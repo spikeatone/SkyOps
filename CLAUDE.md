@@ -6,12 +6,21 @@ re-derive decisions that were already made and validated. If you're about to
 suggest something that contradicts a "Decided" item below, stop and check
 whether there's a reason logged here before overriding it.
 
-This file was substantially rewritten in this session — the fleet grew from
-6 types to 32, the map went from an abstract scope grid to a real geographic
-projection with actual U.S. airports, fees moved from placeholder numbers to
-real sourced data, and aircraft icons moved from a generic triangle to real
-Figma-sourced vector art. If you're picking this up cold, don't assume the
-smaller original scope — read this whole file, not just skim it.
+This file has been substantially rewritten and updated multiple times
+across sessions — the fleet grew from 6 types to 31 (peaked briefly at 32
+before Sukhoi Superjet 100 was removed), the map went from an abstract
+scope grid to a real geographic projection with pan/zoom and actual U.S.
+airports (plus Alaska, Hawaii, and Canada for context), fees and revenue
+moved from placeholder numbers to real sourced data with a working
+economic-event system, and aircraft icons moved from a generic triangle to
+real Figma-sourced vector art. If you're picking this up cold, don't
+assume the smaller original scope — read this whole file, not just skim
+it. If you're the one updating this file next, note that comments and
+counts elsewhere in this codebase have gone stale between updates more
+than once already (see the `TYPE_WEIGHT_TOTAL` stale-comment note in the
+Fleet section for a concrete example) — spot-check numbers against the
+actual code rather than trusting a prior description at face value,
+including the numbers in THIS file.
 
 ## What SkyOps actually is
 
@@ -73,12 +82,14 @@ one contradicts the design thesis.)
   chosen for zero-setup simplicity given the designer isn't a dev by
   background. Revisit if that becomes limiting.
 
-## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 32 / 14)
+## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 31 / 13)
 
-- **Fleet size**: 32 distinct playable aircraft types. This is a major
-  expansion from the original locked 6 — the "locked" framing on the old
-  6-type list no longer applies; that constraint was explicitly reopened by
-  the designer this session.
+- **Fleet size**: 31 distinct playable aircraft types (was 32 — Sukhoi
+  Superjet 100 was removed per designer direction; see the "stale comment"
+  note near the end of this section for a real gotcha this surfaced). This
+  is still a major expansion from the original locked 6 — the "locked"
+  framing on the old 6-type list no longer applies; that constraint was
+  explicitly reopened by the designer this session.
 - **Granularity principle**: each real named variant (A319, A320, A321,
   A319neo, A320neo, A321neo, etc.) is its own separate `AIRCRAFT_TYPES`
   entry with its own seats/cost/revenue/MLW — NOT one averaged entry per
@@ -110,19 +121,20 @@ one contradicts the design thesis.)
   - Every 4-engine widebody (747, A380, A340) and every other widebody
     (777, 787) is its OWN separate family — no real-world commonality
     between manufacturers or airframe generations at that size.
-  - ARJ21 and SSJ100 are each their own standalone family — no other
-    type shares their rating.
-  - **Net result: 14 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
+  - ARJ21 is its own standalone family — no other type shares its rating.
+    (Sukhoi Superjet 100 / `SSJ100_FAMILY` was in this category too, before
+    removal — see stale-comment note below.)
+  - **Net result: 13 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
     `A220_FAMILY`, `B777`, `B787`, `B747`, `A380`, `A340`, `E170_FAMILY`,
-    `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY`, `ARJ21_FAMILY`,
-    `SSJ100_FAMILY`), covering 32 aircraft types. `CREW_FAMILIES` is
-    auto-derived from `AIRCRAFT_TYPES.map(t => t.family)` — adding a new
-    aircraft type with an existing family string automatically joins that
-    pool, no separate list to maintain. `FAMILY_LABELS` (crew status
-    display) is NOT auto-derived — it's a separate hardcoded lookup that
-    must be updated by hand every time a new family is added, or the UI
-    silently shows `undefined`. This bit twice this session; check it
-    every time.
+    `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY`, `ARJ21_FAMILY`), covering 31
+    aircraft types. `CREW_FAMILIES` is auto-derived from
+    `AIRCRAFT_TYPES.map(t => t.family)` — adding or removing an aircraft
+    type automatically updates this list, no separate maintenance needed.
+    `FAMILY_LABELS` (crew status display) is NOT auto-derived — it's a
+    separate hardcoded lookup that must be updated by hand every time a
+    family is added OR removed, or the UI silently shows `undefined` (add)
+    or carries a harmless-but-stale unused entry (remove). This bit twice
+    this session on the add side; check it every time in both directions.
   - `crewsPerTail: 6` was applied to every narrowbody AND every regional
     jet by default. This is a real, UNVERIFIED assumption for the
     regional-jet tier specifically — there's no sourced reason RJs should
@@ -144,16 +156,30 @@ one contradicts the design thesis.)
     The family-level total is sourced; the intra-family proportions are
     estimated from order-share data and general market knowledge, not
     independently sourced per-variant counts.
-  - **Weakest tier**: all 6 regional-jet family totals (E170/E175,
-    E190/E195, CRJ, ERJ, ARJ21, SSJ100) are synthesized estimates, not
-    directly cited totals like the mainline families above. Plausible,
-    not verified — revisit with real sourcing if precision matters here.
+  - **Weakest tier**: all remaining regional-jet family totals (E170/E175,
+    E190/E195, CRJ, ERJ, ARJ21) are synthesized estimates, not directly
+    cited totals like the mainline families above. Plausible, not
+    verified — revisit with real sourcing if precision matters here.
   - `TYPE_WEIGHT_TOTAL` is auto-computed via `.reduce()`, not a hardcoded
     number — always correct by construction, don't hand-maintain it.
-- **32-type fleet has NOT been visually playtested end-to-end.** Individual
+    **A stale COMMENT on this line is a real trap even though the CODE is
+    self-correcting**: after SSJ100 was removed, the code was already
+    correct (31 types, weight auto-recalculated to 363), but the
+    descriptive comment next to it still said "32 types / ~365" for an
+    unknown number of sessions until caught by chance while doing
+    unrelated work. The lesson: auto-computed VALUES don't drift, but
+    comments describing them are just prose and drift like any other doc
+    — don't trust a comment's numbers without spot-checking them
+    occasionally, the same way this file itself needs periodic syncing.
+- **Aircraft icon base sizes are +15% larger than originally shipped**
+  (regionalJet 8.6→9.9, narrowbody 10.9→12.5, widebody2Engine 14.9→17.1,
+  widebody4Engine 17.3→19.9 — see Icons section below), per direct
+  designer feedback that the original sizing felt too small. Relative
+  hierarchy between tiers preserved, verified by script after the change.
+- **31-type fleet has NOT been visually playtested end-to-end.** Individual
   pieces were spot-checked (the 777/787 icon smoke test, the 4-engine
   widebody icon, syntax/math verification on every weight and scale
-  calculation) but nobody has watched a full play session with all 32
+  calculation) but nobody has watched a full play session with all 31
   types spawning together. Do this before treating the expansion as done,
   not just implemented.
 
@@ -175,10 +201,127 @@ one contradicts the design thesis.)
   icon testing. If a new widebody-adjacent bodyType string is ever added,
   it must be added to `WIDEBODY_BODY_TYPES` or gate fees will silently
   undercharge that type at the narrowbody rate.
-- **Airport network**: the definitive top-25 U.S. airports by landing/gate
-  fee, designer-sourced (not the original 7 placeholder airports). Also
-  carries real per-airport `groundStopsPerMonth`, replacing one flat rate
-  that was previously applied uniformly to every airport.
+- **Airport network**: 48 U.S. airports (grew from an initial top-25 to
+  top-50 minus overlaps — see Map section below for the exact accounting),
+  designer-sourced (not the original 7 placeholder airports). Each carries
+  real `groundStopsPerMonth`, replacing one flat rate that was previously
+  applied uniformly to every airport.
+- **Fee detail level is context-dependent, and this is deliberate, not an
+  inconsistency to "fix" later.** The aircraft hover tooltip (in-gameplay,
+  quick-glance context) collapses landing fee + gate fee into one "Fees"
+  line — scanning speed matters more than granularity while actively
+  playing. The eventual native app's dedicated FINANCIALS section
+  (dashboard context, not yet built — the Figma mockups show a finance
+  tab, but nothing in this browser prototype implements it) should split
+  landing fee and gate fee back into separate line items — a player
+  intentionally reviewing financials can afford, and likely wants, more
+  detail than someone glancing mid-flight. Both views can pull from the
+  same `computeLegEconomics()` breakdown (`landingFee`/`gateFee` returned
+  separately even though the tooltip currently sums them for display) —
+  this is a presentation-layer choice per screen, not a data-layer one.
+- **Known data conflicts, not silently resolved one way:** BWI and FLL each
+  appear in two different source batches with different ground-stop
+  numbers (BWI 2.4 vs 3.8/month; FLL 3.8 vs 3.4/month). Kept the
+  original/first-sourced values since they were already live; flag if the
+  newer numbers are actually the correction. SMF's real fee structure is
+  base+per-seat ($61 + $6/seat), which doesn't fit this schema at all —
+  approximated by averaging comparable mid-size regional airports already
+  in the network (PIT/CMH/MCI/IND/CVG/RDU/STL/SAT/CLE) rather than
+  guessing at representative seat counts, which had produced an outlier
+  on the first attempt (see git history / chat log for that version).
+
+## Decided — Economy (revenue, operating cost, and economic events)
+
+- **Revenue formula**: `seats × load factor × average fare per seat`,
+  replacing the original arbitrary `revMin`/`revMax` random-range bands
+  entirely (those fields no longer exist on `AIRCRAFT_TYPES`). Real
+  2025-26 sourced baselines: average domestic one-way fare ~$214 (BTS/DOT
+  Q1 2026 data), average international one-way fare ~$608 (FCM/Corporate
+  Traveler), industry load factor 83.8% (IATA 2026 — a genuine record
+  high due to supply-chain-constrained aircraft deliveries, not a rounded
+  guess). Regional jet fare ($165) is an ESTIMATE — no direct source,
+  meaningfully lower confidence than the other two tiers. Both fare and
+  load factor carry a small per-flight random spread so identical
+  aircraft/conditions don't produce identical revenue every time.
+- **Real per-flight operating cost, charged on EVERY flight at
+  turnaround — not just held ones.** This was NOT the original design:
+  the first version only charged `costPerHour`-derived cost during
+  AOG/crew holds, which meant an economic event that raised costs
+  paradoxically made the airline MORE profitable net-net (fare gains hit
+  every flight, cost gains only hit the rare held ones). Fixed by
+  deducting real operating cost from every flight's revenue at
+  `TURNAROUND`, computed via a shared `computeLegEconomics(ac)` function
+  (also used by the aircraft hover tooltip, so the "projected" leg
+  economics shown mid-flight always match what actually gets recorded).
+- **Operating cost uses per-bodyType realistic stage length, NOT the
+  fixed ~4.8hr state-machine visual cycle every aircraft flies through.**
+  This was also a real bug caught before shipping: an initial version
+  applied one universal block-time constant to every aircraft type,
+  which — because the sourced `costPerHour` figures were quoted assuming
+  each type's typical REAL mission length (narrowbody ~1.5-2.5hr,
+  widebody ~8-10hr) — over-charged narrowbodies and under-charged
+  widebodies badly enough that the A321neo was unprofitable even with no
+  economic event active. Fixed with
+  `OPERATING_COST_BLOCK_MINUTES_BY_BODYTYPE` (regionalJet 75min,
+  narrowbody 120min, widebody2Engine 480min, widebody4Engine 540min) —
+  industry-commonly-cited average stage lengths, not freshly sourced this
+  session, real but lower-confidence than the direct-cited fare/load data
+  above. This is intentionally decoupled from the visual flight-cycle
+  timing (which is locked, see Core Simulation section) — the cost
+  calculation uses its own realistic assumption, the aircraft still
+  visually flies the same fixed cycle either way.
+- **Economic events**: randomly triggered (checked once per sim-day, 15%
+  daily chance when conditions are normal, designed pacing not sourced),
+  lasting 3-10 sim-days, one active at a time. Four types (Oil Price
+  Spike, Fuel Price Drop, Economic Boom, Recession), each with a
+  cost/fare/load multiplier. Magnitude is anchored to a real data point
+  (jet fuel prices moved ~32% year-over-year in a real 2026 supply shock,
+  per IATA Jet Fuel Price Monitor data) but the specific multiplier
+  values and the price-elasticity relationship (higher fares -> lower
+  load factor) are designed for gameplay pacing, not derived from an
+  economic model. A real emergent property worth knowing: 4-engine
+  widebodies (747/A380) go NET NEGATIVE during an oil spike while
+  everything else just compresses — this wasn't hand-tuned, it fell out
+  of the real cost/revenue math, and it happens to match the actual
+  historical dynamic that pushed those aircraft toward retirement.
+- **Financials UI is a stacked ledger** (Revenue / −Operating Costs /
+  −Fees / =Net Revenue), replacing a single-line formula string — net
+  revenue colors green/red by sign. Same breakdown surfaced in the
+  aircraft hover tooltip, both pulling from `computeLegEconomics()`.
+  Tooltip field ORDER is Route → Tail → Type → Status → Crew legal hours →
+  Revenue → Fees → Operating cost → Net for this leg (Route moved to the
+  top per designer direction; this is presentation-order only, doesn't
+  affect `computeLegEconomics()` itself).
+- **A real ship-blocking bug happened here, worth understanding the root
+  cause, not just knowing it got fixed.** When `computeLegEconomics()` was
+  extracted (pulling shared fee/cost math out of the inline TURNAROUND
+  block so the tooltip could reuse it — see above), one log-message
+  reference to the old local `operatingCost` variable was missed and left
+  bare instead of being updated to `econ.operatingCost`. This threw
+  `ReferenceError: operatingCost is not defined` on every flight that hit
+  either the 4%-random-log-sample branch or any net-loss branch — meaning
+  it fired constantly in practice, not on some rare path. **`node --check`
+  never caught this because it only parses syntax; a reference to a
+  variable that's syntactically valid but doesn't exist at runtime is
+  invisible to a parse-only check.** Fixed, and the verification practice
+  changed as a direct result: an ESLint pass with the `no-undef` rule
+  (config: `/tmp/eslint.config.mjs` pattern used in-session, not
+  persisted anywhere in this repo — recreate if needed) now runs
+  alongside `node --check` before anything ships. This was validated
+  against both a synthetic test case and the actual broken file before
+  being trusted (confirmed it caught the real bug, not just that it ran
+  without erroring) — don't skip that validation step if resurrecting
+  this practice in a future session, a linter that silently passes
+  everything is worse than no linter.
+- **Player-facing purchase economy (buying aircraft, paying to open
+  routes) is captured as design intent in `ROADMAP.md` Phase 5, NOT built
+  yet.** Real tension flagged there and worth repeating here since it's
+  easy to miss: real aircraft list prices run into the hundreds of
+  millions, while this sim's per-flight revenue is in the tens of
+  thousands — a future session must NOT import real purchase prices
+  directly the way fee/weight data has been imported everywhere else;
+  that number needs deliberate game-balance work against the revenue
+  scale already established, not a real-world lookup.
 
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
@@ -186,25 +329,96 @@ one contradicts the design thesis.)
   real lat/lon; a lightweight equirectangular projection with a longitude
   cosine correction at the map's center latitude (`projectPoint()`,
   shared by airports AND the basemap below so nothing can drift out of
-  alignment) converts these to canvas coordinates once at startup, fixed
-  to continental-US bounds. NOT a true Albers/conic projection — a
-  defensible approximation at this latitude range and scale, not
-  survey-grade.
-- **Real basemap**: an actual continental-U.S. outline and state borders
-  render under the airports (Natural Earth data via the `us-atlas` npm
-  package, topology-aware simplified — not hand-drawn). This REVERSES an
-  earlier in-session call to keep the map as "projected positions only" —
-  revisited once it was clear the primary player-facing UI needed real
-  geographic legibility, not just correct relative positions. Rendered
-  fresh every frame; cheap at current point count (~1,800 total), but a
-  candidate to pre-render to an offscreen canvas if more visual layers
-  stack on top later.
+  alignment) converts these to "world pixel" coordinates once at startup.
+  NOT a true Albers/conic projection — a defensible approximation at this
+  latitude range and scale, not survey-grade, and NOT a true global
+  projection either (see camera section below — still a fixed rectangular
+  lon/lat box, not a sphere).
+- **Airport network grew in three passes, worth knowing the accounting**:
+  started at 7 placeholder airports → 25 (definitive top-25 by fee,
+  designer-sourced) → 46 (top 26-50 batch, minus BWI/FLL which were
+  duplicates across both source lists with conflicting ground-stop
+  numbers, see Economy section) → 48 (added ANC + Honolulu HNL once the
+  projection bounds were expanded to include Alaska/Hawaii). Current
+  count is 48, not 25 or 50 — don't assume either round number.
+- **`WORLD_BOUNDS` now covers Alaska-to-Hawaii-to-East-Coast**
+  (`latMin: 18, latMax: 71, lonMin: -170, lonMax: -66.5`), expanded from
+  continental-only. This was a deliberate reversal, not scope creep: the
+  designer's stated direction is an eventual GLOBAL map (players will
+  open routes worldwide), so when ANC/HNL needed the map to go
+  non-continental, the choice was between a throwaway continental+AK/HI
+  patch or building the real mechanism (camera pan/zoom, see below) that
+  a global map will actually need. Chose the latter — "let's do C."
+  Aleutian Islands are clipped at `lonMin: -170` rather than crossing the
+  antimeridian, which this projection can't handle cleanly; no airports
+  sit that far west so it doesn't matter yet.
+- **Camera system: pan (drag) + zoom (scroll wheel, cursor-anchored),
+  the desktop-appropriate equivalent of pinch-zoom** (which isn't a
+  native desktop gesture — the eventual mobile app gets real pinch-zoom +
+  touch-drag, this is NOT the final interaction design, just the
+  right one for a browser POC). Implementation: `camera = { zoom,
+  worldCenterX, worldCenterY }` is a transform applied ONCE per frame via
+  `ctx.translate/scale/translate`, wrapping all world content (geography,
+  airports, aircraft). Mouse hit-testing inverts the same transform once
+  (`screenToWorld()`) rather than every position needing dual awareness.
+  Default view is NOT the full Alaska-to-Hawaii world — `resetCameraToConus()`
+  computes a zoom/center that frames continental US specifically (real
+  lat/lon math, not hardcoded pixel numbers, captured once into
+  `DEFAULT_CAMERA_ZOOM` for reuse elsewhere — see the sizing curve below),
+  matching what the map looked like before this expansion. A "Reset View"
+  button returns to this default after panning away. Real bug caught
+  before shipping: the reset button initially shared `class="speed"` with
+  the game-speed controls, which would have swept it into that click
+  handler and set game speed to `NaN` on click, silently freezing the
+  tick loop — caught by checking the class assignment before shipping,
+  not by a bug report.
+- **Airport AND aircraft screen size follow a shared damped zoom curve —
+  this went through two real iterations based on direct designer
+  feedback, not one clean build.** V1 (first shipped): airport dots were
+  made fully zoom-INVARIANT (constant screen size regardless of zoom,
+  like a map pin), while aircraft icons were left with NO zoom
+  compensation at all (scaling fully proportional to `camera.zoom`, same
+  as terrain). Designer feedback on V1: airports should grow SLIGHTLY at
+  high zoom (not stay perfectly flat), and aircraft were "too large when
+  zoomed in" — the fully-proportional behavior was the actual problem,
+  not a minor tuning issue. V2 (current): both now share one function,
+  `getMapElementVisualScale()` — constant size from zoomed-out through
+  the default (CONUS-framing) zoom level, then growing modestly, capped
+  at exactly +15% at max zoom (`CAMERA_MAX_ZOOM`). Airports implement
+  this by dividing their base pixel sizes by `zoom/visualScale`; aircraft
+  implement it by inserting an explicit counter-scale `ctx.scale()` call
+  into `drawAircraft()` that didn't exist before (they previously relied
+  entirely on the ambient camera transform for sizing, which is exactly
+  why they scaled fully proportional). Verified numerically before
+  shipping both times — screen-pixel output confirmed via script at
+  multiple zoom levels, not just eyeballed after a code change.
+- **Real basemap, including Alaska and Hawaii** (added after an earlier
+  gap where AK/HI airports existed with no landmass under them — same
+  `us-atlas` extraction pipeline, re-run with AK/HI INCLUDED instead of
+  filtered out). Nation outline and state borders both cover all 50
+  states now, not just the continental 48.
+- **Canada renders as a separate, deliberately muted background-context
+  layer** (`CANADA_RINGS`, sourced from the `world-atlas` npm package —
+  a NEW dependency, not previously in this project — filtered to Canada's
+  ISO numeric id 124, tiny Arctic-archipelago islands dropped). Purely
+  visual context so Alaska doesn't read as a disconnected blob floating
+  in empty ocean space; NOT interactive, no airports here, drawn UNDER
+  the US outline in a neutral gray specifically so it stays visually
+  secondary. Real geography, but deliberately the least prominent layer
+  on the map by design, not by oversight.
 - **Label decluttering**: airports genuinely close together at this map
-  scale (JFK/EWR/LGA in NYC, MIA/FLL in South Florida) get their text
-  labels fanned out with leader lines (`computeAirportLabelPositions()`),
-  while their dots stay at true projected positions. This is a stopgap for
-  the browser prototype's fixed zoom level — see Open items below
-  (pinch-zoom).
+  scale get their text labels fanned out with leader lines
+  (`computeAirportLabelPositions()`), while their dots stay at true
+  projected positions. Runs generically over whatever's in `AIRPORTS`, so
+  it automatically picked up new clusters when the network grew to 48
+  (Chicago's MDW/ORD, the Bay Area's SFO/SJC/OAK three-way, DFW/DAL,
+  LAX/SNA, BWI/IAD, AUS/SAT, IAH/HOU, MCO/TPA, on top of the original
+  JFK/EWR/LGA and MIA/FLL) — no code changes needed when the airport
+  count grew, this held up as designed. Cluster detection itself is
+  computed ONCE at startup and does NOT re-evaluate as the player zooms —
+  a cluster fanned out at the default zoom stays fanned out even if
+  zooming in would naturally have given it enough room to un-fan. Known,
+  not fixed — flagged in Open below.
 - **Airport hover tooltip**: shows live ground-stop status (with time
   remaining if active), on-ground/inbound aircraft counts, and fee
   reference data. Shares the same tooltip DOM element as the aircraft
@@ -227,22 +441,41 @@ one contradicts the design thesis.)
   amber=ground) — this is why real vector paths were necessary instead of
   the raster export; a raster image can't be recolored per-state the same
   way. Icons are recentered and scaled via a per-icon `targetLength`
-  (NOT a shared constant) so the real size hierarchy holds:
-  regionalJet (7.5px) < narrowbody (9.5px) < widebody2Engine (13px) <
-  widebody4Engine (15px). A shared constant was tried first and caused a
-  real bug (narrowbody rendering larger than the widebody fallback) —
-  caught and fixed before shipping, not after.
+  (NOT a shared constant) so the real size hierarchy holds. Current values
+  (as of the +15% designer-requested bump, up from an earlier baseline
+  that itself already wasn't the original ship values — this comment had
+  gone stale before, check the actual code if precision matters):
+  regionalJet 9.9px < narrowbody 12.5px < widebody2Engine 17.1px <
+  widebody4Engine 19.9px. A shared constant was tried first (early in the
+  icon work) and caused a real bug (narrowbody rendering larger than the
+  widebody fallback) — caught and fixed before shipping, not after.
+- **Icon screen size now follows a damped zoom curve, not the ambient
+  camera transform directly.** Originally aircraft had NO zoom
+  compensation and scaled fully proportional to `camera.zoom` (this is
+  what made them feel oversized when zoomed in — a real designer-caught
+  issue, not a hypothetical). Fixed by sharing `getMapElementVisualScale()`
+  with airports (see Map section) — both now render at a constant size up
+  to the default (CONUS-framing) zoom level, then grow modestly, capped at
+  +15% at max zoom, rather than airports staying perfectly flat and
+  aircraft scaling linearly. This required an explicit counter-scale
+  `ctx.scale()` call inserted into `drawAircraft()`, not just a constant
+  tweak — the two element types now share one formula but arrive at their
+  final size through different render-path mechanics (airports divide
+  their base radius, aircraft insert a compensating transform).
 - **bodyType now drives THREE independent things** that all happen to
   read the same field: gate-fee tier, on-scope render scale (fallback
   triangle path), and icon selection (`AIRCRAFT_ICON_PATHS` lookup, real
   Figma icon path). Changing what a bodyType string means has
   consequences in all three places — check all three before renaming or
   adding a bodyType value.
-- All 4 icon tiers are confirmed visually correct in-browser as of this
-  session (narrowbody, then widebody2Engine via the 777/787 smoke test,
-  then widebody4Engine via 747/A380/A340). This is real verification, not
-  just algebraic transform-math checking — but it was checked type-by-type
-  as each was added, not re-verified after the full 32-type expansion.
+- All 4 icon tiers are confirmed visually correct in-browser (narrowbody,
+  then widebody2Engine via the 777/787 smoke test, then widebody4Engine
+  via 747/A380/A340) — real verification, not just algebraic
+  transform-math checking. This was checked type-by-type as each was
+  added, and again after the zoom-curve and +15%-size changes via
+  numeric script verification (constant-then-damped-growth confirmed
+  exact at multiple zoom levels), but a full in-browser re-check across
+  the entire 31-type fleet at varied zoom levels hasn't happened.
 
 ## Open / not yet decided
 
@@ -260,22 +493,51 @@ one contradicts the design thesis.)
 - Hub connectivity, reputation, passenger demand curves: named in the
   original design brief, not yet modeled in the prototype or planned in
   detail — bigger systems, deliberately last.
-- **Pinch-zoom on the map**: the mobile game is intended to support it.
-  Would help with NYC/South Florida label crowding beyond what the
-  leader-line declutter fix does (zoom in, labels separate on their own),
-  and is no longer blocked on a map-style decision (the real basemap is
-  built). Not built in the browser prototype — viewport transform +
-  touch/wheel gesture handling is real scope, arguably Phase 4 UI work
-  rather than core-loop validation.
+- **Pinch-zoom on the mobile app**: still not built (this is a browser
+  prototype), but the underlying mechanism is no longer blocked or even
+  really "open" in the same sense — the camera system built for pan/zoom
+  (see Map section) is the same math a mobile pinch-gesture handler would
+  drive, just fed by touch events instead of drag+wheel. What's
+  genuinely unbuilt: the touch gesture handling itself.
+- **Label cluster detection doesn't re-evaluate on zoom.** A cluster
+  fanned out with leader lines at the default zoom level (NYC, Bay Area,
+  etc.) stays fanned out even after zooming in far enough that the
+  underlying airports would naturally have enough room for normal,
+  un-fanned labels — `computeAirportLabelPositions()` runs once at
+  startup, not per-frame. Not broken, just static; a real fix means
+  recomputing clusters against CURRENT on-screen distance each frame
+  (or on zoom-change), which is more scope than this pass covered.
+- **The map is not a true global projection.** WORLD_BOUNDS now spans
+  Alaska-to-Hawaii-to-East-Coast, but it's still one fixed rectangular
+  lon/lat box with a cosine-corrected equirectangular projection — that
+  breaks down badly near the poles and doesn't wrap at the antimeridian.
+  A genuine global map (which the designer has stated as the eventual
+  direction — players opening routes worldwide) needs a real projection
+  decision, not just wider bounds on the current one.
+- **BWI/FLL ground-stop data conflict** — two different source batches
+  gave different numbers for the same two airports; kept the
+  original/first-sourced values (see Economy section above for the exact
+  numbers). Not resolved, just not silently overwritten either.
 - **Regional-jet `crewsPerTail`**: defaulted to 6 (same as narrowbody),
   unverified. Real research not done for this tier specifically.
 - **Intra-family fleet-weight splits** for A320/737/A220 families, and ALL
-  6 regional-jet family totals: real but lower-confidence data, flagged
-  in the Fleet section above. Revisit with dedicated sourcing if the
-  designer wants higher precision here.
-- **Full 32-type fleet has not been playtested end-to-end** — see Fleet
-  section above. This is the single most important thing to do before
-  building further on top of the expansion.
+  remaining regional-jet family totals: real but lower-confidence data,
+  flagged in the Fleet section above. Revisit with dedicated sourcing if
+  the designer wants higher precision here.
+- **Full 31-type fleet has not been playtested end-to-end** — see Fleet
+  section above. This is still true, and now compounds with 48 airports,
+  the economic event system, and the pan/zoom camera all also being
+  un-playtested-as-ONE-session — four major systems shipped this session
+  that have each been spot-checked individually (and one, the economy
+  system, had a real ship-blocking bug that slipped through individual
+  checking — see the `operatingCost` note above) but never all run
+  together in one real, sustained play session.
+- **Why Sukhoi Superjet 100 was removed isn't documented anywhere.** The
+  type and its crew family are fully gone from the code (confirmed clean
+  — no orphaned references anywhere), but no record of the actual
+  decision/reasoning exists in this file or the chat history available at
+  time of this update. If that reasoning matters later, it may need to be
+  re-asked rather than looked up.
 - `README.md` is referenced in `TASKS.md`'s "Repo scaffolded" line but was
   never confirmed to actually exist in the repo — flagged once early in
   this project's history, never independently verified since. Check it.

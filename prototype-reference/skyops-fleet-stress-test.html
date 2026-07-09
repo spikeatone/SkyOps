@@ -184,6 +184,42 @@
   }
   .status-strip b { color: var(--amber); }
 
+  .financials-panel {
+    margin: 4px 20px 16px;
+    padding: 12px 14px;
+    background: #0d141c;
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    max-width: 280px;
+  }
+  .fin-header {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .fin-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 3px 0;
+  }
+  .fin-label { color: var(--text-dim); }
+  .fin-value { color: var(--text-main); font-weight: 500; }
+  .fin-row.fin-subtract .fin-label,
+  .fin-row.fin-subtract .fin-value { color: var(--text-dim); }
+  .fin-row.fin-total {
+    margin-top: 4px;
+    padding-top: 7px;
+    border-top: 1px solid var(--panel-line);
+    font-weight: 700;
+  }
+  .fin-row.fin-total .fin-label { color: var(--text-main); }
+  .fin-row.fin-total .fin-value.positive { color: var(--scope-green); }
+  .fin-row.fin-total .fin-value.negative { color: var(--red); }
+
   .log-panel {
     border-top: 1px solid var(--panel-line);
     background: #0a0f14;
@@ -330,7 +366,26 @@
     <div>GROUND STOPS: <b id="weatherStatus">none</b></div>
   </div>
   <div class="status-strip">
-    <div>FINANCIALS: <b id="netFinancial">$0 rev — $0 fees = $0 net</b></div>
+    <div>ECONOMIC CONDITIONS: <b id="economicStatus">Normal</b></div>
+  </div>
+  <div class="financials-panel">
+    <div class="fin-header">FINANCIALS</div>
+    <div class="fin-row">
+      <span class="fin-label">Revenue</span>
+      <span class="fin-value" id="finRevenue">$0</span>
+    </div>
+    <div class="fin-row fin-subtract">
+      <span class="fin-label">– Operating Costs</span>
+      <span class="fin-value" id="finOpCost">$0</span>
+    </div>
+    <div class="fin-row fin-subtract">
+      <span class="fin-label">– Fees</span>
+      <span class="fin-value" id="finFees">$0</span>
+    </div>
+    <div class="fin-row fin-total">
+      <span class="fin-label">= Net Revenue</span>
+      <span class="fin-value" id="finNet">$0</span>
+    </div>
   </div>
 
   <div class="decision-panel" id="decisionPanel"></div>
@@ -357,6 +412,28 @@ const TICKS_PER_STATE = {
 };
 const STATE_ORDER = ["PARKED","BOARDING","TAXI_OUT","TAKEOFF","CRUISE","APPROACH","LANDING","TAXI_IN","TURNAROUND"];
 const REJOIN_DURATION = 10; // ticks to ease from holding pattern back onto approach path
+
+// Real operating cost is charged against a REALISTIC per-bodyType average
+// stage length, NOT the fixed ~4.8hr state-machine cycle every aircraft
+// visually flies through (that timing is locked — see CLAUDE.md, don't
+// touch it; this is a separate assumption used only for the cost
+// calculation). This matters because the sourced costPerHour figures were
+// quoted assuming each type's typical real mission length: narrowbody DOC
+// rates assume ~1.5-2.5hr domestic missions, widebody rates assume
+// ~8-10hr long-haul missions. Applying one fixed block time to every type
+// (the first version of this feature) OVER-charged narrowbodies and
+// UNDER-charged widebodies relative to what their sourced hourly rate
+// actually represents — it made the A321neo unprofitable even in normal
+// conditions, before any economic event. These are industry-commonly-cited
+// average stage lengths, not freshly sourced this session — real but
+// lower-confidence than the direct-cited data elsewhere in this file.
+const OPERATING_COST_BLOCK_MINUTES_BY_BODYTYPE = {
+  regionalJet: 75,        // ~1.25hr average regional stage length
+  narrowbody: 120,        // ~2hr average domestic narrowbody stage length
+  widebody: 480,          // ~8hr — legacy tier, still used by any type not reassigned to a specific widebody tier
+  widebody2Engine: 480,   // ~8hr average long-haul twin-engine stage length
+  widebody4Engine: 540,   // ~9hr — 4-engine widebodies skew toward the longest ultra-long-haul missions historically
+};
 
 // ---------- AIRCRAFT TYPES ----------
 // Hold-cost figures are direct operating cost per hour, sourced from public
@@ -386,17 +463,98 @@ const REJOIN_DURATION = 10; // ticks to ease from holding pattern back onto appr
 // for both the per-turn gate fee tier below AND the on-scope rendering scale
 // (previously that was a separate, undocumented `seats >= 250` check; one
 // definition now instead of two that could silently drift apart).
+// `weight` values below are proportional to REAL global in-service fleet
+// counts (ch-aviation/Wikipedia-tier sourcing, 2025-26), not designer
+// placeholders — per designer direction: for sim testing, spawn ratios
+// should match real-world deployment (real players will "buy" their fleet
+// in the shipped game, so this doesn't need to be final, just realistic
+// for now). Family-level totals are well-sourced (Wikipedia, current as of
+// this pass): A320 family (ceo+neo combined) 11,374 · 737 family (NG+MAX)
+// 7,876 · A220 family 522 · 777 ~1,600 · 787 ~1,000 · 747 (passenger) 427 ·
+// A380 ~170 · A340 71. Regional jet family totals (E170/E175, E190/E195,
+// CRJ, ERJ, ARJ21, SSJ100) are ESTIMATES synthesized from partial source
+// data, not directly cited totals — meaningfully lower confidence than the
+// mainline families above, flag if precision matters here later.
+// All scaled from the same anchor as before: A340 (rarest, real count 71)
+// = weight 1. Within the A320/737/A220 families, the split across named
+// variants is an ESTIMATE (order-share proxies + typical market mix), even
+// though the family-level total is real — no per-variant in-service count
+// was sourced for any of these.
 const AIRCRAFT_TYPES = [
-  { id: 'A321NEO', name: 'Airbus A321neo',        seats: 200, costPerHour: 8000,  revMin: 10000, revMax: 20000, weight: 7,  family: 'A320_FAMILY', crewsPerTail: 6,  mlwLbs: 179000, bodyType: 'narrowbody' },
-  { id: 'B739',    name: 'Boeing 737-900',        seats: 180, costPerHour: 8000,  revMin: 9000,  revMax: 18000, weight: 14, family: 'B737_FAMILY', crewsPerTail: 6,  mlwLbs: 146300, bodyType: 'narrowbody' },
-  { id: 'MAX8',    name: 'Boeing 737 MAX 8',      seats: 175, costPerHour: 7000,  revMin: 9000,  revMax: 17000, weight: 12, family: 'B737_FAMILY', crewsPerTail: 6,  mlwLbs: 146300, bodyType: 'narrowbody' },
-  { id: 'MAX9',    name: 'Boeing 737 MAX 9',      seats: 190, costPerHour: 7500,  revMin: 9500,  revMax: 19000, weight: 12, family: 'B737_FAMILY', crewsPerTail: 6,  mlwLbs: 152800, bodyType: 'narrowbody' },
-  { id: 'B773',    name: 'Boeing 777-300',        seats: 380, costPerHour: 20000, revMin: 25000, revMax: 45000, weight: 6,  family: 'B777',        crewsPerTail: 11, mlwLbs: 460000, bodyType: 'widebody' },
-  { id: 'B788',    name: 'Boeing 787 Dreamliner', seats: 280, costPerHour: 12000, revMin: 18000, revMax: 32000, weight: 9,  family: 'B787',        crewsPerTail: 11, mlwLbs: 380000, bodyType: 'widebody' },
+  // ---- A320 FAMILY (ceo + neo) — one crew family, real EASA type rating ----
+  { id: 'A319',    name: 'Airbus A319',            seats: 140, costPerHour: 7900,  weight: 19, family: 'A320_FAMILY', crewsPerTail: 6, mlwLbs: 134480, bodyType: 'narrowbody' },
+  { id: 'A320',    name: 'Airbus A320',            seats: 165, costPerHour: 8200,  weight: 56, family: 'A320_FAMILY', crewsPerTail: 6, mlwLbs: 142200, bodyType: 'narrowbody' },
+  { id: 'A321',    name: 'Airbus A321',            seats: 200, costPerHour: 11100, weight: 29, family: 'A320_FAMILY', crewsPerTail: 6, mlwLbs: 171520, bodyType: 'narrowbody' },
+  { id: 'A319NEO', name: 'Airbus A319neo',         seats: 145, costPerHour: 7100,  weight: 2,  family: 'A320_FAMILY', crewsPerTail: 6, mlwLbs: 137790, bodyType: 'narrowbody' },
+  { id: 'A320NEO', name: 'Airbus A320neo',         seats: 168, costPerHour: 7400,  weight: 24, family: 'A320_FAMILY', crewsPerTail: 6, mlwLbs: 146170, bodyType: 'narrowbody' },
+  { id: 'A321NEO', name: 'Airbus A321neo',         seats: 200, costPerHour: 8000,  weight: 30, family: 'A320_FAMILY', crewsPerTail: 6, mlwLbs: 179000, bodyType: 'narrowbody' },
+  // ---- 737 FAMILY (NG + MAX) — one crew family, same FAA/EASA type rating ----
+  { id: 'B737700', name: 'Boeing 737-700',         seats: 140, costPerHour: 7500,  weight: 9,  family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 128000, bodyType: 'narrowbody' },
+  { id: 'B737800', name: 'Boeing 737-800',         seats: 175, costPerHour: 7900,  weight: 37, family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 146300, bodyType: 'narrowbody' },
+  { id: 'B739',    name: 'Boeing 737-900',         seats: 180, costPerHour: 8000,  weight: 15, family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 146300, bodyType: 'narrowbody' },
+  { id: 'MAX7',    name: 'Boeing 737 MAX 7',       seats: 140, costPerHour: 6800,  weight: 4,  family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 138500, bodyType: 'narrowbody' },
+  { id: 'MAX8',    name: 'Boeing 737 MAX 8',       seats: 175, costPerHour: 7000,  weight: 30, family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 146300, bodyType: 'narrowbody' },
+  { id: 'MAX9',    name: 'Boeing 737 MAX 9',       seats: 190, costPerHour: 7500,  weight: 10, family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 152800, bodyType: 'narrowbody' },
+  { id: 'MAX10',   name: 'Boeing 737 MAX 10',      seats: 195, costPerHour: 7900,  weight: 6,  family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 158000, bodyType: 'narrowbody' },
+  // ---- A220 FAMILY — one crew family (99% commonality, same type rating) ----
+  // A220-300 is narrowbody per designer's list; A220-100 was also listed
+  // under Regional Jet, resolved per designer's intersection rule ("where
+  // these intersect with narrowbody, put the jets in the RJ category").
+  // Same crew family regardless — bodyType (icon/fee tier) and crew family
+  // are independent, this doesn't conflict.
+  { id: 'A220300', name: 'Airbus A220-300',        seats: 140, costPerHour: 4300,  weight: 4,  family: 'A220_FAMILY', crewsPerTail: 6, mlwLbs: 137300, bodyType: 'narrowbody' },
+  { id: 'A220100', name: 'Airbus A220-100',        seats: 115, costPerHour: 3800,  weight: 3,  family: 'A220_FAMILY', crewsPerTail: 6, mlwLbs: 122300, bodyType: 'regionalJet' },
+  // TEMPORARY SMOKE TEST — reassigned from bodyType: 'widebody' to
+  // 'widebody2Engine' so the real Figma icon actually renders somewhere
+  // visible for verification. This is an honest label (both ARE 2-engine
+  // aircraft), but it is NOT the real fleet-expansion decision — revert
+  // to 'widebody' if the icon looked wrong, or leave as-is and treat it as
+  // the first real step of that expansion if it looked right (confirmed
+  // looking right as of this session).
+  { id: 'B773',    name: 'Boeing 777-300',         seats: 380, costPerHour: 20000, weight: 23,  family: 'B777',        crewsPerTail: 11, mlwLbs: 460000, bodyType: 'widebody2Engine' },
+  { id: 'B788',    name: 'Boeing 787 Dreamliner',  seats: 280, costPerHour: 12000, weight: 14,  family: 'B787',        crewsPerTail: 11, mlwLbs: 380000, bodyType: 'widebody2Engine' },
+  // Real 4-engine widebody types, confirmed by designer. Data sourced via
+  // web search (SimpleFlying/AirInsight/Wikipedia-tier, same confidence
+  // level as the original 6 — NOT primary type-cert documents, see chat
+  // history for per-figure confidence notes). Each gets its own crew
+  // family — a 747 pilot isn't rated on an A380 any more than a 737 pilot
+  // is on a 787, matching the project's existing type-rating principle.
+  { id: 'B747',    name: 'Boeing 747-8',           seats: 467, costPerHour: 25000, weight: 6,  family: 'B747',        crewsPerTail: 11, mlwLbs: 745700,  bodyType: 'widebody4Engine' },
+  { id: 'A380',    name: 'Airbus A380',            seats: 555, costPerHour: 28000, weight: 2,  family: 'A380',        crewsPerTail: 11, mlwLbs: 1133000, bodyType: 'widebody4Engine' },
+  { id: 'A340',    name: 'Airbus A340-300',        seats: 295, costPerHour: 18000, weight: 1,  family: 'A340',        crewsPerTail: 11, mlwLbs: 380000,  bodyType: 'widebody4Engine' },
+  // ---- REGIONAL JETS — real type-rating splits, per designer decision ----
+  // E-Jets split into TWO crew families despite one marketing name: E170/
+  // E175 share a type rating, E190/E195 require a SEPARATE one (different
+  // wing/airframe systems) — this is the specific real-world nuance the
+  // designer confirmed should drive crew pooling, not the icon grouping.
+  { id: 'E170', name: 'Embraer E170', seats: 72,  costPerHour: 2800, weight: 3, family: 'E170_FAMILY', crewsPerTail: 6, mlwLbs: 72500, bodyType: 'regionalJet' },
+  { id: 'E175', name: 'Embraer E175', seats: 78,  costPerHour: 3200, weight: 8, family: 'E170_FAMILY', crewsPerTail: 6, mlwLbs: 79400, bodyType: 'regionalJet' },
+  { id: 'E190', name: 'Embraer E190', seats: 106, costPerHour: 3800, weight: 6, family: 'E190_FAMILY', crewsPerTail: 6, mlwLbs: 99200, bodyType: 'regionalJet' },
+  { id: 'E195', name: 'Embraer E195', seats: 118, costPerHour: 4200, weight: 3, family: 'E190_FAMILY', crewsPerTail: 6, mlwLbs: 107800, bodyType: 'regionalJet' },
+  // CRJ700/900/1000 share one Bombardier type rating (differences training only)
+  { id: 'CRJ700',  name: 'Bombardier CRJ700',  seats: 70,  costPerHour: 2800, weight: 4, family: 'CRJ_FAMILY', crewsPerTail: 6, mlwLbs: 63900, bodyType: 'regionalJet' },
+  { id: 'CRJ900',  name: 'Bombardier CRJ900',  seats: 82,  costPerHour: 3200, weight: 6, family: 'CRJ_FAMILY', crewsPerTail: 6, mlwLbs: 74950, bodyType: 'regionalJet' },
+  { id: 'CRJ1000', name: 'Bombardier CRJ1000', seats: 100, costPerHour: 3600, weight: 3, family: 'CRJ_FAMILY', crewsPerTail: 6, mlwLbs: 80470, bodyType: 'regionalJet' },
+  // ERJ135/140/145 share one Embraer type certificate
+  { id: 'ERJ135', name: 'Embraer ERJ135', seats: 37, costPerHour: 2000, weight: 1, family: 'ERJ_FAMILY', crewsPerTail: 6, mlwLbs: 39900, bodyType: 'regionalJet' },
+  { id: 'ERJ140', name: 'Embraer ERJ140', seats: 44, costPerHour: 2100, weight: 1, family: 'ERJ_FAMILY', crewsPerTail: 6, mlwLbs: 42550, bodyType: 'regionalJet' },
+  { id: 'ERJ145', name: 'Embraer ERJ145', seats: 50, costPerHour: 2200, weight: 2, family: 'ERJ_FAMILY', crewsPerTail: 6, mlwLbs: 43430, bodyType: 'regionalJet' },
+  // Standalone families — no other type shares these ratings
+  { id: 'ARJ21',  name: 'COMAC ARJ21',        seats: 90, costPerHour: 3000, weight: 2, family: 'ARJ21_FAMILY',  crewsPerTail: 6, mlwLbs: 88000,  bodyType: 'regionalJet' },
+  { id: 'SSJ100', name: 'Sukhoi Superjet 100', seats: 98, costPerHour: 3200, weight: 2, family: 'SSJ100_FAMILY', crewsPerTail: 6, mlwLbs: 101150, bodyType: 'regionalJet' },
 ];
 AIRCRAFT_TYPES.forEach(t => { t.holdCostPerTick = Math.round(t.costPerHour / 60); }); // 1 tick = 1 minute
-const TYPE_WEIGHT_TOTAL = AIRCRAFT_TYPES.reduce((s,t) => s+t.weight, 0); // 60, matching the given fleet composition
-const CREW_FAMILIES = [...new Set(AIRCRAFT_TYPES.map(t => t.family))]; // ['A320_FAMILY','B737_FAMILY','B777','B787']
+
+// Gate-fee tier and the icon/render tier are related but not identical —
+// bodyType can be 'widebody', 'widebody2Engine', or 'widebody4Engine'
+// depending on how far the icon rollout has gone, but all three are still
+// "widebody" for fee purposes. Checking bodyType === 'widebody' directly
+// (as this used to) breaks silently the moment any aircraft gets
+// reassigned to a more specific tier — narrowbody-rate gate fees on a
+// widebody aircraft, no error, just a wrong number.
+const WIDEBODY_BODY_TYPES = new Set(['widebody', 'widebody2Engine', 'widebody4Engine']);
+const TYPE_WEIGHT_TOTAL = AIRCRAFT_TYPES.reduce((s,t) => s+t.weight, 0); // ~365 — real-world-proportional across 32 types, not an arbitrary round number
+const CREW_FAMILIES = [...new Set(AIRCRAFT_TYPES.map(t => t.family))]; // 12 families total: A320_FAMILY, B737_FAMILY, A220_FAMILY, B777, B787, B747, A380, A340, E170_FAMILY, E190_FAMILY, CRJ_FAMILY, ERJ_FAMILY, ARJ21_FAMILY, SSJ100_FAMILY
 
 function pickAircraftType() {
   let r = Math.random() * TYPE_WEIGHT_TOTAL;
@@ -429,7 +587,7 @@ const AOG_RATE_PER_AIRCRAFT_PER_MONTH = 2 / 100; // 0.02
 const TICKS_PER_MONTH = 30 * 24 * 60; // 43,200 (1 tick = 1 sim-minute)
 const AOG_PROB_PER_TICK_PER_AIRCRAFT = AOG_RATE_PER_AIRCRAFT_PER_MONTH / TICKS_PER_MONTH;
 
-const FAMILY_LABELS = { A320_FAMILY: 'A320', B737_FAMILY: 'B737', B777: 'B777', B787: 'B787' };
+const FAMILY_LABELS = { A320_FAMILY: 'A320', B737_FAMILY: 'B737', A220_FAMILY: 'A220', B777: 'B777', B787: 'B787', B747: 'B747', A380: 'A380', A340: 'A340', E170_FAMILY: 'E170/175', E190_FAMILY: 'E190/195', CRJ_FAMILY: 'CRJ', ERJ_FAMILY: 'ERJ', ARJ21_FAMILY: 'ARJ21', SSJ100_FAMILY: 'SSJ100' };
 
 // ---------- AOG CLUSTERING ----------
 // Real-world analog: a single incident on one tail can be the leading edge of
@@ -443,12 +601,87 @@ const AOG_CLUSTER_DECAY_TICKS = 4320;  // 3 sim-days for the elevated window to 
 let familyPressureTicksLeft = {};
 CREW_FAMILIES.forEach(f => { familyPressureTicksLeft[f] = 0; });
 
+// Real 2025-26 sourced baselines: average domestic one-way fare ~$214
+// (BTS/DOT Q1 2026 domestic itinerary data: $428 round-trip ÷ 2), average
+// international one-way fare ~$608 (FCM/Corporate Traveler economy-class
+// average: $1,217 round-trip ÷ 2), industry load factor 83.8% (IATA 2026 —
+// a genuine record high, not a rounded guess; 2025-26 specifically runs
+// fuller than historical average because aircraft deliveries are
+// supply-chain-constrained, so airlines run existing planes closer to
+// capacity). Regional jet fare ($165) is an ESTIMATE — shorter average
+// stage length implies a lower average fare than mainline domestic, but no
+// direct source was found for regional-specific average fare; meaningfully
+// lower confidence than the other two tiers.
+const AVG_FARE_PER_SEAT_BY_BODYTYPE = {
+  narrowbody: 214,
+  regionalJet: 165,
+  widebody2Engine: 608,
+  widebody4Engine: 608,
+  widebody: 608, // legacy tier string — still referenced by the fallback triangle render path for any type not reassigned to a specific widebody tier
+};
+const BASE_LOAD_FACTOR = 0.838;
+
+// ---------- ECONOMIC EVENTS ----------
+// Real-world anchor for MAGNITUDE: jet fuel prices moved ~32% year-over-year
+// following a real 2026 supply shock (IATA Jet Fuel Price Monitor data,
+// pulled this session — North America jet fuel +31%, global average +32%
+// after the Iran conflict). That's the scale of swing modeled here. The
+// specific trigger frequency/duration and the price-elasticity relationship
+// (higher fares -> lower load factor) are DESIGNED defaults tuned for
+// gameplay pacing, not sourced from a specific economic study — reasonable
+// and internally consistent, but not fact the way the fuel-price anchor is.
+const ECONOMIC_EVENTS = [
+  { id: 'OIL_SPIKE', label: 'Oil Price Spike', costMultiplier: 1.30, fareMultiplier: 1.15, loadMultiplier: 0.95 },
+  { id: 'FUEL_GLUT', label: 'Fuel Price Drop', costMultiplier: 0.85, fareMultiplier: 0.95, loadMultiplier: 1.03 },
+  { id: 'ECON_BOOM', label: 'Economic Boom',   costMultiplier: 1.00, fareMultiplier: 1.10, loadMultiplier: 1.05 },
+  { id: 'RECESSION', label: 'Recession',       costMultiplier: 1.00, fareMultiplier: 0.85, loadMultiplier: 0.90 },
+];
+const NORMAL_CONDITIONS = { id: 'NORMAL', label: 'Normal', costMultiplier: 1, fareMultiplier: 1, loadMultiplier: 1 };
+
+let currentEconomicEvent = NORMAL_CONDITIONS;
+let economicEventTicksLeft = 0;
+
+const ECONOMIC_EVENT_CHECK_INTERVAL = 1440; // once per sim-day
+const ECONOMIC_EVENT_DAILY_PROBABILITY = 0.15; // ~15%/day chance a new event starts when conditions are currently normal — designed pacing, not sourced
+const ECONOMIC_EVENT_MIN_DURATION_DAYS = 3;
+const ECONOMIC_EVENT_MAX_DURATION_DAYS = 10;
+
+function tickEconomicEvents() {
+  if (currentEconomicEvent !== NORMAL_CONDITIONS) {
+    economicEventTicksLeft--;
+    if (economicEventTicksLeft <= 0) {
+      addLog(`Economic conditions normalize — ${currentEconomicEvent.label} ends`, true);
+      currentEconomicEvent = NORMAL_CONDITIONS;
+    }
+    return;
+  }
+  if (tick % ECONOMIC_EVENT_CHECK_INTERVAL !== 0) return;
+  if (Math.random() < ECONOMIC_EVENT_DAILY_PROBABILITY) {
+    const event = ECONOMIC_EVENTS[Math.floor(Math.random() * ECONOMIC_EVENTS.length)];
+    const durationDays = ECONOMIC_EVENT_MIN_DURATION_DAYS + Math.random() * (ECONOMIC_EVENT_MAX_DURATION_DAYS - ECONOMIC_EVENT_MIN_DURATION_DAYS);
+    economicEventTicksLeft = Math.round(durationDays * 24 * 60);
+    currentEconomicEvent = event;
+    addLog(`Economic event: ${event.label} begins — costs ${Math.round(event.costMultiplier*100)}%, fares ${Math.round(event.fareMultiplier*100)}%, demand ${Math.round(event.loadMultiplier*100)}% of baseline`, true);
+  }
+}
+
 // Each flight's revenue is rolled the moment it's scheduled (see rollRevenue,
 // assigned at route-assignment time), not after it lands. That's what lets
 // an AOG/crew hold erode the ACTUAL number this flight will collect, rather
 // than showing a separate abstract estimate.
+//
+// Revenue = seats x load factor x average fare per seat — replacing the
+// pre-this-session arbitrary revMin-revMax random range, which real-fare
+// math showed was calibrated roughly 2.4x too low for a 200-seat narrowbody
+// (see chat history for the comparison). Load factor and fare both carry a
+// small per-flight random spread (so identical aircraft type + identical
+// conditions doesn't mean identical revenue every time), then get modulated
+// by whatever economic event is currently active.
 function rollRevenue(type) {
-  return type.revMin + Math.round(Math.random() * (type.revMax - type.revMin));
+  const avgFare = AVG_FARE_PER_SEAT_BY_BODYTYPE[type.bodyType] || AVG_FARE_PER_SEAT_BY_BODYTYPE.narrowbody;
+  const farePerSeat = avgFare * currentEconomicEvent.fareMultiplier * (0.9 + Math.random() * 0.2); // +/-10% per-flight spread
+  const loadFactor = Math.min(1, BASE_LOAD_FACTOR * currentEconomicEvent.loadMultiplier * (0.95 + Math.random() * 0.1)); // +/-5% per-flight spread, capped at 100%
+  return Math.round(type.seats * loadFactor * farePerSeat);
 }
 
 // Airport network — the definitive top-25 U.S. list by landing/gate fee
@@ -491,6 +724,35 @@ const AIRPORTS = [
   { code: "BWI", lat: 39.1774, lon: -76.6684,  landingFeePerKlb: 4.65,  gateFeeNarrowbody: 400,  gateFeeWidebody: 750,  groundStopsPerMonth: 2.4,  groundStop: false, groundStopTicksLeft: 0 },
   { code: "SAN", lat: 32.7338, lon: -117.1933, landingFeePerKlb: 4.85,  gateFeeNarrowbody: 420,  gateFeeWidebody: 850,  groundStopsPerMonth: 0.2,  groundStop: false, groundStopTicksLeft: 0 },
   { code: "IAD", lat: 38.9531, lon: -77.4565,  landingFeePerKlb: 3.98,  gateFeeNarrowbody: 380,  gateFeeWidebody: 800,  groundStopsPerMonth: 1.4,  groundStop: false, groundStopTicksLeft: 0 },
+  // Ranks 26-50 batch. BWI/FLL excluded here — already present above,
+  // duplicated in this source list with CONFLICTING ground-stop numbers
+  // (BWI 2.4 vs 3.8, FLL 3.8 vs 3.4) — kept the original live values, see
+  // chat history. ANC and HNL excluded entirely — both are non-continental
+  // (Alaska/Hawaii), and the map's projection bounds are currently locked
+  // to continental US. Designer is planning an eventual global map; adding
+  // an AK/HI-only patch now would likely be throwaway work ahead of that
+  // — see CLAUDE.md "Open" for the real conversation, not yet decided.
+  { code: "MDW", lat: 41.7868, lon: -87.7522,  landingFeePerKlb: 3.45, gateFeeNarrowbody: 310, gateFeeWidebody: 310,  groundStopsPerMonth: 5.4, groundStop: false, groundStopTicksLeft: 0 }, // widebody N/A (real constraint: short runways, narrowbody-only airport) — floored to narrowbody rate
+  { code: "AUS", lat: 30.1975, lon: -97.6664,  landingFeePerKlb: 6.07, gateFeeNarrowbody: 250, gateFeeWidebody: 500,  groundStopsPerMonth: 1.2, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "DAL", lat: 32.8471, lon: -96.8518,  landingFeePerKlb: 4.50, gateFeeNarrowbody: 280, gateFeeWidebody: 280,  groundStopsPerMonth: 1.9, groundStop: false, groundStopTicksLeft: 0 }, // widebody N/A (gates leased, real operational constraint) — floored to narrowbody rate; landing fee is the signatory ("Sig") rate, non-signatory quoted higher at $7.57
+  { code: "PDX", lat: 45.5898, lon: -122.5951, landingFeePerKlb: 2.95, gateFeeNarrowbody: 260, gateFeeWidebody: 480,  groundStopsPerMonth: 0.6, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "TPA", lat: 27.9755, lon: -82.5332,  landingFeePerKlb: 2.25, gateFeeNarrowbody: 220, gateFeeWidebody: 450,  groundStopsPerMonth: 2.8, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "STL", lat: 38.7487, lon: -90.3700,  landingFeePerKlb: 5.00, gateFeeNarrowbody: 200, gateFeeWidebody: 400,  groundStopsPerMonth: 1.5, groundStop: false, groundStopTicksLeft: 0 }, // landing fee listed "$5.00+ (Non-Sig)" — floored at $5.00, same open-ended-figure treatment as LGA
+  { code: "HOU", lat: 29.6454, lon: -95.2789,  landingFeePerKlb: 2.28, gateFeeNarrowbody: 96,  gateFeeWidebody: 137,  groundStopsPerMonth: 2.6, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "RDU", lat: 35.8776, lon: -78.7875,  landingFeePerKlb: 2.50, gateFeeNarrowbody: 240, gateFeeWidebody: 450,  groundStopsPerMonth: 1.1, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "SMF", lat: 38.6954, lon: -121.5908, landingFeePerKlb: 4.70, gateFeeNarrowbody: 961, gateFeeWidebody: 1861, groundStopsPerMonth: 0.5, groundStop: false, groundStopTicksLeft: 0 }, // real fee is base+per-seat ($61 + $6/seat), NOT flat — approximated here using representative seat counts (150 narrowbody / 300 widebody); this is notably higher than peer airports and worth a designer sanity check, see chat history
+  { code: "SJC", lat: 37.3626, lon: -121.9291, landingFeePerKlb: 6.80, gateFeeNarrowbody: 420, gateFeeWidebody: 750,  groundStopsPerMonth: 0.3, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "MCI", lat: 39.2976, lon: -94.7139,  landingFeePerKlb: 3.67, gateFeeNarrowbody: 210, gateFeeWidebody: 450,  groundStopsPerMonth: 1.4, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "SNA", lat: 33.6757, lon: -117.8682, landingFeePerKlb: 3.56, gateFeeNarrowbody: 450, gateFeeWidebody: 450,  groundStopsPerMonth: 0.2, groundStop: false, groundStopTicksLeft: 0 }, // widebody N/A (real constraint: noise-curfew gate limits) — floored to narrowbody rate
+  { code: "IND", lat: 39.7173, lon: -86.2944,  landingFeePerKlb: 1.95, gateFeeNarrowbody: 190, gateFeeWidebody: 380,  groundStopsPerMonth: 1.1, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "CVG", lat: 39.0488, lon: -84.6678,  landingFeePerKlb: 2.40, gateFeeNarrowbody: 260, gateFeeWidebody: 500,  groundStopsPerMonth: 1.6, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "PIT", lat: 40.4915, lon: -80.2329,  landingFeePerKlb: 3.15, gateFeeNarrowbody: 220, gateFeeWidebody: 450,  groundStopsPerMonth: 1.4, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "CMH", lat: 39.9980, lon: -82.8919,  landingFeePerKlb: 5.54, gateFeeNarrowbody: 180, gateFeeWidebody: 350,  groundStopsPerMonth: 0.9, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "MSY", lat: 29.9934, lon: -90.2580,  landingFeePerKlb: 2.35, gateFeeNarrowbody: 280, gateFeeWidebody: 500,  groundStopsPerMonth: 2.1, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "CLE", lat: 41.4117, lon: -81.8498,  landingFeePerKlb: 2.70, gateFeeNarrowbody: 210, gateFeeWidebody: 400,  groundStopsPerMonth: 2.9, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "RSW", lat: 26.5362, lon: -81.7552,  landingFeePerKlb: 2.85, gateFeeNarrowbody: 230, gateFeeWidebody: 450,  groundStopsPerMonth: 1.4, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "OAK", lat: 37.7213, lon: -122.2207, landingFeePerKlb: 5.52, gateFeeNarrowbody: 936, gateFeeWidebody: 1170, groundStopsPerMonth: 0.6, groundStop: false, groundStopTicksLeft: 0 }, // genuinely high relative to peer airports at this rank — trusting the sourced data, flagged for awareness not corrected
+  { code: "SAT", lat: 29.5337, lon: -98.4698,  landingFeePerKlb: 3.50, gateFeeNarrowbody: 200, gateFeeWidebody: 400,  groundStopsPerMonth: 0.8, groundStop: false, groundStopTicksLeft: 0 },
 ];
 
 // ---------- GEOGRAPHIC PROJECTION ----------
@@ -671,6 +933,7 @@ function tickCrewPool() {
 
 let totalFeesPaid = 0;
 let totalRevenue = 0;
+let totalOperatingCost = 0;
 
 // ---------- PLAYER DECISIONS ----------
 // The sim never stops for these — only the specific aircraft involved
@@ -754,11 +1017,12 @@ function renderDecisions() {
     const revText = rev < 0
       ? `$${Math.abs(rev).toLocaleString()} net loss on this flight`
       : `$${rev.toLocaleString()} projected revenue remaining`;
+    const effectiveHoldCost = Math.round(d.ac.type.holdCostPerTick * currentEconomicEvent.costMultiplier);
     return `<div class="decision-card">
       <div class="decision-info">
         <b>${d.ac.tail}</b> · ${d.ac.type.name} · ${cfg.label} · ${d.ac.origin.code}<br>
         <span class="${revClass}">${revText}</span>
-        <span class="decision-subnote">— eroding $${d.ac.type.holdCostPerTick.toLocaleString()}/min while grounded</span>
+        <span class="decision-subnote">— eroding $${effectiveHoldCost.toLocaleString()}/min while grounded${currentEconomicEvent !== NORMAL_CONDITIONS ? ` (${currentEconomicEvent.label})` : ''}</span>
       </div>
       <div class="decision-actions">
         ${cfg.options.map((o,i) => {
@@ -889,6 +1153,25 @@ function updateQuarterSpeedButton() {
   btn.classList.toggle('exhausted', quarterSpeedUsesRemaining <= 0);
 }
 
+// Shared by both the actual TURNAROUND settlement AND the aircraft hover
+// tooltip's "projected" leg economics — same formulas, one place, so the
+// two can't quietly drift apart the way separate copies eventually do.
+// Landing fee is weight-based (real signatory rate × this type's max
+// landing weight); gate fee is tiered by bodyType (real per-turn rate);
+// operating cost is real per-bodyType stage length × this type's
+// per-minute rate × whatever economic event is active. All three are
+// knowable as soon as an aircraft has a destination assigned — they don't
+// depend on the flight having actually landed yet, which is what makes
+// showing them as a live "projected" tooltip value valid.
+function computeLegEconomics(ac) {
+  const landingFee = Math.round(ac.dest.landingFeePerKlb * (ac.type.mlwLbs / 1000));
+  const gateFee = WIDEBODY_BODY_TYPES.has(ac.type.bodyType) ? ac.dest.gateFeeWidebody : ac.dest.gateFeeNarrowbody;
+  const operatingCost = Math.round((OPERATING_COST_BLOCK_MINUTES_BY_BODYTYPE[ac.type.bodyType] || OPERATING_COST_BLOCK_MINUTES_BY_BODYTYPE.narrowbody) * ac.type.holdCostPerTick * currentEconomicEvent.costMultiplier);
+  const revenue = ac.projectedRevenue;
+  const net = revenue - landingFee - gateFee - operatingCost;
+  return { landingFee, gateFee, operatingCost, revenue, net };
+}
+
 // ---------- STATE MACHINE (per aircraft) ----------
 function advanceAircraft(ac) {
   // a scheduled "standard repair" (player-chosen) completes on its own timer
@@ -912,7 +1195,7 @@ function advanceAircraft(ac) {
         pushDecision(ac, 'AOG');
         ac.holdLogged = true;
       }
-      ac.projectedRevenue -= ac.type.holdCostPerTick; // the booked aircraft is still costing money while it sits, at this type's rate
+      ac.projectedRevenue -= Math.round(ac.type.holdCostPerTick * currentEconomicEvent.costMultiplier); // the booked aircraft is still costing money while it sits, at this type's rate — scaled by any active economic event (e.g. an oil spike makes every AOG hold hurt more)
       return;
     }
     // about to board — must have a crew assigned first
@@ -931,7 +1214,7 @@ function advanceAircraft(ac) {
           pushDecision(ac, 'CREW');
           ac.holdLogged = true;
         }
-        ac.projectedRevenue -= ac.type.holdCostPerTick;
+        ac.projectedRevenue -= Math.round(ac.type.holdCostPerTick * currentEconomicEvent.costMultiplier);
         return; // don't advance stateTick further, keep retrying each tick
       }
     }
@@ -990,15 +1273,15 @@ function advanceAircraft(ac) {
     const newState = STATE_ORDER[ac.stateIndex];
 
     if (newState === "TURNAROUND") {
-      // charge landing + gate fees, collect this flight's revenue —
-      // which may have been eaten into by an AOG/crew hold along the way.
-      // Landing fee is weight-based (real signatory rate × this type's max
-      // landing weight); gate fee is tiered by bodyType (real per-turn rate).
-      const landingFee = Math.round(ac.dest.landingFeePerKlb * (ac.type.mlwLbs / 1000));
-      const gateFee = ac.type.bodyType === 'widebody' ? ac.dest.gateFeeWidebody : ac.dest.gateFeeNarrowbody;
-      const fee = landingFee + gateFee;
-      const revenue = ac.projectedRevenue;
+      // charge landing + gate fees, real per-flight operating cost, and
+      // collect this flight's revenue — which may have been eaten into by
+      // an AOG/crew hold along the way. See computeLegEconomics() above for
+      // the actual formulas — this just settles the running totals.
+      const econ = computeLegEconomics(ac);
+      const fee = econ.landingFee + econ.gateFee;
+      const revenue = econ.revenue;
       totalFeesPaid += fee;
+      totalOperatingCost += econ.operatingCost;
       totalRevenue += revenue;
 
       // release crew — send to rest if they've hit max duty, else back to their family's pool
@@ -1013,11 +1296,12 @@ function advanceAircraft(ac) {
       }
       ac.crewId = null;
 
-      if (Math.random() < 0.04 || revenue < 0) {
-        const revenueText = revenue < 0
-          ? `NET LOSS of $${Math.abs(revenue).toLocaleString()} (hold costs exceeded fare revenue)`
+      const netForFlight = econ.net;
+      if (Math.random() < 0.04 || netForFlight < 0) {
+        const revenueText = netForFlight < 0
+          ? `NET LOSS of $${Math.abs(netForFlight).toLocaleString()} (fees + operating cost exceeded fare revenue)`
           : `$${revenue.toLocaleString()} revenue`;
-        addLog(`${ac.tail} (${ac.type.name}): ${revenueText} on ${ac.origin.code}→${ac.dest.code}, $${fee.toLocaleString()} in fees at ${ac.dest.code}`, revenue < 0);
+        addLog(`${ac.tail} (${ac.type.name}): ${revenueText} on ${ac.origin.code}→${ac.dest.code}, $${fee.toLocaleString()} fees + $${operatingCost.toLocaleString()} operating cost at ${ac.dest.code}`, netForFlight < 0);
       }
     }
 
@@ -1053,6 +1337,7 @@ function advanceTick() {
   tickWeather();
   tickCrewPool();
   tickAOGOnset();
+  tickEconomicEvents();
   for (let i=0; i<fleet.length; i++) {
     advanceAircraft(fleet[i]);
   }
@@ -1110,8 +1395,23 @@ function updateStatusStrip() {
   }).join('  ');
   document.getElementById('crewStatus').textContent = crewLines;
   document.getElementById('weatherStatus').textContent = groundStops;
-  document.getElementById('netFinancial').textContent =
-    `$${totalRevenue.toLocaleString()} rev — $${totalFeesPaid.toLocaleString()} fees = $${(totalRevenue-totalFeesPaid).toLocaleString()} net`;
+  const econEl = document.getElementById('economicStatus');
+  if (currentEconomicEvent === NORMAL_CONDITIONS) {
+    econEl.textContent = 'Normal';
+    econEl.style.color = '';
+  } else {
+    const daysLeft = Math.ceil(economicEventTicksLeft / (24*60));
+    econEl.textContent = `${currentEconomicEvent.label} — costs ${Math.round(currentEconomicEvent.costMultiplier*100)}%, fares ${Math.round(currentEconomicEvent.fareMultiplier*100)}%, demand ${Math.round(currentEconomicEvent.loadMultiplier*100)}% (~${daysLeft}d left)`;
+    econEl.style.color = currentEconomicEvent.costMultiplier > 1 || currentEconomicEvent.fareMultiplier < 1 ? 'var(--red)' : 'var(--scope-green)';
+  }
+  const netRevenue = totalRevenue - totalFeesPaid - totalOperatingCost;
+  document.getElementById('finRevenue').textContent = `$${totalRevenue.toLocaleString()}`;
+  document.getElementById('finOpCost').textContent = `$${totalOperatingCost.toLocaleString()}`;
+  document.getElementById('finFees').textContent = `$${totalFeesPaid.toLocaleString()}`;
+  const finNetEl = document.getElementById('finNet');
+  finNetEl.textContent = `${netRevenue < 0 ? '-' : ''}$${Math.abs(netRevenue).toLocaleString()}`;
+  finNetEl.classList.toggle('positive', netRevenue >= 0);
+  finNetEl.classList.toggle('negative', netRevenue < 0);
 }
 
 // ---------- POSITION ----------
@@ -1311,6 +1611,77 @@ function drawAirport(ap) {
   ctx.fillText(ap.code, labelX, labelY);
 }
 
+// Real vector icon data pulled directly from Figma (node 27:39,
+// "Widebody 4 Engine") — actual path geometry, not a raster trace. Path is
+// in the icon's native viewBox coordinate space (151x150, origin top-left),
+// NOT pre-centered or pre-scaled — that happens once below when building
+// AIRCRAFT_ICON_PATHS. Fill color in the raw SVG (#090909) is discarded;
+// drawAircraft() always overrides fillStyle with the live state color
+// (held/flying/ground) — that's the whole point of pulling real paths
+// instead of a flattened image, see chat history on why the raster export
+// couldn't support this.
+// All 4 icon tiers now have real data (widebody4Engine, widebody2Engine,
+// narrowbody, regionalJet). Two are LIVE right now — narrowbody (used by
+// A321neo/737-900/MAX8/MAX9) and, as of this pass, nothing else, since
+// regionalJet/widebody4Engine/widebody2Engine have no aircraft type
+// pointing at them yet. That's still blocked on the fleet-expansion
+// decision in CLAUDE.md (crew-pooling granularity + the E-Jets variant
+// conflict) — this file has the complete icon set ready for whenever
+// that's resolved, but resolving it is a separate step, not implied by
+// having all 4 icons in hand.
+const AIRCRAFT_ICONS = {
+  widebody4Engine: {
+    path: "M94.0852 52.5557C97.2051 52.3551 97.2051 50.9064 97.2051 48.2987L97.2051 47.1843C97.2051 43.997 97.0045 42.8826 92.8819 42.8826L87.3999 42.8826L93.7064 52.578L94.0852 52.578L94.0852 52.5557Z M92.9043 107.095C97.0047 107.095 97.2275 105.981 97.2275 102.793L97.2275 101.679C97.2275 99.0713 97.2275 97.6226 94.1077 97.422L93.7289 97.422L87.4223 107.095L92.9043 107.095Z M81.0264 30.5126C85.1268 30.5126 85.3496 29.3982 85.3496 26.211L85.3496 25.0966C85.3496 21.9093 85.1491 20.7949 81.0264 20.7949L73.0263 20.7949L79.3328 30.4903L81.0264 30.4903L81.0264 30.5126Z M81.0264 129.183C85.1268 129.183 85.3496 128.068 85.3496 124.881L85.3496 123.767C85.3496 120.58 85.1491 119.465 81.0264 119.465L79.3328 119.465L73.0263 129.16L81.0264 129.16L81.0264 129.183Z M51.0095 1.80535L51.0095 1.87222L64.5585 62.474L96.626 62.474L57.3829 2.16197C56.8704 0.846959 55.8453 4.81784e-06 54.7311 4.76913e-06L53.9734 4.73602e-06C52.8592 4.68731e-06 52.0569 0.133734 51.5889 0.423482C51.1878 0.668652 51.0095 1.09213 51.0095 1.80535Z M51.0095 148.083L51.0095 148.195C51.0095 149.554 51.7449 150 53.9957 150L54.7533 150C55.8453 150 56.8927 149.153 57.3606 147.905L96.626 87.526L64.5585 87.526L51.0095 147.905L51.0095 148.083Z M16.9588 58.3952C13.0144 54.2273 9.29288 50.26 6.57417 46.9613C5.03654 45.0891 3.32062 44.2867 0.891608 44.2867L0.0670747 44.2867L5.74964 67.2214L6.41818 66.9762C11.4991 65.0594 17.2485 63.8336 20.2346 63.2763L21.3711 63.0757L20.5911 62.2288C19.4101 60.9584 18.1844 59.6656 16.981 58.3952L16.9588 58.3952Z M5.72718 82.7563L0.066902 105.691L0.891435 105.691C3.40959 105.602 5.05865 104.844 6.574 103.016C9.29271 99.7177 13.0142 95.7726 16.9586 91.5824L17.7385 90.7578C18.6745 89.7548 19.6327 88.7518 20.5687 87.7489L21.3486 86.9019L20.2121 86.7013C17.226 86.1441 11.4766 84.9405 6.39572 83.0015L5.72718 82.7563Z M6.97509 70.0074C6.26198 70.2971 5.61573 70.5869 4.99177 70.8766C4.27866 71.211 3.61011 71.5453 3.03071 71.8573C0.401145 73.2615 0.0222993 73.997 0.0222992 74.6434L0.0222992 75.4234C0.0222992 75.9584 0.356573 76.6716 3.03071 78.1203C3.61011 78.4324 4.27866 78.7667 4.99177 79.101C5.61573 79.3908 6.26198 79.6805 6.97509 79.9703C12.5685 82.3105 18.6745 83.9821 23.2874 84.4279C24.2902 84.5171 25.0478 84.5616 25.7387 84.5616L135.312 84.5616C138.721 84.5616 151 80.0371 151 75.3566L151 75.2006L151 74.7325C151 70.052 138.721 65.416 135.312 65.416L25.7387 65.416C25.0701 65.416 24.3124 65.4606 23.2874 65.5497C18.6522 65.9955 12.5685 67.6671 6.97509 70.0074Z",
+    viewBoxWidth: 151,
+    viewBoxHeight: 150,
+    targetLength: 15 // biggest tier — real 4-engine jumbos (747/A380) are
+                      // the largest aircraft in the icon set
+  },
+  widebody2Engine: {
+    path: "M100.933 48.0781C102.001 48.0781 105.237 48.0781 105.237 41.7023C105.237 35.3264 102.001 35.3264 100.933 35.3264L92.1704 35.3264L99.4977 48.0781L100.902 48.0781L100.933 48.0781Z M100.933 114.643C102.001 114.643 105.237 114.643 105.237 108.267C105.237 101.891 102.001 101.891 100.933 101.891L99.5282 101.891L92.201 114.643L100.933 114.643Z M62.0371 148.505C62.0371 149.817 63.6858 150 65.4565 150L66.3113 150C67.6241 150 68.8453 149.207 69.3949 148.078L104.382 87.2788L71.1046 87.2788L62.0066 148.414L62.0066 148.505L62.0371 148.505Z M62.0369 1.49482L62.0369 1.55583L71.0432 62.1721L71.1348 62.7517L104.413 62.7517L69.5167 2.13545C68.8756 0.793172 67.6849 5.51954e-06 66.3111 5.45949e-06L65.4562 5.42212e-06C64.1129 5.3634e-06 63.1665 0.152537 62.6169 0.427095C62.0979 0.671146 62.0063 1.00672 62.0063 1.49482L62.0369 1.49482Z M5.80048 39.0177L5.6173 39.0177L5.6173 38.4076L2.80853 38.4076L2.80853 39.0787L2.80853 39.7499L4.42663 39.7499L8.91454 67.9683L9.61673 67.7853C14.6847 66.5345 21.096 65.4363 28.7286 64.4601L29.8276 64.3075L29.1865 63.3924C24.2406 56.4674 19.1116 49.2984 13.5551 42.587C11.4791 40.0549 9.15878 38.9872 5.86154 38.9872L5.80048 39.0177Z M8.85351 82.0317L4.274 110.921L5.8005 110.982C9.09775 110.982 11.418 109.915 13.4941 107.383C19.02 100.671 24.1491 93.5021 29.1255 86.5772L29.7666 85.662L28.6675 85.5095C21.035 84.5638 14.6237 83.435 9.55571 82.1843L8.85351 82.0012L8.85351 82.0317Z M33.9494 66.9615L31.446 67.2666C23.2944 68.3343 15.4787 69.6461 9.92226 70.8664L7.75463 71.385C7.29668 71.507 6.8082 71.629 6.38077 71.7205L5.587 71.9341C2.93087 72.6967 1.25173 73.3984 0.42742 74.0695L0.0305238 74.4051L0.305289 74.9542L0.0305237 75.5033L0.42742 75.8389C1.28226 76.51 2.9614 77.2117 5.587 77.9744C5.86176 78.0659 6.10601 78.1269 6.38077 78.2184C6.8082 78.3404 7.29668 78.4625 7.75463 78.554L9.92226 79.0726C15.4787 80.3233 23.2944 81.6351 31.446 82.6723L33.9494 82.9774C34.8348 83.0994 35.6591 83.191 36.4834 83.2825C41.2156 83.8316 44.9708 84.1367 46.8026 84.1367L146.483 84.1367C151.276 84.1367 163 79.5302 163 75.3813L163 75.1983L163 74.6187C163 70.4088 151.429 65.7718 146.483 65.7718L46.8026 65.7718C44.9708 65.7718 41.2156 66.0769 36.4834 66.626C35.6591 66.7175 34.8348 66.809 33.9494 66.931L33.9494 66.9615Z",
+    viewBoxWidth: 163,
+    viewBoxHeight: 150,
+    targetLength: 13 // mid tier — bigger than narrowbody, smaller than
+                      // 4-engine jumbos, still above the current widebody
+                      // fallback triangle's ~12.3px so ordering holds
+                      // whenever this tier actually gets wired to a type
+  },
+  narrowbody: {
+    path: "M67.4944 32.0521C68.209 32.0521 70.3731 32.0521 70.3731 27.8015C70.3731 23.5509 68.209 23.5509 67.4944 23.5509L61.6351 23.5509L66.5349 32.0521L67.474 32.0521L67.4944 32.0521Z M67.4944 76.4287C68.209 76.4287 70.3731 76.4287 70.3731 72.1782C70.3731 67.9276 68.209 67.9276 67.4944 67.9276L66.5553 67.9276L61.6555 76.4287L67.4944 76.4287Z M41.485 99.0035C41.485 99.878 42.5875 100 43.7716 100L44.3432 100C45.2211 100 46.0378 99.4712 46.4052 98.7187L69.8018 58.1859L47.5485 58.1859L41.4646 98.9425L41.4646 99.0035L41.485 99.0035Z M41.4851 0.996546L41.4851 1.03722L47.5078 41.448L47.569 41.8345L69.8223 41.8345L46.487 1.42364C46.0583 0.528781 45.2621 3.69098e-06 44.3433 3.65082e-06L43.7717 3.62583e-06C42.8734 3.58657e-06 42.2405 0.101692 41.873 0.28473C41.526 0.447431 41.4647 0.671145 41.4647 0.996546L41.4851 0.996546Z M3.87905 26.0118L3.75656 26.0118L3.75656 25.605L1.8783 25.605L1.8783 26.0525L1.8783 26.4999L2.96034 26.4999L5.96146 45.3122L6.43102 45.1902C9.82005 44.3563 14.1074 43.6242 19.2113 42.9734L19.9463 42.8717L19.5176 42.2615C16.2102 37.6449 12.7803 32.8656 9.06466 28.3913C7.67639 26.7033 6.12479 25.9915 3.91988 25.9915L3.87905 26.0118Z M5.92044 54.6878L2.85807 73.9475L3.87886 73.9882C6.08377 73.9882 7.63537 73.2764 9.02365 71.5884C12.7189 67.1141 16.1488 62.3348 19.4765 57.7181L19.9053 57.108L19.1703 57.0063C14.0664 56.3758 9.77904 55.6234 6.39001 54.7895L5.92044 54.6675L5.92044 54.6878Z M22.7024 44.641L21.0283 44.8444C15.5773 45.5562 10.3508 46.4307 6.63514 47.2443L5.18562 47.59C4.87938 47.6713 4.55272 47.7527 4.2669 47.8137L3.73609 47.9561C1.95991 48.4645 0.837048 48.9323 0.285824 49.3797L0.0204127 49.6034L0.204151 49.9695L0.0204127 50.3356L0.285824 50.5593C0.857464 51.0067 1.98033 51.4745 3.73609 51.9829C3.91983 52.0439 4.08316 52.0846 4.2669 52.1456C4.55272 52.227 4.87938 52.3083 5.18562 52.3693L6.63514 52.7151C10.3508 53.5489 15.5773 54.4234 21.0283 55.1149L22.7024 55.3183C23.2944 55.3996 23.8457 55.4606 24.3969 55.5217C27.5613 55.8877 30.0725 56.0911 31.2974 56.0911L97.9551 56.0911C101.16 56.0911 109 53.0201 109 50.2542L109 50.1322L109 49.7458C109 46.9392 101.262 43.8479 97.9551 43.8479L31.2974 43.8479C30.0725 43.8479 27.5613 44.0512 24.3969 44.4173C23.8457 44.4783 23.2944 44.5394 22.7024 44.6207L22.7024 44.641Z",
+    viewBoxWidth: 109,
+    viewBoxHeight: 100,
+    targetLength: 9.5 // must stay BELOW the widebody fallback triangle's
+                       // effective length (8.5 * 1.45 ≈ 12.3px) or the
+                       // real size hierarchy inverts — narrowbody types are
+                       // live right now, widebody4/2Engine are not yet
+  },
+  regionalJet: {
+    path: "M34.2016 33.3231L51.1904 33.3231L30.3969 1.14696C30.1324 0.450591 29.5831 2.55242e-06 28.9931 2.52663e-06L28.5862 2.50885e-06C27.9961 2.48306e-06 27.5689 0.0819277 27.3247 0.225297C27.1213 0.348185 27.0195 0.573479 27.0195 0.962624L27.0195 1.00359L34.1406 33.0568L34.2016 33.3231Z M27.0195 78.9759L27.0195 79.0374C27.0195 79.7747 27.4061 80 28.6065 80L29.0134 80C29.6035 80 30.1528 79.5494 30.3969 78.8735L50.8649 47.1889L51.1904 46.6769L34.2016 46.6769L27.0195 78.8735L27.0195 78.9555L27.0195 78.9759Z M3.01122 44.1372L3.44328e-05 56.3646L0.447646 56.3646C1.79047 56.3236 2.66535 55.914 3.45884 54.9309C4.92374 53.1285 6.97867 50.9575 8.97257 48.8274L9.0336 48.766C9.64398 48.1106 10.2747 47.4552 10.8851 46.7793L11.292 46.3287L10.702 46.2263C9.13533 45.9396 6.08345 45.2842 3.37745 44.2601L3.03157 44.1167L3.01122 44.1372Z M8.97272 31.1521C6.8771 28.9196 4.90355 26.81 3.47934 25.0691C2.6655 24.0655 1.77028 23.6559 0.468146 23.6559L0.0205342 23.6559L3.03172 35.8833L3.37761 35.7399C6.06326 34.7158 9.11514 34.0604 10.7021 33.7737L11.3125 33.6508L10.8852 33.2002C10.2545 32.5243 9.60345 31.828 8.97272 31.1521Z M3.68261 37.3374C3.31638 37.5013 2.9705 37.6446 2.64496 37.8085C2.25839 37.9928 1.91252 38.1567 1.60733 38.3205C0.203464 39.0988 0.0203433 39.488 0.0203432 39.8157L0.0203432 40.2253C0.0203432 40.512 0.203464 40.9012 1.60733 41.659C1.91252 41.8228 2.25839 42.0072 2.64496 42.171C2.9705 42.3144 3.31638 42.4782 3.70295 42.6421C6.67345 43.8914 9.8881 44.7721 12.3499 45.0179C12.8789 45.0589 13.2859 45.0998 13.6521 45.0998L71.6785 45.0998C73.4893 45.0998 80 42.6831 80 40.1843L80 40.1024L80 39.8566C80 37.3579 73.4893 34.8797 71.6785 34.8797L13.6114 34.8797C13.2452 34.8797 12.8383 34.9001 12.3093 34.9616C9.84741 35.2074 6.61241 36.0881 3.66226 37.3374L3.68261 37.3374Z M22.1772 34.1014C24.2728 34.1014 24.3745 33.5279 24.3745 31.9099L24.3745 31.3364C24.3745 29.6979 24.2728 29.1449 22.1772 29.1449L15.1375 29.9027L15.2189 33.8351L21.3226 34.1014L22.1772 34.1014Z M22.1772 45.9396C24.2728 45.9396 24.3745 46.5131 24.3745 48.1311L24.3745 48.7046C24.3745 50.3431 24.2728 50.8961 22.1772 50.8961L15.1375 50.1382L15.2189 46.2058L21.3226 45.9396L22.1772 45.9396Z",
+    viewBoxWidth: 80,
+    viewBoxHeight: 80,
+    targetLength: 7.5 // smallest tier — regional jets are physically
+                       // smaller than mainline narrowbodies, must sit
+                       // below narrowbody's 9.5px
+  }
+};
+
+// Precomputed once at load, not per-frame: a Path2D per icon plus the
+// centering/scale transform needed to render it pivoting around the
+// aircraft's actual position, nose aligned with heading. Each icon's
+// targetLength (set per-icon above) drives the scale — NOT a shared
+// constant — so the real narrowbody < widebody2 < widebody4 size
+// hierarchy holds even though the icons have different native viewBox
+// dimensions.
+const AIRCRAFT_ICON_PATHS = {};
+for (const [key, def] of Object.entries(AIRCRAFT_ICONS)) {
+  AIRCRAFT_ICON_PATHS[key] = {
+    path2d: new Path2D(def.path),
+    centerX: def.viewBoxWidth / 2,
+    centerY: def.viewBoxHeight / 2,
+    scale: def.targetLength / def.viewBoxWidth
+  };
+}
+
 function drawAircraft(pos, holdReason, bodyType) {
   ctx.save();
   ctx.translate(pos.x, pos.y);
@@ -1320,18 +1691,26 @@ function drawAircraft(pos, holdReason, bodyType) {
   ctx.shadowColor = isHeld ? "#ff5c5c" : "#37ffb0";
   ctx.shadowBlur = isHeld ? 7 : (pos.alt > 0 ? 5 : 2);
 
-  // widebodies render slightly larger, so type is visible on the scope at
-  // a glance, not just in text — same bodyType field that drives gate fees
-  const scale = bodyType === 'widebody' ? 1.45 : 1.0;
-
   ctx.fillStyle = isHeld ? "#ff5c5c" : (pos.alt > 0.5 ? "#37ffb0" : "#ffb347");
-  ctx.beginPath();
-  ctx.moveTo(5*scale,0);
-  ctx.lineTo(-3.5*scale,-3*scale);
-  ctx.lineTo(-1.5*scale,0);
-  ctx.lineTo(-3.5*scale,3*scale);
-  ctx.closePath();
-  ctx.fill();
+
+  const realIcon = AIRCRAFT_ICON_PATHS[bodyType];
+  if (realIcon) {
+    // real Figma-sourced vector icon, recentered/scaled into canvas space
+    ctx.scale(realIcon.scale, realIcon.scale);
+    ctx.translate(-realIcon.centerX, -realIcon.centerY);
+    ctx.fill(realIcon.path2d);
+  } else {
+    // fallback triangle — used by every current bodyType ('narrowbody',
+    // 'widebody'), since neither has real icon data wired in yet
+    const scale = bodyType === 'widebody' ? 1.45 : 1.0;
+    ctx.beginPath();
+    ctx.moveTo(5*scale,0);
+    ctx.lineTo(-3.5*scale,-3*scale);
+    ctx.lineTo(-1.5*scale,0);
+    ctx.lineTo(-3.5*scale,3*scale);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   ctx.restore();
 }
@@ -1379,7 +1758,8 @@ function loop(timestamp) {
 }
 
 // ---------- HOVER TOOLTIP ----------
-const tooltipEl = document.getElementById('aircraftTooltip');
+const tooltipEl = document.getElementById('aircraftTooltip'); // shared by aircraft AND airport hover — name is a leftover from before airport tooltips existed, not worth a rename-everywhere right now
+let hoveredAirport = null;
 
 canvas.addEventListener('mousemove', (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -1399,21 +1779,74 @@ canvas.addEventListener('mousemove', (e) => {
     if (dist < closestDist) { closestDist = dist; closestAc = entry.ac; }
   }
   hoveredAircraft = closestAc;
+
+  // airport hover is a fallback only — when an aircraft is parked/boarding/
+  // turning around, it renders at the airport's exact x/y, so aircraft
+  // hover intentionally takes priority over airport hover at that position
+  hoveredAirport = null;
+  if (!closestAc) {
+    let closestApDist = 16; // slightly larger than aircraft radius — airport dots render at radius 12
+    for (const ap of AIRPORTS) {
+      const dx = ap.x - mx, dy = ap.y - my;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < closestApDist) { closestApDist = dist; hoveredAirport = ap; }
+    }
+  }
+
   updateTooltip(e, rect);
 });
 
 canvas.addEventListener('mouseleave', () => {
   hoveredAircraft = null;
+  hoveredAirport = null;
   tooltipEl.style.display = 'none';
 });
 
+// Live status for an airport hover: ground-stop state (with time remaining
+// if active) plus current traffic — how many aircraft are on the ground
+// there right now vs inbound/holding/landing. "On the ground" = this is
+// their origin and they're in a ground-side state; "inbound" = this is
+// their destination and they're airborne-approach-side. An aircraft mid-
+// CRUISE toward this airport isn't counted as "inbound" yet — that's
+// deliberate, cruise is most of the flight and counting it would make
+// every airport look permanently busy.
+const GROUND_SIDE_STATES = new Set(['PARKED','BOARDING','TAXI_OUT','TURNAROUND']);
+const INBOUND_SIDE_STATES = new Set(['APPROACH','LANDING','TAXI_IN']);
+
+function getAirportLiveStatus(ap) {
+  let onGround = 0, inbound = 0;
+  for (const ac of fleet) {
+    const state = STATE_ORDER[ac.stateIndex];
+    if (ac.origin === ap && GROUND_SIDE_STATES.has(state)) onGround++;
+    if (ac.dest === ap && INBOUND_SIDE_STATES.has(state)) inbound++;
+  }
+
+  let groundStopText, groundStopClass;
+  if (ap.groundStop) {
+    const minsLeft = ap.groundStopTicksLeft; // 1 tick = 1 sim-minute
+    groundStopText = `ACTIVE — ~${minsLeft} min remaining`;
+    groundStopClass = 'tt-held';
+  } else {
+    groundStopText = 'clear';
+    groundStopClass = '';
+  }
+
+  return { onGround, inbound, groundStopText, groundStopClass };
+}
+
 function updateTooltip(e, canvasRect) {
-  if (!hoveredAircraft) {
+  if (hoveredAircraft) {
+    renderAircraftTooltip(hoveredAircraft);
+  } else if (hoveredAirport) {
+    renderAirportTooltip(hoveredAirport);
+  } else {
     tooltipEl.style.display = 'none';
     return;
   }
-  const ac = hoveredAircraft;
+  positionTooltip(e);
+}
 
+function renderAircraftTooltip(ac) {
   const crew = ac.crewId != null ? crewPoolsByFamily[ac.type.family].find(c => c.id === ac.crewId) : null;
   const crewHoursText = crew
     ? `${((MAX_DUTY_TICKS - crew.dutyTicks) / 60).toFixed(1)} hrs remaining`
@@ -1428,15 +1861,43 @@ function updateTooltip(e, canvasRect) {
     ? `<span class="tt-held">${stateLabel} — HELD (${ac.holdReason})</span>`
     : stateLabel;
 
+  // Full leg economics — same computeLegEconomics() used at actual
+  // TURNAROUND settlement, so this "projected" breakdown always matches
+  // what the flight will actually record when it lands, not a separate
+  // guess. Landing/gate fees and operating cost are knowable as soon as
+  // this aircraft has a destination assigned, regardless of whether it's
+  // landed yet.
+  const econ = computeLegEconomics(ac);
+  const netClass = econ.net < 0 ? 'tt-neg' : '';
+  const netText = econ.net < 0 ? `-$${Math.abs(econ.net).toLocaleString()}` : `$${econ.net.toLocaleString()}`;
+
   tooltipEl.innerHTML = `
     Tail: <b>${ac.tail}</b><br>
     Type: ${ac.type.name}<br>
     Status: ${statusText}<br>
     Crew legal hours: ${crewHoursText}<br>
     Revenue: <span class="${revClass}">${revText}</span><br>
+    Fees: $${(econ.landingFee + econ.gateFee).toLocaleString()}<br>
+    Operating cost: $${econ.operatingCost.toLocaleString()}<br>
+    <b>Net for this leg: <span class="${netClass}">${netText}</span></b><br>
     Route: ${ac.origin.code} → ${ac.dest.code}
   `;
+}
 
+function renderAirportTooltip(ap) {
+  const { onGround, inbound, groundStopText, groundStopClass } = getAirportLiveStatus(ap);
+
+  tooltipEl.innerHTML = `
+    Airport: <b>${ap.code}</b><br>
+    Ground stop: <span class="${groundStopClass}">${groundStopText}</span><br>
+    On ground: ${onGround} · Inbound/holding: ${inbound}<br>
+    Landing fee: $${ap.landingFeePerKlb.toFixed(2)}/1,000 lbs<br>
+    Gate fee: $${ap.gateFeeNarrowbody.toLocaleString()} narrowbody / $${ap.gateFeeWidebody.toLocaleString()} widebody<br>
+    Avg ground stops: ${ap.groundStopsPerMonth}/month
+  `;
+}
+
+function positionTooltip(e) {
   // position relative to the scope-wrap container, clamped so it doesn't run off the edge
   const wrapRect = canvas.parentElement.getBoundingClientRect();
   let left = e.clientX - wrapRect.left + 16;
