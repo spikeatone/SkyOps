@@ -7,13 +7,17 @@ suggest something that contradicts a "Decided" item below, stop and check
 whether there's a reason logged here before overriding it.
 
 This file has been substantially rewritten and updated multiple times
-across sessions — the fleet grew from 6 types to 31 (peaked briefly at 32
-before Sukhoi Superjet 100 was removed), the map went from an abstract
-scope grid to a real geographic projection with pan/zoom and actual U.S.
-airports (plus Alaska, Hawaii, and Canada for context), fees and revenue
-moved from placeholder numbers to real sourced data with a working
-economic-event system, and aircraft icons moved from a generic triangle to
-real Figma-sourced vector art. If you're picking this up cold, don't
+across sessions — the fleet peaked at 32 types then settled to 30 (two
+real-world-driven removals, Sukhoi Superjet 100 and Bombardier CRJ700, per
+designer direction to keep the fleet current with real deliveries and
+retirements — expect this number to keep moving), the map went from an
+abstract scope grid to a real geographic projection with pan/zoom and
+actual U.S. airports (plus Alaska, Hawaii, and Canada for context), fees
+and revenue moved from placeholder numbers to real sourced data with a
+working economic-event system, aircraft icons moved from a generic
+triangle to real Figma-sourced vector art, and a real (if partial) aircraft
+ownership economy now exists — cycle-based lifespan, selling, and buying,
+with a genuine spendable balance. If you're picking this up cold, don't
 assume the smaller original scope — read this whole file, not just skim
 it. If you're the one updating this file next, note that comments and
 counts elsewhere in this codebase have gone stale between updates more
@@ -82,14 +86,23 @@ one contradicts the design thesis.)
   chosen for zero-setup simplicity given the designer isn't a dev by
   background. Revisit if that becomes limiting.
 
-## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 31 / 13)
+## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 30 / 13)
 
-- **Fleet size**: 31 distinct playable aircraft types (was 32 — Sukhoi
-  Superjet 100 was removed per designer direction; see the "stale comment"
-  note near the end of this section for a real gotcha this surfaced). This
+- **Fleet size**: 30 distinct playable aircraft types. Running history:
+  32 (initial big expansion) -> 31 (Sukhoi Superjet 100 removed) -> 30
+  (Bombardier CRJ700 removed — aging out of most real fleets, nearing
+  retirement, per designer direction). `CRJ_FAMILY` stays real (CRJ900/1000
+  remain). See the "stale comment" note near the end of this section for a
+  real gotcha this kind of repeated change has already surfaced once. This
   is still a major expansion from the original locked 6 — the "locked"
   framing on the old 6-type list no longer applies; that constraint was
-  explicitly reopened by the designer this session.
+  explicitly reopened by the designer this session. **Designer has stated
+  an explicit ongoing intent to keep the fleet current with real-world
+  aircraft deliveries and retirements** — expect this number to keep
+  moving in both directions over time, not just grow. The architecture
+  already supports this cleanly for add/remove in almost every respect
+  (see the dedicated note on this later in this section) — only
+  `FAMILY_LABELS` requires hand-maintenance on change.
 - **Granularity principle**: each real named variant (A319, A320, A321,
   A319neo, A320neo, A321neo, etc.) is its own separate `AIRCRAFT_TYPES`
   entry with its own seats/cost/revenue/MLW — NOT one averaged entry per
@@ -176,12 +189,27 @@ one contradicts the design thesis.)
   widebody4Engine 17.3→19.9 — see Icons section below), per direct
   designer feedback that the original sizing felt too small. Relative
   hierarchy between tiers preserved, verified by script after the change.
-- **31-type fleet has NOT been visually playtested end-to-end.** Individual
+- **Every type now carries real `purchasePrice` and `expectedLifespanCycles`
+  fields**, added to support the cycle-based lifespan/sell/buy economy —
+  see the new "Decided — Fleet Lifecycle & Ownership Economy" section
+  below for the full mechanic and sourcing detail. Confidence on these two
+  fields specifically: `purchasePrice` is real (median of designer-sourced
+  published list price and estimated current market value, or a
+  discount-ratio extrapolation where only one figure existed — see that
+  section for the exact methodology and its known weak points).
+  `expectedLifespanCycles` is real FAA/manufacturer Design Service Goal
+  data for the well-established families (A320ceo/737/777/787/A340/CRJ),
+  extrapolated from CRJ's confirmed figure for regional-jet types lacking
+  a published DSG — same two-tier confidence pattern as everything else
+  real-data-sourced in this file.
+- **30-type fleet has NOT been visually playtested end-to-end.** Individual
   pieces were spot-checked (the 777/787 icon smoke test, the 4-engine
-  widebody icon, syntax/math verification on every weight and scale
-  calculation) but nobody has watched a full play session with all 31
-  types spawning together. Do this before treating the expansion as done,
-  not just implemented.
+  widebody icon, syntax/math verification on every weight/scale/price/
+  lifespan calculation) but nobody has watched a full play session with
+  the current fleet spawning together, including the newer sell/buy loop.
+  Do this before treating the expansion as done, not just implemented —
+  this note has been true and repeated at every fleet-size change so far;
+  don't let its repetition make it feel less urgent than it is.
 
 ## Decided — Fees (real data, replacing original flat placeholders)
 
@@ -313,15 +341,119 @@ one contradicts the design thesis.)
   without erroring) — don't skip that validation step if resurrecting
   this practice in a future session, a linter that silently passes
   everything is worse than no linter.
-- **Player-facing purchase economy (buying aircraft, paying to open
-  routes) is captured as design intent in `ROADMAP.md` Phase 5, NOT built
-  yet.** Real tension flagged there and worth repeating here since it's
-  easy to miss: real aircraft list prices run into the hundreds of
-  millions, while this sim's per-flight revenue is in the tens of
-  thousands — a future session must NOT import real purchase prices
-  directly the way fee/weight data has been imported everywhere else;
-  that number needs deliberate game-balance work against the revenue
-  scale already established, not a real-world lookup.
+- **Player-facing purchase economy — PARTIALLY built now, was "not built
+  yet" as of the last update to this file.** Buying and selling aircraft
+  is real (see the new "Decided — Fleet Lifecycle & Ownership Economy"
+  section immediately below for the full mechanic). Route-opening costs
+  and starting capital are still NOT built — see that section's Open
+  items. The real tension flagged here previously is still real and still
+  worth repeating: real aircraft list prices run into the hundreds of
+  millions, this sim's per-flight revenue is in the tens of thousands —
+  the purchase prices now in the game are NOT a naive real-price import,
+  they went through real designer-supplied market-value data and a
+  documented discount methodology (see below), but the deeper
+  game-balance question (does a player's revenue realistically support
+  buying anything without selling first, given there's still no starting
+  capital) has not been tested end-to-end.
+
+## Decided — Fleet Lifecycle & Ownership Economy (cycles, sell, buy)
+
+- **1 cycle = 1 completed flight (takeoff + landing)**, tracked per
+  aircraft as `cyclesAccrued`, incremented once per `TURNAROUND`. Every
+  type carries a real `expectedLifespanCycles` (see Fleet section above
+  for sourcing). Spawned (stress-test) aircraft start with a RANDOMIZED
+  cycle count (0-90% of expected lifespan) rather than 0 — same reasoning
+  as the existing crew-backfill pattern seeding partial duty hours on
+  spawn: a real fleet is mixed-age, not all brand-new, and starting
+  everyone at 0 would mean nobody approaches retirement without an
+  unreasonably long real-time play session. Aircraft bought through the
+  real purchase flow (see below) DO start at exactly 0 cycles — a genuine
+  new purchase hasn't flown for this airline yet, unlike a stress-test
+  spawn representing an existing mixed-age fleet.
+- **At 80% of expected lifespan, a `SELL` decision is pushed** — same
+  `decisionQueue`/`DECISION_TYPES` system as AOG/CREW, not a separate
+  mechanic. Options are "Sell aircraft" (real transaction, see below) or
+  "Keep flying" (sets `ac.sellOfferDismissed = true` so the aircraft
+  doesn't re-prompt every single subsequent flight — the offer is a
+  one-time nudge per aircraft, not a recurring interruption).
+- **Sell value is real LINEAR depreciation from `purchasePrice`, floored
+  at 5%** — explicit designer spec, verified against a concrete example
+  before shipping ($50M new, 20% cycles remaining -> sells for exactly
+  $10M) rather than just trusting the formula matched the words. The 5%
+  floor is a deliberate designer choice (confirmed directly, not just
+  assumed): an aircraft never sells for literally $0 even well past
+  100% of expected lifespan, matching a real scrap/parts-value floor
+  rather than a cliff to zero. This is a simple linear model, NOT a real
+  depreciation curve (real aircraft depreciate steeply early and flatten
+  out) — a known, acceptable simplification, not an oversight.
+- **`playerBalance` is a real, minimal stand-in economy — NOT the full
+  Phase 5 purchase economy from `ROADMAP.md`.** It accumulates net
+  revenue from every completed flight (`econ.net`, the same number the
+  financials ledger and tooltip already show) plus sell proceeds. This is
+  explicitly a "master account" in the sense the designer described it:
+  proceeds from a sale go into the same balance used to buy new aircraft.
+  What's still missing: no starting capital (a fresh session begins at
+  $0 — buying anything requires accumulating revenue or selling first),
+  and no route-opening cost yet (still just the fleet slider's random
+  route assignment, no real "open a route" action for the player).
+- **Buying**: `buyAircraft(typeId)` checks `playerBalance >= purchasePrice`,
+  deducts it, and creates a genuinely fresh aircraft via
+  `makePurchasedAircraft()` — a separate function from the stress-test
+  `makeAircraft()`, not a parameterized branch of it, since the two need
+  meaningfully different defaults (0 cycles vs. randomized;
+  always-`PARKED` vs. randomized starting state). A purchased aircraft
+  gets its route/crew through the SAME `PARKED` gate logic every other
+  aircraft uses — no special-casing needed there. UI is a scrollable
+  "Buy Aircraft" panel listing all types sorted by price, each row
+  showing a Buy button that disables itself when unaffordable and stays
+  LIVE (re-rendered every tick while the panel is open, via
+  `updateStatusStrip()`) since balance changes with every completed
+  flight, not just on click.
+- **A real bug caught and fixed BEFORE it could destroy a player's
+  purchase, not after.** The stress-test fleet slider's old
+  `setFleetSize()` used `fleet.length = n` to shrink the fleet — a raw
+  array truncation with no concept of "some of these aircraft are real
+  purchases, not stress-test filler." The moment buying became real,
+  dragging the slider down would have silently deleted purchased
+  aircraft the player had actually paid for, with no warning. Fixed by
+  tagging every aircraft with `purchased: true/false` and rewriting
+  `setFleetSize()` to only ever trim NON-purchased aircraft when
+  shrinking — verified numerically for both normal shrinkage and the
+  extreme case where the slider goes below the actual purchased count
+  (fleet size floors at the owned count rather than deleting anything).
+  This is the kind of bug that's invisible until two previously-separate
+  systems (a stress-test convenience control, and a new real economy)
+  start interacting — worth remembering when adding future mechanics
+  that touch the `fleet` array.
+- **A second real bug, unrelated to the economy itself but caught in the
+  same work area: the decision panel (AOG/CREW/SELL — anything using
+  `decisionQueue`) used to flicker and unreliably register clicks.**
+  Root cause: `advanceTick()` called `renderDecisions()` unconditionally
+  whenever any decision was pending, and `advanceTick()` can fire up to
+  50 times per animation frame at high game speed. Every call did a full
+  `innerHTML` replacement of the whole panel — destroying and recreating
+  every button that often. That produced exactly the two reported
+  symptoms: hover flicker (`:hover` CSS state resets because it's
+  literally a new DOM node each time) and dropped clicks (a re-render
+  landing between mousedown and the click event completing means the
+  clicked button no longer exists by the time the click would fire).
+  Fixed by removing the per-tick call entirely — `pushDecision()` and
+  `resolveDecision()` already call `renderDecisions()` exactly when the
+  queue's contents actually change (a card added or resolved), which is
+  the correct and sufficient trigger. Traded away: the live-eroding
+  dollar figure inside an OPEN AOG/CREW card no longer visibly ticks
+  down in real time while the card sits unresolved (the underlying
+  number still updates every tick, just not the display). Acceptable —
+  a human resolves these quickly. **If a future session wants that
+  live-tick-down back, it needs a throttled refresh (e.g., from the
+  animation loop, gated to ~1x/second), NOT a raw per-tick call — that
+  exact pattern is what caused this bug.**
+- **Not yet playtested**: the sell/buy loop end-to-end, across a real
+  session, including whether the 80% threshold and randomized starting
+  cycle distribution actually produce a reasonable pace of sell offers
+  (not too rare to matter, not so frequent it's spam) once real people
+  are clicking through it rather than the numeric verification this was
+  shipped with.
 
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
@@ -524,14 +656,26 @@ one contradicts the design thesis.)
   remaining regional-jet family totals: real but lower-confidence data,
   flagged in the Fleet section above. Revisit with dedicated sourcing if
   the designer wants higher precision here.
-- **Full 31-type fleet has not been playtested end-to-end** — see Fleet
-  section above. This is still true, and now compounds with 48 airports,
-  the economic event system, and the pan/zoom camera all also being
-  un-playtested-as-ONE-session — four major systems shipped this session
-  that have each been spot-checked individually (and one, the economy
-  system, had a real ship-blocking bug that slipped through individual
-  checking — see the `operatingCost` note above) but never all run
-  together in one real, sustained play session.
+- **No starting capital and no route-opening cost.** A fresh session
+  begins with `playerBalance = 0` — buying any aircraft requires
+  accumulating flight revenue or selling one first, not a real "player
+  starts with a real fleet + real capital" experience yet. Route-opening
+  as a costed player action doesn't exist either (routes are still
+  randomly assigned, same as always) — this is the exact gap
+  `ROADMAP.md` Phase 5 already flagged, now sharper since the sell/buy
+  half of it is real and the route-opening half still isn't.
+- **Full 30-type fleet, 48 airports, the economic event system, the
+  pan/zoom camera, AND the sell/buy economy have never all run together
+  in one real, sustained play session.** Each has been individually spot-
+  checked and numerically verified, and two of them (the `operatingCost`
+  bug, the decision-panel flicker bug) had real ship-blocking issues that
+  only surfaced through use, not through the verification that shipped
+  them — meaning "spot-checked" has a real, demonstrated failure rate
+  here, not just a theoretical one. This is the single most valuable
+  next step before adding more scope, and has been true and repeated at
+  every major addition this session — its repetition doesn't make it
+  less urgent, if anything it's evidence this keeps getting deprioritized
+  in favor of new features.
 - **Why Sukhoi Superjet 100 was removed isn't documented anywhere.** The
   type and its crew family are fully gone from the code (confirmed clean
   — no orphaned references anywhere), but no record of the actual

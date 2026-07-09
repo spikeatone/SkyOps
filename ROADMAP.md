@@ -90,30 +90,38 @@ back into the fleet/crew/disruption systems from Phases 1-3.
 
 - [ ] Passenger demand + load factor
 - [ ] Reputation feedback loop
-- [ ] Route-opening UI, aircraft purchase (revenue-gated, per original brief).
-      Design intent captured but not yet built: player starts with a small
-      fleet (size TBD) and limited capital, and must accumulate real
-      in-game revenue to afford buying a 2nd/3rd/etc. aircraft — purchase
-      is meant to be a genuine constraint the player saves toward, not a
-      free/instant unlock. Opening a new route also costs money (amount
-      TBD), separate from the aircraft purchase itself. This explicitly
-      reverses/supersedes the current browser prototype's fleet slider,
-      which is a stress-test control with no economic meaning — when this
-      phase is built, the slider goes away and starting fleet size becomes
-      a real game-balance decision, not a dev convenience. NOT yet decided:
-      starting capital amount, per-aircraft-type purchase price (real
-      aircraft list prices run into the hundreds of millions — will need
-      real game-balance work against per-flight revenue figures already in
-      the prototype, not a direct real-price import), route-opening cost
-      formula, and whether the fleet-slider's real-world-proportional spawn
-      weights (see CLAUDE.md) inform which aircraft the player can
-      initially afford vs. which stay aspirational late-game purchases.
-      Note as of the latest browser-prototype pass: "per-flight revenue
-      figures" now means a real load-factor x fare-per-seat formula with
-      live economic events (not the flat placeholder numbers that existed
-      when this phase was first scoped) — the game-balance math against
-      real purchase prices has a much more solid revenue baseline to work
-      from now, see CLAUDE.md's Economy section for the actual figures.
+- [x] Aircraft purchase (revenue-gated) — REAL NOW in the browser
+      prototype, not just design intent. Selling and buying both work:
+      real per-type purchase price, real cycle-based lifespan triggering
+      a sell decision, real linear depreciation, a real spendable balance
+      (`playerBalance`) that accumulates flight revenue and sell
+      proceeds and can actually be spent on a new aircraft. See
+      CLAUDE.md's "Fleet Lifecycle & Ownership Economy" section for the
+      full mechanic, sourcing, and two real bugs caught building it.
+      **This explicitly reverses/supersedes the old fleet slider for
+      anything the player has actually purchased** — the slider still
+      exists for stress-testing, but purchased aircraft are now
+      protected from it (a real bug that got caught: the slider used to
+      silently delete purchased aircraft when shrunk, fixed before it
+      could actually happen to a player).
+- [ ] Route-opening UI + cost — NOT built yet, the one piece of the
+      original purchase-economy vision still missing. Routes are still
+      randomly assigned with no costed player action to open one.
+- [ ] Starting capital — NOT decided or built. A fresh session currently
+      starts at $0 balance, meaning a brand-new player must sell an
+      aircraft or accumulate revenue before buying anything, which isn't
+      a real "player starts with a real fleet" experience. Needs a real
+      design decision (see CLAUDE.md Fleet Lifecycle section), not a
+      placeholder number.
+- [ ] Per-aircraft-type purchase price — RESOLVED for the browser
+      prototype (see above), still needs eventual native-app confirmation
+      the same numbers hold, since they were sourced/computed in a
+      browser-prototype context.
+- [ ] Whether the fleet's real-world-proportional spawn weights (see
+      CLAUDE.md Fleet section) should inform which aircraft the player
+      can initially afford vs. which stay aspirational late-game
+      purchases — genuinely undecided, purchase prices exist now but
+      nothing ties them back to the spawn-weight tiers yet.
 
 ## Deferred indefinitely (not "later," genuinely "not planned")
 

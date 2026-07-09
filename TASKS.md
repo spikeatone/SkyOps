@@ -8,21 +8,26 @@ Format: `- [ ] Task — owner/session note — status`
 
 This file went badly stale between updates — it described "repo just
 scaffolded" for an extended stretch while the browser prototype grew from
-a 6-type/7-airport smoke test into a 31-type/48-airport sim with a real
-economy, pan/zoom map, and Figma-sourced icons. See `CLAUDE.md` for the
-actual technical detail on all of it; this file is just the task-tracking
-layer. Don't let it drift this far again — update it in the same session
-as the work, not "later."
+a 6-type/7-airport smoke test into a 30-type/48-airport sim with a real
+economy (including a working sell/buy ownership loop), pan/zoom map, and
+Figma-sourced icons. See `CLAUDE.md` for the actual technical detail on
+all of it; this file is just the task-tracking layer. Don't let it drift
+this far again — update it in the same session as the work, not "later."
 
 ## In progress
 
-- [ ] Full 31-type / 48-airport / economic-event system has NOT been
-      playtested as one continuous session — every individual piece has
-      been spot-checked (icon rendering, weight math, fee calculations,
-      zoom-scale curves) but nobody has watched it all run together for
-      an extended real session. This is the single most valuable next
-      step before adding more scope — see `CLAUDE.md`'s Open section for
-      why this matters more than it might sound.
+- [ ] Full 30-type / 48-airport / economic-event / sell-buy-economy
+      system has NOT been playtested as one continuous session — every
+      individual piece has been spot-checked or numerically verified
+      (icon rendering, weight math, fee calculations, zoom-scale curves,
+      sell-value depreciation) but nobody has watched it all run together
+      for an extended real session. Two real ship-blocking bugs
+      (`operatingCost` ReferenceError, decision-panel flicker) have
+      already slipped through individual verification and only surfaced
+      through actual use — that's a demonstrated failure rate for
+      "spot-checked," not just a theoretical gap. This is the single most
+      valuable next step before adding more scope — see `CLAUDE.md`'s
+      Open section for the full reasoning.
 
 ## Up next (Phase 0 — still not started, unchanged since original scaffold)
 
@@ -119,8 +124,46 @@ as the work, not "later."
 
 ## Not yet started — economy layer beyond current scope
 
-- [ ] Player-facing purchase economy (buying aircraft, paying to open
-      routes) -- design intent captured in `ROADMAP.md` Phase 5, nothing
-      built. Real constraint flagged there: real aircraft prices run
-      hundreds of millions, this sim's revenue is tens of thousands per
-      flight -- needs deliberate game-balance work, not a real-price import.
+- [ ] Starting capital and route-opening cost — the two pieces of
+      `ROADMAP.md` Phase 5 still missing now that sell/buy is real (see
+      Done section below). A fresh session starts at $0 balance; buying
+      anything requires accumulating flight revenue or selling first.
+      Routes are still randomly assigned, no costed player action to
+      open one yet.
+
+## Done — fleet lifecycle & ownership economy
+
+- [x] Bombardier CRJ700 removed from the fleet (aging out of most real
+      fleets, nearing retirement, per designer direction) — 30 types now.
+      Designer has stated an ongoing intent to keep the fleet current
+      with real deliveries/retirements; expect more changes like this.
+- [x] Real `purchasePrice` added to every type — median of designer-
+      sourced published list price and estimated market value, or a
+      documented discount-ratio extrapolation where only one figure
+      existed (regional-jet vs. narrowbody discount ratios differ
+      meaningfully, ~0.66 vs ~0.46 — handled per-category, not blended).
+- [x] Real `expectedLifespanCycles` added to every type — real FAA/
+      manufacturer Design Service Goal data for well-established
+      families, extrapolated from a confirmed real figure for regional
+      jets lacking published data.
+- [x] Cycle-based lifespan mechanic: 1 cycle = 1 completed flight,
+      tracked per aircraft, 80% threshold triggers a real sell decision
+      through the same AOG/CREW decision-card system.
+- [x] Real sell mechanic: linear depreciation from purchase price,
+      floored at 5%, verified against a designer-specified example
+      before shipping.
+- [x] Real buy mechanic: a minimal stand-in `playerBalance` (accumulates
+      net flight revenue + sell proceeds — explicitly NOT the full Phase
+      5 economy), a Buy Aircraft panel listing all types with live
+      affordability, purchased aircraft starting genuinely fresh (0
+      cycles, PARKED).
+- [x] A real bug caught before it could destroy a player's purchase: the
+      stress-test fleet slider's old truncation logic would have
+      silently deleted purchased aircraft. Fixed by protecting purchased
+      aircraft from slider shrinkage; verified numerically including the
+      extreme case.
+- [x] A real bug fixed after being reported: the decision panel (AOG/
+      CREW/SELL) flickered and unreliably registered clicks, caused by a
+      per-tick full DOM rebuild. Fixed by removing the redundant per-tick
+      render call — the two structural triggers (decision added/
+      resolved) were already correct and sufficient on their own.
