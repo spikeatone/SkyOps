@@ -72,7 +72,24 @@ back into the fleet/crew/disruption systems from Phases 1-3.
 
 - [ ] Passenger demand + load factor
 - [ ] Reputation feedback loop
-- [ ] Route-opening UI, aircraft purchase (revenue-gated, per original brief)
+- [ ] Route-opening UI, aircraft purchase (revenue-gated, per original brief).
+      Design intent captured but not yet built: player starts with a small
+      fleet (size TBD) and limited capital, and must accumulate real
+      in-game revenue to afford buying a 2nd/3rd/etc. aircraft — purchase
+      is meant to be a genuine constraint the player saves toward, not a
+      free/instant unlock. Opening a new route also costs money (amount
+      TBD), separate from the aircraft purchase itself. This explicitly
+      reverses/supersedes the current browser prototype's fleet slider,
+      which is a stress-test control with no economic meaning — when this
+      phase is built, the slider goes away and starting fleet size becomes
+      a real game-balance decision, not a dev convenience. NOT yet decided:
+      starting capital amount, per-aircraft-type purchase price (real
+      aircraft list prices run into the hundreds of millions — will need
+      real game-balance work against per-flight revenue figures already in
+      the prototype, not a direct real-price import), route-opening cost
+      formula, and whether the fleet-slider's real-world-proportional spawn
+      weights (see CLAUDE.md) inform which aircraft the player can
+      initially afford vs. which stay aspirational late-game purchases.
 
 ## Deferred indefinitely (not "later," genuinely "not planned")
 
