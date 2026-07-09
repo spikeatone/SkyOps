@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SkyOps — Multi-Aircraft Stress Test</title>
+<style>
+  :root {
+    --bg: #0b1016;
+    --panel: #121a24;
+    --panel-line: #1e2a38;
+    --scope-green: #37ffb0;
+    --scope-dim: #1c5c47;
+    --amber: #ffb347;
+    --red: #ff5c5c;
+    --text-main: #d9e6ee;
+    --text-dim: #6c7f8f;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at 50% 0%, #0e1620 0%, var(--bg) 70%);
+    color: var(--text-main);
+    font-family: var(--sans);
+    padding: 20px;
+    min-height: 100vh;
+  }
+
+  .frame {
+    max-width: 960px;
+    margin: 0 auto;
+    border: 1px solid var(--panel-line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--panel);
+    box-shadow: 0 0 0 1px rgba(55,255,176,0.03), 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  .titlebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--panel-line);
+    background: linear-gradient(180deg, #141d28, #101820);
+  }
+
+  .titlebar h1 {
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 0.12em;
+    margin: 0;
+    color: var(--scope-green);
+    text-transform: uppercase;
+  }
+  .titlebar h1 span { color: var(--text-dim); font-weight: 400; }
+
+  .clock {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    text-align: right;
+    line-height: 1.5;
+  }
+  .clock b { color: var(--text-main); font-weight: 500; }
+
+  .scope-wrap {
+    position: relative;
+    background: #060a0e;
+    margin: 16px;
+    border-radius: 6px;
+    border: 1px solid var(--panel-line);
+    overflow: hidden;
+  }
+
+  canvas { display: block; width: 100%; height: auto; }
+
+  .perf-overlay {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--scope-green);
+    background: rgba(6,10,14,0.7);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(55,255,176,0.15);
+    line-height: 1.6;
+    text-align: right;
+  }
+  .perf-overlay .warn { color: var(--red); }
+
+  .aircraft-tooltip {
+    position: absolute;
+    display: none;
+    pointer-events: none;
+    background: rgba(6,10,14,0.94);
+    border: 1px solid rgba(55,255,176,0.3);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-main);
+    line-height: 1.7;
+    white-space: nowrap;
+    z-index: 20;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
+  .aircraft-tooltip b { color: var(--scope-green); }
+  .aircraft-tooltip .tt-neg { color: var(--red); font-weight: 600; }
+  .aircraft-tooltip .tt-held { color: var(--red); }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px 10px;
+    border-top: 1px solid var(--panel-line);
+    flex-wrap: wrap;
+  }
+
+  .speed-group {
+    display: flex;
+    gap: 6px;
+    background: #0d141c;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-line);
+  }
+
+  button.speed {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 7px 13px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button.speed:hover { color: var(--text-main); }
+  button.speed.active {
+    background: var(--scope-green);
+    color: #06130d;
+    font-weight: 600;
+  }
+  button.speed:disabled,
+  button.speed.exhausted:not(.active) {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .fleet-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .fleet-control input[type=range] {
+    width: 180px;
+    accent-color: var(--scope-green);
+  }
+  .fleet-control b { color: var(--text-main); min-width: 34px; display: inline-block; }
+
+  .spacer { flex: 1; }
+
+  .status-strip {
+    display: flex;
+    gap: 24px;
+    padding: 6px 20px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    flex-wrap: wrap;
+  }
+  .status-strip b { color: var(--amber); }
+
+  .log-panel {
+    border-top: 1px solid var(--panel-line);
+    background: #0a0f14;
+    padding: 12px 20px;
+    max-height: 130px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.85;
+  }
+  .log-panel::-webkit-scrollbar { width: 6px; }
+  .log-panel::-webkit-scrollbar-thumb { background: var(--panel-line); border-radius: 3px; }
+  .log-entry { color: var(--text-dim); }
+  .log-entry .t { color: var(--scope-dim); margin-right: 8px; }
+  .log-entry.event { color: var(--amber); }
+
+  .footer-note {
+    padding: 10px 20px 16px;
+    font-size: 11px;
+    color: #3d4c58;
+    font-family: var(--mono);
+    border-top: 1px solid var(--panel-line);
+  }
+
+  .decision-panel {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+    border-top: 1px solid var(--panel-line);
+  }
+  .decision-panel.visible {
+    display: flex;
+    padding: 14px 20px;
+    background: rgba(255,92,92,0.06);
+  }
+
+  .decision-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: #131b25;
+    border: 1px solid rgba(255,92,92,0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+
+  .decision-info {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-main);
+  }
+  .decision-info b { color: var(--red); }
+  .decision-cost { color: var(--amber); font-weight: 600; }
+  .decision-cost-neg { color: var(--red); font-weight: 700; }
+  .decision-subnote { color: var(--text-dim); font-style: italic; font-size: 11px; }
+
+  .decision-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  button.decision-btn {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    background: #1a2530;
+    border: 1px solid var(--panel-line);
+    color: var(--text-main);
+    padding: 7px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  button.decision-btn:hover {
+    background: var(--scope-green);
+    color: #06130d;
+    border-color: var(--scope-green);
+  }
+  button.decision-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: #1a2530;
+    color: var(--text-dim);
+  }
+  button.decision-btn:disabled:hover {
+    background: #1a2530;
+    color: var(--text-dim);
+    border-color: var(--panel-line);
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <div class="titlebar">
+    <h1>SKYOPS <span>// multi-aircraft stress test</span></h1>
+    <div class="clock">
+      <b id="calDate">—</b><br>
+      DAY <b id="dayNum">1</b> — <b id="clockTime">00:00</b><br>
+      TICK <b id="tickCount">0</b>
+    </div>
+  </div>
+
+  <div class="scope-wrap">
+    <canvas id="scope" width="900" height="480"></canvas>
+    <div class="perf-overlay" id="perfOverlay">
+      FPS <b id="fpsVal">60</b><br>
+      tick cost <b id="tickCostVal">0.0ms</b><br>
+      aircraft <b id="fleetCountVal">20</b>
+    </div>
+    <div class="aircraft-tooltip" id="aircraftTooltip"></div>
+  </div>
+
+  <div class="controls">
+    <div class="speed-group">
+      <button class="speed" data-speed="0.25" id="quarterSpeedBtn">¼× (3/3)</button>
+      <button class="speed" data-speed="0.5">½×</button>
+      <button class="speed" data-speed="1">1×</button>
+      <button class="speed active" data-speed="5">5×</button>
+      <button class="speed" data-speed="10">10×</button>
+      <button class="speed" data-speed="25">25×</button>
+    </div>
+    <div class="fleet-control">
+      FLEET SIZE <input type="range" id="fleetSlider" min="1" max="150" value="20">
+      <b id="fleetLabel">20</b>
+    </div>
+    <div class="spacer"></div>
+  </div>
+
+  <div class="status-strip">
+    <div>ACTIVE: <b id="activeCount">0</b></div>
+    <div>ON GROUND: <b id="groundCount">0</b></div>
+    <div>AIRBORNE: <b id="airCount">0</b></div>
+    <div>MAINT/AOG: <b id="maintCount">0</b></div>
+    <div>HELD: <b id="heldCount">0</b></div>
+  </div>
+  <div class="status-strip">
+    <div>CREW (avail/on-duty/rest, by family): <b id="crewStatus">—</b></div>
+  </div>
+  <div class="status-strip">
+    <div>GROUND STOPS: <b id="weatherStatus">none</b></div>
+  </div>
+  <div class="status-strip">
+    <div>FINANCIALS: <b id="netFinancial">$0 rev — $0 fees = $0 net</b></div>
+  </div>
+
+  <div class="decision-panel" id="decisionPanel"></div>
+
+  <div class="log-panel" id="logPanel"></div>
+
+  <div class="footer-note">
+    Fleet mix: Airbus A321neo, Boeing 737-900, 737 MAX 8/9, 777-300, 787 Dreamliner — each with its own hold-cost rate and revenue range. AOG/crew holds erode that flight's actual projected revenue at the type's real hourly rate. Widebodies render larger on the scope.
+  </div>
+</div>
+
+<script>
+// ---------- CONFIG ----------
+const TICKS_PER_STATE = {
+  PARKED:      40,
+  BOARDING:    35,
+  TAXI_OUT:    12,
+  TAKEOFF:     50,
+  CRUISE:      150,
+  APPROACH:    32,
+  LANDING:     35,
+  TAXI_IN:     10,
+  TURNAROUND:  45
+};
+const STATE_ORDER = ["PARKED","BOARDING","TAXI_OUT","TAKEOFF","CRUISE","APPROACH","LANDING","TAXI_IN","TURNAROUND"];
+const REJOIN_DURATION = 10; // ticks to ease from holding pattern back onto approach path
+
+// ---------- AIRCRAFT TYPES ----------
+// Hold-cost figures are direct operating cost per hour, sourced from public
+// data (SimpleFlying/AirInsight/aircraftcostcalculator, 2025-26): narrowbodies
+// cluster $7-8k/hr, 787 varies $10-14k/hr by source methodology, 777-300ER is
+// consistently $18-19k/hr — which lines up with the "$20k+/hr" reference
+// point already used for this sim. Revenue ranges are scaled roughly by
+// typical seat count, since a widebody should earn meaningfully more per
+// flight, not just cost more when grounded.
+//
+// `family` groups types that share real-world type-rating commonality
+// (737-900/MAX8/MAX9 share a common type rating) — crews are qualified per
+// family, not per individual model, and never cross families.
+// `crewsPerTail` is a real-world-referenced roster ratio: short-haul
+// narrowbody sits at 6 (low-mid of the given 5-8 range), long-haul widebody
+// at 11 (mid of the given 10-12 range). Neither 777-300 nor 787 as specified
+// is a true ultra-long-haul airframe (that's usually a 777-200LR/A350-900ULR),
+// so both sit in the long-haul tier rather than the 15-17 ultra tier.
+// mlwLbs = Max Landing Weight in pounds, from public type-certificate data.
+// This is what airport signatory landing fees are actually rated against
+// ("per 1,000 lbs GLW"), not MTOW — an aircraft always lands lighter than
+// its max takeoff weight, and fee schedules price the landing event itself.
+// 787 Dreamliner spec doesn't distinguish -8/-9/-10 — using -9 figures since
+// it's the most commonly operated variant; revisit if a specific sub-variant
+// is intended.
+// bodyType = the single source of truth for narrowbody vs widebody — used
+// for both the per-turn gate fee tier below AND the on-scope rendering scale
+// (previously that was a separate, undocumented `seats >= 250` check; one
+// definition now instead of two that could silently drift apart).
+const AIRCRAFT_TYPES = [
+  { id: 'A321NEO', name: 'Airbus A321neo',        seats: 200, costPerHour: 8000,  revMin: 10000, revMax: 20000, weight: 7,  family: 'A320_FAMILY', crewsPerTail: 6,  mlwLbs: 179000, bodyType: 'narrowbody' },
+  { id: 'B739',    name: 'Boeing 737-900',        seats: 180, costPerHour: 8000,  revMin: 9000,  revMax: 18000, weight: 14, family: 'B737_FAMILY', crewsPerTail: 6,  mlwLbs: 146300, bodyType: 'narrowbody' },
+  { id: 'MAX8',    name: 'Boeing 737 MAX 8',      seats: 175, costPerHour: 7000,  revMin: 9000,  revMax: 17000, weight: 12, family: 'B737_FAMILY', crewsPerTail: 6,  mlwLbs: 146300, bodyType: 'narrowbody' },
+  { id: 'MAX9',    name: 'Boeing 737 MAX 9',      seats: 190, costPerHour: 7500,  revMin: 9500,  revMax: 19000, weight: 12, family: 'B737_FAMILY', crewsPerTail: 6,  mlwLbs: 152800, bodyType: 'narrowbody' },
+  { id: 'B773',    name: 'Boeing 777-300',        seats: 380, costPerHour: 20000, revMin: 25000, revMax: 45000, weight: 6,  family: 'B777',        crewsPerTail: 11, mlwLbs: 460000, bodyType: 'widebody' },
+  { id: 'B788',    name: 'Boeing 787 Dreamliner', seats: 280, costPerHour: 12000, revMin: 18000, revMax: 32000, weight: 9,  family: 'B787',        crewsPerTail: 11, mlwLbs: 380000, bodyType: 'widebody' },
+];
+AIRCRAFT_TYPES.forEach(t => { t.holdCostPerTick = Math.round(t.costPerHour / 60); }); // 1 tick = 1 minute
+const TYPE_WEIGHT_TOTAL = AIRCRAFT_TYPES.reduce((s,t) => s+t.weight, 0); // 60, matching the given fleet composition
+const CREW_FAMILIES = [...new Set(AIRCRAFT_TYPES.map(t => t.family))]; // ['A320_FAMILY','B737_FAMILY','B777','B787']
+
+function pickAircraftType() {
+  let r = Math.random() * TYPE_WEIGHT_TOTAL;
+  for (const t of AIRCRAFT_TYPES) {
+    r -= t.weight;
+    if (r <= 0) return t;
+  }
+  return AIRCRAFT_TYPES[AIRCRAFT_TYPES.length - 1];
+}
+
+const HOLD_COST_PER_TICK = 2000; // fallback only — real per-tick cost now comes from ac.type.holdCostPerTick
+
+const SIM_START_DATE = new Date(2027, 0, 1, 0, 0, 0); // arbitrary sim epoch, Jan 1 2027
+const MAX_QUARTER_SPEED_USES_PER_DAY = 3; // resets on a fixed sim-calendar-day boundary, not a rolling window
+let quarterSpeedUsesRemaining = MAX_QUARTER_SPEED_USES_PER_DAY;
+let lastSeenSimDay = 1;
+
+// A fixed reserve pool per family — a reserve pilot is type-rated just like
+// anyone else, so a generic flat number doesn't map onto multiple crew
+// families anymore. Small fixed count per family, not fleet-size-scaled.
+let reserveCrewsByFamily = {};
+CREW_FAMILIES.forEach(f => { reserveCrewsByFamily[f] = 2; });
+
+// ---------- AOG FREQUENCY CALIBRATION ----------
+// Anchored to a real-world reference: a large airline (76-125 a/c bracket,
+// midpoint ~100) sees ~2 AOG incidents/month. Scaled linearly per aircraft
+// rather than hard-coding five bracket values, so there's no cliff at a
+// bracket boundary (e.g. aircraft #75 vs #76 behaving identically).
+const AOG_RATE_PER_AIRCRAFT_PER_MONTH = 2 / 100; // 0.02
+const TICKS_PER_MONTH = 30 * 24 * 60; // 43,200 (1 tick = 1 sim-minute)
+const AOG_PROB_PER_TICK_PER_AIRCRAFT = AOG_RATE_PER_AIRCRAFT_PER_MONTH / TICKS_PER_MONTH;
+
+const FAMILY_LABELS = { A320_FAMILY: 'A320', B737_FAMILY: 'B737', B777: 'B777', B787: 'B787' };
+
+// ---------- AOG CLUSTERING ----------
+// Real-world analog: a single incident on one tail can be the leading edge of
+// a type-wide problem (bad parts batch, an airworthiness directive, a
+// systemic issue) — see the actual 737 MAX grounding. One AOG temporarily
+// raises the odds of another AOG in the SAME family, decaying back to
+// baseline if nothing else goes wrong, rather than every aircraft rolling
+// fully independent dice forever.
+const AOG_CLUSTER_MULTIPLIER = 3;      // peak risk multiplier right after an incident
+const AOG_CLUSTER_DECAY_TICKS = 4320;  // 3 sim-days for the elevated window to fully decay
+let familyPressureTicksLeft = {};
+CREW_FAMILIES.forEach(f => { familyPressureTicksLeft[f] = 0; });
+
+// Each flight's revenue is rolled the moment it's scheduled (see rollRevenue,
+// assigned at route-assignment time), not after it lands. That's what lets
+// an AOG/crew hold erode the ACTUAL number this flight will collect, rather
+// than showing a separate abstract estimate.
+function rollRevenue(type) {
+  return type.revMin + Math.round(Math.random() * (type.revMax - type.revMin));
+}
+
+// Airport network — the definitive top-25 U.S. list by landing/gate fee
+// (designer-sourced, same convention as AIRCRAFT_TYPES). lat/lon are public
+// airport reference coordinates (approximate, not survey-precision — fine
+// for a relative-position map, not fine for anything claiming nav-grade
+// accuracy). x/y are NOT hardcoded here anymore — they're computed once at
+// startup by projectAirports() below, from real geography, so the scope
+// layout is an actual (if simplified) map of the continental U.S. instead
+// of an arbitrary hand-placed scatter.
+// groundStopsPerMonth = real average monthly ground-stop count, designer-
+// sourced. Replaces the old flat per-airport rate (~25.9 events/month,
+// uniform) — actual per-airport range here is 0.1 (LAX) to 14.2 (EWR), so
+// this is a real reduction in overall frequency, not just added variance.
+// Duration per event is still generic (90-330 ticks, see tickWeather) —
+// no source data for average duration per airport, only frequency.
+const AIRPORTS = [
+  { code: "ORD", lat: 41.9786, lon: -87.9048,  landingFeePerKlb: 10.58, gateFeeNarrowbody: 600,  gateFeeWidebody: 1500, groundStopsPerMonth: 9.4,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "ATL", lat: 33.6407, lon: -84.4277,  landingFeePerKlb: 1.63,  gateFeeNarrowbody: 250,  gateFeeWidebody: 450,  groundStopsPerMonth: 4.8,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "DFW", lat: 32.8998, lon: -97.0403,  landingFeePerKlb: 2.78,  gateFeeNarrowbody: 350,  gateFeeWidebody: 750,  groundStopsPerMonth: 7.1,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "DEN", lat: 39.8561, lon: -104.6737, landingFeePerKlb: 4.95,  gateFeeNarrowbody: 400,  gateFeeWidebody: 800,  groundStopsPerMonth: 8.7,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "LAS", lat: 36.0840, lon: -115.1537, landingFeePerKlb: 1.20,  gateFeeNarrowbody: 275,  gateFeeWidebody: 650,  groundStopsPerMonth: 0.5,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "LAX", lat: 33.9416, lon: -118.4085, landingFeePerKlb: 5.74,  gateFeeNarrowbody: 500,  gateFeeWidebody: 1200, groundStopsPerMonth: 0.1,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "CLT", lat: 35.2144, lon: -80.9473,  landingFeePerKlb: 1.23,  gateFeeNarrowbody: 200,  gateFeeWidebody: 500,  groundStopsPerMonth: 2.9,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "MIA", lat: 25.7959, lon: -80.2870,  landingFeePerKlb: 1.65,  gateFeeNarrowbody: 350,  gateFeeWidebody: 800,  groundStopsPerMonth: 3.2,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "PHX", lat: 33.4342, lon: -112.0116, landingFeePerKlb: 2.23,  gateFeeNarrowbody: 184,  gateFeeWidebody: 184,  groundStopsPerMonth: 0.4,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "JFK", lat: 40.6413, lon: -73.7781,  landingFeePerKlb: 8.47,  gateFeeNarrowbody: 900,  gateFeeWidebody: 1800, groundStopsPerMonth: 10.8, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "IAH", lat: 29.9902, lon: -95.3368,  landingFeePerKlb: 3.45,  gateFeeNarrowbody: 350,  gateFeeWidebody: 750,  groundStopsPerMonth: 4.5,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "SEA", lat: 47.4502, lon: -122.3088, landingFeePerKlb: 4.62,  gateFeeNarrowbody: 722,  gateFeeWidebody: 1444, groundStopsPerMonth: 0.8,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "MCO", lat: 28.4312, lon: -81.3081,  landingFeePerKlb: 1.59,  gateFeeNarrowbody: 210,  gateFeeWidebody: 450,  groundStopsPerMonth: 3.6,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "SFO", lat: 37.6213, lon: -122.3790, landingFeePerKlb: 7.73,  gateFeeNarrowbody: 1164, gateFeeWidebody: 1338, groundStopsPerMonth: 13.5, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "EWR", lat: 40.6895, lon: -74.1745,  landingFeePerKlb: 10.32, gateFeeNarrowbody: 850,  gateFeeWidebody: 1400, groundStopsPerMonth: 14.2, groundStop: false, groundStopTicksLeft: 0 },
+  { code: "MSP", lat: 44.8848, lon: -93.2223,  landingFeePerKlb: 3.15,  gateFeeNarrowbody: 300,  gateFeeWidebody: 650,  groundStopsPerMonth: 1.8,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "BOS", lat: 42.3656, lon: -71.0096,  landingFeePerKlb: 5.12,  gateFeeNarrowbody: 450,  gateFeeWidebody: 900,  groundStopsPerMonth: 5.9,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "DTW", lat: 42.2124, lon: -83.3534,  landingFeePerKlb: 1.76,  gateFeeNarrowbody: 240,  gateFeeWidebody: 500,  groundStopsPerMonth: 1.5,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "FLL", lat: 26.0726, lon: -80.1527,  landingFeePerKlb: 2.58,  gateFeeNarrowbody: 380,  gateFeeWidebody: 700,  groundStopsPerMonth: 3.8,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "LGA", lat: 40.7769, lon: -73.8740,  landingFeePerKlb: 17.72, gateFeeNarrowbody: 1231, gateFeeWidebody: 1231, groundStopsPerMonth: 12.1, groundStop: false, groundStopTicksLeft: 0 }, // widebody listed N/A — floored to narrowbody rate, see note below
+  { code: "PHL", lat: 39.8744, lon: -75.2424,  landingFeePerKlb: 4.10,  gateFeeNarrowbody: 320,  gateFeeWidebody: 680,  groundStopsPerMonth: 6.4,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "SLC", lat: 40.7884, lon: -111.9778, landingFeePerKlb: 2.95,  gateFeeNarrowbody: 280,  gateFeeWidebody: 600,  groundStopsPerMonth: 0.3,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "BWI", lat: 39.1774, lon: -76.6684,  landingFeePerKlb: 4.65,  gateFeeNarrowbody: 400,  gateFeeWidebody: 750,  groundStopsPerMonth: 2.4,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "SAN", lat: 32.7338, lon: -117.1933, landingFeePerKlb: 4.85,  gateFeeNarrowbody: 420,  gateFeeWidebody: 850,  groundStopsPerMonth: 0.2,  groundStop: false, groundStopTicksLeft: 0 },
+  { code: "IAD", lat: 38.9531, lon: -77.4565,  landingFeePerKlb: 3.98,  gateFeeNarrowbody: 380,  gateFeeWidebody: 800,  groundStopsPerMonth: 1.4,  groundStop: false, groundStopTicksLeft: 0 },
+];
+
+// ---------- GEOGRAPHIC PROJECTION ----------
+// Lightweight equirectangular projection with a longitude cosine correction
+// at the map's center latitude — NOT a true Albers/conic projection (what
+// real US wall maps use), but close enough at this scale/latitude range
+// that airports land in visually-correct relative positions without pulling
+// in a mapping library. Bounds are fixed to continental-US extent (not just
+// this airport set's bounding box) so future airports added later still
+// project correctly without everyone else's position shifting.
+const US_BOUNDS = { latMin: 24.5, latMax: 49.5, lonMin: -125, lonMax: -66.5 };
+const MAP_PADDING = 36; // px, keeps edge airports (SEA, MIA) off the canvas border
+
+// Computed once and reused by anything projecting lat/lon to canvas space —
+// airports AND the outline/state geometry below need the IDENTICAL scale/
+// offset, or they'd drift apart (airports floating off their real state).
+let PROJECTION = null;
+
+function computeProjection() {
+  const avgLatRad = ((US_BOUNDS.latMin + US_BOUNDS.latMax) / 2) * Math.PI / 180;
+  const lonCorrection = Math.cos(avgLatRad); // shrinks longitude degrees toward their true relative distance
+
+  const xUnitsRange = (US_BOUNDS.lonMax - US_BOUNDS.lonMin) * lonCorrection;
+  const yUnitsRange = (US_BOUNDS.latMax - US_BOUNDS.latMin);
+
+  const availW = canvas.width - MAP_PADDING * 2;
+  const availH = canvas.height - MAP_PADDING * 2;
+
+  // fit the real aspect ratio inside the available canvas area (letterbox),
+  // rather than stretching lat/lon independently to fill the canvas
+  const scale = Math.min(availW / xUnitsRange, availH / yUnitsRange);
+  const offsetX = MAP_PADDING + (availW - xUnitsRange * scale) / 2;
+  const offsetY = MAP_PADDING + (availH - yUnitsRange * scale) / 2;
+
+  return { lonCorrection, scale, offsetX, offsetY };
+}
+
+function projectPoint(lat, lon) {
+  const p = PROJECTION;
+  const xUnits = (lon - US_BOUNDS.lonMin) * p.lonCorrection;
+  const yUnits = (US_BOUNDS.latMax - lat); // invert: higher latitude = further north = smaller y
+  return { x: p.offsetX + xUnits * p.scale, y: p.offsetY + yUnits * p.scale };
+}
+
+function projectAirports() {
+  PROJECTION = computeProjection();
+  for (const ap of AIRPORTS) {
+    const pos = projectPoint(ap.lat, ap.lon);
+    ap.x = pos.x;
+    ap.y = pos.y;
+  }
+}
+
+// Real continental-US outline + state boundaries, from Natural Earth data
+// (via the us-atlas package, topology-aware-simplified — NOT hand-drawn or
+// approximated). Alaska/Hawaii/territories excluded — matches this game's
+// fixed continental-US projection bounds above. Raw arrays are lon/lat
+// rings; PROJECTED_* versions (canvas x/y) are computed once at startup by
+// projectGeographyLayers(), reusing the exact same projectPoint() as
+// airports so nothing can drift out of alignment with real airport
+// positions.
+const US_NATION_RINGS = [[[-81.44,30.71],[-81.26,29.81],[-80.94,29.11],[-80.57,28.59],[-80.57,28.1],[-80.09,27.02],[-80.04,26.59],[-80.15,25.7],[-80.44,25.19],[-81.08,25.12],[-81.29,25.69],[-81.69,25.85],[-81.87,26.38],[-82.25,26.76],[-82.7,27.5],[-82.39,27.84],[-82.85,27.86],[-82.86,28.22],[-82.67,28.44],[-82.69,28.91],[-83.4,29.52],[-83.64,29.89],[-84.27,30.1],[-85.05,29.59],[-85.35,29.66],[-85.36,29.9],[-85.92,30.24],[-86.63,30.4],[-87.52,30.28],[-87.77,30.26],[-88.01,30.68],[-88.14,30.32],[-88.4,30.37],[-88.89,30.39],[-89.53,30.18],[-89.82,30.04],[-89.66,29.86],[-89.48,30.08],[-89.43,29.66],[-89.67,29.64],[-89.51,29.39],[-89.2,29.35],[-89.14,28.99],[-89.84,29.32],[-90.22,29.09],[-90.43,29.35],[-90.81,29.04],[-91.34,29.3],[-91.62,29.74],[-91.89,29.84],[-92.32,29.53],[-93.18,29.77],[-93.84,29.69],[-94.78,29.38],[-94.69,29.76],[-95.01,29.66],[-94.73,29.33],[-95.38,28.87],[-96.22,28.49],[-97,27.91],[-96.92,28.09],[-96.44,28.34],[-96.79,28.38],[-97.41,27.32],[-97.41,26.48],[-97.15,25.95],[-97.37,25.84],[-97.8,26.06],[-98.2,26.06],[-99.11,26.43],[-99.45,27.02],[-99.48,27.49],[-99.88,27.8],[-100.29,28.28],[-100.67,29.1],[-101.48,29.78],[-102.3,29.88],[-102.65,29.73],[-102.89,29.21],[-103.12,28.99],[-104.15,29.38],[-104.51,29.64],[-104.71,30.24],[-105.01,30.69],[-105.4,30.86],[-106.53,31.78],[-108.21,31.78],[-108.21,31.33],[-109.05,31.33],[-111.08,31.33],[-114.81,32.49],[-114.72,32.72],[-117.12,32.53],[-117.5,33.33],[-118.18,33.76],[-118.41,33.74],[-118.54,34.04],[-119.22,34.15],[-119.56,34.41],[-120.47,34.45],[-120.65,34.58],[-120.63,35.12],[-121.25,35.66],[-121.94,36.48],[-121.79,36.8],[-122.4,37.2],[-122.52,37.78],[-122.09,37.45],[-122.43,37.96],[-122.53,37.82],[-123.01,38],[-122.97,38.25],[-123.74,38.95],[-123.85,39.83],[-124.36,40.26],[-124.41,40.44],[-124.18,40.84],[-124.06,41.44],[-124.21,42],[-124.55,42.84],[-124.2,43.67],[-123.98,45.15],[-123.9,46.17],[-123.55,46.26],[-124.08,46.27],[-123.83,46.72],[-124.09,46.75],[-124.49,47.82],[-124.73,48.16],[-124.65,48.39],[-123.98,48.16],[-123.04,48.08],[-122.76,48.14],[-122.48,47.75],[-122.6,47.22],[-122.33,47.35],[-122.39,47.81],[-122.23,48.03],[-122.49,48.75],[-122.76,49],[-117.03,49],[-116.05,49],[-104.05,49],[-97.23,49],[-95.15,49],[-95.15,49.38],[-94.82,49.29],[-94.64,48.74],[-93.83,48.63],[-93.79,48.52],[-92.99,48.62],[-91.72,48.2],[-91.57,48.04],[-90.89,48.25],[-90.76,48.1],[-90.13,48.11],[-89.58,48],[-90.54,47.7],[-91.13,47.4],[-92.09,46.79],[-92.01,46.71],[-91.51,46.76],[-90.97,46.94],[-90.42,46.57],[-89.79,46.82],[-89.44,46.84],[-88.18,47.46],[-87.71,47.4],[-88.23,47.2],[-88.24,46.93],[-87.67,46.84],[-87.39,46.52],[-86.59,46.46],[-86.14,46.67],[-84.95,46.77],[-85.03,46.48],[-84.59,46.41],[-84.22,46.53],[-84.07,46.1],[-83.58,46.09],[-83.56,45.91],[-84.38,45.93],[-84.66,46.05],[-84.83,45.87],[-85.51,46.09],[-85.66,45.97],[-86.2,45.96],[-87.02,45.84],[-87.59,45.1],[-87.98,44.72],[-87.97,44.53],[-87.4,44.9],[-87.06,45.29],[-87.05,45.09],[-87.47,44.55],[-87.52,44.18],[-87.91,43.24],[-87.8,42.49],[-87.84,42.3],[-87.52,41.71],[-87.22,41.62],[-86.82,41.76],[-86.62,41.89],[-86.26,42.44],[-86.23,43.02],[-86.54,43.66],[-86.51,44.05],[-86.27,44.35],[-86.26,44.69],[-85.62,45.19],[-85.6,44.77],[-85.39,44.93],[-85.37,45.27],[-84.92,45.39],[-85.12,45.57],[-84.77,45.79],[-84.06,45.49],[-83.5,45.36],[-83.27,45.02],[-83.33,44.34],[-83.96,43.75],[-83.68,43.59],[-83.26,43.97],[-82.91,44.07],[-82.64,43.85],[-82.42,43.01],[-82.52,42.61],[-82.82,42.63],[-83.19,42.01],[-83.45,41.73],[-82.48,41.38],[-81.74,41.49],[-81.01,41.85],[-80.52,41.98],[-79.76,42.27],[-78.85,42.78],[-79.07,43.26],[-78.49,43.37],[-76.95,43.27],[-76.24,43.53],[-76.14,43.93],[-76.31,44.2],[-75.91,44.37],[-75.31,44.84],[-74.83,45.02],[-73.34,45.01],[-71.5,45.01],[-71.38,45.24],[-71.08,45.31],[-70.86,45.23],[-70.72,45.52],[-70.26,45.89],[-70.21,46.33],[-70,46.69],[-69.23,47.46],[-68.9,47.18],[-68.23,47.35],[-67.79,47.07],[-67.8,45.68],[-67.45,45.6],[-67.49,45.28],[-67.16,45.16],[-66.98,44.81],[-67.59,44.45],[-67.77,44.55],[-68.05,44.33],[-68.52,44.26],[-68.6,44.01],[-68.81,44.5],[-69.22,43.92],[-69.93,43.78],[-70.35,43.54],[-70.7,43.06],[-70.82,42.87],[-70.6,42.66],[-70.99,42.41],[-70.64,42.09],[-70.54,41.82],[-69.93,41.69],[-70.66,41.54],[-70.63,41.71],[-71.12,41.5],[-71.2,41.68],[-71.22,41.71],[-71.39,41.78],[-71.48,41.37],[-71.86,41.32],[-72.9,41.24],[-73.66,40.98],[-72.64,40.98],[-72.36,41.14],[-72.1,40.99],[-73.21,40.63],[-73.94,40.54],[-74.05,40.69],[-74.07,40.66],[-74.26,40.5],[-73.97,40.37],[-74.1,39.76],[-74.34,39.43],[-74.97,38.94],[-74.89,39.16],[-75.54,39.46],[-75.56,39.61],[-75.56,39.63],[-75.51,39.69],[-75.59,39.46],[-75.4,39.07],[-75.1,38.8],[-75.05,38.45],[-75.24,38.03],[-75.56,37.74],[-75.83,37.17],[-76.03,37.26],[-75.67,37.95],[-75.89,37.92],[-75.85,38.21],[-76.17,38.24],[-76.34,38.49],[-76.03,38.57],[-76.38,38.85],[-76.18,39.32],[-76.44,39.2],[-76.52,38.54],[-76.44,38.16],[-76.8,38.24],[-77.13,38.64],[-77.27,38.33],[-76.62,38.15],[-76.24,37.89],[-76.41,37.4],[-76.27,37.08],[-76.48,36.9],[-75.99,36.92],[-75.87,36.55],[-75.92,36.24],[-76.67,35.94],[-75.81,35.96],[-75.78,35.58],[-76.14,35.33],[-77.02,35.52],[-76.47,35.26],[-76.76,34.92],[-76.44,35.06],[-76.29,34.94],[-76.54,34.59],[-77.03,34.66],[-77.56,34.42],[-77.96,33.85],[-78.54,33.85],[-79.09,33.48],[-79.36,33.01],[-80,32.61],[-80.48,32.46],[-80.46,32.33],[-80.89,32.03],[-81.13,31.72],[-81.44,30.71]]];
+
+const US_STATE_RINGS = [[[[-88.2,35],[-85.61,34.98],[-85.19,32.87],[-84.89,32.26],[-85.14,31.84],[-85,31],[-87.6,31],[-87.37,30.44],[-87.52,30.28],[-87.77,30.26],[-88.01,30.68],[-88.14,30.32],[-88.4,30.37],[-88.47,31.89],[-88.1,34.89],[-88.2,35]]],[[[-114.72,32.72],[-114.53,32.76],[-114.73,33.41],[-114.5,33.7],[-114.44,34.09],[-114.13,34.26],[-114.63,35],[-114.76,36.09],[-114.05,36.19],[-114.05,37],[-109.04,37],[-109.05,31.33],[-111.08,31.33],[-114.81,32.49],[-114.72,32.72]]],[[[-109.05,41],[-104.05,41],[-102.05,41],[-102.05,40],[-102.04,36.99],[-103,37],[-109.04,37],[-109.05,41]]],[[[-81.81,24.57],[-81.44,24.81],[-81.24,24.67],[-81.81,24.57]],[[-85,31],[-84.86,30.71],[-82.21,30.57],[-82.04,30.37],[-81.95,30.83],[-81.44,30.71],[-81.26,29.81],[-80.94,29.11],[-80.57,28.59],[-80.57,28.1],[-80.09,27.02],[-80.04,26.59],[-80.15,25.7],[-80.44,25.19],[-81.08,25.12],[-81.29,25.69],[-81.69,25.85],[-81.87,26.38],[-82.25,26.76],[-82.7,27.5],[-82.39,27.84],[-82.85,27.86],[-82.86,28.22],[-82.67,28.44],[-82.69,28.91],[-83.4,29.52],[-83.64,29.89],[-84.27,30.1],[-85.05,29.59],[-85.35,29.66],[-85.36,29.9],[-85.92,30.24],[-86.63,30.4],[-87.52,30.28],[-87.37,30.44],[-87.6,31],[-85,31]]],[[[-85.61,34.98],[-84.32,34.99],[-83.11,35],[-83.34,34.68],[-82.88,34.48],[-82.56,33.94],[-81.91,33.44],[-81.49,33.01],[-81.11,32.11],[-80.89,32.03],[-81.13,31.72],[-81.44,30.71],[-81.95,30.83],[-82.04,30.37],[-82.21,30.57],[-84.86,30.71],[-85,31],[-85.14,31.84],[-84.89,32.26],[-85.19,32.87],[-85.61,34.98]]],[[[-87.52,41.71],[-87.22,41.62],[-86.82,41.76],[-84.81,41.76],[-84.81,41.7],[-84.82,39.11],[-84.81,38.79],[-85.45,38.71],[-85.42,38.54],[-85.83,38.28],[-85.92,38.03],[-86.79,37.99],[-87.13,37.78],[-87.6,37.97],[-88.03,37.8],[-88.1,37.9],[-87.49,38.74],[-87.64,39.17],[-87.53,39.35],[-87.52,41.71]]],[[[-102.05,40],[-95.31,40],[-94.88,39.83],[-95.1,39.53],[-94.61,39.12],[-94.62,37],[-102.04,36.99],[-102.05,40]]],[[[-70.7,43.06],[-70.99,43.38],[-71.08,45.31],[-70.86,45.23],[-70.72,45.52],[-70.26,45.89],[-70.21,46.33],[-70,46.69],[-69.23,47.46],[-68.9,47.18],[-68.23,47.35],[-67.79,47.07],[-67.8,45.68],[-67.45,45.6],[-67.49,45.28],[-67.16,45.16],[-66.98,44.81],[-67.59,44.45],[-67.77,44.55],[-68.05,44.33],[-68.52,44.26],[-68.6,44.01],[-68.81,44.5],[-69.22,43.92],[-69.93,43.78],[-70.35,43.54],[-70.7,43.06]]],[[[-73.26,42.75],[-72.46,42.73],[-71.29,42.7],[-70.82,42.87],[-70.6,42.66],[-70.99,42.41],[-70.64,42.09],[-70.54,41.82],[-69.93,41.69],[-70.66,41.54],[-70.63,41.71],[-71.12,41.5],[-71.2,41.68],[-71.22,41.71],[-71.38,42.02],[-71.8,42.01],[-73.49,42.05],[-73.26,42.75]]],[[[-97.23,49],[-95.15,49],[-95.15,49.38],[-94.82,49.29],[-94.64,48.74],[-93.83,48.63],[-93.79,48.52],[-92.99,48.62],[-91.72,48.2],[-91.57,48.04],[-90.89,48.25],[-90.76,48.1],[-90.13,48.11],[-89.58,48],[-90.54,47.7],[-91.13,47.4],[-92.09,46.79],[-92.01,46.71],[-92.29,46.66],[-92.29,46.07],[-92.71,45.89],[-92.89,45.58],[-92.76,45.29],[-92.81,44.77],[-92.54,44.57],[-91.92,44.33],[-91.88,44.2],[-91.28,43.84],[-91.22,43.5],[-96.45,43.5],[-96.45,45.3],[-96.86,45.61],[-96.56,45.94],[-96.6,46.33],[-96.8,46.66],[-96.86,47.61],[-97.13,48.14],[-97.1,48.69],[-97.23,49]]],[[[-75.56,39.63],[-75.51,39.69],[-75.42,39.8],[-74.72,40.15],[-75.2,40.69],[-75.14,40.97],[-74.7,41.36],[-73.91,41],[-74.05,40.69],[-74.07,40.66],[-74.26,40.5],[-73.97,40.37],[-74.1,39.76],[-74.34,39.43],[-74.97,38.94],[-74.89,39.16],[-75.54,39.46],[-75.56,39.61],[-75.56,39.63]]],[[[-81.68,36.59],[-80.29,36.54],[-75.87,36.55],[-75.92,36.24],[-76.67,35.94],[-75.81,35.96],[-75.78,35.58],[-76.14,35.33],[-77.02,35.52],[-76.47,35.26],[-76.76,34.92],[-76.44,35.06],[-76.29,34.94],[-76.54,34.59],[-77.03,34.66],[-77.56,34.42],[-77.96,33.85],[-78.54,33.85],[-79.67,34.8],[-80.8,34.82],[-81.04,35.15],[-82.29,35.2],[-83.11,35],[-84.32,34.99],[-84.29,35.22],[-83.77,35.56],[-83.49,35.57],[-82.21,36.16],[-82.03,36.13],[-81.68,36.59]]],[[[-104.05,49],[-97.23,49],[-97.1,48.69],[-97.13,48.14],[-96.86,47.61],[-96.8,46.66],[-96.6,46.33],[-96.56,45.94],[-104.04,45.95],[-104.05,49]]],[[[-103,37],[-102.04,36.99],[-94.62,37],[-94.62,36.5],[-94.43,35.39],[-94.49,33.64],[-95.23,33.96],[-96.15,33.84],[-96.32,33.69],[-96.91,33.95],[-97.16,33.73],[-98.36,34.16],[-98.49,34.06],[-99.21,34.34],[-99.71,34.39],[-100,34.56],[-100,36.5],[-103,36.5],[-103,37]]],[[[-80.52,41.98],[-79.76,42.27],[-79.76,42],[-75.36,42],[-75.08,41.61],[-74.7,41.36],[-75.14,40.97],[-75.2,40.69],[-74.72,40.15],[-75.42,39.8],[-75.79,39.72],[-79.48,39.72],[-80.52,39.72],[-80.52,40.64],[-80.52,41.98]]],[[[-104.06,45],[-104.04,45.95],[-96.56,45.94],[-96.86,45.61],[-96.45,45.3],[-96.45,43.5],[-96.63,42.71],[-96.45,42.49],[-97.31,42.87],[-98.02,42.76],[-98.5,43],[-104.05,43],[-104.06,45]]],[[[-103,36.5],[-100,36.5],[-100,34.56],[-99.71,34.39],[-99.21,34.34],[-98.49,34.06],[-98.36,34.16],[-97.16,33.73],[-96.91,33.95],[-96.32,33.69],[-96.15,33.84],[-95.23,33.96],[-94.49,33.64],[-94.05,33.55],[-94.05,33.55],[-94.04,33.02],[-94.04,31.99],[-93.53,31.18],[-93.55,30.82],[-93.77,30.33],[-93.7,30.07],[-93.84,29.69],[-94.78,29.38],[-94.69,29.76],[-95.01,29.66],[-94.73,29.33],[-95.38,28.87],[-96.22,28.49],[-97,27.91],[-96.92,28.09],[-96.44,28.34],[-96.79,28.38],[-97.41,27.32],[-97.41,26.48],[-97.15,25.95],[-97.37,25.84],[-97.8,26.06],[-98.2,26.06],[-99.11,26.43],[-99.45,27.02],[-99.48,27.49],[-99.88,27.8],[-100.29,28.28],[-100.67,29.1],[-101.48,29.78],[-102.3,29.88],[-102.65,29.73],[-102.89,29.21],[-103.12,28.99],[-104.15,29.38],[-104.51,29.64],[-104.71,30.24],[-105.01,30.69],[-105.4,30.86],[-106.53,31.78],[-106.62,32],[-103.07,32],[-103.04,36.5],[-103,36.5]]],[[[-104.06,45],[-104.05,43],[-104.05,41],[-109.05,41],[-111.05,41],[-111.05,42],[-111.05,44.47],[-111.05,45],[-104.06,45]]],[[[-73.49,42.05],[-71.8,42.01],[-71.86,41.32],[-72.9,41.24],[-73.66,40.98],[-73.55,41.3],[-73.49,42.05]]],[[[-95.76,40.59],[-94.59,40.57],[-91.73,40.61],[-91.42,40.38],[-91.49,40.04],[-91.37,39.73],[-90.72,39.23],[-90.66,38.93],[-90.11,38.85],[-90.36,38.21],[-89.52,37.69],[-89.52,37.29],[-89.13,36.98],[-89.16,36.67],[-89.42,36.5],[-89.49,36.5],[-89.54,36.5],[-89.73,36],[-90.38,36],[-90.08,36.27],[-90.15,36.5],[-94.62,36.5],[-94.62,37],[-94.61,39.12],[-95.1,39.53],[-94.88,39.83],[-95.31,40],[-95.76,40.59]]],[[[-82.6,38.42],[-82.32,38.45],[-82.03,39.03],[-81.89,38.87],[-81.47,39.4],[-81.21,39.39],[-80.83,39.71],[-80.52,40.64],[-80.52,39.72],[-79.48,39.72],[-79.49,39.21],[-78.78,39.62],[-78.47,39.52],[-78.18,39.7],[-77.72,39.32],[-77.83,39.13],[-78.35,39.47],[-78.4,39.17],[-78.87,38.76],[-79,38.85],[-79.31,38.41],[-79.65,38.59],[-79.69,38.43],[-80.29,37.69],[-80.3,37.51],[-81.22,37.24],[-81.68,37.2],[-81.97,37.54],[-82.29,37.67],[-82.64,38.14],[-82.6,38.42]]],[[[-91.42,40.38],[-91.12,40.67],[-90.95,41.1],[-91.04,41.42],[-90.34,41.59],[-90.16,42.12],[-90.64,42.51],[-87.8,42.49],[-87.84,42.3],[-87.52,41.71],[-87.53,39.35],[-87.64,39.17],[-87.49,38.74],[-88.1,37.9],[-88.03,37.8],[-88.08,37.47],[-88.48,37.39],[-88.46,37.07],[-88.92,37.22],[-89.13,36.98],[-89.52,37.29],[-89.52,37.69],[-90.36,38.21],[-90.11,38.85],[-90.66,38.93],[-90.72,39.23],[-91.37,39.73],[-91.49,40.04],[-91.42,40.38]]],[[[-109.04,37],[-103,37],[-103,36.5],[-103.04,36.5],[-103.07,32],[-106.62,32],[-106.53,31.78],[-108.21,31.78],[-108.21,31.33],[-109.05,31.33],[-109.04,37]]],[[[-94.62,36.5],[-90.15,36.5],[-90.08,36.27],[-90.38,36],[-89.73,36],[-89.66,35.89],[-90.17,35.42],[-90.06,35.14],[-90.31,35],[-90.51,34.8],[-90.57,34.43],[-91.09,33.96],[-90.99,33.79],[-91.17,33],[-94.04,33.02],[-94.05,33.55],[-94.05,33.55],[-94.49,33.64],[-94.43,35.39],[-94.62,36.5]]],[[[-124.21,42],[-120,42],[-120,41.99],[-120,39],[-117.83,37.47],[-116.25,36.28],[-114.63,35],[-114.13,34.26],[-114.44,34.09],[-114.5,33.7],[-114.73,33.41],[-114.53,32.76],[-114.72,32.72],[-117.12,32.53],[-117.5,33.33],[-118.18,33.76],[-118.41,33.74],[-118.54,34.04],[-119.22,34.15],[-119.56,34.41],[-120.47,34.45],[-120.65,34.58],[-120.63,35.12],[-121.25,35.66],[-121.94,36.48],[-121.79,36.8],[-122.4,37.2],[-122.52,37.78],[-122.09,37.45],[-122.43,37.96],[-122.53,37.82],[-123.01,38],[-122.97,38.25],[-123.74,38.95],[-123.85,39.83],[-124.36,40.26],[-124.41,40.44],[-124.18,40.84],[-124.06,41.44],[-124.21,42]]],[[[-75.79,39.72],[-75.42,39.8],[-75.51,39.69],[-75.59,39.46],[-75.4,39.07],[-75.1,38.8],[-75.05,38.45],[-75.69,38.46],[-75.79,39.72]]],[[[-77.12,38.93],[-77.04,38.79],[-77.12,38.93],[-77.12,38.93]]],[[[-96.45,43.5],[-91.22,43.5],[-91.06,42.74],[-90.64,42.51],[-90.16,42.12],[-90.34,41.59],[-91.04,41.42],[-90.95,41.1],[-91.12,40.67],[-91.42,40.38],[-91.73,40.61],[-94.59,40.57],[-95.76,40.59],[-95.93,41.46],[-96.45,42.49],[-96.63,42.71],[-96.45,43.5]]],[[[-89.13,36.98],[-88.92,37.22],[-88.46,37.07],[-88.48,37.39],[-88.08,37.47],[-88.03,37.8],[-87.6,37.97],[-87.13,37.78],[-86.79,37.99],[-85.92,38.03],[-85.83,38.28],[-85.42,38.54],[-85.45,38.71],[-84.81,38.79],[-84.82,39.11],[-84.44,39.11],[-84.21,38.81],[-83.31,38.6],[-82.89,38.76],[-82.6,38.42],[-82.64,38.14],[-82.29,37.67],[-81.97,37.54],[-82.72,37.12],[-83.14,36.74],[-83.68,36.6],[-86.59,36.65],[-87.85,36.63],[-88.05,36.5],[-89.42,36.5],[-89.16,36.67],[-89.13,36.98]],[[-89.49,36.5],[-89.54,36.5],[-89.49,36.5],[-89.49,36.5]]],[[[-75.99,37.95],[-76.04,37.95],[-75.99,37.95],[-75.99,37.95]],[[-79.48,39.72],[-75.79,39.72],[-75.69,38.46],[-75.05,38.45],[-75.24,38.03],[-75.67,37.95],[-75.89,37.92],[-75.85,38.21],[-76.17,38.24],[-76.34,38.49],[-76.03,38.57],[-76.38,38.85],[-76.18,39.32],[-76.44,39.2],[-76.52,38.54],[-76.44,38.16],[-76.8,38.24],[-77.13,38.64],[-77.04,38.79],[-77.12,38.93],[-77.72,39.32],[-78.18,39.7],[-78.47,39.52],[-78.78,39.62],[-79.49,39.21],[-79.48,39.72]]],[[[-86.82,41.76],[-86.62,41.89],[-86.26,42.44],[-86.23,43.02],[-86.54,43.66],[-86.51,44.05],[-86.27,44.35],[-86.26,44.69],[-85.62,45.19],[-85.6,44.77],[-85.39,44.93],[-85.37,45.27],[-84.92,45.39],[-85.12,45.57],[-84.77,45.79],[-84.06,45.49],[-83.5,45.36],[-83.27,45.02],[-83.33,44.34],[-83.96,43.75],[-83.68,43.59],[-83.26,43.97],[-82.91,44.07],[-82.64,43.85],[-82.42,43.01],[-82.52,42.61],[-82.82,42.63],[-83.19,42.01],[-83.45,41.73],[-84.81,41.7],[-84.81,41.76],[-86.82,41.76]],[[-89.25,47.88],[-88.66,48.14],[-88.67,48.01],[-89.25,47.88]],[[-90.42,46.57],[-89.79,46.82],[-89.44,46.84],[-88.18,47.46],[-87.71,47.4],[-88.23,47.2],[-88.24,46.93],[-87.67,46.84],[-87.39,46.52],[-86.59,46.46],[-86.14,46.67],[-84.95,46.77],[-85.03,46.48],[-84.59,46.41],[-84.22,46.53],[-84.07,46.1],[-83.58,46.09],[-83.56,45.91],[-84.38,45.93],[-84.66,46.05],[-84.83,45.87],[-85.51,46.09],[-85.66,45.97],[-86.2,45.96],[-87.02,45.84],[-87.59,45.1],[-87.85,45.34],[-87.85,45.34],[-87.78,45.67],[-88.1,45.92],[-90.12,46.34],[-90.35,46.54],[-90.35,46.54],[-90.42,46.57]]],[[[-91.17,33],[-90.99,33.79],[-91.09,33.96],[-90.57,34.43],[-90.51,34.8],[-90.31,35],[-88.2,35],[-88.1,34.89],[-88.47,31.89],[-88.4,30.37],[-88.89,30.39],[-89.53,30.18],[-89.85,30.66],[-89.75,31],[-91.64,31],[-91.52,31.52],[-90.91,32.34],[-91.11,32.48],[-91.17,33]]],[[[-116.05,49],[-104.05,49],[-104.04,45.95],[-104.06,45],[-111.05,45],[-111.05,44.47],[-111.39,44.76],[-111.47,44.54],[-112.29,44.57],[-112.39,44.45],[-113,44.45],[-113.13,44.77],[-113.46,44.87],[-113.45,45.06],[-113.99,45.7],[-114.35,45.46],[-114.57,45.77],[-114.32,46.61],[-114.95,46.86],[-115.33,47.26],[-115.72,47.42],[-115.72,47.7],[-116.05,47.98],[-116.05,49]]],[[[-71.5,45.01],[-71.38,45.24],[-71.08,45.31],[-70.99,43.38],[-70.7,43.06],[-70.82,42.87],[-71.29,42.7],[-72.46,42.73],[-72.38,43.57],[-72.03,44.09],[-72.03,44.32],[-71.58,44.5],[-71.5,45.01]]],[[[-74.07,40.66],[-74.26,40.5],[-74.07,40.66],[-74.07,40.66]],[[-79.76,42.27],[-78.85,42.78],[-79.07,43.26],[-78.49,43.37],[-76.95,43.27],[-76.24,43.53],[-76.14,43.93],[-76.31,44.2],[-75.91,44.37],[-75.31,44.84],[-74.83,45.02],[-73.34,45.01],[-73.29,44.44],[-73.44,44.04],[-73.25,43.55],[-73.26,42.75],[-73.49,42.05],[-73.55,41.3],[-73.66,40.98],[-72.64,40.98],[-72.36,41.14],[-72.1,40.99],[-73.21,40.63],[-73.94,40.54],[-74.05,40.69],[-73.91,41],[-74.7,41.36],[-75.08,41.61],[-75.36,42],[-79.76,42],[-79.76,42.27]]],[[[-84.81,41.7],[-83.45,41.73],[-82.48,41.38],[-81.74,41.49],[-81.01,41.85],[-80.52,41.98],[-80.52,40.64],[-80.83,39.71],[-81.21,39.39],[-81.47,39.4],[-81.89,38.87],[-82.03,39.03],[-82.32,38.45],[-82.6,38.42],[-82.89,38.76],[-83.31,38.6],[-84.21,38.81],[-84.44,39.11],[-84.82,39.11],[-84.81,41.7]]],[[[-123.55,46.26],[-123.11,46.19],[-122.81,45.96],[-122.76,45.66],[-122.27,45.54],[-121.53,45.73],[-121.18,45.61],[-120.56,45.74],[-119.13,45.93],[-118.99,46],[-116.92,46],[-116.46,45.6],[-117.22,44.29],[-116.9,44.18],[-117.03,43.81],[-117.03,42],[-120,42],[-120,41.99],[-120,42],[-124.21,42],[-124.55,42.84],[-124.2,43.67],[-123.98,45.15],[-123.9,46.17],[-123.55,46.26]]],[[[-89.73,36],[-89.54,36.5],[-89.49,36.5],[-89.42,36.5],[-88.05,36.5],[-87.85,36.63],[-86.59,36.65],[-83.68,36.6],[-81.68,36.59],[-82.03,36.13],[-82.21,36.16],[-83.49,35.57],[-83.77,35.56],[-84.29,35.22],[-84.32,34.99],[-85.61,34.98],[-88.2,35],[-90.31,35],[-90.06,35.14],[-90.17,35.42],[-89.66,35.89],[-89.73,36]]],[[[-114.04,41.99],[-111.05,42],[-111.05,41],[-109.05,41],[-109.04,37],[-114.05,37],[-114.04,41.99]]],[[[-75.67,37.95],[-75.24,38.03],[-75.56,37.74],[-75.83,37.17],[-76.03,37.26],[-75.67,37.95]],[[-75.99,37.95],[-76.04,37.95],[-75.99,37.95],[-75.99,37.95]],[[-81.97,37.54],[-81.68,37.2],[-81.22,37.24],[-80.3,37.51],[-80.29,37.69],[-79.69,38.43],[-79.65,38.59],[-79.31,38.41],[-79,38.85],[-78.87,38.76],[-78.4,39.17],[-78.35,39.47],[-77.83,39.13],[-77.72,39.32],[-77.12,38.93],[-77.04,38.79],[-77.13,38.64],[-77.27,38.33],[-76.62,38.15],[-76.24,37.89],[-76.41,37.4],[-76.27,37.08],[-76.48,36.9],[-75.99,36.92],[-75.87,36.55],[-80.29,36.54],[-81.68,36.59],[-83.68,36.6],[-83.14,36.74],[-82.72,37.12],[-81.97,37.54]]],[[[-123.2,48.6],[-122.74,48.66],[-122.8,48.43],[-123.2,48.6]],[[-117.03,49],[-117.04,46.41],[-116.92,46],[-118.99,46],[-119.13,45.93],[-120.56,45.74],[-121.18,45.61],[-121.53,45.73],[-122.27,45.54],[-122.76,45.66],[-122.81,45.96],[-123.11,46.19],[-123.55,46.26],[-124.08,46.27],[-123.83,46.72],[-124.09,46.75],[-124.49,47.82],[-124.73,48.16],[-124.65,48.39],[-123.98,48.16],[-123.04,48.08],[-122.76,48.14],[-122.48,47.75],[-122.6,47.22],[-122.33,47.35],[-122.39,47.81],[-122.23,48.03],[-122.49,48.75],[-122.76,49],[-117.03,49]]],[[[-92.01,46.71],[-91.51,46.76],[-90.97,46.94],[-90.42,46.57],[-90.35,46.54],[-90.35,46.54],[-90.12,46.34],[-88.1,45.92],[-87.78,45.67],[-87.85,45.34],[-87.85,45.34],[-87.59,45.1],[-87.98,44.72],[-87.97,44.53],[-87.4,44.9],[-87.06,45.29],[-87.05,45.09],[-87.47,44.55],[-87.52,44.18],[-87.91,43.24],[-87.8,42.49],[-90.64,42.51],[-91.06,42.74],[-91.22,43.5],[-91.28,43.84],[-91.88,44.2],[-91.92,44.33],[-92.54,44.57],[-92.81,44.77],[-92.76,45.29],[-92.89,45.58],[-92.71,45.89],[-92.29,46.07],[-92.29,46.66],[-92.01,46.71]]],[[[-104.05,43],[-98.5,43],[-98.02,42.76],[-97.31,42.87],[-96.45,42.49],[-95.93,41.46],[-95.76,40.59],[-95.31,40],[-102.05,40],[-102.05,41],[-104.05,41],[-104.05,43]]],[[[-83.11,35],[-82.29,35.2],[-81.04,35.15],[-80.8,34.82],[-79.67,34.8],[-78.54,33.85],[-79.09,33.48],[-79.36,33.01],[-80,32.61],[-80.48,32.46],[-80.46,32.33],[-80.89,32.03],[-81.11,32.11],[-81.49,33.01],[-81.91,33.44],[-82.56,33.94],[-82.88,34.48],[-83.34,34.68],[-83.11,35]]],[[[-116.92,46],[-117.04,46.41],[-117.03,49],[-116.05,49],[-116.05,47.98],[-115.72,47.7],[-115.72,47.42],[-115.33,47.26],[-114.95,46.86],[-114.32,46.61],[-114.57,45.77],[-114.35,45.46],[-113.99,45.7],[-113.45,45.06],[-113.46,44.87],[-113.13,44.77],[-113,44.45],[-112.39,44.45],[-112.29,44.57],[-111.47,44.54],[-111.39,44.76],[-111.05,44.47],[-111.05,42],[-114.04,41.99],[-117.03,42],[-117.03,43.81],[-116.9,44.18],[-117.22,44.29],[-116.46,45.6],[-116.92,46]]],[[[-120,41.99],[-120,42],[-117.03,42],[-114.04,41.99],[-114.05,37],[-114.05,36.19],[-114.76,36.09],[-114.63,35],[-116.25,36.28],[-117.83,37.47],[-120,39],[-120,41.99]]],[[[-73.34,45.01],[-71.5,45.01],[-71.58,44.5],[-72.03,44.32],[-72.03,44.09],[-72.38,43.57],[-72.46,42.73],[-73.26,42.75],[-73.25,43.55],[-73.44,44.04],[-73.29,44.44],[-73.34,45.01]]],[[[-94.04,33.02],[-91.17,33],[-91.11,32.48],[-90.91,32.34],[-91.52,31.52],[-91.64,31],[-89.75,31],[-89.85,30.66],[-89.53,30.18],[-89.82,30.04],[-89.66,29.86],[-89.48,30.08],[-89.43,29.66],[-89.67,29.64],[-89.51,29.39],[-89.2,29.35],[-89.14,28.99],[-89.84,29.32],[-90.22,29.09],[-90.43,29.35],[-90.81,29.04],[-91.34,29.3],[-91.62,29.74],[-91.89,29.84],[-92.32,29.53],[-93.18,29.77],[-93.84,29.69],[-93.7,30.07],[-93.77,30.33],[-93.55,30.82],[-93.53,31.18],[-94.04,31.99],[-94.04,33.02]]],[[[-71.2,41.68],[-71.12,41.5],[-71.2,41.68],[-71.2,41.68]],[[-71.86,41.32],[-71.8,42.01],[-71.38,42.02],[-71.22,41.71],[-71.39,41.78],[-71.48,41.37],[-71.86,41.32]]]];
+
+let PROJECTED_NATION_RINGS = [];
+let PROJECTED_STATE_RINGS = [];
+
+function projectRing(ring) {
+  return ring.map(([lon, lat]) => projectPoint(lat, lon));
+}
+
+function projectGeographyLayers() {
+  PROJECTED_NATION_RINGS = US_NATION_RINGS.map(projectRing);
+  PROJECTED_STATE_RINGS = US_STATE_RINGS.map(feature => feature.map(projectRing));
+}
+
+// ---------- CREW POOL ----------
+const MAX_DUTY_TICKS = 600;  // 10 sim-hours on duty before rest required
+const REST_TICKS = 480;      // 8 sim-hours minimum rest
+
+// Crews are type-rated and never cross families — a 737 pilot can't fly a
+// 787. Pool size is a real roster ratio (crewsPerTail) against however many
+// aircraft of that family are ACTUALLY in the current fleet, not a fixed
+// nominal split, since the weighted spawn means real counts vary run to run.
+let crewPoolsByFamily = {};
+CREW_FAMILIES.forEach(f => { crewPoolsByFamily[f] = []; });
+
+function resizeCrewPools() {
+  const countsByFamily = {};
+  CREW_FAMILIES.forEach(f => { countsByFamily[f] = 0; });
+  for (const ac of fleet) countsByFamily[ac.type.family]++;
+
+  for (const f of CREW_FAMILIES) {
+    const repType = AIRCRAFT_TYPES.find(t => t.family === f);
+    const target = Math.max(1, countsByFamily[f] * repType.crewsPerTail);
+    const pool = crewPoolsByFamily[f];
+    while (pool.length < target) {
+      pool.push({ id: pool.length, status: 'AVAILABLE', dutyTicks: 0, restTicksLeft: 0 });
+    }
+    // shrinking: only drop crew from the end that are AVAILABLE, never cut one mid-duty/rest
+    while (pool.length > target && pool.length > 0 && pool[pool.length-1].status === 'AVAILABLE') {
+      pool.pop();
+    }
+  }
+}
+
+// Real geography means some airports sit genuinely close together at this
+// map scale (JFK/EWR/LGA in the NYC area, MIA/FLL in South Florida) — their
+// dots stay at true projected positions, but their text labels would
+// otherwise overlap into an unreadable stack. This groups anything within
+// CLUSTER_LABEL_THRESHOLD px, fans the labels out radially around the
+// cluster's centroid, and flags them to render with a short leader line
+// back to the real dot. Airports with no nearby neighbor are unaffected —
+// label sits directly under the dot like before.
+// NOTE: this is a stopgap for the browser prototype's fixed zoom level.
+// The actual mobile game is planned to support pinch-zoom, which would
+// resolve this more naturally (zoom in on NYC, labels separate on their
+// own) — that's a real UI decision for Phase 4, not yet logged in
+// CLAUDE.md's "Decided" list. Flag it there before porting.
+const CLUSTER_LABEL_THRESHOLD = 18; // px
+
+function computeAirportLabelPositions() {
+  const assigned = new Set();
+  const clusters = [];
+  for (let i = 0; i < AIRPORTS.length; i++) {
+    if (assigned.has(i)) continue;
+    const cluster = [i];
+    assigned.add(i);
+    for (let j = i + 1; j < AIRPORTS.length; j++) {
+      if (assigned.has(j)) continue;
+      const dx = AIRPORTS[i].x - AIRPORTS[j].x, dy = AIRPORTS[i].y - AIRPORTS[j].y;
+      if (Math.sqrt(dx*dx + dy*dy) < CLUSTER_LABEL_THRESHOLD) {
+        cluster.push(j);
+        assigned.add(j);
+      }
+    }
+    clusters.push(cluster);
+  }
+
+  for (const cluster of clusters) {
+    if (cluster.length === 1) {
+      const ap = AIRPORTS[cluster[0]];
+      ap.labelX = ap.x;
+      ap.labelY = ap.y + 26;
+      ap.labelLeader = false;
+      continue;
+    }
+    const cx = cluster.reduce((s,i) => s + AIRPORTS[i].x, 0) / cluster.length;
+    const cy = cluster.reduce((s,i) => s + AIRPORTS[i].y, 0) / cluster.length;
+    const radius = 34;
+    cluster.forEach((idx, k) => {
+      const angle = (Math.PI * 2 * k / cluster.length) - Math.PI / 2; // fan starting straight up
+      const ap = AIRPORTS[idx];
+      ap.labelX = cx + Math.cos(angle) * radius;
+      ap.labelY = cy + Math.sin(angle) * radius;
+      ap.labelLeader = true;
+    });
+  }
+}
+
+function findAvailableCrew(family) {
+  return crewPoolsByFamily[family].find(c => c.status === 'AVAILABLE');
+}
+
+function tickCrewPool() {
+  for (const f of CREW_FAMILIES) {
+    for (const c of crewPoolsByFamily[f]) {
+      if (c.status === 'ON_DUTY') {
+        c.dutyTicks++;
+      } else if (c.status === 'RESTING') {
+        c.restTicksLeft--;
+        if (c.restTicksLeft <= 0) c.status = 'AVAILABLE';
+      }
+    }
+  }
+}
+
+let totalFeesPaid = 0;
+let totalRevenue = 0;
+
+// ---------- PLAYER DECISIONS ----------
+// The sim never stops for these — only the specific aircraft involved
+// stays held until the player picks an option, exactly like real ops.
+const DECISION_TYPES = {
+  AOG: {
+    label: 'AOG — grounded for maintenance',
+    options: [
+      {
+        label: 'Expedite ($15,000 — ready now)',
+        apply: (ac) => {
+          totalFeesPaid += 15000;
+          ac.maint = false;
+          addLog(`${ac.tail}: expedited repair — $15,000 spent, returning to service`, true);
+        }
+      },
+      {
+        label: 'Standard repair ($3,000 — ~3hr)',
+        apply: (ac) => {
+          totalFeesPaid += 3000;
+          ac.aogAutoClearTick = tick + 180;
+          addLog(`${ac.tail}: standard repair scheduled — $3,000 spent, ~3hr turnaround`, true);
+        }
+      }
+    ]
+  },
+  CREW: {
+    label: 'No available crew',
+    options: [
+      {
+        label: 'Call in reserve crew ($5,000)',
+        apply: (ac) => {
+          const family = ac.type.family;
+          if (reserveCrewsByFamily[family] <= 0) return; // guarded by disabled button too, but safe here
+          reserveCrewsByFamily[family]--;
+          totalFeesPaid += 5000;
+          const pool = crewPoolsByFamily[family];
+          const crew = { id: pool.length, status: 'ON_DUTY', dutyTicks: 0, restTicksLeft: 0 };
+          pool.push(crew);
+          ac.crewId = crew.id;
+          addLog(`${ac.tail}: reserve crew called in — $5,000 spent, ${reserveCrewsByFamily[family]} ${family} reserve(s) left`, true);
+        }
+      },
+      {
+        label: 'Wait for next available crew',
+        apply: () => { /* no-op — aircraft just keeps waiting on the pool */ }
+      }
+    ]
+  }
+};
+
+let decisionQueue = [];
+
+function pushDecision(ac, type) {
+  if (decisionQueue.some(d => d.ac === ac && d.type === type)) return; // no duplicates
+  decisionQueue.push({ id: `${type}_${ac.tail}_${tick}`, type, ac });
+  renderDecisions();
+}
+
+function resolveDecision(id, optionIndex) {
+  const idx = decisionQueue.findIndex(d => d.id === id);
+  if (idx === -1) return;
+  const d = decisionQueue[idx];
+  DECISION_TYPES[d.type].options[optionIndex].apply(d.ac);
+  decisionQueue.splice(idx, 1);
+  renderDecisions();
+}
+
+function renderDecisions() {
+  const panel = document.getElementById('decisionPanel');
+  if (decisionQueue.length === 0) {
+    panel.classList.remove('visible');
+    panel.innerHTML = '';
+    return;
+  }
+  panel.classList.add('visible');
+  panel.innerHTML = decisionQueue.map(d => {
+    const cfg = DECISION_TYPES[d.type];
+    const rev = d.ac.projectedRevenue;
+    const revClass = rev < 0 ? 'decision-cost-neg' : 'decision-cost';
+    const revText = rev < 0
+      ? `$${Math.abs(rev).toLocaleString()} net loss on this flight`
+      : `$${rev.toLocaleString()} projected revenue remaining`;
+    return `<div class="decision-card">
+      <div class="decision-info">
+        <b>${d.ac.tail}</b> · ${d.ac.type.name} · ${cfg.label} · ${d.ac.origin.code}<br>
+        <span class="${revClass}">${revText}</span>
+        <span class="decision-subnote">— eroding $${d.ac.type.holdCostPerTick.toLocaleString()}/min while grounded</span>
+      </div>
+      <div class="decision-actions">
+        ${cfg.options.map((o,i) => {
+          const isReserveOption = d.type === 'CREW' && i === 0;
+          const outOfReserves = isReserveOption && reserveCrewsByFamily[d.ac.type.family] <= 0;
+          const label = outOfReserves ? 'No reserve crews available (this family)' : o.label;
+          return `<button class="decision-btn" data-id="${d.id}" data-opt="${i}" ${outOfReserves ? 'disabled' : ''}>${label}</button>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let tick = 0;
+let speed = 5;
+let fleet = [];
+let nextTailNum = 400;
+let log = [];
+
+const canvas = document.getElementById('scope');
+const ctx = canvas.getContext('2d');
+let lastDrawnPositions = []; // {ac, x, y} from the most recent draw() call, used for hover hit-testing
+let hoveredAircraft = null;
+
+function randomRoutePair() {
+  const a = AIRPORTS[Math.floor(Math.random()*AIRPORTS.length)];
+  let b = AIRPORTS[Math.floor(Math.random()*AIRPORTS.length)];
+  while (b === a) b = AIRPORTS[Math.floor(Math.random()*AIRPORTS.length)];
+  return [a, b];
+}
+
+function makeAircraft() {
+  const [origin, dest] = randomRoutePair();
+  const type = pickAircraftType();
+  return {
+    tail: "N" + (nextTailNum++) + "SK",
+    type,
+    origin, dest,
+    stateIndex: Math.floor(Math.random()*STATE_ORDER.length), // stagger initial states
+    stateTick: 0,
+    maint: false,
+    crewId: null,
+    holdReason: null,   // 'CREW' | 'WEATHER' | null — currently blocked from advancing
+    holdLogged: false,
+    projectedRevenue: rollRevenue(type)
+  };
+}
+
+function setFleetSize(n) {
+  if (n > fleet.length) {
+    while (fleet.length < n) fleet.push(makeAircraft());
+  } else {
+    fleet.length = n;
+  }
+  resizeCrewPools();
+  backfillStaggeredCrews();
+  document.getElementById('fleetCountVal').textContent = fleet.length;
+}
+
+// Aircraft spawn staggered across random initial states (not always PARKED),
+// so one that spawns already mid-flight never passes through the PARKED gate
+// where crew normally gets assigned. Without this, a genuinely flying
+// aircraft could show "no crew assigned" indefinitely — this backfills a
+// crew for any such aircraft right after spawn, with a partially-elapsed
+// duty clock (since it's plausible they've already been flying a while),
+// rather than leaving it as a startup-only display quirk.
+function backfillStaggeredCrews() {
+  for (const ac of fleet) {
+    if (ac.crewId != null) continue;
+    const state = STATE_ORDER[ac.stateIndex];
+    if (state === 'PARKED') continue; // will be assigned normally via the gate when it's ready
+    const crew = findAvailableCrew(ac.type.family);
+    if (crew) {
+      crew.status = 'ON_DUTY';
+      crew.dutyTicks = Math.floor(Math.random() * MAX_DUTY_TICKS * 0.5); // plausible partial duty already elapsed
+      ac.crewId = crew.id;
+    }
+    // if no crew is available even for backfill, it's left null — the
+    // aircraft will pick one up (or hold) the next time it reaches PARKED
+  }
+}
+
+// ---------- LOG ----------
+function addLog(msg, isEvent) {
+  log.unshift({ time: formatClock(), msg, isEvent });
+  if (log.length > 30) log.pop();
+  renderLog();
+}
+function renderLog() {
+  const panel = document.getElementById('logPanel');
+  panel.innerHTML = log.map(e =>
+    `<div class="log-entry${e.isEvent ? ' event' : ''}"><span class="t">${e.time}</span>${e.msg}</div>`
+  ).join('');
+}
+function formatClock() {
+  const day = Math.floor(tick / (24*60)) + 1;
+  const minsInDay = tick % (24*60);
+  const hh = String(Math.floor(minsInDay/60)).padStart(2,'0');
+  const mm = String(minsInDay%60).padStart(2,'0');
+  return `D${day} ${hh}:${mm}`;
+}
+function updateClockDisplay() {
+  const day = Math.floor(tick / (24*60)) + 1;
+  const minsInDay = tick % (24*60);
+  const hh = String(Math.floor(minsInDay/60)).padStart(2,'0');
+  const mm = String(minsInDay%60).padStart(2,'0');
+  document.getElementById('dayNum').textContent = day;
+  document.getElementById('clockTime').textContent = `${hh}:${mm}`;
+  document.getElementById('tickCount').textContent = tick;
+
+  const simDate = new Date(SIM_START_DATE.getTime() + tick*60000);
+  document.getElementById('calDate').textContent = simDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+  // fixed sim-calendar-day boundary — resets when the day number itself
+  // changes, not on a rolling 24-hour window from first use
+  if (day !== lastSeenSimDay) {
+    lastSeenSimDay = day;
+    quarterSpeedUsesRemaining = MAX_QUARTER_SPEED_USES_PER_DAY;
+    addLog(`New sim day — ¼× speed uses reset (${MAX_QUARTER_SPEED_USES_PER_DAY} available)`, true);
+    updateQuarterSpeedButton();
+  }
+}
+
+function updateQuarterSpeedButton() {
+  const btn = document.getElementById('quarterSpeedBtn');
+  btn.textContent = `¼× (${quarterSpeedUsesRemaining}/${MAX_QUARTER_SPEED_USES_PER_DAY})`;
+  btn.disabled = quarterSpeedUsesRemaining <= 0 && !btn.classList.contains('active');
+  btn.classList.toggle('exhausted', quarterSpeedUsesRemaining <= 0);
+}
+
+// ---------- STATE MACHINE (per aircraft) ----------
+function advanceAircraft(ac) {
+  // a scheduled "standard repair" (player-chosen) completes on its own timer
+  if (ac.aogAutoClearTick && tick >= ac.aogAutoClearTick) {
+    ac.maint = false;
+    ac.aogAutoClearTick = null;
+    addLog(`${ac.tail}: standard repair complete, returning to service`, true);
+  }
+
+  const state = STATE_ORDER[ac.stateIndex];
+  const duration = TICKS_PER_STATE[state];
+
+  // ----- gating checks: these can hold an aircraft in its current state
+  // past its normal duration, rather than transitioning on schedule -----
+  if (ac.stateTick >= duration - 1 && state === "PARKED") {
+    // grounded for maintenance — nothing moves until the player resolves it
+    if (ac.maint) {
+      ac.holdReason = 'AOG';
+      if (!ac.holdLogged) {
+        addLog(`${ac.tail}: grounded at ${ac.origin.code} — AOG, awaiting maintenance decision`, true);
+        pushDecision(ac, 'AOG');
+        ac.holdLogged = true;
+      }
+      ac.projectedRevenue -= ac.type.holdCostPerTick; // the booked aircraft is still costing money while it sits, at this type's rate
+      return;
+    }
+    // about to board — must have a crew assigned first
+    if (!ac.crewId) {
+      const crew = findAvailableCrew(ac.type.family);
+      if (crew) {
+        crew.status = 'ON_DUTY';
+        crew.dutyTicks = 0;
+        ac.crewId = crew.id;
+        ac.holdReason = null;
+        ac.holdLogged = false;
+      } else {
+        ac.holdReason = 'CREW';
+        if (!ac.holdLogged) {
+          addLog(`${ac.tail}: holding at ${ac.origin.code} — no available crew`, true);
+          pushDecision(ac, 'CREW');
+          ac.holdLogged = true;
+        }
+        ac.projectedRevenue -= ac.type.holdCostPerTick;
+        return; // don't advance stateTick further, keep retrying each tick
+      }
+    }
+  }
+
+  if (ac.stateTick >= duration - 1 && state === "TAXI_OUT") {
+    if (ac.origin.groundStop) {
+      ac.holdReason = 'WEATHER';
+      if (!ac.holdLogged) {
+        addLog(`${ac.tail}: ground stop at ${ac.origin.code} — holding departure`, true);
+        ac.holdLogged = true;
+      }
+      return;
+    }
+  }
+
+  if (ac.stateTick >= duration - 1 && state === "APPROACH") {
+    if (ac.dest.groundStop) {
+      if (ac.holdReason !== 'WEATHER' && !ac.holdLogged) {
+        addLog(`${ac.tail}: holding pattern at ${ac.dest.code} — ground stop in effect`, true);
+        ac.holdLogged = true;
+      }
+      ac.holdReason = 'WEATHER';
+      return;
+    } else if (ac.holdReason === 'WEATHER') {
+      // ground stop just lifted — don't jump straight onto the approach
+      // path, ease out of the holding pattern first
+      const path = getPathPoints(ac.origin, ac.dest);
+      const tailHash = ac.tail.split('').reduce((s,c) => s + c.charCodeAt(0), 0);
+      const angle = ((tick + tailHash) % 120) / 120 * Math.PI * 2;
+      const fix = {
+        x: bezier(path.startX, path.midX, path.endX, 0.90),
+        y: bezier(path.startY, path.midY, path.endY, 0.90)
+      };
+      ac.rejoinStartX = fix.x + Math.cos(angle) * 20;
+      ac.rejoinStartY = fix.y + Math.sin(angle) * 12;
+      ac.rejoinStartHeading = angle + Math.PI/2;
+      ac.holdReason = 'REJOIN';
+      ac.rejoinTick = 0;
+      addLog(`${ac.tail}: cleared to rejoin approach at ${ac.dest.code}`, true);
+      return;
+    } else if (ac.holdReason === 'REJOIN') {
+      ac.rejoinTick++;
+      if (ac.rejoinTick < REJOIN_DURATION) return;
+      ac.holdReason = null; // rejoin complete — fall through to normal transition
+    }
+  }
+
+  ac.holdReason = null;
+  ac.holdLogged = false;
+  ac.stateTick++;
+
+  if (ac.stateTick >= duration) {
+    ac.stateIndex = (ac.stateIndex + 1) % STATE_ORDER.length;
+    ac.stateTick = 0;
+    const newState = STATE_ORDER[ac.stateIndex];
+
+    if (newState === "TURNAROUND") {
+      // charge landing + gate fees, collect this flight's revenue —
+      // which may have been eaten into by an AOG/crew hold along the way.
+      // Landing fee is weight-based (real signatory rate × this type's max
+      // landing weight); gate fee is tiered by bodyType (real per-turn rate).
+      const landingFee = Math.round(ac.dest.landingFeePerKlb * (ac.type.mlwLbs / 1000));
+      const gateFee = ac.type.bodyType === 'widebody' ? ac.dest.gateFeeWidebody : ac.dest.gateFeeNarrowbody;
+      const fee = landingFee + gateFee;
+      const revenue = ac.projectedRevenue;
+      totalFeesPaid += fee;
+      totalRevenue += revenue;
+
+      // release crew — send to rest if they've hit max duty, else back to their family's pool
+      const crew = crewPoolsByFamily[ac.type.family].find(c => c.id === ac.crewId);
+      if (crew) {
+        if (crew.dutyTicks >= MAX_DUTY_TICKS) {
+          crew.status = 'RESTING';
+          crew.restTicksLeft = REST_TICKS;
+        } else {
+          crew.status = 'AVAILABLE';
+        }
+      }
+      ac.crewId = null;
+
+      if (Math.random() < 0.04 || revenue < 0) {
+        const revenueText = revenue < 0
+          ? `NET LOSS of $${Math.abs(revenue).toLocaleString()} (hold costs exceeded fare revenue)`
+          : `$${revenue.toLocaleString()} revenue`;
+        addLog(`${ac.tail} (${ac.type.name}): ${revenueText} on ${ac.origin.code}→${ac.dest.code}, $${fee.toLocaleString()} in fees at ${ac.dest.code}`, revenue < 0);
+      }
+    }
+
+    if (newState === "PARKED") {
+      const [o, d] = randomRoutePair();
+      ac.origin = o; ac.dest = d;
+      ac.projectedRevenue = rollRevenue(ac.type);
+    }
+  }
+}
+
+// ---------- WEATHER ----------
+function tickWeather() {
+  for (const ap of AIRPORTS) {
+    if (ap.groundStop) {
+      ap.groundStopTicksLeft--;
+      if (ap.groundStopTicksLeft <= 0) {
+        ap.groundStop = false;
+        addLog(`Ground stop lifted at ${ap.code}`, true);
+      }
+    } else if (Math.random() < ap.groundStopsPerMonth / TICKS_PER_MONTH) {
+      // per-airport real onset rate now (was one flat 0.0006/tick rate for
+      // every airport, ~25.9 events/month uniform — see AIRPORTS comment)
+      ap.groundStop = true;
+      ap.groundStopTicksLeft = 90 + Math.round(Math.random()*240); // 1.5–5.5 sim-hours — still generic, no per-airport duration data sourced
+      addLog(`Weather event: ground stop declared at ${ap.code}`, true);
+    }
+  }
+}
+
+function advanceTick() {
+  tick++;
+  tickWeather();
+  tickCrewPool();
+  tickAOGOnset();
+  for (let i=0; i<fleet.length; i++) {
+    advanceAircraft(fleet[i]);
+  }
+  updateClockDisplay();
+  updateStatusStrip();
+  if (decisionQueue.length > 0) renderDecisions();
+}
+
+function tickAOGOnset() {
+  // decay any active per-family elevated-risk window
+  for (const f of CREW_FAMILIES) {
+    if (familyPressureTicksLeft[f] > 0) familyPressureTicksLeft[f]--;
+  }
+
+  for (const ac of fleet) {
+    if (ac.maint) continue; // already flagged, don't re-trigger
+    const f = ac.type.family;
+    const pressureRatio = familyPressureTicksLeft[f] / AOG_CLUSTER_DECAY_TICKS; // 1 right after an incident, decaying to 0
+    const multiplier = 1 + (AOG_CLUSTER_MULTIPLIER - 1) * pressureRatio;
+
+    if (Math.random() < AOG_PROB_PER_TICK_PER_AIRCRAFT * multiplier) {
+      ac.maint = true;
+      const wasElevated = familyPressureTicksLeft[f] > 0;
+      familyPressureTicksLeft[f] = AOG_CLUSTER_DECAY_TICKS; // this incident (re)triggers the elevated window for the whole family
+      const clusterNote = wasElevated ? ` — part of a developing ${FAMILY_LABELS[f]} cluster` : '';
+      addLog(`${ac.tail}: unscheduled maintenance flag (AOG) at ${ac.origin.code}${clusterNote}`, true);
+    }
+  }
+}
+
+function updateStatusStrip() {
+  let ground = 0, air = 0, maint = 0, held = 0;
+  for (const ac of fleet) {
+    const state = STATE_ORDER[ac.stateIndex];
+    if (ac.maint) maint++;
+    if (ac.holdReason) held++;
+    if (["CRUISE","APPROACH","TAKEOFF"].includes(state)) air++;
+    else ground++;
+  }
+  const groundStops = AIRPORTS.filter(a => a.groundStop).map(a => a.code).join(', ') || 'none';
+
+  document.getElementById('activeCount').textContent = fleet.length;
+  document.getElementById('groundCount').textContent = ground;
+  document.getElementById('airCount').textContent = air;
+  document.getElementById('maintCount').textContent = maint;
+  document.getElementById('heldCount').textContent = held;
+
+  const crewLines = CREW_FAMILIES.map(f => {
+    const pool = crewPoolsByFamily[f];
+    const avail = pool.filter(c => c.status === 'AVAILABLE').length;
+    const onDuty = pool.filter(c => c.status === 'ON_DUTY').length;
+    const resting = pool.filter(c => c.status === 'RESTING').length;
+    const elevated = familyPressureTicksLeft[f] > 0 ? ' ⚠' : '';
+    return `${FAMILY_LABELS[f]}: ${avail}/${onDuty}/${resting} · ${reserveCrewsByFamily[f]} res${elevated}`;
+  }).join('  ');
+  document.getElementById('crewStatus').textContent = crewLines;
+  document.getElementById('weatherStatus').textContent = groundStops;
+  document.getElementById('netFinancial').textContent =
+    `$${totalRevenue.toLocaleString()} rev — $${totalFeesPaid.toLocaleString()} fees = $${(totalRevenue-totalFeesPaid).toLocaleString()} net`;
+}
+
+// ---------- POSITION ----------
+function bezier(a,b,c,t) { return (1-t)*(1-t)*a + 2*(1-t)*t*b + t*t*c; }
+
+function lerpAngle(a, b, t) {
+  let diff = ((b - a + Math.PI) % (2*Math.PI)) - Math.PI;
+  if (diff < -Math.PI) diff += 2*Math.PI;
+  return a + diff * t;
+}
+
+function getPathPoints(origin, dest) {
+  const startX = origin.x, startY = origin.y;
+  const endX = dest.x, endY = dest.y;
+  const midX = (startX+endX)/2;
+  const midY = Math.min(startY,endY) - 90;
+  return { startX, startY, midX, midY, endX, endY };
+}
+
+function getAircraftPosition(ac) {
+  const state = STATE_ORDER[ac.stateIndex];
+  const duration = TICKS_PER_STATE[state];
+  const p = ac.stateTick / duration;
+  const path = getPathPoints(ac.origin, ac.dest);
+
+  switch(state) {
+    case "PARKED":
+    case "BOARDING":
+      return { x: ac.origin.x, y: ac.origin.y, alt: 0 };
+    case "TAXI_OUT": {
+      // ease heading toward runway/flight direction during taxi instead of
+      // snapping to it the instant TAKEOFF starts
+      const targetHeading = headingAt(path, 0.001);
+      return { x: ac.origin.x, y: ac.origin.y, alt: 0, heading: targetHeading * p };
+    }
+    case "TAKEOFF": {
+      // ease-in (quadratic) instead of linear, so the roll accelerates
+      // rather than covering ground in coarse equal steps
+      const eased = p * p;
+      const t = eased * 0.12;
+      const x = bezier(path.startX, path.midX, path.endX, t);
+      const y = bezier(path.startY, path.midY, path.endY, t);
+      return { x, y, alt: eased*0.2, heading: headingAt(path, Math.max(t,0.001)) };
+    }
+    case "CRUISE": {
+      const t = 0.12 + p*0.7;
+      const x = bezier(path.startX, path.midX, path.endX, t);
+      const y = bezier(path.startY, path.midY, path.endY, t);
+      return { x, y, alt: 1, heading: headingAt(path, t) };
+    }
+    case "APPROACH": {
+      if (ac.holdReason === 'WEATHER') {
+        // holding pattern — orbit near the approach fix instead of freezing
+        // in place, so a weather hold reads as intentional, not stuck
+        const fix = {
+          x: bezier(path.startX, path.midX, path.endX, 0.90),
+          y: bezier(path.startY, path.midY, path.endY, 0.90)
+        };
+        const tailHash = ac.tail.split('').reduce((s,c) => s + c.charCodeAt(0), 0);
+        const angle = ((tick + tailHash) % 120) / 120 * Math.PI * 2;
+        const rx = 20, ry = 12;
+        return {
+          x: fix.x + Math.cos(angle) * rx,
+          y: fix.y + Math.sin(angle) * ry,
+          alt: 0.5,
+          heading: angle + Math.PI/2
+        };
+      }
+      if (ac.holdReason === 'REJOIN') {
+        // ease from the last holding-pattern position onto the approach
+        // path over REJOIN_DURATION ticks, instead of snapping onto it
+        const rp = ac.rejoinTick / REJOIN_DURATION;
+        const eased = rp*rp*(3 - 2*rp); // smoothstep
+        const targetX = bezier(path.startX, path.midX, path.endX, 0.92);
+        const targetY = bezier(path.startY, path.midY, path.endY, 0.92);
+        const targetHeading = headingAt(path, 0.92);
+        const x = ac.rejoinStartX + (targetX - ac.rejoinStartX) * eased;
+        const y = ac.rejoinStartY + (targetY - ac.rejoinStartY) * eased;
+        const heading = lerpAngle(ac.rejoinStartHeading, targetHeading, eased);
+        return { x, y, alt: 0.5 - eased*0.2, heading };
+      }
+      const t = 0.82 + p*0.10;
+      const x = bezier(path.startX, path.midX, path.endX, t);
+      const y = bezier(path.startY, path.midY, path.endY, t);
+      return { x, y, alt: 1-p*0.7, heading: headingAt(path, t) };
+    }
+    case "LANDING": {
+      // ease-out deceleration through flare + rollout, continuing the same
+      // path instead of snapping to the destination coordinates
+      const eased = 1 - (1-p)*(1-p);
+      const t = 0.92 + eased*0.08;
+      const x = bezier(path.startX, path.midX, path.endX, t);
+      const y = bezier(path.startY, path.midY, path.endY, t);
+      return { x, y, alt: (1-eased)*0.3, heading: headingAt(path, Math.min(t, 0.999)) };
+    }
+    case "TAXI_IN":
+    case "TURNAROUND":
+      return { x: ac.dest.x, y: ac.dest.y, alt: 0 };
+    default:
+      return { x: ac.origin.x, y: ac.origin.y, alt: 0 };
+  }
+}
+
+function headingAt(path, t) {
+  const dt = 0.01;
+  const t2 = Math.min(t+dt, 1);
+  const x1 = bezier(path.startX, path.midX, path.endX, t);
+  const y1 = bezier(path.startY, path.midY, path.endY, t);
+  const x2 = bezier(path.startX, path.midX, path.endX, t2);
+  const y2 = bezier(path.startY, path.midY, path.endY, t2);
+  return Math.atan2(y2-y1, x2-x1);
+}
+
+// ---------- RENDER ----------
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.strokeStyle = "rgba(55,255,176,0.04)";
+  ctx.lineWidth = 1;
+  for (let x=0; x<canvas.width; x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for (let y=0; y<canvas.height; y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+
+  drawGeographyLayers();
+
+  for (const ap of AIRPORTS) drawAirport(ap);
+
+  lastDrawnPositions = [];
+  for (const ac of fleet) {
+    const pos = getAircraftPosition(ac);
+    drawAircraft(pos, ac.holdReason, ac.type.bodyType);
+    lastDrawnPositions.push({ ac, x: pos.x, y: pos.y });
+  }
+}
+
+// U.S. outline + state borders — real geography (see US_NATION_RINGS /
+// US_STATE_RINGS above), rendered as a background context layer between the
+// scope grid and the airports/aircraft on top of it. State lines are
+// deliberately fainter than the national outline per design direction —
+// context, not a focal element competing with gameplay.
+function drawGeographyLayers() {
+  ctx.fillStyle = "rgba(55,255,176,0.025)";
+  ctx.strokeStyle = "rgba(55,255,176,0.35)";
+  ctx.lineWidth = 1.25;
+  for (const ring of PROJECTED_NATION_RINGS) {
+    if (ring.length < 2) continue;
+    ctx.beginPath();
+    ctx.moveTo(ring[0].x, ring[0].y);
+    for (let i = 1; i < ring.length; i++) ctx.lineTo(ring[i].x, ring[i].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = "rgba(108,127,143,0.25)";
+  ctx.lineWidth = 0.75;
+  for (const feature of PROJECTED_STATE_RINGS) {
+    for (const ring of feature) {
+      if (ring.length < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(ring[0].x, ring[0].y);
+      for (let i = 1; i < ring.length; i++) ctx.lineTo(ring[i].x, ring[i].y);
+      ctx.closePath();
+      ctx.stroke();
+    }
+  }
+}
+
+function drawAirport(ap) {
+  ctx.fillStyle = "#0d141c";
+  ctx.strokeStyle = ap.groundStop ? "#ff5c5c" : "#1c5c47";
+  ctx.beginPath();
+  ctx.arc(ap.x, ap.y, 12, 0, Math.PI*2);
+  ctx.fill();
+  ctx.lineWidth = ap.groundStop ? 2.5 : 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = ap.groundStop ? "#ff5c5c" : "#37ffb0";
+  ctx.beginPath();
+  ctx.arc(ap.x, ap.y, 2.5, 0, Math.PI*2);
+  ctx.fill();
+
+  const labelX = ap.labelX != null ? ap.labelX : ap.x;
+  const labelY = ap.labelY != null ? ap.labelY : ap.y + 26;
+
+  if (ap.labelLeader) {
+    ctx.strokeStyle = "rgba(108,127,143,0.5)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(ap.x, ap.y);
+    ctx.lineTo(labelX, labelY - 8);
+    ctx.stroke();
+  }
+
+  ctx.font = "11px 'IBM Plex Mono', monospace";
+  ctx.fillStyle = ap.groundStop ? "#ff5c5c" : "#6c7f8f";
+  ctx.textAlign = "center";
+  ctx.fillText(ap.code, labelX, labelY);
+}
+
+function drawAircraft(pos, holdReason, bodyType) {
+  ctx.save();
+  ctx.translate(pos.x, pos.y);
+  ctx.rotate(pos.heading || 0);
+
+  const isHeld = !!holdReason;
+  ctx.shadowColor = isHeld ? "#ff5c5c" : "#37ffb0";
+  ctx.shadowBlur = isHeld ? 7 : (pos.alt > 0 ? 5 : 2);
+
+  // widebodies render slightly larger, so type is visible on the scope at
+  // a glance, not just in text — same bodyType field that drives gate fees
+  const scale = bodyType === 'widebody' ? 1.45 : 1.0;
+
+  ctx.fillStyle = isHeld ? "#ff5c5c" : (pos.alt > 0.5 ? "#37ffb0" : "#ffb347");
+  ctx.beginPath();
+  ctx.moveTo(5*scale,0);
+  ctx.lineTo(-3.5*scale,-3*scale);
+  ctx.lineTo(-1.5*scale,0);
+  ctx.lineTo(-3.5*scale,3*scale);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ---------- MAIN LOOP w/ PERF TRACKING ----------
+let lastFrame = 0;
+let tickAccumulator = 0;
+const BASE_TICK_MS = 250;
+
+let fpsFrames = 0;
+let fpsTimer = 0;
+let lastTickCost = 0;
+
+function loop(timestamp) {
+  const delta = timestamp - lastFrame;
+  lastFrame = timestamp;
+
+  fpsFrames++;
+  fpsTimer += delta;
+  if (fpsTimer >= 500) {
+    const fps = Math.round((fpsFrames * 1000) / fpsTimer);
+    document.getElementById('fpsVal').textContent = fps;
+    document.getElementById('fpsVal').parentElement.querySelector('.warn');
+    const fpsEl = document.getElementById('fpsVal');
+    fpsEl.classList.toggle('warn', fps < 45);
+    document.getElementById('tickCostVal').textContent = lastTickCost.toFixed(2) + "ms";
+    fpsFrames = 0; fpsTimer = 0;
+  }
+
+  if (speed > 0) {
+    tickAccumulator += delta;
+    const interval = BASE_TICK_MS / speed;
+    let ticksThisFrame = 0;
+    while (tickAccumulator >= interval && ticksThisFrame < 50) {
+      const t0 = performance.now();
+      advanceTick();
+      lastTickCost = performance.now() - t0;
+      tickAccumulator -= interval;
+      ticksThisFrame++;
+    }
+  }
+
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ---------- HOVER TOOLTIP ----------
+const tooltipEl = document.getElementById('aircraftTooltip');
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  // canvas has a fixed internal resolution (920x420) but is CSS-scaled to
+  // fill its container, so client coordinates need converting back to
+  // canvas-space before hit-testing against drawn aircraft positions
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+
+  let closestAc = null;
+  let closestDist = 14; // hit radius in canvas units
+  for (const entry of lastDrawnPositions) {
+    const dx = entry.x - mx, dy = entry.y - my;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < closestDist) { closestDist = dist; closestAc = entry.ac; }
+  }
+  hoveredAircraft = closestAc;
+  updateTooltip(e, rect);
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoveredAircraft = null;
+  tooltipEl.style.display = 'none';
+});
+
+function updateTooltip(e, canvasRect) {
+  if (!hoveredAircraft) {
+    tooltipEl.style.display = 'none';
+    return;
+  }
+  const ac = hoveredAircraft;
+
+  const crew = ac.crewId != null ? crewPoolsByFamily[ac.type.family].find(c => c.id === ac.crewId) : null;
+  const crewHoursText = crew
+    ? `${((MAX_DUTY_TICKS - crew.dutyTicks) / 60).toFixed(1)} hrs remaining`
+    : 'no crew assigned';
+
+  const rev = ac.projectedRevenue;
+  const revClass = rev < 0 ? 'tt-neg' : '';
+  const revText = rev < 0 ? `-$${Math.abs(rev).toLocaleString()} (net loss)` : `$${rev.toLocaleString()}`;
+
+  const stateLabel = STATE_ORDER[ac.stateIndex];
+  const statusText = ac.holdReason
+    ? `<span class="tt-held">${stateLabel} — HELD (${ac.holdReason})</span>`
+    : stateLabel;
+
+  tooltipEl.innerHTML = `
+    Tail: <b>${ac.tail}</b><br>
+    Type: ${ac.type.name}<br>
+    Status: ${statusText}<br>
+    Crew legal hours: ${crewHoursText}<br>
+    Revenue: <span class="${revClass}">${revText}</span><br>
+    Route: ${ac.origin.code} → ${ac.dest.code}
+  `;
+
+  // position relative to the scope-wrap container, clamped so it doesn't run off the edge
+  const wrapRect = canvas.parentElement.getBoundingClientRect();
+  let left = e.clientX - wrapRect.left + 16;
+  let top = e.clientY - wrapRect.top + 16;
+  tooltipEl.style.display = 'block'; // must be visible before measuring offsetWidth/Height below
+  const maxLeft = wrapRect.width - tooltipEl.offsetWidth - 8;
+  const maxTop = wrapRect.height - tooltipEl.offsetHeight - 8;
+  left = Math.min(left, Math.max(8, maxLeft));
+  top = Math.min(top, Math.max(8, maxTop));
+  tooltipEl.style.left = left + 'px';
+  tooltipEl.style.top = top + 'px';
+}
+
+// ---------- CONTROLS ----------
+document.querySelectorAll('button.speed').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const requestedSpeed = parseFloat(btn.dataset.speed);
+    const isFreshQuarterActivation = requestedSpeed === 0.25 && speed !== 0.25;
+
+    if (isFreshQuarterActivation) {
+      if (quarterSpeedUsesRemaining <= 0) {
+        addLog(`¼× exhausted for today — reverting to 1×`, true);
+        document.querySelectorAll('button.speed').forEach(b => b.classList.remove('active'));
+        document.querySelector('button.speed[data-speed="1"]').classList.add('active');
+        speed = 1;
+        return; // don't fall through to activating the clicked (disabled) button
+      }
+      quarterSpeedUsesRemaining--;
+      addLog(`¼× speed engaged — ${quarterSpeedUsesRemaining} use(s) left today`, true);
+      updateQuarterSpeedButton();
+    }
+
+    document.querySelectorAll('button.speed').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    speed = requestedSpeed;
+  });
+});
+
+const slider = document.getElementById('fleetSlider');
+slider.addEventListener('input', () => {
+  document.getElementById('fleetLabel').textContent = slider.value;
+  setFleetSize(parseInt(slider.value, 10));
+});
+
+document.getElementById('decisionPanel').addEventListener('click', (e) => {
+  if (e.target.classList.contains('decision-btn')) {
+    resolveDecision(e.target.dataset.id, parseInt(e.target.dataset.opt, 10));
+  }
+});
+
+// ---------- INIT ----------
+projectAirports();
+projectGeographyLayers();
+computeAirportLabelPositions();
+setFleetSize(20);
+addLog("Fleet initialized — 20 aircraft (mixed types), type-rated crew pools sized per family, random routes assigned");
+updateQuarterSpeedButton();
+updateClockDisplay();
+updateStatusStrip();
+draw();
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
