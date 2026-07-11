@@ -9,23 +9,27 @@ Format: `- [ ] Task — owner/session note — status`
 This file went badly stale between updates — it described "repo just
 scaffolded" for an extended stretch while the browser prototype grew from
 a 6-type/7-airport smoke test into a 30-type/48-airport sim with a real
-economy (sell, buy, lease, a genuine player route network, and a
-twice-rebuilt crew system), pan/zoom map, and Figma-sourced icons. See
-`CLAUDE.md` for the actual technical detail on all of it; this file is
-just the task-tracking layer. Don't let it drift this far again — update
-it in the same session as the work, not "later."
+economy (sell, buy, lease, a used-aircraft market, a genuine player route
+network, and a twice-rebuilt crew system), real player/competitor airline
+identity, pan/zoom map, and Figma-sourced icons. See `CLAUDE.md` for the
+actual technical detail on all of it; this file is just the task-tracking
+layer. Don't let it drift this far again — update it in the same session
+as the work, not "later."
 
 ## In progress
 
 - [ ] The full system — fleet, airports, economy, route network, leasing,
-      crew — has NOT been playtested as one continuous session. Every
-      individual piece has been spot-checked or numerically verified, but
-      that verification has a long, real, DEMONSTRATED catch rate at this
-      point, not a theoretical one: the `operatingCost` ReferenceError,
-      three separate instances of the same panel-flicker bug, a lease-
-      proration bug that made leasing nearly dominant, a phantom-crew-
-      family bug, background traffic generating real player decisions,
-      and crew duty time never actually accumulating across flights —
+      the used-aircraft market, crew, airline identity — has NOT been
+      playtested as one continuous session. Every individual piece has
+      been spot-checked or numerically verified, but that verification
+      has a long, real, DEMONSTRATED catch rate at this point, not a
+      theoretical one: the `operatingCost` ReferenceError, three separate
+      instances of the same panel-flicker bug, a lease-proration bug that
+      made leasing nearly dominant, a phantom-crew-family bug, background
+      traffic generating real player decisions, crew duty time never
+      actually accumulating across flights, decision cards going stale
+      when resolved outside their own buttons, and aircraft color/flight-
+      path rendering bugs that only became visible through actual play —
       all shipped once, all only caught after the fact (through a bug
       report or a direct question), none caught by the verification that
       shipped them. This is still the single most valuable next step
@@ -271,9 +275,14 @@ it in the same session as the work, not "later."
 - [x] Reserve crew count corrected: 1 per family (not 2) — a family's
       first aircraft should grant 2 crew total (1 bundled + 1 reserve),
       not 3.
-- [x] Background traffic given a distinct color scheme (blue/orange vs.
-      the player's green/amber) and a reduced hover tooltip (Route/Tail/
-      Type/Status only — no performance data).
+- [x] Background traffic given a distinct color scheme, reduced hover
+      tooltip (Route/Tail/Type/Status only — no performance data). NOTE:
+      the color scheme changed twice after this — first blue/orange
+      (flying/ground) vs. the player's green/amber, later simplified to
+      one constant color (`#B25BFF`) regardless of state. See the
+      rendering-fixes batch below for the current, correct version —
+      this entry is kept for history, don't treat "blue/orange" as
+      current.
 - [x] A real, substantive bug fixed after direct questioning, not a bug
       report: crew duty time never actually accumulated across flights.
       `dutyTicks` was reset to 0 on every new assignment, meaning a lone
@@ -286,3 +295,117 @@ it in the same session as the work, not "later."
       117 minimum rest is 10 consecutive hours. Verified via simulation:
       a lone crew member now flies exactly 2 consecutive cycles before
       mandatory rest blocks a third.
+
+## Done — decision panel fixes
+
+- [x] A real reported bug: decision cards went stale when resolved
+      through a path OTHER than that card's own buttons (hiring crew via
+      ADD CREW while a CREW hold was showing). Root cause affected AOG's
+      timed auto-repair too, caught by checking rather than assuming the
+      fix was narrowly scoped. Fixed with a real cleanup function called
+      from both actual resolution points.
+- [x] CREW decision now has a real third option, "Hire new crew" —
+      reuses the same `hireCrew()` function as the standalone panel, not
+      a duplicate implementation.
+
+## Done — used aircraft market
+
+- [x] Real used-aircraft market: buy-only, persistent inventory (1-2
+      listings per type, generated once, slowly replenished over time).
+      Pricing reuses the exact same linear depreciation formula as the
+      sell mechanic, per designer direction for consistency. Real market
+      research behind it: a genuine $1.96B+ industry segment, real
+      depreciation curve cross-checked against an actual Boeing 737-800
+      example. Verified end-to-end with the real extracted functions —
+      listing generated, purchased, balance deducted exactly, the
+      resulting aircraft correctly inheriting the used cycle count
+      instead of starting fresh.
+
+## Done — rendering fixes
+
+- [x] A real reported bug: flight-path arcs looked disproportionately
+      curved on short routes. Root cause was a fixed 90px arc height
+      regardless of actual distance between airports. Fixed to scale
+      with real distance (12% of straight-line distance, floored at
+      15px, capped at 120px) — verified numerically.
+- [x] A real reported bug: aircraft color stayed in the wrong flight-
+      phase color too long, both at takeoff and landing. Root cause:
+      color was picked from an altitude THRESHOLD that never actually
+      lined up with the real state machine (TAKEOFF's altitude curve
+      never even crosses the old threshold; APPROACH stayed above it for
+      ~71% of its duration). Fixed to key color directly off the real
+      state instead — three real colors for the player's own aircraft
+      (takeoff/climb, cruise, descent/landing), applied the same
+      state-based fix to background traffic too for the same accuracy
+      reason.
+- [x] Background traffic's color simplified to one constant color,
+      replacing an earlier two-tier scheme from the same session — makes
+      it instantly recognizable as "not mine" regardless of flight
+      phase. NOTE: this value was tweaked again later in the same
+      session (`#B25BFF` -> `#D767FF`, "wasn't popping enough") — see the
+      color-tweaks batch below, don't treat `#B25BFF` as current.
+
+## Done — airline identity & competitor traffic
+
+- [x] Player airline naming: a styled modal blocks the game on load,
+      asking the player to name their airline. Shown as the first line
+      in the player's own aircraft tooltip.
+- [x] Real-world-weighted competitor airlines assigned to background
+      traffic — actual 2025-26 US domestic market share (BTS/OAG/
+      Statista, cross-checked across five sources). Original version
+      restricted eligibility by aircraft BODY TYPE (narrowbody/widebody/
+      etc) — see the REBUILD below, this is superseded, not current.
+- [x] Alaska Airlines roster entry updated mid-session for a real,
+      independently-verified 2026 news development (absorbed Hawaiian's
+      787 fleet, launched real widebody international routes from
+      Seattle) — confirmed via search before changing anything, not
+      taken on request alone, though it matched.
+
+## Done — fleet-accuracy rebuild, certification gating, A330/A350
+
+- [x] Airline eligibility REBUILT from body-type-category restriction to
+      real SPECIFIC-aircraft-type restriction — prompted by a real
+      concern ("a player will notice if Airline X doesn't fly type Y").
+      Every airline's eligible-types list is now individually researched,
+      not a category. Real findings, several of which corrected
+      assumptions rather than confirmed them: Delta's widebody fleet was
+      100% Airbus (none modeled in this game at the time — see A330/A350
+      below); Delta flies no 737 MAX at all; United flies A321neo but no
+      A321ceo; JetBlue retired its last E190 in Sept 2025; Emirates flies
+      no 787 at all; Lufthansa flies no Boeing 777 passenger service at
+      all — but IS confirmed the world's largest A340 operator in 2026
+      (14 -300s + 5 -600s, kept flying due to 777X delivery delays), the
+      opposite of the "probably retired" assumption made before checking.
+      Types with no real match anywhere in the roster (A319neo, E190,
+      E195, ERJ135/140, ARJ21) fall to a generic "Independent Operator"
+      fallback rather than a forced fake match. Verified via script that
+      every type in the fleet resolves to at least one eligible airline
+      (no crash risk), and via real 10,000-20,000-sample distribution
+      checks that the weighted outcomes match the real sourced
+      percentages.
+- [x] A new, real design principle: aircraft must be actually FAA/ICAO
+      certified AND in real service to stay in this fleet — an order or
+      certification-pending status isn't enough. Established by removing
+      Boeing 737 MAX 7 and MAX 10 entirely (verified via search: neither
+      was certified as of this game's real current timeframe, first
+      deliveries not until 2027 even after certification). Same bar then
+      applied to Delta's real Jan 2026 787-10 order — confirmed real, but
+      deliberately NOT added to Delta's fleet yet since an order isn't a
+      delivery.
+- [x] Airbus A330-900 and A350-900 added — specifically to give Delta a
+      real widebody fleet in this game (their actual widebody fleet is
+      100% Airbus). Real sourced specs (MLW, seats matching Delta's own
+      cabin config, market-value-based purchase price, not Airbus sticker
+      list price). Also added to Air France (both), Lufthansa/British
+      Airways/Japan Airlines (A350 only), Air Canada (A330 only) — each
+      individually confirmed, not assumed uniform. A real correction
+      surfaced while researching this, unrelated to the reason for the
+      search: Air France's A380 fleet was fully retired by 2022 and had
+      never been re-verified since the original roster build — fixed in
+      the same pass.
+
+## Done — color tweaks
+
+- [x] Background traffic color: `#B25BFF` -> `#D767FF` ("wasn't popping
+      enough"). Player aircraft cruise color: `#6CD3FF` -> `#83C9FF`
+      (better contrast).

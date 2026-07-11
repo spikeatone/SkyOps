@@ -44,15 +44,19 @@ as the fleet expanded, see CLAUDE.md Fleet + Icons sections).
 - [ ] Scale to full fleet size, profile performance (the JS prototype's
       FPS/tick-cost overlay is worth porting as a dev tool, not shipping it)
 - [ ] Port AIRCRAFT_TYPES config — grew significantly past "real
-      hold-cost/revenue figures": now 31 real named variants across 13
+      hold-cost/revenue figures": now 30 real named variants across 15
       real crew-type-rating families (not 1:1 with the type list — see
       CLAUDE.md's Fleet section for the type-rating groupings, especially
-      the E-Jets split that isn't obvious from the marketing name), plus a
-      real load-factor x fare-per-seat revenue formula, real per-flight
-      operating cost, and a working randomized economic-event system
-      (oil price spikes, recessions, etc.) that modulates cost/fare/load
-      together. This is a meaningfully bigger port than the phase's
-      original framing implies — budget accordingly.
+      the E-Jets split that isn't obvious from the marketing name). This
+      count has moved multiple times and will keep moving — MAX 7/10 were
+      removed (not yet certified), A330/A350 were added (Delta's real
+      widebody fleet) — recompute from the actual code rather than
+      trusting this number, same caution CLAUDE.md gives about itself.
+      Also port: a real load-factor x fare-per-seat revenue formula, real
+      per-flight operating cost, and a working randomized economic-event
+      system (oil price spikes, recessions, etc.) that modulates cost/
+      fare/load together. This is a meaningfully bigger port than the
+      phase's original framing implies — budget accordingly.
 
 ## Phase 3 — Crew + AOG + weather systems
 **Exit condition:** per-family crew pools, AOG clustering, and weather holds
@@ -97,6 +101,19 @@ mockups, pulled via MCP — not reinterpreted from memory or screenshots.
       camera math (pan offset + zoom multiplier, one transform wrapping
       all world content) should port directly; only the gesture-input
       layer changes.
+- [ ] Real UI-surface inventory as of this update, for scoping the Figma
+      pass — none of these have a Figma design yet, all exist only as
+      functional browser-prototype panels: the airline-naming modal
+      (first-launch flow), the ACQUIRE AIRCRAFT panel (now three real
+      acquisition paths per type — buy, lease, and 1-2 used listings —
+      not just one row), the ADD CREW panel, the ROUTES list/detail view
+      (a real two-level navigation: list of all routes, tap through to
+      full history/financials/assigned-aircraft detail for one), and the
+      decision-card system (AOG/CREW/SELL, now with a real third CREW
+      option). All of these are functionally real and verified, but their
+      current look is the browser prototype's dev-tool aesthetic, not
+      designed UI — treat all of them as needing real mockups, not just
+      the map/route/fleet screens named when this phase was first scoped.
 
 ## Phase 5 — Economy layer
 **Exit condition:** route-opening, passenger demand, and reputation feed
@@ -120,6 +137,45 @@ back into the fleet/crew/disruption systems from Phases 1-3.
       per-flight instead, which made leasing nearly always dominant —
       see CLAUDE.md for the full story). Port the FIXED-OBLIGATION
       billing model, not a per-flight-prorated one.
+- [x] Used-aircraft market — also NOT in the original Phase 5 scope.
+      Buy-only, persistent inventory, real linear depreciation pricing
+      (same formula as the sell mechanic). Real market research behind
+      it (a genuine industry segment, real depreciation curves). See
+      CLAUDE.md's Fleet Lifecycle section for the full mechanic and its
+      known simplifications.
+- [x] Player + competitor airline identity — also NOT in the original
+      Phase 5 scope, and arguably belongs more to Phase 4 (UI/presentation)
+      than the economy layer, but implemented alongside it this session.
+      Real player airline naming, real US-market-share-weighted
+      competitor airlines on background traffic. Entirely US-hardcoded
+      right now — see CLAUDE.md's "Airline Identity & Competitor Traffic"
+      section for the real scope limit if a non-US region ever gets
+      built. **Rebuilt mid-session from body-type-category eligibility to
+      real SPECIFIC-aircraft-type eligibility** — a real accuracy upgrade
+      worth porting faithfully, not the earlier simpler version: every
+      airline's eligible-types list is individually researched (which
+      exact aircraft, not just which size class), including real
+      surprises caught by checking rather than assuming (Delta's widebody
+      fleet is 100% Airbus; Lufthansa is confirmed the world's largest
+      A340 operator in 2026, not a retired-type assumption). See
+      CLAUDE.md for the full roster and sourcing.
+- [x] A new, real design principle established this session, applies to
+      ANY future fleet additions including in the native port: an
+      aircraft type must be actually FAA/ICAO certified AND in real
+      service to belong in this fleet — an order or certification-pending
+      status is not enough. Established by removing 737 MAX 7/10
+      entirely (neither certified yet as of this game's real current
+      timeframe) and by deliberately NOT adding Delta's real Jan 2026
+      787-10 order to their fleet (an order, not a delivery). Apply this
+      bar to any aircraft considered for the native fleet too — don't
+      port a type just because an airline announced it.
+- [x] Airbus A330-900 and A350-900 added to the fleet — real sourced
+      specs, added specifically to give Delta a real widebody fleet
+      (their actual widebody fleet is 100% Airbus, previously unmodeled).
+      Two new crew families (`A330`, `A350`) — port these as genuinely
+      separate type ratings like every other widebody pair in this fleet,
+      despite Airbus itself treating A330/A350 as commonly-rated in
+      reality (a known, disclosed simplification, see CLAUDE.md).
 - [x] Route-opening UI + cost — REAL NOW, was the one piece of the
       original purchase-economy vision missing as of the last update to
       this file. Real cost built from data already in the game (base fee
