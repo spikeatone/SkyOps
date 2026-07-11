@@ -9,25 +9,28 @@ Format: `- [ ] Task — owner/session note — status`
 This file went badly stale between updates — it described "repo just
 scaffolded" for an extended stretch while the browser prototype grew from
 a 6-type/7-airport smoke test into a 30-type/48-airport sim with a real
-economy (including a working sell/buy ownership loop), pan/zoom map, and
-Figma-sourced icons. See `CLAUDE.md` for the actual technical detail on
-all of it; this file is just the task-tracking layer. Don't let it drift
-this far again — update it in the same session as the work, not "later."
+economy (sell, buy, lease, a genuine player route network, and a
+twice-rebuilt crew system), pan/zoom map, and Figma-sourced icons. See
+`CLAUDE.md` for the actual technical detail on all of it; this file is
+just the task-tracking layer. Don't let it drift this far again — update
+it in the same session as the work, not "later."
 
 ## In progress
 
-- [ ] Full 30-type / 48-airport / economic-event / sell-buy-economy
-      system has NOT been playtested as one continuous session — every
-      individual piece has been spot-checked or numerically verified
-      (icon rendering, weight math, fee calculations, zoom-scale curves,
-      sell-value depreciation) but nobody has watched it all run together
-      for an extended real session. Two real ship-blocking bugs
-      (`operatingCost` ReferenceError, decision-panel flicker) have
-      already slipped through individual verification and only surfaced
-      through actual use — that's a demonstrated failure rate for
-      "spot-checked," not just a theoretical gap. This is the single most
-      valuable next step before adding more scope — see `CLAUDE.md`'s
-      Open section for the full reasoning.
+- [ ] The full system — fleet, airports, economy, route network, leasing,
+      crew — has NOT been playtested as one continuous session. Every
+      individual piece has been spot-checked or numerically verified, but
+      that verification has a long, real, DEMONSTRATED catch rate at this
+      point, not a theoretical one: the `operatingCost` ReferenceError,
+      three separate instances of the same panel-flicker bug, a lease-
+      proration bug that made leasing nearly dominant, a phantom-crew-
+      family bug, background traffic generating real player decisions,
+      and crew duty time never actually accumulating across flights —
+      all shipped once, all only caught after the fact (through a bug
+      report or a direct question), none caught by the verification that
+      shipped them. This is still the single most valuable next step
+      before adding more scope — see `CLAUDE.md`'s Open section for the
+      full reasoning.
 
 ## Up next (Phase 0 — still not started, unchanged since original scaffold)
 
@@ -122,14 +125,22 @@ this far again — update it in the same session as the work, not "later."
       variable references, only actual parse errors. An ESLint
       `no-undef` pass now runs alongside it before anything ships.
 
-## Not yet started — economy layer beyond current scope
+## Not yet started — beyond current scope
 
-- [ ] Starting capital and route-opening cost — the two pieces of
-      `ROADMAP.md` Phase 5 still missing now that sell/buy is real (see
-      Done section below). A fresh session starts at $0 balance; buying
-      anything requires accumulating flight revenue or selling first.
-      Routes are still randomly assigned, no costed player action to
-      open one yet.
+- [ ] Player-funded route marketing (view loads by route/origin, spend to
+      boost them) — genuinely separate from the airport-incentive
+      mechanic below, needs its own load-visibility UI.
+- [ ] Airport-incentive-offer mechanic — bottom-15 airports offering
+      waived fees + marketing support, with a real clawback penalty for
+      abandoning the route early. Explicitly sequenced as Phase C/D,
+      held until the route-opening foundation (Phase A/B, now done and
+      shipped) could be felt in actual play first.
+- [ ] Route profitability chart visualization — the data model
+      (`route.history`) is real and verified sufficient to build this;
+      the actual chart doesn't exist yet.
+- [ ] Bankruptcy / negative-balance consequences — `playerBalance` can go
+      negative (confirmed via lease billing) with no consequence beyond
+      red text and being blocked from further purchases.
 
 ## Done — fleet lifecycle & ownership economy
 
@@ -167,3 +178,111 @@ this far again — update it in the same session as the work, not "later."
       per-tick full DOM rebuild. Fixed by removing the redundant per-tick
       render call — the two structural triggers (decision added/
       resolved) were already correct and sufficient on their own.
+
+## Done — real starting capital
+
+- [x] Starting capital: $20M, calibrated to cover the cheapest aircraft
+      plus a typical route-opening cost with buffer. A fresh session now
+      starts with real capital, no planes, no routes, and zero background
+      traffic — an actual new-game experience, not a stress-test default.
+
+## Done — leasing
+
+- [x] Real leasing mechanic alongside buying: 15% of purchase price
+      upfront (designer-specified), real sourced monthly rate (0.8% of
+      aircraft value — industry lease-rate-factor data, cross-validated
+      against real quoted dollar figures). ACQUIRE AIRCRAFT panel (renamed
+      from BUY AIRCRAFT) shows Buy and Lease as two independent options
+      per type.
+- [x] A real bug caught mid-build: the first version prorated lease cost
+      per-flight (same as operating cost), which made leasing nearly
+      strictly dominant — an idle leased aircraft cost nothing, so the
+      real downside risk of a fixed obligation was missing. Fixed with a
+      genuine recurring-billing mechanism (`tickLeaseBilling()`) charging
+      every leased aircraft monthly regardless of flying/idle/held status.
+      Verified numerically: an idle leased aircraft now genuinely loses
+      money over time with zero revenue.
+- [x] Lease cost is a real separate line item in report views (financials
+      ledger, route detail panel) but folds into the tooltip's displayed
+      "Operating cost" as a smoothed estimate, per designer direction —
+      too much detail for the in-flight view.
+
+## Done — real player route network
+
+- [x] The foundational shift: purchased aircraft no longer fly random
+      destinations. They fly only between airports the player has
+      explicitly opened a route between, swapping direction each cycle.
+      An unassigned purchased aircraft is a real idle spare, not wandering
+      traffic. Background stress-test traffic is unaffected — still fully
+      random by design.
+- [x] Abstract airport slot scarcity (no real competitor-airline modeling
+      — deliberately deferred, matching `ROADMAP.md`'s existing scope
+      decision), scaled to real landing-fee data already in the game.
+- [x] Real route-opening cost, built from real data already in the game
+      (base fee + both endpoints' gate fees), landing in a real
+      $68K-$275K range.
+- [x] Route-opening UI rebuilt from dropdowns (which hit the same
+      flicker bug as the decision panel) to real click-to-select-on-map:
+      click OPEN ROUTE, click origin, click destination, confirm panel
+      with live cost/slot data. Basic mobile tap support included.
+- [x] Buying/leasing an aircraft while mid-route-selection auto-assigns
+      it to the pending route — the whole "realize you need a plane,
+      buy one, route opens" flow now completes in one pass. A second
+      ACQUIRE AIRCRAFT button lives inside the route-confirm panel itself.
+- [x] Deterministic route-economics preview in the route-confirm panel —
+      real distance (haversine), revenue/fees/operating cost/net for a
+      round trip, using a real spare's actual type if one exists.
+- [x] Real per-flight simulated load tracking: the aircraft tooltip shows
+      actual pax/seats/load% for the current flight — previously
+      computed internally and immediately discarded, now captured and
+      displayed.
+- [x] Real route-level profitability, weighed against actual
+      establishment cost — a route isn't "profitable" until cumulative
+      net revenue recoups what it cost to open, not just whenever one
+      flight nets positive. Reduced by real lease bills too, not just
+      flight economics.
+- [x] Full per-flight route history (revenue, fees, costs, load, net,
+      cumulative net per flight) — real data, verified sufficient to
+      support a future profitability-over-time chart (not built yet).
+- [x] Routes are archived, not deleted, when closed — selling a
+      route-assigned aircraft used to destroy the route's history
+      entirely; now moves to a real archive with a close date stamped on.
+- [x] A dedicated ROUTES panel: list view of every route (open and
+      closed), tap for full detail (dates, flights flown, financials,
+      assigned-aircraft history, recent-flights log).
+
+## Done — crew system rebuilt (twice)
+
+- [x] Crew provisioning changed from automatic ratio-based sizing to
+      player-driven hiring. Buying/leasing an aircraft bundles exactly 1
+      crew (deliberately not enough for continuous operation); growing
+      the pool further requires the new ADD CREW panel with a real
+      designed hire cost, scaled by aircraft complexity.
+- [x] A real reported bug fixed: crew pools showed a phantom minimum
+      ("1/0/0 · 2 res") for every family regardless of ownership. Fixed
+      at the root — `resizeCrewPools()` no longer auto-sizes by ratio at
+      all, it's a pure cleanup pass now.
+- [x] A second real reported bug fixed: AOG, crew-shortage, and
+      sell-eligibility decisions were firing for background traffic the
+      player doesn't own. Fixed across five functions — background
+      traffic now has zero economic/decision stakes, confirmed via
+      individually checking every other fleet-wide loop in the codebase
+      to make sure this wasn't a sixth instance hiding somewhere.
+- [x] Reserve crew count corrected: 1 per family (not 2) — a family's
+      first aircraft should grant 2 crew total (1 bundled + 1 reserve),
+      not 3.
+- [x] Background traffic given a distinct color scheme (blue/orange vs.
+      the player's green/amber) and a reduced hover tooltip (Route/Tail/
+      Type/Status only — no performance data).
+- [x] A real, substantive bug fixed after direct questioning, not a bug
+      report: crew duty time never actually accumulated across flights.
+      `dutyTicks` was reset to 0 on every new assignment, meaning a lone
+      crew member could fly indefinitely without ever hitting real rest
+      (a single flight cycle is well under the duty ceiling). Fixed to
+      match real FAA Part 117 mechanics — duty time now carries across
+      consecutive assignments, only clearing after an actual completed
+      rest period. Also caught and corrected in the same pass:
+      `REST_TICKS` was wrong (480/8hr), not just simplified — real Part
+      117 minimum rest is 10 consecutive hours. Verified via simulation:
+      a lone crew member now flies exactly 2 consecutive cycles before
+      mandatory rest blocks a third.

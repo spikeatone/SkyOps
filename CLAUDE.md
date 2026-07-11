@@ -15,16 +15,40 @@ abstract scope grid to a real geographic projection with pan/zoom and
 actual U.S. airports (plus Alaska, Hawaii, and Canada for context), fees
 and revenue moved from placeholder numbers to real sourced data with a
 working economic-event system, aircraft icons moved from a generic
-triangle to real Figma-sourced vector art, and a real (if partial) aircraft
-ownership economy now exists — cycle-based lifespan, selling, and buying,
-with a genuine spendable balance. If you're picking this up cold, don't
-assume the smaller original scope — read this whole file, not just skim
-it. If you're the one updating this file next, note that comments and
-counts elsewhere in this codebase have gone stale between updates more
-than once already (see the `TYPE_WEIGHT_TOTAL` stale-comment note in the
-Fleet section for a concrete example) — spot-check numbers against the
-actual code rather than trusting a prior description at face value,
-including the numbers in THIS file.
+triangle to real Figma-sourced vector art, and a real, playable ownership
+economy now exists — cycle-based lifespan, selling, buying, leasing, AND
+a real used-aircraft market, a genuine player route network (aircraft fly
+real routes the player opens, not random destinations), real starting
+capital, a crew system rebuilt twice in one session (first from
+ratio-auto-sizing to player-driven hiring, then to fix duty/rest time not
+actually accumulating across flights), and — most recently — a real
+player airline identity plus real-world-weighted competitor airlines on
+background traffic, alongside a round of rendering fixes (flight-path
+arcs that scale with real distance instead of a fixed pixel offset, and
+aircraft color tied to actual flight phase instead of an altitude
+threshold that never lined up with it). Most recently: the competitor
+airline roster was rebuilt from body-type-category eligibility to real
+SPECIFIC-aircraft-type eligibility (researched per-airline, with several
+real corrections found along the way — Delta's all-Airbus widebody
+fleet, Lufthansa turning out to still be the world's largest A340
+operator, Air France's A380 retirement), a new "must be actually
+certified and in service, not just ordered" principle got established
+(737 MAX 7/10 removed from the fleet entirely; Delta's real Jan 2026
+787-10 order deliberately NOT added yet for the same reason), and the
+Airbus A330-900/A350-900 were added specifically to give Delta a real
+widebody fleet in this game for the first time. If you're picking this
+up cold, don't assume the smaller original scope — read this whole file,
+not just skim it. If you're the one updating this file next, note that
+comments and counts elsewhere in this codebase have gone stale between
+updates more than once already (see the `TYPE_WEIGHT_TOTAL` stale-comment
+note in the Fleet section for a concrete example) — spot-check numbers
+against the actual code rather than trusting a prior description at face
+value, including the numbers in THIS file. Also note: the SAME flicker/
+dropped-click bug (a panel re-rendering on every tick instead of only on
+real state changes) has now been independently discovered and fixed
+THREE separate times in this codebase (decision panel, route-picker
+dropdowns, buy/lease panel) — if a fourth panel shows this symptom, don't
+apply a fourth one-off fix, see the note in the Fleet Lifecycle section.
 
 ## What SkyOps actually is
 
@@ -86,15 +110,20 @@ one contradicts the design thesis.)
   chosen for zero-setup simplicity given the designer isn't a dev by
   background. Revisit if that becomes limiting.
 
-## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 30 / 13)
+## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 30 / 15)
 
-- **Fleet size**: 30 distinct playable aircraft types. Running history:
-  32 (initial big expansion) -> 31 (Sukhoi Superjet 100 removed) -> 30
-  (Bombardier CRJ700 removed — aging out of most real fleets, nearing
-  retirement, per designer direction). `CRJ_FAMILY` stays real (CRJ900/1000
-  remain). See the "stale comment" note near the end of this section for a
-  real gotcha this kind of repeated change has already surfaced once. This
-  is still a major expansion from the original locked 6 — the "locked"
+- **Fleet size**: 30 distinct playable aircraft types (net — two removed,
+  two added since the last count). Running history: 32 (initial big
+  expansion) -> 31 (Sukhoi Superjet 100 removed) -> 30 (Bombardier CRJ700
+  removed — aging out of most real fleets, nearing retirement, per
+  designer direction) -> 28 (737 MAX 7 and MAX 10 removed — see the new
+  "not yet certified" principle below) -> 30 (Airbus A330-900 and
+  A350-900 added — see the new Airline Identity section for why). Family
+  count grew from 13 to 15 with the two new widebody families (`A330`,
+  `A350`). `CRJ_FAMILY` stays real (CRJ900/1000 remain). See the "stale
+  comment" note near the end of this section for a real gotcha this kind
+  of repeated change has already surfaced once. This is still a major
+  expansion from the original locked 6 — the "locked"
   framing on the old 6-type list no longer applies; that constraint was
   explicitly reopened by the designer this session. **Designer has stated
   an explicit ongoing intent to keep the fleet current with real-world
@@ -132,22 +161,31 @@ one contradicts the design thesis.)
   - ERJ135/140/145 = ONE crew family (`ERJ_FAMILY`) — shared type
     certificate.
   - Every 4-engine widebody (747, A380, A340) and every other widebody
-    (777, 787) is its OWN separate family — no real-world commonality
-    between manufacturers or airframe generations at that size.
+    (777, 787, A330, A350) is its OWN separate family — no real-world
+    commonality between manufacturers or airframe generations at that
+    size. (Real-world footnote, not modeled: Airbus itself says the
+    A350 and A330 actually DO share a common type rating in reality —
+    see the A350-900 sourcing note in Airline Identity — but this game
+    keeps them as separate crew families anyway, consistent with how
+    every other widebody pair here is modeled as non-interchangeable.)
   - ARJ21 is its own standalone family — no other type shares its rating.
     (Sukhoi Superjet 100 / `SSJ100_FAMILY` was in this category too, before
     removal — see stale-comment note below.)
-  - **Net result: 13 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
-    `A220_FAMILY`, `B777`, `B787`, `B747`, `A380`, `A340`, `E170_FAMILY`,
-    `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY`, `ARJ21_FAMILY`), covering 31
-    aircraft types. `CREW_FAMILIES` is auto-derived from
+  - **Net result: 15 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
+    `A220_FAMILY`, `B777`, `B787`, `A330`, `A350`, `B747`, `A380`, `A340`,
+    `E170_FAMILY`, `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY`, `ARJ21_FAMILY`),
+    covering 30 aircraft types — verified via script, not hand-counted,
+    after this count went stale at least once before (see the
+    `TYPE_WEIGHT_TOTAL` note). `CREW_FAMILIES` is auto-derived from
     `AIRCRAFT_TYPES.map(t => t.family)` — adding or removing an aircraft
     type automatically updates this list, no separate maintenance needed.
     `FAMILY_LABELS` (crew status display) is NOT auto-derived — it's a
-    separate hardcoded lookup that must be updated by hand every time a
-    family is added OR removed, or the UI silently shows `undefined` (add)
-    or carries a harmless-but-stale unused entry (remove). This bit twice
-    this session on the add side; check it every time in both directions.
+    hand-maintained object literal, and DOES need updating whenever a
+    family is added or removed. This bit an update mid-session: adding
+    the A330 and A350 families for Delta's real widebody fleet required
+    a manual `FAMILY_LABELS` edit (`A330: 'A330', A350: 'A350'`) — miss
+    this step next time a family changes and the crew status strip will
+    show `undefined` for that family instead of a real label.
   - `crewsPerTail: 6` was applied to every narrowbody AND every regional
     jet by default. This is a real, UNVERIFIED assumption for the
     regional-jet tier specifically — there's no sourced reason RJs should
@@ -356,7 +394,7 @@ one contradicts the design thesis.)
   buying anything without selling first, given there's still no starting
   capital) has not been tested end-to-end.
 
-## Decided — Fleet Lifecycle & Ownership Economy (cycles, sell, buy)
+## Decided — Fleet Lifecycle & Ownership Economy (cycles, sell, buy, lease, crew)
 
 - **1 cycle = 1 completed flight (takeoff + landing)**, tracked per
   aircraft as `cyclesAccrued`, incremented once per `TURNAROUND`. Every
@@ -440,20 +478,449 @@ one contradicts the design thesis.)
   Fixed by removing the per-tick call entirely — `pushDecision()` and
   `resolveDecision()` already call `renderDecisions()` exactly when the
   queue's contents actually change (a card added or resolved), which is
-  the correct and sufficient trigger. Traded away: the live-eroding
-  dollar figure inside an OPEN AOG/CREW card no longer visibly ticks
-  down in real time while the card sits unresolved (the underlying
-  number still updates every tick, just not the display). Acceptable —
-  a human resolves these quickly. **If a future session wants that
-  live-tick-down back, it needs a throttled refresh (e.g., from the
-  animation loop, gated to ~1x/second), NOT a raw per-tick call — that
-  exact pattern is what caused this bug.**
-- **Not yet playtested**: the sell/buy loop end-to-end, across a real
-  session, including whether the 80% threshold and randomized starting
-  cycle distribution actually produce a reasonable pace of sell offers
-  (not too rare to matter, not so frequent it's spam) once real people
-  are clicking through it rather than the numeric verification this was
-  shipped with.
+  the correct and sufficient trigger. **This exact same bug pattern
+  recurred TWICE more later in this session** — once in the route panel's
+  original dropdown-based UI (fixed by replacing dropdowns with
+  click-to-select entirely), and once in the buy/lease panel (fixed the
+  same way, removing its per-tick refresh). Three independent instances
+  of the identical root cause, each only caught after being built, not
+  anticipated. If a FOURTH panel ever shows this symptom, stop applying
+  one-off fixes — build a single shared "re-render only on real state
+  change" helper every panel uses, instead of trusting each new panel to
+  independently avoid a mistake that's already happened three times.
+- **Leasing — a real alternative to buying, not a strictly-better option.**
+  Explicit designer spec: 15% of purchase price upfront (`LEASE_UPFRONT_RATE`),
+  vs. paying the full purchase price outright. Monthly lease rate is real,
+  sourced data — 0.8% of aircraft value per month (`LEASE_MONTHLY_RATE`),
+  the middle of a real industry range (0.6%-1.2% "lease rate factor",
+  Acumen Aero market analysis), cross-validated against real quoted
+  dollar figures for narrowbody leases ($380K-$500K/month on $55-70M
+  aircraft). The ACQUIRE AIRCRAFT panel (renamed from BUY AIRCRAFT — same
+  button, both the main one and the copy inside the route-confirm panel)
+  shows Buy and Lease as two independent options per type, each with its
+  own affordability check.
+- **A real, substantive bug caught mid-build on leasing, not shipped
+  quietly: the first version made leasing almost strictly dominant, not
+  a genuine tradeoff.** Root cause: lease cost was prorated PER-FLIGHT,
+  the same way operating cost works (block-minutes × per-tick rate) —
+  meaning an idle leased aircraft (a spare never assigned to a route, or
+  one sitting held) cost nothing. Real leases are a FIXED MONTHLY
+  OBLIGATION regardless of utilization — you owe the lessor whether the
+  plane flies or sits idle. Under the wrong model, the crossover point
+  where cumulative lease payments would exceed the upfront savings from
+  buying was ~38,000 flights (roughly 23 years of daily flying) —
+  functionally never reached in any real playthrough. Fixed with a real
+  recurring-billing mechanism, `tickLeaseBilling()`: checked every tick,
+  bills `ac.type.monthlyLeaseCost` against `playerBalance` whenever
+  `tick >= ac.nextLeaseBillTick`, for EVERY leased aircraft regardless of
+  flying/parked/held/idle-spare status, then advances the next-bill tick
+  by `TICKS_PER_MONTH`. Verified numerically: an idle leased aircraft
+  that never flies a single leg now genuinely loses money over time (a
+  representative narrowbody: ~$4.5M lost over 6 months of pure idle
+  lease payments). `playerBalance` is allowed to go negative here — no
+  bankruptcy mechanic exists (see Open below) or is planned yet; a
+  negative balance is itself the consequence, rendering in red and
+  blocking further Buy/Lease/Open Route actions.
+- **`computeLegEconomics()` still returns a `leaseCostEstimate` field,
+  but it is DISPLAY-ONLY and does not affect `net`.** This is deliberate,
+  not a leftover from the broken per-flight model: the designer wants the
+  in-flight tooltip to show a smoothed, readable lease-cost-per-leg
+  estimate folded into the displayed "Operating cost" line (too much
+  detail to break out in that view), while report views (the financials
+  ledger's real "– Lease Costs" row, the Routes detail panel's "Total
+  lease cost" line) show the REAL number from `tickLeaseBilling()`'s
+  running totals (`totalLeaseCost`, `route.totalLeaseCost`) — not derived
+  from the per-flight estimate, which would now be wrong since billing
+  isn't tied to individual flights anymore.
+- **Crew provisioning was rebuilt from automatic ratio-based sizing to
+  fully player-driven hiring — a real architecture reversal, not a bug
+  fix, prompted by a real reported bug.** The original design auto-sized
+  each family's crew pool to `ownedAircraftCount × crewsPerTail` (6-11
+  crews per aircraft) via `resizeCrewPools()` — meaning a SINGLE aircraft
+  purchase silently granted 6-11 crew immediately, which trivialized the
+  entire crew-rest tension the AOG/CREW hold mechanic exists to create.
+  Worse, a `Math.max(1, ...)` floor guaranteed a phantom minimum pool
+  for EVERY family regardless of ownership — the reported bug (crew
+  status strip showing "1/0/0 · 2 res" for families with zero owned
+  aircraft). Both are fixed by the same redesign: buying or leasing an
+  aircraft now bundles exactly 1 crew member (`grantBundledCrew()`,
+  called from both `buyAircraft()`/`leaseAircraft()`) — deliberately NOT
+  enough for continuous operation once duty/rest limits kick in, which
+  is the actual intended pressure toward hiring more. A family's FIRST
+  aircraft also seeds its reserve pool (1 reserve — see the "2 res"
+  correction below), which stays flat regardless of how many more
+  aircraft get added to that family. `resizeCrewPools()` is now purely a
+  CLEANUP pass — it clears a family's pool/reserves to 0 only when owned
+  aircraft count hits zero (last one sold), and otherwise does NOT grow
+  or shrink the pool by any ratio. Real `crewsPerTail` ratios (6
+  short-haul, 11 long-haul) are no longer consumed by any code — they're
+  now purely a REFERENCE figure the player has to learn and reason about
+  themselves ("how many crews does this route actually need"), per
+  explicit designer direction that this stays on the player to figure
+  out, not something the game calculates or recommends for them.
+- **New ADD CREW panel**: lists only families the player currently owns
+  aircraft in (never the full 13), each with a real hire cost
+  (`computeCrewHireCost()`) and current pool size shown. Hire cost is a
+  DESIGNED estimate, not deeply sourced like purchase prices/lease rates
+  — real crew hiring/training costs vary too much by role and seniority
+  to research precisely at this level; 0.2% of a representative
+  aircraft's purchase price (`CREW_HIRE_COST_RATE`) scales cost with
+  aircraft complexity ($28K for a regional jet crew up to $578K for a
+  widebody crew) without claiming to be researched. Revisit with real
+  sourcing if precision matters here later.
+- **Reserve crew count corrected: 1, not 2** — a family's first aircraft
+  purchase should grant 2 crew TOTAL (1 bundled + 1 reserve), not 3. Both
+  places that seeded the old value of 2 were fixed for consistency: the
+  real functional one (`grantBundledCrew()`) and a vestigial startup
+  default (`reserveCrewsByFamily` initialization) that was functionally
+  harmless but left inconsistent — the same class of stale-value trap
+  this file has flagged before elsewhere in this codebase.
+- **A second real, reported bug: AOG, crew shortage, and sell-eligibility
+  decisions were firing for background stress-test traffic the player
+  doesn't own** — offering to sell aircraft, or asking the player to call
+  in reserve crew, for planes that were never theirs. Root cause: these
+  three mechanics (plus `resizeCrewPools()` and `backfillStaggeredCrews()`)
+  predate the `purchased` ownership concept entirely and were never
+  retrofitted with an ownership check when background traffic and real
+  ownership diverged. Fixed across FIVE places, all with the same
+  principle — background traffic has zero economic/decision stakes, pure
+  visual flavor: `tickAOGOnset()` skips non-purchased aircraft entirely
+  (they can never be flagged `maint`, not just never prompted about it);
+  the PARKED boarding gate's crew check is gated on `ac.purchased` (
+  background traffic proceeds unconditionally, no hold, no decision); the
+  SELL trigger requires `ac.purchased`; `resizeCrewPools()` only counts
+  purchased aircraft; `backfillStaggeredCrews()` is scoped the same way
+  so background traffic can't pull a crew slot from a pool sized for the
+  player's real fleet. Every OTHER fleet-wide loop in the codebase (main
+  tick advancement, canvas rendering, status-strip counts, airport hover
+  status) was individually checked and confirmed to be correctly
+  UNSCOPED — those legitimately need background traffic included for it
+  to look and feel like real airspace. Only the five decision/stake-bearing
+  mechanics needed the fix.
+- **Background traffic is visually distinct from the player's own fleet**:
+  `#55BBFF` inflight / `#FF6D0C` on the ground, vs. the player's
+  green/amber. Held (red) stays shared between both — background traffic
+  can still show a real weather ground-stop (that applies universally),
+  and red-for-problem was kept as a universal constant rather than adding
+  a fourth color scheme.
+- **Background traffic's hover tooltip is deliberately reduced**: Route,
+  Tail, Type, Status only — no economics, no crew, no load, no route P&L.
+  This is a real early return in `renderAircraftTooltip()`, not fields
+  hidden in the template — none of the economic computation (crew
+  lookup, `computeLegEconomics()`, route P&L) runs at all for background
+  traffic, since none of it would be displayed anyway.
+- **Crew duty/rest was rebuilt to real FAA 14 CFR Part 117 mechanics —
+  the original implementation didn't actually accumulate duty time
+  across flights.** Reported and diagnosed directly: `dutyTicks` was
+  reset to 0 on every new assignment (`crew.dutyTicks = 0` at the
+  boarding gate), including for a crew member who'd just been released
+  as `AVAILABLE` without hitting the rest threshold. Since one full
+  flight cycle (369 ticks) is well under `MAX_DUTY_TICKS` (600), this
+  meant duty time NEVER meaningfully accumulated — a lone crew member
+  could fly indefinitely without ever triggering real rest, as long as
+  no SINGLE flight was individually delayed past 600 ticks. Fixed by
+  removing the reset from the assignment point entirely; `dutyTicks` now
+  only resets when a crew member completes an ACTUAL rest period
+  (`RESTING` → `AVAILABLE` transition in `tickCrewPool()`), matching how
+  a real Flight Duty Period works — the whole duty day (potentially
+  several flight segments back-to-back), not a per-flight allowance that
+  refills on every new leg. Also caught and fixed in the same pass: 
+  `REST_TICKS` was **wrong**, not just simplified — 480 (8hr) conflated
+  the real Part 117 minimum-sleep-opportunity component (8 of the 10
+  hours) with the full required rest period, which is 10 CONSECUTIVE
+  hours (14 CFR 117.25(e)). Corrected to 600. `MAX_DUTY_TICKS` (600,
+  10hr) was independently verified as already reasonable — real Table B
+  Flight Duty Period limits run roughly 9-13hr depending on report time
+  and segment count, so 10hr sits appropriately in that real range.
+  Verified with an actual simulation, not just logic review: a lone
+  crew member now flies exactly 2 consecutive cycles (~12.3 cumulative
+  hours) before mandatory rest blocks a third, which is the real
+  mechanism creating pressure toward hiring a second crew member.
+- **Real used-aircraft market, buy-only (no lease), persistent inventory
+  (designer decisions, not re-randomized on panel open).** 1-2 listings
+  generated per type at game start, randomized 15%-75% of expected
+  lifespan, slowly replenished over time (~10%/day per under-2 type) so
+  the market doesn't permanently deplete over a long session. Pricing
+  reuses the EXACT SAME linear depreciation formula as `computeSellValue()`
+  — same 5% floor, deliberate consistency with the sell mechanic, not a
+  new formula. Real market research behind this: used aircraft trading is
+  a genuine $1.96B+ industry segment (Technavio, 7.7% CAGR 2025-2030),
+  partly driven by real OEM production delays. Real depreciation curve
+  (Acumen Aero): aircraft retain ~70%/50%/35% of value at 5/10/15 years —
+  cross-checked against a real Boeing 737-800 example ($106.1M new,
+  ~$20-22M at 8 years old). The linear model runs slightly OPTIMISTIC at
+  high cycle counts versus that real curve (real depreciation steepens
+  with age/usage, this model doesn't) — a known simplification matching
+  the designer's existing choice for the sell mechanic, not a new,
+  undisclosed one. A purchased used aircraft genuinely starts with its
+  real cycle count (not 0), verified end-to-end with the actual extracted
+  functions: a real listing generated, purchased, balance deducted
+  exactly, and the resulting aircraft correctly inherited the used
+  aircraft's cycle count rather than starting fresh.
+- **A real, reported bug: decision cards went stale when their underlying
+  condition resolved through a path OTHER than that card's own buttons.**
+  Concretely: hiring a new crew member via the ADD CREW panel while a
+  CREW hold was showing correctly unblocked the aircraft, but the stale
+  "no available crew" card kept showing anyway. Root cause: `decisionQueue`
+  entries were ONLY ever removed by `resolveDecision()` (a card's own
+  buttons) — there was no cleanup path for a condition resolving
+  independently. This turned out to affect a SECOND case too, caught by
+  checking rather than assuming the fix was narrowly scoped: AOG's timed
+  "standard repair" auto-completion had the identical gap. Fixed with a
+  real `clearDecisionForAircraft(ac, type)` function, called from both
+  actual resolution points (crew becoming available, AOG auto-clearing).
+  Verified the removal logic directly, not just reasoned about it.
+- **CREW decision now has a real third option: "Hire new crew"**,
+  alongside "Call in reserve crew" and "Wait." Reuses `hireCrew()`
+  directly — same real cost, same pool-growth logic as the standalone
+  ADD CREW panel, not a duplicated implementation — and immediately
+  assigns the newly hired crew to the specific held aircraft, resolving
+  the hold right away rather than waiting for the next tick's normal
+  boarding-gate pickup. Disables itself with "Insufficient funds to
+  hire" using the same real cost function the ADD CREW panel uses.
+- **Not yet playtested**: the sell/buy/lease/used-market loop, the full
+  route-opening and route-history system, the rebuilt crew-hiring
+  economy, the corrected duty/rest mechanic, and the airline-identity
+  system below — none of this has been run together in one continuous
+  real session. Individually spot-checked and numerically verified at
+  every step (that verification caught real bugs — the lease proration
+  bug, the crew-reset bug, the phantom-family bug, the ownership-scoping
+  gap, the stale-decision-card bug — meaning "spot-checked" has a real,
+  demonstrated catch rate here, not just a theoretical safety net), but
+  the combined, played experience is still the one thing that hasn't
+  actually happened.
+
+## Decided — Airline Identity & Competitor Traffic
+
+- **Player airline naming**: a styled modal blocks the game on load,
+  asking the player to name their airline (Enter or button submits;
+  defaults to "SkyOps Air" if left blank rather than blocking
+  submission). Stored in `playerAirlineName`, shown as the first line
+  in the player's own aircraft tooltip.
+- **Background traffic now carries a real competitor airline name**,
+  weighted by actual 2025-26 US domestic market share (BTS/OAG/Statista,
+  cross-checked across five sources this session). `AIRLINE_ROSTER`:
+  American ~21%, Delta ~19%, Southwest ~18%, United ~17% (the real "Big
+  Four," together ~75-76% of US domestic capacity, consistent across
+  every source checked), Alaska a clear real 5th at ~6%. Remaining ~19%
+  split across JetBlue/ULCCs (Spirit, Frontier, Allegiant)/regional-brand
+  liveries (SkyWest, Republic, Envoy, Endeavor, Horizon, PSA) — designed
+  proportions within that remainder, not individually sourced the way
+  the Big Four figures are.
+- **Airline eligibility was REBUILT mid-session from body-type CATEGORY
+  restriction to SPECIFIC aircraft-type restriction — a real
+  architecture upgrade, not a refinement.** The original version only
+  restricted by category (narrowbody/regionalJet/widebody2Engine/
+  widebody4Engine), which isn't accurate enough: "Southwest doesn't fly
+  widebodies" is a category fact, but "Southwest doesn't fly the
+  737-900, only 700/800/MAX8" or "Delta has ZERO Boeing widebodies at
+  all" are SPECIFIC-type facts a category system can't represent — and
+  the designer explicitly flagged the risk of a player noticing
+  ("Airline X doesn't fly the A340!"). Every airline's `types` array is
+  now a real, individually-researched list of specific `AIRCRAFT_TYPES`
+  IDs, not a category. Real findings from that research, several of
+  which corrected assumptions rather than confirming them:
+  - **Delta's widebody fleet was ENTIRELY excluded at first** — real
+    fleet was 100% Airbus (A330/A350), and neither was modeled in this
+    game at the time, despite Delta being a real widebody operator.
+    Resolved this session — see the A330/A350 addition below.
+  - Delta flies NO Boeing 737 MAX at all (confirmed, a real and
+    deliberate carrier choice); United flies A321neo but no A321ceo;
+    JetBlue retired its LAST Embraer E190 in September 2025 (real,
+    recent) and is now all-Airbus; Emirates flies NO 787 at all (777/
+    A380 only); Lufthansa flies NO Boeing 777 passenger service at all
+    (747-8/A380/787/A340/A350 instead).
+  - **A genuine surprise caught by checking rather than assuming**:
+    Lufthansa is confirmed the world's LARGEST Airbus A340 operator in
+    2026 (14 A340-300s + 5 A340-600s), kept flying specifically because
+    of Boeing 777X delivery delays — not a retired type as first
+    assumed before searching. The A340 in this game now resolves 100%
+    of the time to Lufthansa specifically, verified via a 10,000-sample
+    check, matching this real, current fact.
+  - Seven specific types (`A319NEO`, `E190`, `E195`, `ERJ135`, `ERJ140`,
+    `ARJ21`, and formerly `MAX10` before it was removed entirely — see
+    below) have NO real match anywhere in the 21-airline roster — either
+    vanishingly rare variants, retired from major-carrier US regional
+    feed, or (ARJ21) a China-market-only type no Western carrier flies.
+    These fall to a generic `Independent Operator` fallback entry rather
+    than forcing a fake mainline match — smaller/charter/startup
+    operators are the genuine real-world pattern for exactly this kind
+    of orphaned type. This fallback is also what prevents
+    `pickAirlineForType()` from crashing on an empty eligible-airlines
+    array; every type in `AIRCRAFT_TYPES` is verified via script (not
+    just assumed) to resolve to at least one eligible entry.
+  - Alaska Airlines includes real `B788` eligibility from an earlier
+    update this session — absorbed Hawaiian Airlines' 787-9 fleet and
+    launched genuine widebody international routes from Seattle (London,
+    Rome, Reykjavik, Seoul, Tokyo), confirmed via search before that
+    change, not taken on request alone. Still excluded from
+    `widebody4Engine` — no 747/A380/A340-class aircraft.
+- **A new, real design principle established this session: aircraft
+  types must be actually FAA/ICAO certified AND in real service to stay
+  in this game — an order or a certification-pending status isn't
+  enough.** Prompted by removing Boeing 737 MAX 7 and MAX 10 entirely
+  from `AIRCRAFT_TYPES` — verified via search before removing (not
+  assumed): as of this game's real current timeframe, MAX 7 certification
+  is expected within weeks but hadn't cleared FAA sign-off yet, and MAX
+  10 isn't expected until year-end 2026, with first DELIVERIES for both
+  not until 2027 even after certification clears. Fleet dropped to 28
+  types/349 weight, then back to 30/367 with the A330/A350 addition
+  below. This same certified-and-flying bar was then applied to Delta's
+  real Boeing 787-10 order (Jan 2026, 30 firm + 30 options) — a genuine
+  order, confirmed via search, but explicitly NOT added to Delta's fleet
+  yet since an order isn't a delivery. Revisit both MAX7/10 and Delta's
+  787 once they've actually entered real service, not before.
+- **Airbus A330-900 and A350-900 added specifically because Delta's
+  entire real widebody fleet is Airbus** — this is what actually
+  resolved the "Delta excluded from every widebody" gap noted above.
+  Real sourced specs: A330-900 MLW 191,000kg (confirmed, Airbus/
+  AeroCorner), 300 seats; A350-900 MLW 207,000kg (confirmed, multiple
+  technical sources), seats set to 306 to match DELTA'S OWN real cabin
+  configuration specifically (not a generic representative number),
+  purchase price ~$300M sourced from Axon Aviation's real market-value
+  estimate, not Airbus sticker list price — the same "real transacted
+  value" methodology already used for every other type in this game.
+  Delta gets both new types. Also added, individually confirmed (not
+  assumed uniform across "the international carriers"): Air France
+  (both A330 and A350 — real, current operator of both), Lufthansa and
+  British Airways and Japan Airlines (A350 only — each independently
+  confirmed, deliberately not adding A330 to any of them since that
+  wasn't confirmed), Air Canada (A330 only, confirmed, no A350).
+  - **A second real correction surfaced while researching this
+    addition, unrelated to the reason for the search**: Air France's
+    A380 fleet was fully retired by 2022 — their current 2026 long-haul
+    fleet is 787/777/A350 only. The roster had them still eligible for
+    A380 from the ORIGINAL build, which had simply never been
+    independently re-verified. Fixed in the same pass rather than left
+    for later, exactly the kind of drift this roster is expected to
+    accumulate over time (see the scope-limit note below).
+- Verified via real 10,000-20,000-sample distribution checks at multiple
+  points this session, not just trusting the configured weights on
+  paper: narrowbody assignment lands within a percentage point or two of
+  the real sourced market share; widebody-only international carriers
+  come out appropriately rare (~1.5-4% each depending on how many
+  carriers are eligible for that specific type); Delta appropriately
+  dominates A330/A350 assignment as the real anchor customer, with the
+  occasional international carrier showing up alongside it.
+- **Real scope limit worth being explicit about**: this whole roster is
+  hardcoded to US market share because the game itself is hardcoded to
+  48 real US airports — there's no region-selection feature. If a future
+  version lets players start in a different region, this roster and its
+  weights would need to become region-aware rather than assuming US
+  market share universally, which is what "weight based on the
+  geography the player is playing within" actually implied as a design
+  intent, not fully realized yet.
+- **This roster has now been independently corrected twice for facts
+  that were wrong in the original build** (Air France's A380 status,
+  and implicitly Delta's widebody exclusion once A330/A350 existed to
+  resolve it). Real airline fleets and route networks change constantly
+  and this roster has no mechanism to detect that on its own — it only
+  gets fixed when someone notices and asks, or when unrelated research
+  happens to surface the correction. Treat every entry as due for
+  re-verification eventually, not as settled once written.
+
+## Decided — Route Network & Player Operations
+
+- **The foundational shift this session: aircraft you own no longer fly
+  randomly.** Before this work, EVERY aircraft (purchased or background)
+  picked a destination via `randomRoutePair()` on every PARKED cycle —
+  there was no concept of "the player's network" at all. Purchased
+  aircraft now fly ONLY between airports the player has explicitly opened
+  a route between (`ac.assignedRouteId`), swapping direction each cycle
+  (A→B, then B→A) rather than picking randomly. A purchased aircraft with
+  no assigned route is a real "spare" — it sits genuinely idle (skips the
+  entire state machine via an early return in `advanceAircraft`, consumes
+  no crew) until assigned via `openRoute()`. Background traffic keeps the
+  old fully-random behavior unchanged — it's unrelated to the player's
+  network by design.
+- **Abstract slot scarcity, explicitly NOT real competitor-airline
+  modeling** — a deliberate scope decision. Each airport has
+  `slotsTotal`/`slotsAvailable`, `slotsTotal` scaled inversely to real
+  landing-fee data already in the game (busier/more-expensive airports
+  have less room for new entrants — ORD floors at 3 slots, smaller
+  airports get up to ~13). Slots free up slowly over time
+  (`tickSlotAvailability()`, ~5%/day per under-capacity airport, designed
+  pacing not sourced) representing unnamed background churn, or can be
+  bought outright when none are free (a real premium added to the
+  route-opening cost). Real competitor airlines were explicitly
+  considered and rejected for this pass — see `ROADMAP.md`'s "Deferred
+  indefinitely" list, which this deliberately did not reopen.
+- **Real route-opening cost**, built from data already in the game rather
+  than invented: a base fee plus both endpoints' gate fees
+  (`computeRouteOpeningCost()`), landing in a real $68K-$275K range
+  depending on airport size and slot scarcity — small relative to
+  aircraft prices, real relative to per-flight revenue.
+- **Route-opening UI is click-to-select on the map, not dropdowns** — a
+  real rebuild, not the original design. The first version used two
+  `<select>` dropdowns and hit the exact same per-tick-flicker bug
+  documented above (third instance). Rebuilt as a real 4-step flow: click
+  OPEN ROUTE → click origin airport on the map → click destination
+  airport → confirm panel with live cost/slot info and Open Route/Abandon
+  buttons. Selected airports get a visible highlight ring, correctly
+  zoom-scaled the same way as everything else on the map. Basic tap
+  support exists for mobile, honestly scoped to just this flow (not full
+  touch-pan/pinch-zoom, which remains unbuilt). Airport hit-testing was
+  refactored into one shared function (`findAirportAtScreenPos`) used by
+  both hover AND route-picking, rather than two copies that could drift.
+- **Buying/leasing an aircraft while mid-route-selection auto-assigns it
+  to the pending route** — explicit designer call, chosen over a
+  separate two-step buy-then-manually-assign flow. If the acquisition
+  succeeds but the route still can't open (e.g., the route fee alone
+  exceeds what's left of the balance), the aircraft stays as a real spare
+  and the route panel stays open showing why, rather than silently
+  failing. A second ACQUIRE AIRCRAFT button lives inside the route
+  confirm panel itself (next to Open Route/Abandon) for exactly this
+  case — both buttons share one `toggleBuyPanel()` implementation, not
+  two copies.
+- **Real route-level profitability, weighed against the actual
+  establishment cost** — a route isn't "profitable" the moment one
+  flight nets positive; it's profitable once cumulative net revenue
+  actually recoups `route.openingCost`. Tracked via `route.cumulativeNet`,
+  accumulated at every completed flight AND decremented by real lease
+  bills (`tickLeaseBilling()` reduces a route's cumulativeNet too, if its
+  aircraft is leased) — so a route's true P&L reflects both flight
+  economics and ongoing lease obligations, not just ticket revenue.
+- **Full per-flight route history**, not just the running total — this is
+  what makes a real "chart profitability over time" view possible.
+  `route.history` captures one entry per completed flight: tick,
+  aircraft tail, revenue, fees, operating cost, a DISPLAY-ONLY lease
+  estimate, net, pax/seats/load factor, and cumulative net at that point.
+  Verified the data model is sufficient to reconstruct the full curve and
+  identify the exact flight that crossed into profitability, not just
+  that it eventually did. `route.assignmentHistory` tracks which
+  aircraft has flown the route and when — a real array even though today
+  a route only ever has ONE aircraft for its whole life (it just closes
+  if that aircraft is sold); this is intentionally future-proofed for
+  when aircraft reassignment on an existing route gets built.
+- **Routes are archived, not deleted, when closed.** Selling a
+  route-assigned aircraft used to `splice()` the route out of
+  `playerRoutes` entirely — which would have destroyed exactly the
+  history data the designer wants to eventually chart, right at the
+  moment it'd be most interesting to review (a route that didn't make
+  it). Routes now move to `closedPlayerRoutes` with a `closedTick`
+  stamped on, full history intact. The closure log message now reports
+  real final P&L ("recouped its $X opening cost with $Y to spare" or
+  "never recouped... closed $Z short") instead of a bare "aircraft sold."
+- **A dedicated ROUTES panel**: list view of every route (open AND
+  closed, newest first), tap one for full detail — start date, close
+  date if applicable, flights flown, opening cost, cumulative net and
+  profitability status, total revenue/fees/operating cost/lease cost,
+  average load, full assigned-aircraft history, and a recent-flights log
+  (capped at the most recent 15 for display — a long-running route could
+  have hundreds of entries, but the summary numbers above are always
+  computed from the COMPLETE history regardless of that display cap, not
+  truncated). Not yet built: the actual chart visualization the designer
+  described wanting eventually — this panel has the real data ready for
+  it, but the chart itself doesn't exist yet.
+- **Not yet built**: player-funded route marketing (view loads by
+  route/origin, spend to boost them) — flagged early as a genuinely
+  separate feature from the airport-incentive-offer mechanic, needs its
+  own load-visibility UI that doesn't exist yet. The airport-incentive
+  mechanic itself (bottom-15 airports offering waived fees + marketing
+  support, with a real clawback penalty for abandoning the route early)
+  is also not built — this was explicitly sequenced as Phase C/D, held
+  until the Phase A/B foundation (this section) could be felt in actual
+  play first.
 
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
@@ -559,6 +1026,20 @@ one contradicts the design thesis.)
   hover when they overlap (a PARKED/BOARDING/TURNAROUND aircraft renders
   at the airport's exact position) — this was an explicit default, not
   extensively tested against alternatives.
+- **A real reported bug: flight-path arcs looked disproportionately
+  curved on short routes.** Root cause in `getPathPoints()`: the bezier
+  midpoint's vertical offset was a FIXED 90px regardless of the actual
+  distance between the two airports — a short hop (e.g. DEN-MCI) got the
+  exact same bulge as a coast-to-coast route, which reads as an
+  unrealistic exaggerated arc on anything nearby. Fixed to scale with
+  real distance: 12% of the straight-line distance between the two
+  points, floored at 15px (so very short hops still read as a
+  deliberate curve, not robotically straight) and capped at 120px (so a
+  genuinely long route doesn't arc absurdly high relative to the visible
+  map). These specific proportions are a designed visual choice, not
+  sourced from anything. Verified numerically: a short route now gets a
+  ~15px arc instead of the old flat 90px, scaling smoothly up to the
+  120px cap for long routes.
 
 ## Decided — Aircraft Icons (real Figma vector data, replacing the generic triangle)
 
@@ -608,6 +1089,36 @@ one contradicts the design thesis.)
   numeric script verification (constant-then-damped-growth confirmed
   exact at multiple zoom levels), but a full in-browser re-check across
   the entire 31-type fleet at varied zoom levels hasn't happened.
+- **A real reported bug: aircraft color stayed in the wrong flight-phase
+  color too long, both at takeoff and at landing.** Root cause: color was
+  picked from an altitude THRESHOLD (`pos.alt > 0.5`), which never
+  actually lined up with the real state-machine transitions. Checked the
+  actual altitude curves before fixing: TAKEOFF's altitude never even
+  crosses 0.2 across its whole duration (so it never triggered the
+  "flying" color at all during takeoff), while APPROACH stayed above the
+  0.5 threshold for roughly the first 71% of its duration before
+  dropping. Fixed by tying color DIRECTLY to the real state, not
+  altitude: the player's own aircraft now use three real per-phase
+  colors — `#37FFB0` (takeoff/initial climb, the original green,
+  unchanged), `#83C9FF` (cruise — updated from an initial `#6CD3FF` for
+  better contrast, a follow-up tweak in the same session), `#FFB300`
+  (descent/landing, i.e. APPROACH+LANDING states). Ground states keep
+  the original amber, unchanged. Applied the same state-based fix (not
+  altitude-threshold) to background traffic too, for the same accuracy
+  reason, even though only the player's colors were explicitly requested
+  to change.
+- **Background traffic's color scheme was simplified to one constant
+  color**, replacing an earlier two-tier blue/orange (flying/ground)
+  scheme from the same session. Makes background traffic instantly
+  recognizable as "not mine" regardless of what it's doing, without
+  needing the phase-distinction that actually matters for the player's
+  own fleet. The constant color itself was tweaked once already —
+  `#B25BFF` initially, then `#D767FF` in a follow-up pass because the
+  first value "wasn't popping enough" — current value is `#D767FF`, if a
+  future edit references the old one it's stale. HELD (red) stays a
+  shared universal constant for both ownership tiers — background
+  traffic can still show a real weather ground-stop, and red-for-problem
+  doesn't need a fourth color.
 
 ## Open / not yet decided
 
@@ -620,8 +1131,23 @@ one contradicts the design thesis.)
   guess at layouts from descriptions. Note the raster-export limitation
   documented above under Icons — full-screen mockups may hit the same
   wall the icon nodes did; verify early rather than assuming it'll work.
-- Route competition / competitor airlines: designed to be deferred until
-  the core loop is solid in Swift.
+- Route competition / competitor airline AI: STILL deferred — this is
+  about actual competitive gameplay (competing for routes/slots/traffic),
+  not the same thing as the real competitor airline NAMES/branding added
+  to background traffic this session (see "Airline Identity & Competitor
+  Traffic" section above). Background traffic with a real airline name
+  painted on it is cosmetic identity, not an AI opponent — it doesn't
+  compete for anything, doesn't react to the player, doesn't have its
+  own economy. Don't conflate the two when this phase eventually gets
+  revisited.
+- The airline roster (`AIRLINE_ROSTER`) and its US-market-share weighting
+  is hardcoded to the current US-only airport network. If a future
+  version adds other regions/countries, the roster and weights need to
+  become region-aware — right now there's no mechanism for that at all,
+  it's a single fixed US-weighted list. Also has no way to detect real-
+  world fleet/route changes on its own (an Alaska Airlines update this
+  session was applied because it was reported and independently
+  verified, not because anything in the game noticed).
 - Hub connectivity, reputation, passenger demand curves: named in the
   original design brief, not yet modeled in the prototype or planned in
   detail — bigger systems, deliberately last.
@@ -651,31 +1177,48 @@ one contradicts the design thesis.)
   original/first-sourced values (see Economy section above for the exact
   numbers). Not resolved, just not silently overwritten either.
 - **Regional-jet `crewsPerTail`**: defaulted to 6 (same as narrowbody),
-  unverified. Real research not done for this tier specifically.
+  unverified — and its role changed this session. It's no longer consumed
+  by any code at all (`resizeCrewPools()` was rewritten to not use it —
+  see Fleet Lifecycle section); it's now purely a reference number the
+  player might reason about themselves, or that a future UI might show
+  as a suggestion. Still unverified either way.
 - **Intra-family fleet-weight splits** for A320/737/A220 families, and ALL
   remaining regional-jet family totals: real but lower-confidence data,
   flagged in the Fleet section above. Revisit with dedicated sourcing if
   the designer wants higher precision here.
-- **No starting capital and no route-opening cost.** A fresh session
-  begins with `playerBalance = 0` — buying any aircraft requires
-  accumulating flight revenue or selling one first, not a real "player
-  starts with a real fleet + real capital" experience yet. Route-opening
-  as a costed player action doesn't exist either (routes are still
-  randomly assigned, same as always) — this is the exact gap
-  `ROADMAP.md` Phase 5 already flagged, now sharper since the sell/buy
-  half of it is real and the route-opening half still isn't.
+- **No bankruptcy mechanic.** `playerBalance` can go negative (confirmed
+  real via lease billing, which doesn't check affordability before
+  charging) with no consequence beyond red text and being blocked from
+  further Buy/Lease/Open Route/Add Crew actions. Whether that's the
+  intended long-term design or a placeholder hasn't been decided.
+- **Route-opening cost and starting capital are now REAL** — this item
+  used to be open, resolved this session (see Fleet Lifecycle and Route
+  Network sections). Real remaining gap in the same area: player-funded
+  route marketing and the airport-incentive-offer mechanic (bottom-15
+  airports, waived fees, real clawback penalty for abandoning early) were
+  both explicitly scoped as later phases (C/D) and are still not built —
+  only the foundational route-opening mechanic (A/B) shipped.
+- **The Routes panel has real per-flight history data but no chart.** The
+  designer's stated goal — an app view charting profitability over time,
+  seeing exactly when a route became profitable — is only half done. The
+  data model is verified sufficient to build it; the actual visualization
+  doesn't exist yet.
 - **Full 30-type fleet, 48 airports, the economic event system, the
-  pan/zoom camera, AND the sell/buy economy have never all run together
-  in one real, sustained play session.** Each has been individually spot-
-  checked and numerically verified, and two of them (the `operatingCost`
-  bug, the decision-panel flicker bug) had real ship-blocking issues that
-  only surfaced through use, not through the verification that shipped
-  them — meaning "spot-checked" has a real, demonstrated failure rate
-  here, not just a theoretical one. This is the single most valuable
-  next step before adding more scope, and has been true and repeated at
-  every major addition this session — its repetition doesn't make it
-  less urgent, if anything it's evidence this keeps getting deprioritized
-  in favor of new features.
+  pan/zoom camera, the sell/buy/lease economy, the real player route
+  network, AND the rebuilt crew-hiring/duty-rest system have never all
+  run together in one real, sustained play session.** Each has been
+  individually spot-checked and numerically verified, and SEVERAL of
+  them (the `operatingCost` bug, three separate instances of the same
+  decision-panel/dropdown/buy-panel flicker bug, the lease-proration bug
+  that made leasing nearly dominant, the phantom-crew-family bug, the
+  ownership-scoping gap letting background traffic generate real
+  decisions, and the crew duty/rest reset bug) had real, user-facing
+  issues that only surfaced through actual use or a direct question, not
+  through the verification that shipped them. "Spot-checked" has a long,
+  real, demonstrated catch rate at this point — not a theoretical safety
+  net, a proven one. This is still the single most valuable next step
+  before adding more scope, and has been true and repeated at nearly
+  every major addition this session.
 - **Why Sukhoi Superjet 100 was removed isn't documented anywhere.** The
   type and its crew family are fully gone from the code (confirmed clean
   — no orphaned references anywhere), but no record of the actual

@@ -61,7 +61,21 @@ that were bugs and got fixed (crew backfill for staggered spawns, the
 holding-pattern loiter loop instead of a frozen freeze-frame, the rejoin
 easing between holding pattern and final approach).
 
-- [ ] Port crew pool system (per-family, real crews-per-tail ratios)
+- [ ] Port crew pool system — GREW substantially past "real crews-per-tail
+      ratios" since this phase was first scoped. Crew provisioning is no
+      longer automatic/ratio-based at all: buying/leasing an aircraft
+      bundles exactly 1 crew, growing the pool further is a real
+      player-driven action (the ADD CREW panel, real hire cost). Real
+      `crewsPerTail` ratios still exist as data but are no longer
+      consumed by any pool-sizing code — they're a reference figure only.
+      Also port the corrected duty/rest timing faithfully: crew duty time
+      accumulates ACROSS consecutive flight assignments (a real Flight
+      Duty Period, not a per-flight allowance that resets), only clearing
+      after a completed rest period — this was a real bug in an earlier
+      version of the browser prototype, already fixed there, don't
+      re-introduce the broken per-assignment-reset version when porting.
+      `MAX_DUTY_TICKS`/`REST_TICKS` (600/600, i.e. 10hr/10hr) are real
+      FAA 14 CFR Part 117-sourced figures, port the actual numbers.
 - [ ] Port AOG onset + clustering
 - [ ] Port weather ground-stop system + holding-pattern visual
 - [ ] Port the player-decision system (AOG/crew cards, sim keeps running)
@@ -95,33 +109,62 @@ back into the fleet/crew/disruption systems from Phases 1-3.
       real per-type purchase price, real cycle-based lifespan triggering
       a sell decision, real linear depreciation, a real spendable balance
       (`playerBalance`) that accumulates flight revenue and sell
-      proceeds and can actually be spent on a new aircraft. See
-      CLAUDE.md's "Fleet Lifecycle & Ownership Economy" section for the
-      full mechanic, sourcing, and two real bugs caught building it.
-      **This explicitly reverses/supersedes the old fleet slider for
-      anything the player has actually purchased** — the slider still
-      exists for stress-testing, but purchased aircraft are now
-      protected from it (a real bug that got caught: the slider used to
-      silently delete purchased aircraft when shrunk, fixed before it
-      could actually happen to a player).
-- [ ] Route-opening UI + cost — NOT built yet, the one piece of the
-      original purchase-economy vision still missing. Routes are still
-      randomly assigned with no costed player action to open one.
-- [ ] Starting capital — NOT decided or built. A fresh session currently
-      starts at $0 balance, meaning a brand-new player must sell an
-      aircraft or accumulate revenue before buying anything, which isn't
-      a real "player starts with a real fleet" experience. Needs a real
-      design decision (see CLAUDE.md Fleet Lifecycle section), not a
-      placeholder number.
-- [ ] Per-aircraft-type purchase price — RESOLVED for the browser
-      prototype (see above), still needs eventual native-app confirmation
-      the same numbers hold, since they were sourced/computed in a
-      browser-prototype context.
+      proceeds and can actually be spent. See CLAUDE.md's "Fleet
+      Lifecycle & Ownership Economy" section for the full mechanic,
+      sourcing, and the real bugs caught building it.
+- [x] Leasing, as a real alternative to buying — NOT in the original
+      Phase 5 scope, added this session. 15% of purchase price upfront,
+      real sourced monthly rate (industry lease-rate-factor data), billed
+      as a genuine fixed monthly obligation regardless of aircraft
+      utilization (a real bug in the first version charged lease cost
+      per-flight instead, which made leasing nearly always dominant —
+      see CLAUDE.md for the full story). Port the FIXED-OBLIGATION
+      billing model, not a per-flight-prorated one.
+- [x] Route-opening UI + cost — REAL NOW, was the one piece of the
+      original purchase-economy vision missing as of the last update to
+      this file. Real cost built from data already in the game (base fee
+      + both endpoints' real gate fees), abstract airport slot scarcity
+      (explicitly NOT real competitor-airline modeling — see Deferred
+      list below, this didn't reopen that), click-to-select-on-map UI.
+      Purchased aircraft now fly ONLY the routes the player has opened,
+      not random destinations — this is the single biggest behavioral
+      change to the simulation this phase produced, port it faithfully.
+- [x] Starting capital — DECIDED and built: $20M, calibrated (not
+      arbitrary) to cover the cheapest aircraft plus a typical
+      route-opening cost with buffer. A fresh session now starts with
+      real capital, zero aircraft, zero routes, zero background traffic.
+- [x] Per-aircraft-type purchase price — RESOLVED for the browser
+      prototype, still needs eventual native-app confirmation the same
+      numbers hold, since they were sourced/computed in a browser-
+      prototype context.
 - [ ] Whether the fleet's real-world-proportional spawn weights (see
       CLAUDE.md Fleet section) should inform which aircraft the player
       can initially afford vs. which stay aspirational late-game
       purchases — genuinely undecided, purchase prices exist now but
       nothing ties them back to the spawn-weight tiers yet.
+- [ ] Player-funded route marketing — view loads by route/origin, spend
+      to boost them. Explicitly scoped as a separate feature from the
+      item below, needs its own load-visibility UI, not built.
+- [ ] Airport-incentive-offer mechanic — bottom-15 airports (by real fee
+      data already in the game) periodically offering waived landing
+      fees + real marketing support for a new route, with a genuine
+      clawback penalty if the player abandons the route before the
+      committed term ends. Designed and sequenced (explicitly staged as
+      "Phase C/D" after the route-opening foundation), not built —
+      the foundation it depends on (Phase A/B) is what actually shipped
+      this session.
+- [ ] Route profitability chart — full per-flight history data now
+      exists per route (`route.history`, verified sufficient to
+      reconstruct a complete profitability-over-time curve and identify
+      the exact flight that crossed into profitability), including for
+      CLOSED routes (archived, not deleted, specifically so this data
+      survives). The actual chart visualization doesn't exist yet — this
+      is real, ready-to-consume data waiting on a UI decision.
+- [ ] Bankruptcy / negative-balance handling — `playerBalance` can
+      currently go negative (confirmed via real lease billing, which
+      doesn't check affordability before charging) with no consequence
+      beyond red text and being blocked from new purchases. Whether
+      that's intended long-term or a placeholder hasn't been decided.
 
 ## Deferred indefinitely (not "later," genuinely "not planned")
 
