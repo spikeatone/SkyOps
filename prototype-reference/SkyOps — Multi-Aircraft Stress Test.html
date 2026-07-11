@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0071)file:///Users/michaelstevens/Downloads/skyops-fleet-stress-test_12.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <title>SkyOps — Multi-Aircraft Stress Test</title>
 <style>
   :root {
@@ -28,6 +28,69 @@
     padding: 20px;
     min-height: 100vh;
   }
+
+  .naming-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6,10,14,0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .naming-overlay.hidden { display: none; }
+  .naming-box {
+    background: var(--panel);
+    border: 1px solid var(--scope-green);
+    border-radius: 10px;
+    padding: 28px 32px;
+    box-shadow: 0 0 40px rgba(55,255,176,0.15), 0 20px 60px rgba(0,0,0,0.6);
+    text-align: center;
+    max-width: 360px;
+  }
+  .naming-title {
+    font-family: var(--mono);
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    color: var(--scope-green);
+    margin-bottom: 8px;
+  }
+  .naming-subtitle {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 18px;
+  }
+  .naming-box input {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 14px;
+    background: #0d141c;
+    border: 1px solid var(--panel-line);
+    color: var(--text-main);
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    box-sizing: border-box;
+  }
+  .naming-box input:focus {
+    outline: none;
+    border-color: var(--scope-green);
+  }
+  .naming-box button {
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    background: var(--scope-green);
+    color: #06130d;
+    font-weight: 600;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .naming-box button:hover { opacity: 0.9; }
 
   .frame {
     max-width: 960px;
@@ -429,21 +492,30 @@
 </head>
 <body>
 
+<div class="naming-overlay" id="namingOverlay">
+  <div class="naming-box">
+    <div class="naming-title">FOUND YOUR AIRLINE</div>
+    <div class="naming-subtitle">Name your airline before your first flight.</div>
+    <input type="text" id="airlineNameInput" maxlength="40" placeholder="e.g. Cascade Airways" autocomplete="off">
+    <button id="foundAirlineBtn">Found Airline</button>
+  </div>
+</div>
+
 <div class="frame">
   <div class="titlebar">
     <h1>SKYOPS <span>// multi-aircraft stress test</span></h1>
     <div class="clock">
-      <b id="calDate">—</b><br>
-      DAY <b id="dayNum">1</b> — <b id="clockTime">00:00</b><br>
-      TICK <b id="tickCount">0</b>
+      <b id="calDate">Sat, Jan 2, 2027</b><br>
+      DAY <b id="dayNum">2</b> — <b id="clockTime">11:51</b><br>
+      TICK <b id="tickCount">2151</b>
     </div>
   </div>
 
   <div class="scope-wrap">
-    <canvas id="scope" width="900" height="480"></canvas>
+    <canvas id="scope" width="900" height="480" style="cursor: grab;"></canvas>
     <div class="perf-overlay" id="perfOverlay">
-      FPS <b id="fpsVal">60</b><br>
-      tick cost <b id="tickCostVal">0.0ms</b><br>
+      FPS <b id="fpsVal">120</b><br>
+      tick cost <b id="tickCostVal">0.30ms</b><br>
       aircraft <b id="fleetCountVal">0</b>
     </div>
     <div class="aircraft-tooltip" id="aircraftTooltip"></div>
@@ -458,7 +530,7 @@
       <button class="speed" data-speed="10">10×</button>
       <button class="speed" data-speed="25">25×</button>
     </div>
-    <div class="fleet-control" title="Generic background industry traffic for stress-testing — NOT the player's real fleet, which is bought separately and starts at zero">
+    <div class="fleet-control" title="Generic background industry traffic for stress-testing — NOT the player&#39;s real fleet, which is bought separately and starts at zero">
       BACKGROUND TRAFFIC <input type="range" id="fleetSlider" min="0" max="150" value="0">
       <b id="fleetLabel">0</b>
     </div>
@@ -483,10 +555,10 @@
     <div>HELD: <b id="heldCount">0</b></div>
   </div>
   <div class="status-strip">
-    <div>CREW (avail/on-duty/rest, by family): <b id="crewStatus">—</b></div>
+    <div>CREW (avail/on-duty/rest, by family): <b id="crewStatus">no aircraft owned yet</b></div>
   </div>
   <div class="status-strip">
-    <div>GROUND STOPS: <b id="weatherStatus">none</b></div>
+    <div>GROUND STOPS: <b id="weatherStatus">JFK, PHL</b></div>
   </div>
   <div class="status-strip">
     <div>ECONOMIC CONDITIONS: <b id="economicStatus">Normal</b></div>
@@ -511,17 +583,17 @@
     </div>
     <div class="fin-row fin-total">
       <span class="fin-label">= Net Revenue</span>
-      <span class="fin-value" id="finNet">$0</span>
+      <span class="fin-value positive" id="finNet">$0</span>
     </div>
     <div class="fin-row fin-total" style="margin-top: 8px; border-top: 1px dashed var(--panel-line);">
       <span class="fin-label" title="Includes aircraft sale proceeds — not the same number as Net Revenue above once any sales have happened">Cash Balance</span>
-      <span class="fin-value" id="finBalance">$0</span>
+      <span class="fin-value positive" id="finBalance">$20,000,000</span>
     </div>
   </div>
 
   <div class="decision-panel" id="decisionPanel"></div>
 
-  <div class="log-panel" id="logPanel"></div>
+  <div class="log-panel" id="logPanel"><div class="log-entry event"><span class="t">D2 10:29</span>Weather event: ground stop declared at JFK</div><div class="log-entry event"><span class="t">D2 10:23</span>Weather event: ground stop declared at PHL</div><div class="log-entry event"><span class="t">D2 08:52</span>Ground stop lifted at MDW</div><div class="log-entry event"><span class="t">D2 05:50</span>Weather event: ground stop declared at MDW</div><div class="log-entry event"><span class="t">D2 05:43</span>Ground stop lifted at PIT</div><div class="log-entry event"><span class="t">D2 05:07</span>Ground stop lifted at JFK</div><div class="log-entry event"><span class="t">D2 03:41</span>Ground stop lifted at SFO</div><div class="log-entry event"><span class="t">D2 01:03</span>Weather event: ground stop declared at PIT</div><div class="log-entry event"><span class="t">D2 00:28</span>Weather event: ground stop declared at JFK</div><div class="log-entry event"><span class="t">D2 00:02</span>Weather event: ground stop declared at SFO</div><div class="log-entry event"><span class="t">D2 00:00</span>New sim day — ¼× speed uses reset (3 available)</div><div class="log-entry event"><span class="t">D1 23:40</span>Ground stop lifted at LGA</div><div class="log-entry event"><span class="t">D1 22:47</span>Ground stop lifted at FLL</div><div class="log-entry event"><span class="t">D1 19:57</span>Weather event: ground stop declared at LGA</div><div class="log-entry event"><span class="t">D1 18:38</span>Weather event: ground stop declared at FLL</div><div class="log-entry event"><span class="t">D1 15:15</span>Ground stop lifted at DAL</div><div class="log-entry event"><span class="t">D1 15:01</span>Ground stop lifted at SFO</div><div class="log-entry event"><span class="t">D1 12:34</span>Weather event: ground stop declared at DAL</div><div class="log-entry event"><span class="t">D1 12:02</span>Ground stop lifted at JFK</div><div class="log-entry event"><span class="t">D1 10:15</span>Weather event: ground stop declared at SFO</div><div class="log-entry event"><span class="t">D1 07:45</span>Weather event: ground stop declared at JFK</div><div class="log-entry event"><span class="t">D1 06:47</span>Ground stop lifted at CLE</div><div class="log-entry event"><span class="t">D1 05:11</span>Ground stop lifted at DEN</div><div class="log-entry event"><span class="t">D1 02:57</span>Weather event: ground stop declared at DEN</div><div class="log-entry event"><span class="t">D1 01:46</span>Weather event: ground stop declared at CLE</div></div>
 
   <div class="footer-note">
     Fleet mix: Airbus A321neo, Boeing 737-900, 737 MAX 8/9, 777-300, 787 Dreamliner — each with its own hold-cost rate and revenue range. AOG/crew holds erode that flight's actual projected revenue at the type's real hourly rate. Widebodies render larger on the scope.
@@ -636,10 +708,16 @@ const AIRCRAFT_TYPES = [
   { id: 'B737700', name: 'Boeing 737-700',         seats: 140, costPerHour: 7500,  weight: 9,  family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 128000, bodyType: 'narrowbody', purchasePrice: 59000000, expectedLifespanCycles: 75000 },
   { id: 'B737800', name: 'Boeing 737-800',         seats: 175, costPerHour: 7900,  weight: 37, family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 146300, bodyType: 'narrowbody', purchasePrice: 70000000, expectedLifespanCycles: 75000 },
   { id: 'B739',    name: 'Boeing 737-900',         seats: 180, costPerHour: 8000,  weight: 15, family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 146300, bodyType: 'narrowbody', purchasePrice: 74000000, expectedLifespanCycles: 75000 },
-  { id: 'MAX7',    name: 'Boeing 737 MAX 7',       seats: 140, costPerHour: 6800,  weight: 4,  family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 138500, bodyType: 'narrowbody', purchasePrice: 72000000, expectedLifespanCycles: 75000 },
   { id: 'MAX8',    name: 'Boeing 737 MAX 8',       seats: 175, costPerHour: 7000,  weight: 30, family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 146300, bodyType: 'narrowbody', purchasePrice: 86000000, expectedLifespanCycles: 75000 },
   { id: 'MAX9',    name: 'Boeing 737 MAX 9',       seats: 190, costPerHour: 7500,  weight: 10, family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 152800, bodyType: 'narrowbody', purchasePrice: 94000000, expectedLifespanCycles: 75000 },
-  { id: 'MAX10',   name: 'Boeing 737 MAX 10',      seats: 195, costPerHour: 7900,  weight: 6,  family: 'B737_FAMILY', crewsPerTail: 6, mlwLbs: 158000, bodyType: 'narrowbody', purchasePrice: 99000000, expectedLifespanCycles: 75000 },
+  // MAX 7 and MAX 10 deliberately NOT included — as of this game's real
+  // current timeframe (mid-2026), NEITHER is FAA/ICAO certified yet.
+  // MAX 7 is expected to certify within weeks (end of July 2026); MAX 10
+  // isn't expected until year-end 2026, with first DELIVERIES for both
+  // not until 2027 even after certification clears. Designer direction:
+  // only include aircraft that are actually certified and in service —
+  // add these back when that's genuinely true, not before. Verified via
+  // real search before removing, not assumed.
   // ---- A220 FAMILY — one crew family (99% commonality, same type rating) ----
   // A220-300 is narrowbody per designer's list; A220-100 was also listed
   // under Regional Jet, resolved per designer's intersection rule ("where
@@ -657,6 +735,23 @@ const AIRCRAFT_TYPES = [
   // looking right as of this session).
   { id: 'B773',    name: 'Boeing 777-300',         seats: 380, costPerHour: 20000, weight: 23,  family: 'B777',        crewsPerTail: 11, mlwLbs: 460000, bodyType: 'widebody2Engine', purchasePrice: 289000000, expectedLifespanCycles: 44000 },
   { id: 'B788',    name: 'Boeing 787 Dreamliner',  seats: 280, costPerHour: 12000, weight: 14,  family: 'B787',        crewsPerTail: 11, mlwLbs: 380000, bodyType: 'widebody2Engine', purchasePrice: 225000000, expectedLifespanCycles: 44000 },
+  // Added specifically because Delta's ENTIRE real widebody fleet is
+  // Airbus (A330/A350) — before this, Delta was correctly excluded from
+  // every widebody type in this game since neither was modeled. Real
+  // sourced specs: A330-900 MLW 191,000kg confirmed (Airbus/AeroCorner),
+  // typical 300-seat 3-class config; A350-900 MLW 207,000kg confirmed
+  // (multiple technical sources), seats set to 306 to match Delta's own
+  // real cabin configuration specifically, purchase price ~$300M
+  // (Axon Aviation market-value estimate, not Airbus sticker list price
+  // — same "real transacted value, not list price" methodology used for
+  // every other type in this game). Real note: Delta ALSO placed its
+  // first-ever direct Boeing 787-10 order in Jan 2026 (30 firm + 30
+  // options) — deliberately NOT added to Delta's fleet yet, since that's
+  // an ORDER, not aircraft actually in service, matching the same
+  // certified-and-flying bar just applied to MAX7/MAX10. Revisit once
+  // Delta's 787s actually enter service.
+  { id: 'A339',    name: 'Airbus A330-900',        seats: 300, costPerHour: 11500, weight: 10,  family: 'A330',        crewsPerTail: 11, mlwLbs: 421082, bodyType: 'widebody2Engine', purchasePrice: 230000000, expectedLifespanCycles: 44000 },
+  { id: 'A359',    name: 'Airbus A350-900',        seats: 306, costPerHour: 13500, weight: 8,   family: 'A350',        crewsPerTail: 11, mlwLbs: 456357, bodyType: 'widebody2Engine', purchasePrice: 300000000, expectedLifespanCycles: 44000 },
   // Real 4-engine widebody types, confirmed by designer. Data sourced via
   // web search (SimpleFlying/AirInsight/Wikipedia-tier, same confidence
   // level as the original 6 — NOT primary type-cert documents, see chat
@@ -712,8 +807,8 @@ AIRCRAFT_TYPES.forEach(t => { t.monthlyLeaseCost = Math.round(t.purchasePrice * 
 // reassigned to a more specific tier — narrowbody-rate gate fees on a
 // widebody aircraft, no error, just a wrong number.
 const WIDEBODY_BODY_TYPES = new Set(['widebody', 'widebody2Engine', 'widebody4Engine']);
-const TYPE_WEIGHT_TOTAL = AIRCRAFT_TYPES.reduce((s,t) => s+t.weight, 0); // ~359 across 30 types — real-world-proportional, not an arbitrary round number. History: 32 types/~365 -> 31/~363 (SSJ100 removed) -> 30/~359 (CRJ700 removed, aging out of real fleets). This comment has gone stale before — see CLAUDE.md Fleet section — recompute and check this number if it's been a while since the last edit here
-const CREW_FAMILIES = [...new Set(AIRCRAFT_TYPES.map(t => t.family))]; // 13 families total (verified via script, not hand-counted — an earlier version of this comment said "12" while actually listing 14, a stale-comment bug that predates this edit): A320_FAMILY, B737_FAMILY, A220_FAMILY, B777, B787, B747, A380, A340, E170_FAMILY, E190_FAMILY, CRJ_FAMILY, ERJ_FAMILY, ARJ21_FAMILY (SSJ100_FAMILY removed along with the type, per designer direction)
+const TYPE_WEIGHT_TOTAL = AIRCRAFT_TYPES.reduce((s,t) => s+t.weight, 0); // 349 across 28 types (verified via script, not estimated) — real-world-proportional, not an arbitrary round number. History: 32 types/~365 -> 31/~363 (SSJ100 removed) -> 30/~359 (CRJ700 removed) -> 28/349 (MAX7/MAX10 removed — neither is FAA/ICAO certified yet as of this game's real current timeframe; add back once actually certified and in service). This comment has gone stale before — see CLAUDE.md Fleet section — recompute and check this number if it's been a while since the last edit here
+const CREW_FAMILIES = [...new Set(AIRCRAFT_TYPES.map(t => t.family))]; // 15 families total (verified via script, not hand-counted — an earlier version of this comment said "12" while actually listing 14, a stale-comment bug that predates this edit): A320_FAMILY, B737_FAMILY, A220_FAMILY, B777, B787, A330, A350, B747, A380, A340, E170_FAMILY, E190_FAMILY, CRJ_FAMILY, ERJ_FAMILY, ARJ21_FAMILY (SSJ100_FAMILY removed along with the type, per designer direction)
 
 function pickAircraftType() {
   let r = Math.random() * TYPE_WEIGHT_TOTAL;
@@ -722,6 +817,110 @@ function pickAircraftType() {
     if (r <= 0) return t;
   }
   return AIRCRAFT_TYPES[AIRCRAFT_TYPES.length - 1];
+}
+
+// ---------- BACKGROUND TRAFFIC AIRLINE ASSIGNMENT ----------
+// Real 2025-26 US domestic market share (BTS/OAG/Statista, cross-checked
+// across multiple sources this session): American ~21%, Delta ~19%,
+// Southwest ~18%, United ~17%, with Alaska (having absorbed Hawaiian in
+// 2024) a clear 5th at roughly 6% — the "Big Four" together hold ~75-76%
+// of US domestic capacity, consistent across every source checked.
+// Remaining ~19% is real too, split across JetBlue/ULCCs/regional-brand
+// liveries below — designed proportions within that remainder, not
+// individually sourced per-carrier the way the Big Four figures are.
+//
+// `types` restricts eligibility to SPECIFIC aircraft type IDs an airline
+// actually flies in reality — a real upgrade from an earlier version of
+// this roster that only restricted by body-type CATEGORY (narrowbody/
+// widebody/etc). Category-level wasn't enough: "Southwest doesn't fly
+// widebodies" is a category fact, but "Southwest doesn't fly the A321"
+// or "Delta has ZERO Boeing widebodies at all, only Airbus ones this
+// game doesn't model" are SPECIFIC-type facts a category system can't
+// represent. Researched per-airline via real fleet data (SEC 10-K/10-Q
+// filings, OAG/Cirium-sourced trade press) rather than assumed:
+//
+// - Delta: real widebody fleet is 100% Airbus (A330/A350), NEITHER of
+//   which this game models (only Boeing 777/787 and the 4-engine jumbos
+//   are modeled widebody types) — so Delta is EXCLUDED from every
+//   widebody type in this game, despite being a real widebody operator
+//   in reality. Also confirmed Delta flies NO Boeing 737 MAX at all.
+// - United: confirmed A319/A320/A321neo (no A321ceo), no A220.
+// - Southwest: confirmed 737-700/800 + MAX8 (NOT 737-900, NOT MAX9/10).
+//   MAX7 (Southwest's launch variant) removed from the game entirely —
+//   see AIRCRAFT_TYPES, not yet FAA-certified as of the real current
+//   timeframe, expected within weeks but not flying with passengers yet.
+// - JetBlue: retired its last E190 in September 2025 (real, recent) —
+//   now all-Airbus (A220/A320/A321/A321neo), zero Embraer.
+// - Alaska: confirmed via its own Q1 2026 10-K/10-Q filing — 737-700/
+//   800/900ER/MAX8/MAX9, real 787-9 (absorbed from Hawaiian, see the
+//   2026 update below), E175 via Horizon. No Airbus under the Alaska
+//   brand specifically (the merger's A321neo/A330 are Hawaiian-branded).
+// - Allegiant: real ex-lease A319/A320 core plus a genuine, real 737
+//   MAX8 addition in progress.
+// - Regional brands: SkyWest and Envoy fly both CRJ and E-jets for
+//   multiple mainline partners; Republic and Horizon are E-jet only
+//   (Horizon confirmed E175-exclusive per Alaska's own fleet table);
+//   Endeavor (Delta Connection) is CRJ-only, no E-jets.
+// - International widebody fleets researched individually, not assumed
+//   uniform: Emirates flies NO 787 at all (777/A380 only); Lufthansa
+//   flies NO Boeing 777 passenger service at all (747-8/A380/787
+//   instead); Lufthansa is — a real surprise caught by checking rather
+//   than assuming — still the world's LARGEST Airbus A340 operator in
+//   2026 (14 A340-300s + 5 A340-600s), kept flying specifically because
+//   of 777X delivery delays, not a retired type as first assumed.
+//
+// A few specific types in this game (A319neo, E190, E195, ERJ135/140,
+// ARJ21) have NO real match anywhere in this 21-airline roster — either
+// vanishingly rare variants (A319neo), retired from major-carrier US
+// regional feed (E190/E195/ERJ135/140), or a China-market-only type no
+// Western carrier flies at all (ARJ21). Rather than force a fake
+// mainline-carrier match, these fall to a generic "Independent Operator"
+// entry — smaller/charter/startup operators genuinely are the real-world
+// pattern for exactly this kind of orphaned type. (MAX 7 and MAX 10 used
+// to need the same treatment but were removed from the game entirely
+// instead — see AIRCRAFT_TYPES — since they're not FAA/ICAO certified
+// yet at all, not just orphaned from this specific roster.)
+const AIRLINE_ROSTER = [
+  { name: 'American Airlines', weight: 21, types: ['A319','A320','A321','A321NEO','B737800','MAX8','B773','B788'] },
+  { name: 'Delta Air Lines',   weight: 19, types: ['A319','A320','A321','A321NEO','B737800','B739','A220300','A220100','A339','A359'] }, // real widebody fleet confirmed: A330 and A350 (both variants added this pass) — Delta's own 787-10 order (Jan 2026) is NOT included yet, that's an order not aircraft in service, see AIRCRAFT_TYPES comment
+  { name: 'Southwest Airlines',weight: 18, types: ['B737700','B737800','MAX8'] }, // real: no 737-900, no MAX9/10, no Airbus, no widebodies. MAX7 removed from the game entirely — not yet certified, see AIRCRAFT_TYPES
+  { name: 'United Airlines',   weight: 17, types: ['A319','A320','A321NEO','B737700','B737800','B739','MAX8','MAX9','B773','B788'] },
+  { name: 'Alaska Airlines',   weight: 6,  types: ['B737700','B737800','B739','MAX8','MAX9','B788','E175'] }, // real 2026: absorbed Hawaiian's 787-9 fleet, genuine widebody international routes from Seattle
+  { name: 'JetBlue Airways',   weight: 5,  types: ['A320','A321','A321NEO','A220300'] }, // E190 retired Sept 2025 (real) — no Embraer left in the fleet at all
+  { name: 'Spirit Airlines',   weight: 3,  types: ['A319','A320','A320NEO','A321','A321NEO'] },
+  { name: 'Frontier Airlines', weight: 3,  types: ['A319','A320','A320NEO','A321','A321NEO'] },
+  { name: 'Allegiant Air',     weight: 2,  types: ['A319','A320','MAX8'] },
+  // Regional-brand liveries — real carriers that fly under partner brands
+  // (American Eagle, Delta Connection, United Express) on regional-jet
+  // equipment specifically
+  { name: 'SkyWest Airlines',  weight: 4, types: ['CRJ900','CRJ1000','E170','E175','ERJ145'] }, // real: broadest multi-partner regional fleet, still the most plausible ERJ145 holdout
+  { name: 'Republic Airways',  weight: 3, types: ['E170','E175'] }, // real: E-jet only, no CRJ
+  { name: 'Envoy Air',         weight: 3, types: ['CRJ900','CRJ1000','E170','E175'] },
+  { name: 'Endeavor Air',      weight: 3, types: ['CRJ900','CRJ1000'] }, // real: all-CRJ Delta Connection carrier, no E-jets
+  { name: 'Horizon Air',       weight: 2, types: ['E175'] }, // real: E175-exclusive per Alaska's own fleet filings
+  { name: 'PSA Airlines',      weight: 2, types: ['CRJ900','CRJ1000','E175'] },
+  // International — widebody only, deliberately rare, individually
+  // researched real widebody fleets rather than a uniform assumption
+  { name: 'Air France',        weight: 1, types: ['B773','B788','A339','A359'] }, // no 747 (retired), no A340 (retired 2021). CORRECTION this pass: A380 removed — confirmed retired fleet-wide by 2022, not part of Air France's current 2026 long-haul fleet at all (that was a real error in the original roster, caught while researching this update, not previously verified). Added A330/A350 — confirmed real current operator of both.
+  { name: 'Lufthansa',         weight: 1, types: ['B788','B747','A380','A340','A359'] }, // no B773 — Lufthansa flies no Boeing 777 passenger service at all; genuinely still the world's largest A340 operator in 2026. Added A350 this pass — real, confirmed mainline operator
+  { name: 'British Airways',   weight: 1, types: ['B773','B788','A380','A359'] }, // no 747 (retired 2020). Added A350 this pass — real, confirmed operator since 2019
+  { name: 'Emirates',          weight: 1, types: ['B773','A380'] }, // no 787 — Emirates flies none at all
+  { name: 'Air Canada',        weight: 1, types: ['B773','B788','A339'] }, // no A380, no 747. Added A330 this pass — real, longtime confirmed operator
+  { name: 'Japan Airlines',    weight: 1, types: ['B773','B788','A359'] }, // no 747 (retired 2011), no A380. Added A350 this pass — real, confirmed operator since 2019
+  // Fallback for real-world orphaned types this roster has no genuine
+  // match for — see the comment block above for why each is here
+  { name: 'Independent Operator', weight: 1, types: ['A319NEO','E190','E195','ERJ135','ERJ140','ARJ21'] },
+];
+
+function pickAirlineForType(typeId) {
+  const eligible = AIRLINE_ROSTER.filter(a => a.types.includes(typeId));
+  const total = eligible.reduce((s,a) => s+a.weight, 0);
+  let r = Math.random() * total;
+  for (const a of eligible) {
+    r -= a.weight;
+    if (r <= 0) return a.name;
+  }
+  return eligible[eligible.length - 1].name;
 }
 
 const HOLD_COST_PER_TICK = 2000; // fallback only — real per-tick cost now comes from ac.type.holdCostPerTick
@@ -751,7 +950,7 @@ const AOG_RATE_PER_AIRCRAFT_PER_MONTH = 2 / 100; // 0.02
 const TICKS_PER_MONTH = 30 * 24 * 60; // 43,200 (1 tick = 1 sim-minute)
 const AOG_PROB_PER_TICK_PER_AIRCRAFT = AOG_RATE_PER_AIRCRAFT_PER_MONTH / TICKS_PER_MONTH;
 
-const FAMILY_LABELS = { A320_FAMILY: 'A320', B737_FAMILY: 'B737', A220_FAMILY: 'A220', B777: 'B777', B787: 'B787', B747: 'B747', A380: 'A380', A340: 'A340', E170_FAMILY: 'E170/175', E190_FAMILY: 'E190/195', CRJ_FAMILY: 'CRJ', ERJ_FAMILY: 'ERJ', ARJ21_FAMILY: 'ARJ21' };
+const FAMILY_LABELS = { A320_FAMILY: 'A320', B737_FAMILY: 'B737', A220_FAMILY: 'A220', B777: 'B777', B787: 'B787', A330: 'A330', A350: 'A350', B747: 'B747', A380: 'A380', A340: 'A340', E170_FAMILY: 'E170/175', E190_FAMILY: 'E190/195', CRJ_FAMILY: 'CRJ', ERJ_FAMILY: 'ERJ', ARJ21_FAMILY: 'ARJ21' };
 
 // ---------- AOG CLUSTERING ----------
 // Real-world analog: a single incident on one tail can be the leading edge of
@@ -1513,6 +1712,23 @@ const DECISION_TYPES = {
         }
       },
       {
+        // Reuses hireCrew() — same real hire cost, same pool-growth logic
+        // as the standalone ADD CREW panel, not a separate/duplicated
+        // implementation. The newly hired crew is immediately assigned to
+        // THIS aircraft (rather than just joining the pool generically)
+        // so the hold resolves right now instead of waiting for the next
+        // tick's normal boarding-gate pickup.
+        label: 'Hire new crew',
+        apply: (ac) => {
+          const family = ac.type.family;
+          if (!hireCrew(family)) return; // guarded by disabled button too, but safe here
+          const pool = crewPoolsByFamily[family];
+          const crew = pool[pool.length - 1]; // hireCrew() just pushed this one
+          crew.status = 'ON_DUTY';
+          ac.crewId = crew.id;
+        }
+      },
+      {
         label: 'Wait for next available crew',
         apply: () => { /* no-op — aircraft just keeps waiting on the pool */ }
       }
@@ -1577,6 +1793,21 @@ function pushDecision(ac, type) {
   renderDecisions();
 }
 
+// A real, reported bug: decisionQueue entries were ONLY ever removed by
+// clicking that specific card's own buttons (via resolveDecision below).
+// If the underlying condition resolved some OTHER way — hiring a new
+// crew member through the ADD CREW panel while a CREW hold was showing,
+// or an AOG's timed "standard repair" auto-clearing — the aircraft
+// itself correctly stopped being held, but the stale decision card kept
+// showing, now describing a problem that no longer existed. Call this
+// wherever a hold clears through a path OTHER than resolveDecision.
+function clearDecisionForAircraft(ac, type) {
+  const idx = decisionQueue.findIndex(d => d.ac === ac && d.type === type);
+  if (idx === -1) return;
+  decisionQueue.splice(idx, 1);
+  renderDecisions();
+}
+
 function resolveDecision(id, optionIndex) {
   const idx = decisionQueue.findIndex(d => d.id === id);
   if (idx === -1) return;
@@ -1621,8 +1852,13 @@ function renderDecisions() {
         ${cfg.options.map((o,i) => {
           const isReserveOption = d.type === 'CREW' && i === 0;
           const outOfReserves = isReserveOption && reserveCrewsByFamily[d.ac.type.family] <= 0;
-          const label = outOfReserves ? 'No reserve crews available (this family)' : o.label;
-          return `<button class="decision-btn" data-id="${d.id}" data-opt="${i}" ${outOfReserves ? 'disabled' : ''}>${label}</button>`;
+          const isHireOption = d.type === 'CREW' && i === 1;
+          const cantAffordHire = isHireOption && playerBalance < computeCrewHireCost(d.ac.type.family);
+          const disabled = outOfReserves || cantAffordHire;
+          let label = o.label;
+          if (outOfReserves) label = 'No reserve crews available (this family)';
+          else if (cantAffordHire) label = 'Insufficient funds to hire';
+          return `<button class="decision-btn" data-id="${d.id}" data-opt="${i}" ${disabled ? 'disabled' : ''}>${label}</button>`;
         }).join('')}
       </div>
     </div>`;
@@ -1673,6 +1909,7 @@ function makeAircraft() {
     sellOfferDismissed: false, // true once the player picks "Keep Flying" — don't re-prompt every tick after that
     purchased: false, // stress-test slider spawn, not a real player purchase — see setFleetSize, which must never silently delete a purchased aircraft
     assignedRouteId: null, // unused by stress-test aircraft (purchased: false) — they always keep the old random-route behavior regardless of this field
+    airline: pickAirlineForType(type.id), // real competitor airline, matched by SPECIFIC aircraft type (not just body-type category) — see AIRLINE_ROSTER. Only assigned to background traffic; the player's own aircraft carry playerAirlineName instead
     isLeased: false // stress-test aircraft are never leased, always false
   };
 }
@@ -1682,13 +1919,17 @@ function makeAircraft() {
 // aircraft hasn't flown for this airline yet) and PARKED (hasn't been
 // assigned a route or crew yet either — both happen through the normal
 // PARKED gate logic already built, no special-casing needed there).
-function makePurchasedAircraft(type) {
+function makePurchasedAircraft(type, startingCycles = 0) {
   // No route assigned yet — this aircraft is a real "spare" until the
   // player uses openRoute() to assign it. Sits idle at a random base
   // airport (origin === dest, matching real "based here, not yet flying
   // anywhere" status) rather than getting a random flight destination the
   // old randomRoutePair() call used to give every aircraft regardless of
   // ownership.
+  // startingCycles is 0 for a genuinely new purchase, or a real carried-
+  // over cycle count for a used-market purchase (see buyUsedAircraft) —
+  // a used aircraft doesn't start fresh, it arrives with whatever
+  // cycles it already had.
   const base = AIRPORTS[Math.floor(Math.random() * AIRPORTS.length)];
   const rolled = rollRevenue(type);
   return {
@@ -1704,7 +1945,7 @@ function makePurchasedAircraft(type) {
     projectedRevenue: rolled.revenue,
     currentLoadFactor: rolled.loadFactor,
     currentPax: rolled.pax,
-    cyclesAccrued: 0,
+    cyclesAccrued: startingCycles,
     sellOfferDismissed: false,
     purchased: true,
     assignedRouteId: null, // set by openRoute() — null means "spare," a real prerequisite for opening a new route
@@ -1787,6 +2028,104 @@ function leaseAircraft(typeId) {
   resizeCrewPools();
   document.getElementById('fleetCountVal').textContent = fleet.length;
   addLog(`Leased ${type.name} for $${upfrontCost.toLocaleString()} upfront ($${type.monthlyLeaseCost.toLocaleString()}/mo) — fleet now ${fleet.length} aircraft`, true);
+  tryAutoAssignToPendingRoute(newAircraft);
+  return true;
+}
+
+// ---------- USED AIRCRAFT MARKET ----------
+// Real market: used aircraft trading is a genuine, sizeable industry
+// segment (Technavio: $1.96B+ market growth, 7.7% CAGR 2025-2030), partly
+// driven by real OEM production delays (Airbus/Boeing both behind on new-
+// aircraft delivery rates) pushing more demand onto the secondary market.
+//
+// Pricing reuses the EXACT SAME linear depreciation formula as
+// computeSellValue() — designer-specified, for consistency with the sell
+// mechanic already in the game, not a new formula. Real-world sanity
+// check performed before building this: real aircraft depreciation
+// (Acumen Aero data) retains ~70% value at 5yr, ~50% at 10yr, ~35% at
+// 15yr — cross-checked against a real Boeing 737-800 example ($106.1M
+// new, ~$20-22M used at 8 years old, roughly 20% of original value at
+// roughly 20% of real cycle life). The linear model tracks reasonably at
+// low-to-mid usage but runs slightly OPTIMISTIC at high cycle counts
+// versus the real curve (real depreciation steepens with age/usage,
+// this model doesn't) — a known simplification, matching the same
+// designer choice already made for the sell mechanic, not an invisible
+// inaccuracy.
+//
+// Buy-only, no lease option for used inventory (designer decision).
+// Inventory PERSISTS (not re-randomized on every panel open) — 1-2
+// listings generated per type at game start, removed when purchased,
+// slowly replenished over time (see tickUsedInventoryReplenishment) so
+// the market doesn't permanently deplete over a long session.
+let usedAircraftInventory = {}; // { [typeId]: [{ id, cyclesAccrued, price }, ...] }
+let nextUsedListingId = 1;
+
+function computeUsedPrice(type, cyclesAccrued) {
+  const usedFraction = cyclesAccrued / type.expectedLifespanCycles;
+  const remainingFraction = Math.max(0.05, 1 - usedFraction);
+  return Math.round(type.purchasePrice * remainingFraction);
+}
+
+function generateUsedListing(type) {
+  // Randomized 15%-75% of expected lifespan — meaningfully used
+  // inventory, not indistinguishable from new (too low) or worthless
+  // near-EOL junk (too high). A real used market has genuine variety
+  // across this range, not just barely-used or nearly-dead examples.
+  const cyclesAccrued = Math.round(type.expectedLifespanCycles * (0.15 + Math.random() * 0.6));
+  return {
+    id: nextUsedListingId++,
+    cyclesAccrued,
+    price: computeUsedPrice(type, cyclesAccrued)
+  };
+}
+
+function initializeUsedInventory() {
+  for (const type of AIRCRAFT_TYPES) {
+    const count = 1 + Math.floor(Math.random() * 2); // 1 or 2 listings per type
+    usedAircraftInventory[type.id] = [];
+    for (let i = 0; i < count; i++) {
+      usedAircraftInventory[type.id].push(generateUsedListing(type));
+    }
+  }
+}
+
+// Small periodic chance to replenish a type's inventory back toward 2
+// listings, representing new used aircraft entering the market over
+// time (another airline selling, a lessor's aircraft coming off lease,
+// etc.) — without this, a long session would eventually deplete every
+// type's used market to nothing. Checked once per sim-day, same
+// interval pattern as other monthly/daily-cadence mechanics in this file.
+const USED_MARKET_REPLENISH_CHECK_INTERVAL = 1440; // once per sim-day
+const USED_MARKET_REPLENISH_DAILY_PROBABILITY = 0.1; // designed pacing, not sourced
+
+function tickUsedMarketReplenishment() {
+  if (tick % USED_MARKET_REPLENISH_CHECK_INTERVAL !== 0) return;
+  for (const type of AIRCRAFT_TYPES) {
+    const listings = usedAircraftInventory[type.id] || [];
+    if (listings.length < 2 && Math.random() < USED_MARKET_REPLENISH_DAILY_PROBABILITY) {
+      listings.push(generateUsedListing(type));
+      usedAircraftInventory[type.id] = listings;
+    }
+  }
+}
+
+function buyUsedAircraft(typeId, listingId) {
+  const type = AIRCRAFT_TYPES.find(t => t.id === typeId);
+  if (!type) return false;
+  const listings = usedAircraftInventory[typeId] || [];
+  const listingIdx = listings.findIndex(l => l.id === listingId);
+  if (listingIdx === -1) return false;
+  const listing = listings[listingIdx];
+  if (playerBalance < listing.price) return false;
+  playerBalance -= listing.price;
+  const newAircraft = makePurchasedAircraft(type, listing.cyclesAccrued);
+  fleet.push(newAircraft);
+  grantBundledCrew(type);
+  resizeCrewPools();
+  document.getElementById('fleetCountVal').textContent = fleet.length;
+  const lifePct = Math.round(100 * listing.cyclesAccrued / type.expectedLifespanCycles);
+  addLog(`Purchased USED ${type.name} (${listing.cyclesAccrued.toLocaleString()} cycles, ${lifePct}% of life used) for $${listing.price.toLocaleString()} — fleet now ${fleet.length} aircraft`, true);
+  listings.splice(listingIdx, 1); // sold — gone from inventory until replenishment generates a new one
   tryAutoAssignToPendingRoute(newAircraft);
   return true;
 }
@@ -1941,6 +2280,7 @@ function advanceAircraft(ac) {
     ac.maint = false;
     ac.aogAutoClearTick = null;
     addLog(`${ac.tail}: standard repair complete, returning to service`, true);
+    clearDecisionForAircraft(ac, 'AOG'); // the hold resolved via the repair timer, not by clicking this decision's own buttons — without this the stale card would keep showing "grounded" for an aircraft that's already back in service
   }
 
   const state = STATE_ORDER[ac.stateIndex];
@@ -1984,6 +2324,7 @@ function advanceAircraft(ac) {
         ac.crewId = crew.id;
         ac.holdReason = null;
         ac.holdLogged = false;
+        clearDecisionForAircraft(ac, 'CREW'); // the hold resolved because crew became available — possibly from hiring a new one via ADD CREW, not by clicking this decision's own buttons. Without this, the stale card kept showing "no available crew" for an aircraft that was already boarding.
       } else {
         ac.holdReason = 'CREW';
         if (!ac.holdLogged) {
@@ -2184,6 +2525,7 @@ function advanceTick() {
   tickEconomicEvents();
   tickSlotAvailability();
   tickLeaseBilling();
+  tickUsedMarketReplenishment();
   for (let i=0; i<fleet.length; i++) {
     advanceAircraft(fleet[i]);
   }
@@ -2313,7 +2655,19 @@ function getPathPoints(origin, dest) {
   const startX = origin.x, startY = origin.y;
   const endX = dest.x, endY = dest.y;
   const midX = (startX+endX)/2;
-  const midY = Math.min(startY,endY) - 90;
+  // Arc height now scales with the REAL distance between the two points,
+  // not a fixed pixel offset. The old fixed 90px arc looked wildly
+  // disproportionate on short routes (a nearby airport pair got the same
+  // bulge as a coast-to-coast one) — real flight paths bulge relative to
+  // distance, not by a constant amount regardless of it. 12% of the
+  // straight-line distance, floored at 15px (so very short hops still
+  // read as a deliberate curve, not a robotic straight line) and capped
+  // at 120px (so a very long route doesn't arc absurdly high relative to
+  // the visible map). These specific constants are a designed choice for
+  // visual proportion, not sourced from anything.
+  const dist = Math.hypot(endX - startX, endY - startY);
+  const arcHeight = Math.min(120, Math.max(15, dist * 0.12));
+  const midY = Math.min(startY,endY) - arcHeight;
   return { startX, startY, midX, midY, endX, endY };
 }
 
@@ -2437,7 +2791,7 @@ function draw() {
   lastDrawnPositions = [];
   for (const ac of fleet) {
     const pos = getAircraftPosition(ac);
-    drawAircraft(pos, ac.holdReason, ac.type.bodyType, ac.purchased);
+    drawAircraft(pos, ac.holdReason, ac.type.bodyType, ac.purchased, STATE_ORDER[ac.stateIndex]);
     lastDrawnPositions.push({ ac, x: pos.x, y: pos.y });
   }
 
@@ -2626,7 +2980,7 @@ for (const [key, def] of Object.entries(AIRCRAFT_ICONS)) {
   };
 }
 
-function drawAircraft(pos, holdReason, bodyType, purchased) {
+function drawAircraft(pos, holdReason, bodyType, purchased, state) {
   ctx.save();
   ctx.translate(pos.x, pos.y);
   ctx.rotate(pos.heading || 0);
@@ -2641,21 +2995,38 @@ function drawAircraft(pos, holdReason, bodyType, purchased) {
   ctx.scale(zoomCompensation, zoomCompensation);
 
   const isHeld = !!holdReason;
-  // Background stress-test traffic (purchased: false) gets its own color
-  // scheme — blue inflight, orange on the ground/boarding — so it reads
-  // as visually distinct from the player's own fleet (green/amber) at a
-  // glance, per designer direction. Held (red) stays the same for both;
-  // background traffic can still show a weather hold (ground stops apply
-  // universally), and red-for-problem is a useful constant regardless of
-  // ownership. This is purely a rendering distinction — background
-  // traffic already has zero economic/decision stakes (see the AOG/crew/
-  // sell ownership-scoping fix), this just makes that difference visible.
-  const flyingColor = purchased ? '#37ffb0' : '#55BBFF';
-  const groundColor = purchased ? '#ffb347' : '#FF6D0C';
-  ctx.shadowColor = isHeld ? "#ff5c5c" : flyingColor;
+
+  // Color is now tied DIRECTLY to the real state machine, not an altitude
+  // threshold (pos.alt > 0.5) — the old approach didn't line up with when
+  // a flight conceptually enters/exits each phase (e.g. TAKEOFF's altitude
+  // curve never actually exceeds 0.2, so it never crossed the old 0.5
+  // threshold at all; APPROACH stayed "above threshold" for roughly the
+  // first 71% of its duration before dropping) — this is what caused the
+  // reported "stays in the wrong color too long" bug for both takeoff and
+  // landing. Real per-phase colors for the player's own aircraft, per
+  // designer spec: takeoff/initial climb keeps the original green,
+  // cruise and descent/landing get their own distinct colors so all
+  // three flight phases are visually distinguishable at a glance.
+  let fillColor;
+  if (isHeld) {
+    fillColor = "#ff5c5c";
+  } else if (purchased) {
+    if (state === 'TAKEOFF') fillColor = '#37ffb0';                    // takeoff / initial climb
+    else if (state === 'CRUISE') fillColor = '#83C9FF';                // cruise — updated for better contrast
+    else if (state === 'APPROACH' || state === 'LANDING') fillColor = '#FFB300'; // descent / landing
+    else fillColor = '#ffb347';                                        // ground states, unchanged
+  } else {
+    // Background traffic: one consistent color regardless of state —
+    // simplified from the earlier two-tier blue/orange scheme. Makes
+    // background traffic instantly recognizable as "not mine" at a
+    // glance without needing to read its current flight phase; the
+    // player's own fleet is where phase distinction actually matters.
+    fillColor = '#D767FF'; // updated — previous #B25BFF wasn't popping enough
+  }
+  ctx.shadowColor = isHeld ? "#ff5c5c" : fillColor;
   ctx.shadowBlur = isHeld ? 7 : (pos.alt > 0 ? 5 : 2);
 
-  ctx.fillStyle = isHeld ? "#ff5c5c" : (pos.alt > 0.5 ? flyingColor : groundColor);
+  ctx.fillStyle = fillColor;
 
   const realIcon = AIRCRAFT_ICON_PATHS[bodyType];
   if (realIcon) {
@@ -2937,6 +3308,7 @@ function renderAircraftTooltip(ac) {
   // displayed anyway — cheaper, not just simpler.
   if (!ac.purchased) {
     tooltipEl.innerHTML = `
+      Airline: <b>${ac.airline || 'Unknown'}</b><br>
       Route: ${ac.origin.code} → ${ac.dest.code}<br>
       Tail: <b>${ac.tail}</b><br>
       Type: ${ac.type.name}<br>
@@ -3000,6 +3372,7 @@ function renderAircraftTooltip(ac) {
   }
 
   tooltipEl.innerHTML = `
+    Airline: <b>${playerAirlineName || 'Unnamed Airline'}</b><br>
     Route: ${ac.origin.code} → ${ac.dest.code}<br>
     Tail: <b>${ac.tail}</b>${ac.isLeased ? ' <span class="tt-leased">(leased)</span>' : ''}<br>
     Type: ${ac.type.name}<br>
@@ -3086,6 +3459,15 @@ function renderBuyPanel() {
       const canBuy = playerBalance >= t.purchasePrice;
       const leaseUpfront = Math.round(t.purchasePrice * LEASE_UPFRONT_RATE);
       const canLease = playerBalance >= leaseUpfront;
+      const usedListings = usedAircraftInventory[t.id] || [];
+      const usedRowsHtml = usedListings.map(l => {
+        const lifePct = Math.round(100 * l.cyclesAccrued / t.expectedLifespanCycles);
+        const canBuyUsed = playerBalance >= l.price;
+        return `<div class="buy-row">
+          <span class="buy-price">Used — ${l.cyclesAccrued.toLocaleString()} cycles (${lifePct}% life used) — $${l.price.toLocaleString()}</span>
+          <button class="buy-btn" data-type-id="${t.id}" data-action="buy-used" data-listing-id="${l.id}" ${canBuyUsed ? '' : 'disabled'}>${canBuyUsed ? 'Buy Used' : 'Insufficient funds'}</button>
+        </div>`;
+      }).join('');
       return `<div class="acquire-type-block">
         <div class="buy-name">${t.name}</div>
         <div class="buy-row">
@@ -3096,6 +3478,7 @@ function renderBuyPanel() {
           <span class="buy-price">Lease $${leaseUpfront.toLocaleString()} upfront + $${t.monthlyLeaseCost.toLocaleString()}/mo</span>
           <button class="buy-btn" data-type-id="${t.id}" data-action="lease" ${canLease ? '' : 'disabled'}>${canLease ? 'Lease' : 'Insufficient funds'}</button>
         </div>
+        ${usedRowsHtml}
       </div>`;
     }).join('');
 }
@@ -3115,7 +3498,10 @@ document.getElementById('buyPanel').addEventListener('click', (e) => {
   if (!e.target.classList.contains('buy-btn')) return;
   const typeId = e.target.dataset.typeId;
   const action = e.target.dataset.action;
-  const success = action === 'lease' ? leaseAircraft(typeId) : buyAircraft(typeId);
+  let success;
+  if (action === 'lease') success = leaseAircraft(typeId);
+  else if (action === 'buy-used') success = buyUsedAircraft(typeId, parseInt(e.target.dataset.listingId, 10));
+  else success = buyAircraft(typeId);
   if (success) {
     renderBuyPanel(); // refresh balance + re-evaluate affordability for every row, not just the one bought
   }
@@ -3532,12 +3918,28 @@ document.getElementById('decisionPanel').addEventListener('click', (e) => {
 });
 
 // ---------- INIT ----------
+let playerAirlineName = null;
+
+function foundAirline() {
+  const input = document.getElementById('airlineNameInput');
+  const name = input.value.trim() || 'SkyOps Air'; // sensible default if left blank, rather than blocking submission
+  playerAirlineName = name;
+  document.getElementById('namingOverlay').classList.add('hidden');
+  addLog(`${name} founded — $${STARTING_PLAYER_BALANCE.toLocaleString()} starting balance, no aircraft, no routes. Buy an aircraft, then open a route.`, true);
+}
+
+document.getElementById('foundAirlineBtn').addEventListener('click', foundAirline);
+document.getElementById('airlineNameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') foundAirline();
+});
+document.getElementById('airlineNameInput').focus();
+
 projectAirports();
 projectGeographyLayers();
 computeAirportLabelPositions();
 resetCameraToConus();
 setFleetSize(0); // real new-game start: zero background traffic, zero player fleet — was 20 (stress-test default). Drag BACKGROUND TRAFFIC up manually if stress-testing under load is what's actually wanted for a given session.
-addLog(`New game — $${STARTING_PLAYER_BALANCE.toLocaleString()} starting balance, no aircraft, no routes. Buy an aircraft, then open a route.`, true);
+initializeUsedInventory();
 updateQuarterSpeedButton();
 updateClockDisplay();
 updateStatusStrip();
@@ -3545,5 +3947,6 @@ draw();
 requestAnimationFrame(loop);
 </script>
 
-</body>
-</html>
+
+
+</body></html>
