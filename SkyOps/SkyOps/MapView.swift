@@ -91,6 +91,7 @@ struct MapView: View {
 
     private func drawAirports(_ ctx: GraphicsContext) {
         let es = sim.elementScale
+        let ls = sim.labelScale
         let r: CGFloat = 3.2 * es
         var dots = Path()
         var stopped = Path()
@@ -105,14 +106,67 @@ struct MapView: View {
         ctx.fill(dots, with: .color(climbColor.opacity(0.85)))
         ctx.stroke(stopped, with: .color(heldColor.opacity(0.9)), lineWidth: 1.5)
 
-        // Labels — grow with zoom, reaching +15% over other elements at max
-        // zoom (their own labelScale) where legibility matters most.
-        let fontSize = min(13, 8.5 * sim.labelScale)
-        for ap in sim.airports {
+        // Label declutter — ported from computeAirportLabelPositions(), with
+        // the upgrade CLAUDE.md's Open list asked for: clusters recompute
+        // against CURRENT screen distance every frame (the camera exists now),
+        // so a fanned cluster naturally un-fans once zooming in gives its
+        // labels room. Greedy clustering, fan on a ring around the cluster
+        // centroid starting straight up, leader line from each dot.
+        let fontSize = min(13, 8.5 * ls)
+        let threshold: CGFloat = 13 * ls          // overlap radius grows with label size
+        let fanRadius: CGFloat = 24 * ls
+
+        let n = sim.airports.count
+        var assigned = [Bool](repeating: false, count: n)
+        var labelPos = [CGPoint](repeating: .zero, count: n)
+        var hasLeader = [Bool](repeating: false, count: n)
+
+        for i in 0..<n where !assigned[i] {
+            var cluster = [i]
+            assigned[i] = true
+            let pi = sim.airports[i].screen
+            for j in (i + 1)..<n where !assigned[j] {
+                let pj = sim.airports[j].screen
+                if hypot(pi.x - pj.x, pi.y - pj.y) < threshold {
+                    cluster.append(j)
+                    assigned[j] = true
+                }
+            }
+            if cluster.count == 1 {
+                labelPos[i] = CGPoint(x: pi.x, y: pi.y - (r + fontSize * 0.9))
+            } else {
+                let cx = cluster.reduce(CGFloat(0)) { $0 + sim.airports[$1].screen.x } / CGFloat(cluster.count)
+                let cy = cluster.reduce(CGFloat(0)) { $0 + sim.airports[$1].screen.y } / CGFloat(cluster.count)
+                for (k, idx) in cluster.enumerated() {
+                    // fan starting straight up, evenly spaced
+                    let angle = 2 * .pi * CGFloat(k) / CGFloat(cluster.count) - .pi / 2
+                    labelPos[idx] = CGPoint(x: cx + cos(angle) * fanRadius,
+                                            y: cy + sin(angle) * fanRadius)
+                    hasLeader[idx] = true
+                }
+            }
+        }
+
+        // Leader lines under the labels, stopped just short of the text.
+        var leaders = Path()
+        for i in 0..<n where hasLeader[i] {
+            let from = sim.airports[i].screen
+            let to = labelPos[i]
+            let d = hypot(to.x - from.x, to.y - from.y)
+            guard d > 1 else { continue }
+            let gap = fontSize * 0.7
+            let t = max(0, (d - gap) / d)
+            leaders.move(to: from)
+            leaders.addLine(to: CGPoint(x: from.x + (to.x - from.x) * t,
+                                        y: from.y + (to.y - from.y) * t))
+        }
+        ctx.stroke(leaders, with: .color(borderColor.opacity(0.5)), lineWidth: 1)
+
+        for (i, ap) in sim.airports.enumerated() {
             let text = Text(ap.code)
                 .font(.system(size: fontSize, weight: .medium, design: .monospaced))
-                .foregroundColor(.white.opacity(0.6))
-            ctx.draw(text, at: CGPoint(x: ap.screen.x, y: ap.screen.y - (r + fontSize * 0.9)), anchor: .center)
+                .foregroundColor(ap.groundStop ? heldColor : .white.opacity(0.6))
+            ctx.draw(text, at: labelPos[i], anchor: .center)
         }
     }
 
