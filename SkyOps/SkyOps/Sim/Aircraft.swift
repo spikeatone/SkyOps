@@ -18,6 +18,15 @@ import CoreGraphics
 enum HoldReason {
     case weather   // ground stop at origin (departure) or dest (arrival)
     case rejoin    // easing out of the holding pattern back onto approach
+    case aog       // grounded for unscheduled maintenance, awaiting decision
+}
+
+/// Things that happen inside Aircraft.advance() that the Simulation must act
+/// on (push or clear a decision card). Returned rather than called back so
+/// the aircraft stays free of any UI/queue knowledge.
+enum AdvanceEvent {
+    case aogHoldStarted     // held at the gate, needs an AOG decision card
+    case aogRepairCompleted // timed standard repair finished on its own
 }
 
 final class Aircraft: Identifiable {
@@ -44,6 +53,14 @@ final class Aircraft: Identifiable {
     var rejoinStart: CGPoint = .zero
     var rejoinStartHeading: Double = 0
 
+    // AOG state (Phase 3). `maint` flags the aircraft for unscheduled
+    // maintenance; it blocks at the PARKED boarding gate (an in-flight
+    // aircraft finishes its flight first). `holdLogged` ensures the decision
+    // card is pushed once per hold, not every tick.
+    var maint: Bool = false
+    var aogAutoClearTick: Int?
+    var holdLogged: Bool = false
+
     init(tail: String, type: AircraftType, origin: Airport, dest: Airport,
          stateIndex: Int = FlightState.parked.rawValue, cyclesAccrued: Int = 0) {
         self.tail = tail
@@ -58,21 +75,43 @@ final class Aircraft: Identifiable {
     var state: FlightState { FlightState(rawValue: stateIndex)! }
     var isHeld: Bool { holdReason != nil }
 
-    /// Advance one tick. Ports advanceAircraft()'s weather gating: hold blocks
+    /// Advance one tick. Ports advanceAircraft()'s hold gating: hold blocks
     /// only fire at the transition boundary (stateTick >= duration - 1); every
-    /// other tick clears holdReason and advances normally.
-    func advance(tick: Int) {
+    /// other tick clears holdReason and advances normally. Returns an event
+    /// when the Simulation needs to push/clear a decision card.
+    @discardableResult
+    func advance(tick: Int) -> AdvanceEvent? {
+        // A scheduled "standard repair" (player-chosen) completes on its own
+        // timer — the hold then clears through the normal gate below.
+        var event: AdvanceEvent?
+        if let clearAt = aogAutoClearTick, tick >= clearAt {
+            maint = false
+            aogAutoClearTick = nil
+            event = .aogRepairCompleted
+        }
+
         let duration = state.durationTicks
 
         if stateTick >= duration - 1 {
             switch state {
+            case .parked:
+                // grounded for maintenance — nothing moves until resolved
+                if maint {
+                    holdReason = .aog
+                    if !holdLogged {
+                        holdLogged = true
+                        return .aogHoldStarted
+                    }
+                    return event
+                }
+
             case .taxiOut:
                 // departure ground stop — freeze at the runway until it lifts
-                if origin.groundStop { holdReason = .weather; return }
+                if origin.groundStop { holdReason = .weather; return event }
 
             case .approach:
                 if dest.groundStop {
-                    holdReason = .weather; return          // hold in the pattern
+                    holdReason = .weather; return event    // hold in the pattern
                 } else if holdReason == .weather {
                     // stop just lifted — capture the current orbit position and
                     // ease from it onto the approach path, don't snap on
@@ -83,10 +122,10 @@ final class Aircraft: Identifiable {
                     rejoinStartHeading = angle + .pi / 2
                     holdReason = .rejoin
                     rejoinTick = 0
-                    return
+                    return event
                 } else if holdReason == .rejoin {
                     rejoinTick += 1
-                    if rejoinTick < Aircraft.rejoinDuration { return }
+                    if rejoinTick < Aircraft.rejoinDuration { return event }
                     holdReason = nil   // rejoin complete — fall through to transition
                 }
 
@@ -96,9 +135,10 @@ final class Aircraft: Identifiable {
         }
 
         holdReason = nil
+        holdLogged = false
         stateTick += 1
 
-        guard stateTick >= duration else { return }
+        guard stateTick >= duration else { return event }
 
         // transition to the next phase
         stateIndex = state.next.rawValue
@@ -107,6 +147,7 @@ final class Aircraft: Identifiable {
 
         if newState == .turnaround { cyclesAccrued += 1 }
         if newState == .parked { swap(&origin, &dest) }   // fly the return leg
+        return event
     }
 
     /// Interpolated screen position for rendering. Handles the weather
@@ -135,6 +176,8 @@ final class Aircraft: Identifiable {
                                    y: rejoinStart.y + (target.y - rejoinStart.y) * eased),
                     alt: 0.5 - eased * 0.2,
                     heading: FlightPath.lerpAngle(rejoinStartHeading, targetHeading, eased))
+            case .aog:
+                break   // AOG holds only happen at the gate (PARKED), not on approach
             }
         }
 

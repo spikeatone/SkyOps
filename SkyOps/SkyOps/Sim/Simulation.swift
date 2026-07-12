@@ -190,7 +190,11 @@ final class Simulation {
     func setFleetSize(_ n: Int) {
         let target = max(0, n)
         if target < aircraft.count {
+            let removed = aircraft[target...]
             aircraft.removeLast(aircraft.count - target)
+            // don't leave decision cards pointing at aircraft that no longer
+            // exist (same stale-card bug family the prototype documented)
+            decisionQueue.removeAll { d in removed.contains(where: { $0 === d.aircraft }) }
         } else {
             while aircraft.count < target { aircraft.append(makeAircraft()) }
         }
@@ -204,11 +208,94 @@ final class Simulation {
     /// converting real per-month event rates into per-tick probabilities.
     static let ticksPerMonth = 30 * 24 * 60   // 43,200
 
+    // MARK: - AOG (unscheduled maintenance), ported from tickAOGOnset()
+
+    /// Real anchor: ~2 incidents/month for a 100-aircraft airline, as a
+    /// continuous per-aircraft per-tick probability (NOT bracketed tiers).
+    static let aogRatePerAircraftPerMonth = 2.0 / 100.0
+    static let aogProbPerTick = aogRatePerAircraftPerMonth / Double(ticksPerMonth)
+    /// One incident temporarily triples AOG risk for the SAME family only
+    /// (real-world analog: type-wide ADs / bad parts batches), decaying
+    /// linearly over 3 sim-days. Families never cross-contaminate.
+    static let aogClusterMultiplier = 3.0
+    static let aogClusterDecayTicks = 4320   // 3 sim-days
+
+    private var familyPressureTicksLeft: [String: Int] = [:]
+
+    /// NOTE (ownership scoping): the prototype gates AOG on `ac.purchased` —
+    /// background traffic never experiences it. Ownership doesn't exist until
+    /// Phase 5, so for now the whole stress-test fleet is eligible. Re-scope
+    /// this when `purchased` lands (see TASKS.md / CLAUDE.md — the prototype
+    /// had a real reported bug from missing exactly this retrofit).
+    private func tickAOGOnset() {
+        for (f, left) in familyPressureTicksLeft where left > 0 {
+            familyPressureTicksLeft[f] = left - 1
+        }
+        for ac in aircraft where !ac.maint {
+            let pressure = Double(familyPressureTicksLeft[ac.type.family] ?? 0)
+                         / Double(Simulation.aogClusterDecayTicks)
+            let multiplier = 1 + (Simulation.aogClusterMultiplier - 1) * pressure
+            if Double.random(in: 0..<1) < Simulation.aogProbPerTick * multiplier {
+                ac.maint = true
+                // this incident (re)opens the elevated window for the family
+                familyPressureTicksLeft[ac.type.family] = Simulation.aogClusterDecayTicks
+            }
+        }
+    }
+
+    // MARK: - Decisions (AOG cards; CREW/SELL arrive with their systems)
+
+    struct Decision: Identifiable {
+        enum Kind { case aog }
+        let id: String
+        let kind: Kind
+        let aircraft: Aircraft
+    }
+
+    private(set) var decisionQueue: [Decision] = []
+    /// Running maintenance spend (expedite/standard repair costs). The full
+    /// fee/economy system is Phase 5; this keeps the costs real until then.
+    private(set) var maintenanceSpend: Int = 0
+
+    private func pushDecision(_ kind: Decision.Kind, for ac: Aircraft) {
+        guard !decisionQueue.contains(where: { $0.aircraft === ac && $0.kind == kind }) else { return }
+        decisionQueue.append(Decision(id: "\(kind)_\(ac.tail)_\(tick)", kind: kind, aircraft: ac))
+    }
+
+    /// Remove a card whose condition resolved through a path OTHER than its
+    /// own buttons (e.g. the timed standard repair completing). Ported from
+    /// clearDecisionForAircraft() — a real reported prototype bug.
+    private func clearDecision(_ kind: Decision.Kind, for ac: Aircraft) {
+        decisionQueue.removeAll { $0.aircraft === ac && $0.kind == kind }
+    }
+
+    /// AOG card option 1: pay to have the aircraft ready now.
+    func resolveAOGExpedite(_ decision: Decision) {
+        maintenanceSpend += 15_000
+        decision.aircraft.maint = false
+        decisionQueue.removeAll { $0.id == decision.id }
+    }
+
+    /// AOG card option 2: cheaper repair on a ~3 sim-hour timer; the aircraft
+    /// stays held until it completes.
+    func resolveAOGStandard(_ decision: Decision) {
+        maintenanceSpend += 3_000
+        decision.aircraft.aogAutoClearTick = tick + 180
+        decisionQueue.removeAll { $0.id == decision.id }
+    }
+
     /// One sim-minute for the whole world.
     func advanceTick() {
         tick += 1
         tickWeather()
-        for ac in aircraft { ac.advance(tick: tick) }
+        tickAOGOnset()
+        for ac in aircraft {
+            switch ac.advance(tick: tick) {
+            case .aogHoldStarted:      pushDecision(.aog, for: ac)
+            case .aogRepairCompleted:  clearDecision(.aog, for: ac)   // defensive — card normally already resolved
+            case nil:                  break
+            }
+        }
     }
 
     /// Per-airport weather ground stops. Onset uses each airport's real

@@ -110,9 +110,20 @@ as the work, not "later."
       ground stop: approaching aircraft held red and orbited the fix,
       desynced per-tail. (Rejoin easing is a verbatim port but wasn't
       visually caught — it only fires when a stop lifts.)
-- [ ] AOG onset + clustering (per-aircraft per-tick probability, family
-      risk clustering) + the player-decision card system (AOG cards; sim
-      keeps running).
+- [x] AOG onset + clustering + the player-decision card system. Onset is
+      the calibrated continuous probability (2/100 aircraft/month ÷
+      ticks/month), family clustering (3× same-family risk, 3-sim-day
+      linear decay, no cross-contamination). Maint aircraft hold at the
+      PARKED gate (in-flight aircraft land first), render red, and push
+      ONE decision card: Expedite ($15,000, ready now) or Standard
+      ($3,000, ~3hr timer). Sim never pauses for cards. Verified TWO ways:
+      a headless test harness compiled from the actual app sources (16/16
+      checks: hold, single-card push, both resolution paths + charges,
+      timer auto-clear + return to service, orphaned-card cleanup on
+      fleet shrink, onset-rate statistics) + visual card check in-sim.
+      NOTE: applies to the whole stress-test fleet for now — ownership
+      (Phase 5) must re-scope this to purchased aircraft only, exactly
+      the retrofit the prototype documents getting wrong once.
 - [ ] Crew pools per family + duty/rest (FAA Part 117 timings) + the
       boarding-gate crew gating + CREW decision cards.
 - Note: with no ownership yet (Phase 5), AOG/crew/decisions will apply to

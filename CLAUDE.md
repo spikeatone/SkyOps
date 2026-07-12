@@ -1242,9 +1242,52 @@ where numbers are involved.
   live GESTURE input was NOT driven end-to-end — the user declined
   Simulator control for computer-use — so the drag/pinch handlers
   themselves are only verified by inspection, not by a real gesture.
-  Designer to confirm interactively. Still NOT built: leader-line label
-  decluttering (labels overlap at default zoom, rely on zoom to separate)
-  and the Figma UI pass.
+  UPDATE: designer confirmed interactively — "pan feels great, as does
+  pinch." Max zoom then raised 4→14 per designer, with the icon-growth
+  curve re-anchored to a FIXED span (defaultZoom×2.5) so icon feel at
+  already-tuned zoom levels didn't change; labels get their own
+  `labelScale` reaching +15% over other elements at max zoom (designer
+  request). Basemap coastline reads faceted at extreme zoom
+  (topology-simplified source) — accepted for now, re-extract higher-res
+  geometry if crisp coastlines are ever wanted.
+- **Label declutter — DONE, better than the prototype.** Ports
+  computeAirportLabelPositions() (greedy 13px-threshold clustering, ring
+  fan from cluster centroid starting straight up, leader lines) but
+  recomputes clusters against CURRENT screen distance EVERY FRAME — the
+  exact upgrade the old "doesn't re-evaluate on zoom" Open item asked
+  for, affordable now because 48 airports is ~1,100 distance checks.
+  Fanned clusters un-fan automatically once zoom gives labels room.
+  Ground-stopped airports' labels render red. The old Open item is
+  resolved for the native app (the browser prototype still has the
+  static version).
+- **Phase 3 slice 2 — AOG + decision cards, DONE.** Faithful port:
+  calibrated onset (2/100/month as continuous per-tick probability),
+  family clustering (3×, 3-sim-day linear decay, families never
+  cross-contaminate), maint blocks at the PARKED gate only (in-flight
+  aircraft finish flying first), Expedite $15,000-now vs Standard
+  $3,000-~3hr(180-tick timer). `Aircraft.advance` returns an
+  `AdvanceEvent` (aogHoldStarted / aogRepairCompleted) so the aircraft
+  stays free of queue/UI knowledge; `Simulation` owns `decisionQueue`,
+  push (dupe-guarded), resolve, and `clearDecision` (the prototype's
+  stale-card fix, called on timer completion + fleet shrink).
+  `maintenanceSpend` accumulates real charges until the Phase 5 economy
+  absorbs them. Decision cards are bottom-anchored SwiftUI views over the
+  map — stable `Decision.id` + ForEach diffing is the SwiftUI idiom for
+  the prototype's thrice-recurring per-tick-re-render bug; don't key
+  cards off tick. OWNERSHIP SCOPING DEBT (deliberate): AOG currently
+  applies to the whole stress-test fleet because `purchased` doesn't
+  exist until Phase 5 — when it lands, gate `tickAOGOnset` on ownership,
+  the SAME retrofit the prototype documents having missed once.
+- **A second verification lane now exists and caught nothing only because
+  it ran BEFORE shipping**: the Sim/ sources compile standalone with
+  `swiftc` (no SwiftUI imports in the sim layer — deliberate), so a
+  headless test harness can drive the REAL app code. The AOG slice
+  shipped with 16/16 passing lifecycle checks (hold/push/resolve paths/
+  timer/cleanup/onset statistics) run this way. Pattern lives in the
+  session scratchpad, trivial to recreate: compile Sim/*.swift + a
+  @main @MainActor TestMain.swift. Use it for every future sim-layer
+  port (crew duty/rest is next and is exactly the kind of logic it
+  catches).
 
 ## Open / not yet decided
 
