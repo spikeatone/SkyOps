@@ -36,16 +36,30 @@ as the work, not "later."
       before adding more scope — see `CLAUDE.md`'s Open section for the
       full reasoning.
 
-## Up next (Phase 0 — still not started, unchanged since original scaffold)
+## Phase 0 — DONE (native project foundation)
 
-- [ ] Create real Xcode project shell on a Mac
-- [ ] Decide SwiftData vs Core Data — leaning SwiftData, not final
+- [x] Create real Xcode project shell on a Mac — SwiftUI + SwiftData
+      template, `SkyOps/SkyOps.xcodeproj`. Builds clean on the iPhone 17
+      Pro simulator (`** BUILD SUCCEEDED **`), launches to the template's
+      placeholder to-do UI. Verified via `xcodebuild` + simulator launch.
+- [x] Decide SwiftData vs Core Data — SwiftData (kept the template's
+      choice; matches the CLAUDE.md "leaning SwiftData" call).
+- [x] Confirm min iOS version — set to iOS 18.0 across all three targets
+      (was 26.5 from the template default). Nothing in the port needs
+      26-only APIs, so 18 maximizes reach at no technical cost.
 - [ ] Get Figma file link from designer, pull first screen via
-      `Figma:get_design_context` (note: the Figma MCP tool returns
-      flattened raster exports for at least some node types regardless of
-      query params — confirmed during icon work, see `CLAUDE.md` Icons
-      section — verify early whether this affects full-screen mockups too)
-- [ ] Confirm min iOS version
+      `Figma:get_design_context` — DEFERRED to Phase 4 (this is UI-layer
+      work; Figma MCP also needs authorizing in an interactive session
+      first). Note: the Figma MCP tool returns flattened raster exports
+      for at least some node types regardless of query params — confirmed
+      during icon work, see `CLAUDE.md` Icons section — verify early
+      whether this affects full-screen mockups too.
+
+## In progress (Phase 1 — port the validated tick engine)
+
+- [ ] One aircraft flies one route in SwiftUI on the SAME state machine /
+      tick durations as the JS prototype (ported verbatim, not re-derived
+      — takeoff/landing must NOT visually jolt).
 
 ## Blocked
 
