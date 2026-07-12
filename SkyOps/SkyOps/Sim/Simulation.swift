@@ -426,8 +426,34 @@ final class Simulation {
 
     // MARK: - Economics (per-flight revenue / cost / fees)
 
-    /// Active economic condition. Only NORMAL until the events slice.
+    /// Active economic condition and how many ticks it has left.
     private(set) var currentEvent = EconomicEvent.normal
+    private(set) var economicEventTicksLeft = 0
+
+    private static let economicEventCheckInterval = 1440   // once per sim-day
+    private static let economicEventDailyProbability = 0.15
+    private static let economicEventMinDurationDays = 3
+    private static let economicEventMaxDurationDays = 10
+
+    /// Sim-days remaining on the active event (for the HUD banner).
+    var eventDaysLeft: Int { max(0, Int((Double(economicEventTicksLeft) / (24 * 60)).rounded(.up))) }
+
+    /// Randomly start / end economic events. Ported from tickEconomicEvents():
+    /// checked once per sim-day, 15% chance to start when normal, 3–10 days.
+    private func tickEconomicEvents() {
+        if !currentEvent.isNormal {
+            economicEventTicksLeft -= 1
+            if economicEventTicksLeft <= 0 { currentEvent = .normal }
+            return
+        }
+        guard tick % Simulation.economicEventCheckInterval == 0 else { return }
+        if Double.random(in: 0..<1) < Simulation.economicEventDailyProbability {
+            currentEvent = EconomicEvent.all.randomElement()!
+            let days = Double(Simulation.economicEventMinDurationDays)
+                     + Double.random(in: 0..<1) * Double(Simulation.economicEventMaxDurationDays - Simulation.economicEventMinDurationDays)
+            economicEventTicksLeft = Int((days * 24 * 60).rounded())
+        }
+    }
 
     // Running financial totals (a fresh session's ledger). playerBalance and
     // the ownership economy arrive in a later slice; for now this is the sim's
@@ -475,6 +501,7 @@ final class Simulation {
         tickWeather()
         tickCrewPool()
         tickAOGOnset()
+        tickEconomicEvents()
         for ac in aircraft {
             switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {
             case .aogHoldStarted:      pushDecision(.aog, for: ac)

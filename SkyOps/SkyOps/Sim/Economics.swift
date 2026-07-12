@@ -24,6 +24,21 @@ struct EconomicEvent {
 
     static let normal = EconomicEvent(id: "NORMAL", label: "Normal",
                                       costMultiplier: 1, fareMultiplier: 1, loadMultiplier: 1)
+
+    /// The four events, ported from ECONOMIC_EVENTS. Magnitude anchored to a
+    /// real ~32% YoY jet-fuel swing (IATA 2026); the specific multipliers and
+    /// the fare→load price-elasticity are designed for pacing. A real emergent
+    /// property: 4-engine widebodies go NET NEGATIVE under an oil spike while
+    /// everything else just compresses — this falls out of the cost/revenue
+    /// math, matching the real dynamic that pushed those types to retirement.
+    static let all: [EconomicEvent] = [
+        .init(id: "OIL_SPIKE", label: "Oil Price Spike", costMultiplier: 1.30, fareMultiplier: 1.15, loadMultiplier: 0.95),
+        .init(id: "FUEL_GLUT", label: "Fuel Price Drop", costMultiplier: 0.85, fareMultiplier: 0.95, loadMultiplier: 1.03),
+        .init(id: "ECON_BOOM", label: "Economic Boom",   costMultiplier: 1.00, fareMultiplier: 1.10, loadMultiplier: 1.05),
+        .init(id: "RECESSION", label: "Recession",       costMultiplier: 1.00, fareMultiplier: 0.85, loadMultiplier: 0.90),
+    ]
+
+    var isNormal: Bool { id == "NORMAL" }
 }
 
 /// The settled (or projected) economics of one flight leg. `revenue` is the

@@ -133,6 +133,9 @@ struct ContentView: View {
                     sim.speed = $0
                 }
             }
+            if !sim.currentEvent.isNormal {
+                economicEventBanner
+            }
             HStack {
                 Text("FLEET")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
@@ -153,6 +156,30 @@ struct ContentView: View {
         }
         .foregroundStyle(.white)
     }
+
+    /// Active economic-event banner — red when it hurts the airline (higher
+    /// costs or lower fares), green when it helps.
+    private var economicEventBanner: some View {
+        let e = sim.currentEvent
+        let hurts = e.costMultiplier > 1 || e.fareMultiplier < 1
+        let color = hurts ? Color(red: 1, green: 0x5C/255, blue: 0x5C/255)
+                          : Color(red: 0x37/255, green: 1, blue: 0xB0/255)
+        return HStack(spacing: 8) {
+            Text(e.label.uppercased())
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+            Text("cost \(pct(e.costMultiplier)) · fare \(pct(e.fareMultiplier)) · demand \(pct(e.loadMultiplier)) · \(sim.eventDaysLeft)d left")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.75))
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(color.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(color.opacity(0.5), lineWidth: 1))
+    }
+
+    private func pct(_ m: Double) -> String { "\(Int((m * 100).rounded()))%" }
 
     /// A row of pill buttons for a set of values.
     private func controlRow<T: Hashable>(_ values: [T],

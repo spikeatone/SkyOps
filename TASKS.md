@@ -160,11 +160,14 @@ as the work, not "later."
       hand-math, load ≈ 0.838, fleet net-positive +$10.4M/4000 ticks,
       ledger identity) + in-sim (787 leg: $143k rev − $1.6k fees − $96k op
       = $45.7k net, matches). `costPerHour` added to all 30 types.
-- [ ] Economic-event system (slice 2): Oil Spike / Fuel Drop / Boom /
-      Recession modulating cost/fare/load; the model + NORMAL are already
-      wired (Economics.swift) — just needs the event scheduler + a HUD
-      banner. The 4-engine-widebody-goes-net-negative-under-oil-spike
-      emergent property should fall out for free.
+- [x] Economic-event system (slice 2). Oil Spike / Fuel Drop / Boom /
+      Recession, scheduled once per sim-day (15% chance, 3–10 days), one at
+      a time, modulating cost/fare/load. HUD banner (red=hurts,
+      green=helps) with live multipliers + days left. Verified: 6/6
+      headless (events fire, all 4 kinds, return to normal) INCLUDING the
+      emergent property — under an oil spike the A340 goes net −$45,619
+      while the A320 stays +$6,524 (fell out of the math for free) — plus
+      in-sim banner check.
 - [ ] Ownership economy (slice 3): playerBalance, $20M starting capital,
       purchase/sell, cycle-based SELL decision, linear depreciation.
 - [ ] Leasing + used-aircraft market (slice 4).
