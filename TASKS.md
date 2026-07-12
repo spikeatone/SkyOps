@@ -55,11 +55,35 @@ as the work, not "later."
       during icon work, see `CLAUDE.md` Icons section — verify early
       whether this affects full-screen mockups too.
 
-## In progress (Phase 1 — port the validated tick engine)
+## Phase 1 — DONE (port the validated tick engine)
 
-- [ ] One aircraft flies one route in SwiftUI on the SAME state machine /
-      tick durations as the JS prototype (ported verbatim, not re-derived
-      — takeoff/landing must NOT visually jolt).
+- [x] One aircraft flies one route in SwiftUI on the SAME state machine /
+      tick durations as the JS prototype, ported verbatim. Verified in the
+      simulator: SKY001 flies SFO→JFK and back (origin/dest swap each
+      cycle), phase colours track the real flight phase (green climb / blue
+      cruise / amber descent / amber ground), tick timing matches exactly
+      (142 ticks in 7s at 5× = the prototype's 50ms/tick). Files under
+      `SkyOps/SkyOps/Sim/` + `MapView.swift`; async tick loop
+      (`Simulation.run()`) decoupled from render, BASE_TICK_MS=250.
+- Two real bugs caught by watching it run, not by the build:
+  1. Aircraft frozen at the launch frame while the HUD advanced. Root
+     cause: `MapView`'s only stored property was the `sim` reference
+     (never changes), so SwiftUI diffed it as identical every tick and
+     skipped re-invoking its body — the Canvas never redrew. Fixed by
+     passing `tick` in as a changing VALUE input. See CLAUDE.md's new
+     native-port section — this WILL recur on every new Canvas/panel view
+     in Phase 2+, it's the SwiftUI analog of the prototype's per-tick
+     panel-flicker bug family.
+  2. `node --check`-style "it compiles" proved nothing here either — the
+     freeze was a runtime/observation bug a clean build said nothing
+     about. Same lesson as the prototype's `operatingCost` ReferenceError:
+     build success ≠ correct behaviour; drive it in the simulator.
+
+## Up next (Phase 2 — multi-aircraft + fleet types)
+
+- [ ] Scale to full fleet; port AIRCRAFT_TYPES (30 types / 15 crew
+      families) + the 4 real icon tiers + revenue/cost/economic-event
+      systems. See ROADMAP Phase 2 (bigger than its original framing).
 
 ## Blocked
 

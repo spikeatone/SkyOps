@@ -1120,6 +1120,66 @@ one contradicts the design thesis.)
   traffic can still show a real weather ground-stop, and red-for-problem
   doesn't need a fourth color.
 
+## Decided — Native iOS Port (Phase 0–1, the actual Xcode app)
+
+The port from the browser prototype into the real SwiftUI app has started.
+The prototype (`prototype-reference/…Stress Test.html`) remains the source
+of truth for all sim behavior — the Swift code ports FROM it, verbatim
+where numbers are involved.
+
+- **Project shape**: `SkyOps/SkyOps.xcodeproj`, SwiftUI + SwiftData
+  template. objectVersion 77 → uses **file-system-synchronized groups**
+  (`PBXFileSystemSynchronizedRootGroup`): any `.swift` file dropped inside
+  `SkyOps/SkyOps/` is auto-compiled into the app target — NO `.pbxproj`
+  editing needed to add files. This is a real workflow win; don't hand-edit
+  the project file to register new sources, just create them in the folder.
+- **Min deployment target: iOS 18.0** (was 26.5 from the template default).
+  Nothing in the port needs iOS-26-only APIs; 18 maximizes reach at no
+  technical cost. Set across all three targets.
+- **SwiftData kept** (template default) but NOT used yet — Phase 1 has
+  nothing to persist. `Item.swift` template model deleted. SwiftData
+  returns for real in Phase 5 (fleet/routes/economy persistence).
+- **Tick engine architecture (Phase 1)**: `Simulation` is a `@MainActor
+  @Observable` class owning airports + aircraft + `tick`. The tick loop is
+  `Simulation.run()` — a Swift-Concurrency async task started from the
+  view's `.task`, using a `ContinuousClock` accumulator: `BASE_TICK_MS =
+  250` at 1× (ported from the prototype), divided by `speed`, capped at 50
+  catch-up ticks/wake. This is the ROADMAP's "async tick source decoupled
+  from render frame rate." Verified in-sim the timing matches the prototype
+  exactly (142 ticks in 7s at 5×).
+- **State machine + interpolation ported VERBATIM** into `Sim/FlightState`,
+  `Sim/FlightPath`, `Sim/Aircraft`. The chained per-state `t` ranges
+  (takeoff 0→0.12, cruise 0.12→0.82, approach 0.82→0.92, landing
+  0.92→1.0) and the eased takeoff/landing curves are the exact prototype
+  values — that continuity is what prevents the takeoff-jolt/landing-
+  teleport bugs. Phase 1 deliberately OMITS the WEATHER holding-pattern and
+  REJOIN branches (Phase 3). Aircraft color is tied to real flight PHASE,
+  not an altitude threshold — same validated fix as the prototype.
+- **A real SwiftUI redraw bug caught by watching it run, NOT by the build
+  — and it WILL recur in Phase 2+.** The map froze at the launch frame
+  (aircraft stuck parked-at-SFO, amber) while the HUD's tick/phase advanced
+  live. Root cause: a child view (`MapView`) whose only stored property is
+  a reference type (`Simulation`) that never changes gets diffed as
+  IDENTICAL by SwiftUI every tick, so its `body` is never re-invoked and
+  its `Canvas` never redraws. Plain (non-`@Observable`) model classes
+  (`Aircraft`/`Airport`) don't help — they carry no observable dependency.
+  Neither did a `TimelineView(.animation)` wrapper, nor a discarded `let _
+  = sim.tick` read inside the frozen body. **The fix that works: pass the
+  changing value (`tick: sim.tick`) into the child view as a real VALUE
+  input, so SwiftUI sees the input change and re-renders.** Aircraft
+  position is a step-function of the tick, so a tick-driven redraw is exact,
+  not a hack. This is the SwiftUI analog of the prototype's three-times-
+  recurring per-tick panel-flicker bug: any new tick-driven Canvas or panel
+  view (fleet, routes, decision cards in later phases) must take a changing
+  value input, or it will silently freeze. If a second view freezes this
+  way, build the shared pattern rather than fixing it one-off a fourth time.
+- **Verification practice for the native app**: a clean `xcodebuild`
+  build proves NOTHING about runtime behavior — the freeze above compiled
+  perfectly. Same lesson as the prototype's `operatingCost` ReferenceError
+  (`node --check` passed it). Drive the app in the simulator
+  (`xcrun simctl` install/launch/screenshot) and actually WATCH the
+  behavior before calling a phase done. This caught the freeze bug.
+
 ## Open / not yet decided
 
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on

@@ -4,29 +4,19 @@
 //
 //  Created by Michael Stevens on 7/12/26.
 //
+//  Phase 1: no persistence yet — the app just runs the live tick simulation.
+//  SwiftData returns in Phase 5 (saving the player's fleet/routes/economy);
+//  the project is still configured for it, we simply don't have anything to
+//  persist while porting the engine.
+//
 
 import SwiftUI
-import SwiftData
 
 @main
 struct SkyOpsApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(sharedModelContainer)
     }
 }
