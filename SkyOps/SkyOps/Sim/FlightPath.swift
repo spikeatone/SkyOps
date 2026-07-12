@@ -63,9 +63,20 @@ enum FlightPath {
         return atan2(y2 - y1, x2 - x1)
     }
 
-    private static func pointOnPath(_ path: PathPoints, _ t: Double) -> CGPoint {
+    static func point(_ path: PathPoints, at t: Double) -> CGPoint {
         CGPoint(x: bezier(path.start.x, path.mid.x, path.end.x, t),
                 y: bezier(path.start.y, path.mid.y, path.end.y, t))
+    }
+
+    private static func pointOnPath(_ path: PathPoints, _ t: Double) -> CGPoint {
+        point(path, at: t)
+    }
+
+    /// Shortest-arc angular interpolation (radians). Ported from lerpAngle().
+    static func lerpAngle(_ a: Double, _ b: Double, _ t: Double) -> Double {
+        var diff = ((b - a + .pi).truncatingRemainder(dividingBy: 2 * .pi)) - .pi
+        if diff < -.pi { diff += 2 * .pi }
+        return a + diff * t
     }
 
     /// Interpolated position for an aircraft, given its current phase and the

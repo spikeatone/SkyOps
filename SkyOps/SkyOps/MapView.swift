@@ -28,6 +28,7 @@ struct MapView: View {
     private let cruiseColor  = Color(red: 0x83/255, green: 0xC9/255, blue: 0xFF/255) // #83C9FF
     private let descentColor = Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255) // #FFB300
     private let groundColor  = Color(red: 0xE8/255, green: 0xA1/255, blue: 0x3C/255) // ground amber
+    private let heldColor     = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255) // #ff5c5c — held (weather)
 
     var body: some View {
         // `tick` (a changing value input) is what forces this body to re-run
@@ -73,18 +74,25 @@ struct MapView: View {
     private func drawAirports(_ ctx: GraphicsContext) {
         // All 48 airports as small dots. Real label decluttering / leader
         // lines are a Phase 4 (map) concern; here they'd just overlap.
+        // Ground-stopped airports (weather) get a red ring.
         var dots = Path()
+        var stopped = Path()
         let r: CGFloat = 3.5
         for ap in sim.airports {
             dots.addEllipse(in: CGRect(x: ap.screen.x - r, y: ap.screen.y - r, width: r * 2, height: r * 2))
+            if ap.groundStop {
+                let rr: CGFloat = 8
+                stopped.addEllipse(in: CGRect(x: ap.screen.x - rr, y: ap.screen.y - rr, width: rr * 2, height: rr * 2))
+            }
         }
         ctx.fill(dots, with: .color(climbColor.opacity(0.85)))
+        ctx.stroke(stopped, with: .color(heldColor.opacity(0.9)), lineWidth: 1.5)
     }
 
     private func drawAircraft(_ ctx: GraphicsContext) {
         for ac in sim.aircraft {
-            let pos = ac.position
-            let color = color(for: ac.state)
+            let pos = ac.position(tick: tick)
+            let color = ac.isHeld ? heldColor : color(for: ac.state)
 
             // Base transform: pivot on the aircraft position, rotate to heading
             // (icons are authored nose-toward +x). Same order as the prototype.

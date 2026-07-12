@@ -28,6 +28,10 @@ final class Airport: Identifiable {
     /// Pixel position in the current view (assigned each layout).
     var screen: CGPoint = .zero
 
+    // Weather ground-stop state (Phase 3). Universal — applies to all traffic.
+    var groundStop: Bool = false
+    var groundStopTicksLeft: Int = 0
+
     init(code: String, lat: Double, lon: Double,
          landingFeePerKlb: Double = 0, gateFeeNarrowbody: Double = 0,
          gateFeeWidebody: Double = 0, groundStopsPerMonth: Double = 0) {

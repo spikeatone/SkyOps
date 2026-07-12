@@ -115,10 +115,30 @@ final class Simulation {
 
     // MARK: - Tick
 
+    /// Ticks in a 30-day sim-month (1 tick = 1 sim-minute). Used for
+    /// converting real per-month event rates into per-tick probabilities.
+    static let ticksPerMonth = 30 * 24 * 60   // 43,200
+
     /// One sim-minute for the whole world.
     func advanceTick() {
         tick += 1
-        for ac in aircraft { ac.advance() }
+        tickWeather()
+        for ac in aircraft { ac.advance(tick: tick) }
+    }
+
+    /// Per-airport weather ground stops. Onset uses each airport's real
+    /// groundStopsPerMonth rate; duration 90–330 ticks (1.5–5.5 sim-hours).
+    /// Ported from tickWeather(). Universal — applies to all traffic.
+    private func tickWeather() {
+        for ap in airports {
+            if ap.groundStop {
+                ap.groundStopTicksLeft -= 1
+                if ap.groundStopTicksLeft <= 0 { ap.groundStop = false }
+            } else if Double.random(in: 0..<1) < ap.groundStopsPerMonth / Double(Simulation.ticksPerMonth) {
+                ap.groundStop = true
+                ap.groundStopTicksLeft = 90 + Int.random(in: 0...240)
+            }
+        }
     }
 
     /// The async tick loop. Start once from the view's `.task`; it advances the

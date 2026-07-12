@@ -99,11 +99,30 @@ as the work, not "later."
       These pair naturally with the Phase 5 economy work and the
       hover-tooltip UI; sequence them next or fold into Phase 5.
 
-## Up next
+## In progress (Phase 3 — crew / AOG / weather)
 
-- [ ] Decide ordering: Phase 3 (crew / AOG / weather systems) vs. the
-      deferred Phase 2 economy (revenue/cost/economic events). Both port
-      from validated prototype logic. See ROADMAP.
+- [x] Weather ground-stops + holding pattern + rejoin easing. Ported
+      tickWeather() (per-airport onset from real groundStopsPerMonth,
+      90–330 tick duration) + the departure/arrival hold gating in
+      Aircraft.advance() + the holding-pattern orbit and REJOIN smoothstep
+      in Aircraft.position(). Held aircraft render red; ground-stopped
+      airports get a red ring. Verified in-sim with a temporary forced ATL
+      ground stop: approaching aircraft held red and orbited the fix,
+      desynced per-tail. (Rejoin easing is a verbatim port but wasn't
+      visually caught — it only fires when a stop lifts.)
+- [ ] AOG onset + clustering (per-aircraft per-tick probability, family
+      risk clustering) + the player-decision card system (AOG cards; sim
+      keeps running).
+- [ ] Crew pools per family + duty/rest (FAA Part 117 timings) + the
+      boarding-gate crew gating + CREW decision cards.
+- Note: with no ownership yet (Phase 5), AOG/crew/decisions will apply to
+      the whole stress-test fleet for now; ownership-scoping comes later
+      (see CLAUDE.md — the prototype had a real bug from that retrofit).
+
+## Deferred (economy — pairs with Phase 5)
+
+- [ ] Real load-factor × fare revenue, per-flight operating cost, and the
+      randomized economic-event system (was folded into ROADMAP Phase 2).
 
 ## Blocked
 
