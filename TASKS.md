@@ -150,10 +150,28 @@ as the work, not "later."
       the whole stress-test fleet for now; ownership-scoping comes later
       (see CLAUDE.md — the prototype had a real bug from that retrofit).
 
-## Deferred (economy — pairs with Phase 5)
+## In progress (Phase 5 — economy)
 
-- [ ] Real load-factor × fare revenue, per-flight operating cost, and the
-      randomized economic-event system (was folded into ROADMAP Phase 2).
+- [x] Per-flight economics (slice 1). Real revenue (pax × fare, rolled at
+      scheduling so a hold erodes it), real operating cost (per-bodyType
+      stage length × cost/tick), real fees (weight-based landing + body-type
+      gate). Tooltip now shows LOAD + REVENUE/FEES/OP COST/NET-per-leg;
+      HUD shows running net. Verified: 13/13 headless (fee/revenue/cost vs
+      hand-math, load ≈ 0.838, fleet net-positive +$10.4M/4000 ticks,
+      ledger identity) + in-sim (787 leg: $143k rev − $1.6k fees − $96k op
+      = $45.7k net, matches). `costPerHour` added to all 30 types.
+- [ ] Economic-event system (slice 2): Oil Spike / Fuel Drop / Boom /
+      Recession modulating cost/fare/load; the model + NORMAL are already
+      wired (Economics.swift) — just needs the event scheduler + a HUD
+      banner. The 4-engine-widebody-goes-net-negative-under-oil-spike
+      emergent property should fall out for free.
+- [ ] Ownership economy (slice 3): playerBalance, $20M starting capital,
+      purchase/sell, cycle-based SELL decision, linear depreciation.
+- [ ] Leasing + used-aircraft market (slice 4).
+- [ ] Player route network + route-opening cost + slots + ROUTES panel
+      (slice 5) — the big behavioral change (owned aircraft fly opened
+      routes, not random).
+- [ ] Player + competitor airline identity (slice 6).
 
 ## Blocked
 

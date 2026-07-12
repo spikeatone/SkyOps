@@ -189,12 +189,14 @@ final class Simulation {
         let (origin, dest) = Airport.randomPair()
         let tail = "N\(nextTailNum)SK"
         nextTailNum += 1
-        return Aircraft(tail: tail,
-                        type: type,
-                        origin: origin,
-                        dest: dest,
-                        stateIndex: Int.random(in: 0..<FlightState.allCases.count),
-                        cyclesAccrued: Int.random(in: 0..<Int(Double(type.expectedLifespanCycles) * 0.9)))
+        let ac = Aircraft(tail: tail,
+                          type: type,
+                          origin: origin,
+                          dest: dest,
+                          stateIndex: Int.random(in: 0..<FlightState.allCases.count),
+                          cyclesAccrued: Int.random(in: 0..<Int(Double(type.expectedLifespanCycles) * 0.9)))
+        rollRevenue(for: ac)   // seed this leg's revenue before its first arrival
+        return ac
     }
 
     /// Grow or shrink the fleet to `n` (stress-test control; all aircraft are
@@ -422,6 +424,51 @@ final class Simulation {
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
+    // MARK: - Economics (per-flight revenue / cost / fees)
+
+    /// Active economic condition. Only NORMAL until the events slice.
+    private(set) var currentEvent = EconomicEvent.normal
+
+    // Running financial totals (a fresh session's ledger). playerBalance and
+    // the ownership economy arrive in a later slice; for now this is the sim's
+    // net result.
+    private(set) var totalRevenue = 0
+    private(set) var totalFees = 0
+    private(set) var totalOperatingCost = 0
+    var netRevenue: Int { totalRevenue - totalFees - totalOperatingCost }
+
+    /// Roll a leg's revenue at scheduling time — pax-first so displayed pax and
+    /// revenue always agree. Ported from rollRevenue(). Stored on the aircraft.
+    private func rollRevenue(for ac: Aircraft) {
+        let avgFare = ac.type.bodyType.avgFarePerSeat
+        let farePerSeat = avgFare * currentEvent.fareMultiplier * (0.9 + Double.random(in: 0..<0.2))  // ±10%
+        let load = min(1, baseLoadFactor * currentEvent.loadMultiplier * (0.95 + Double.random(in: 0..<0.1)))  // ±5%, capped
+        let pax = Int((Double(ac.type.seats) * load).rounded())
+        ac.currentLoadFactor = load
+        ac.currentPax = pax
+        ac.projectedRevenue = Int((Double(pax) * farePerSeat).rounded())
+    }
+
+    /// Real economics for a leg (projected while flying, settled at arrival).
+    /// Ported from computeLegEconomics(): weight-based landing fee, body-type
+    /// gate fee, per-bodyType stage-length operating cost × event multiplier.
+    func legEconomics(for ac: Aircraft) -> LegEconomics {
+        let landingFee = Int((ac.dest.landingFeePerKlb * (Double(ac.type.mlwLbs) / 1000)).rounded())
+        let gateFee = Int(ac.type.bodyType.usesWidebodyGateFee ? ac.dest.gateFeeWidebody : ac.dest.gateFeeNarrowbody)
+        let opCost = Int((Double(ac.type.bodyType.operatingCostBlockMinutes)
+                          * Double(ac.type.holdCostPerTick) * currentEvent.costMultiplier).rounded())
+        return LegEconomics(revenue: ac.projectedRevenue, landingFee: landingFee,
+                            gateFee: gateFee, operatingCost: opCost)
+    }
+
+    /// Settle a completed leg into the running totals.
+    private func settleLeg(_ ac: Aircraft) {
+        let econ = legEconomics(for: ac)
+        totalRevenue += econ.revenue
+        totalFees += econ.fees
+        totalOperatingCost += econ.operatingCost
+    }
+
     /// One sim-minute for the whole world.
     func advanceTick() {
         tick += 1
@@ -434,7 +481,15 @@ final class Simulation {
             case .aogRepairCompleted:  clearDecision(.aog, for: ac)   // defensive — card normally already resolved
             case .crewHoldStarted:     pushDecision(.crew, for: ac)
             case .crewHoldResolved:    clearDecision(.crew, for: ac)  // crew freed up outside the card's own buttons
+            case .legScheduled:        rollRevenue(for: ac)
+            case .legCompleted:        settleLeg(ac)
             case nil:                  break
+            }
+            // A booked aircraft still burns money while stuck at the gate
+            // (AOG/crew) — erode the leg's revenue at its per-tick cost, scaled
+            // by any economic event. One held number crosses profit → loss.
+            if ac.holdReason == .aog || ac.holdReason == .crew {
+                ac.projectedRevenue -= Int((Double(ac.type.holdCostPerTick) * currentEvent.costMultiplier).rounded())
             }
         }
     }

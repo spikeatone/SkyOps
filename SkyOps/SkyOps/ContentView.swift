@@ -120,10 +120,13 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("SkyOps")
                         .font(.system(size: 15, weight: .bold, design: .monospaced))
-                    Text("tick \(sim.tick)  ·  \(sim.fleetCount) aircraft"
-                         + (sim.maintenanceSpend > 0 ? "  ·  maint $\(sim.maintenanceSpend / 1000)k" : ""))
+                    Text("tick \(sim.tick)  ·  \(sim.fleetCount) aircraft")
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(.secondary)
+                    Text("net " + netString)
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(sim.netRevenue < 0 ? Color(red: 1, green: 0x5C/255, blue: 0x5C/255)
+                                                            : Color(red: 0x37/255, green: 1, blue: 0xB0/255))
                 }
                 Spacer()
                 controlRow(speeds, isActive: { sim.speed == $0 }, label: speedLabel) {
@@ -175,6 +178,16 @@ struct ContentView: View {
 
     private func speedLabel(_ s: Double) -> String {
         s == s.rounded() ? "\(Int(s))×" : "\(s)×"
+    }
+
+    /// Compact signed money for the HUD (e.g. "+$1.2M", "−$340k").
+    private var netString: String {
+        let v = sim.netRevenue
+        let sign = v < 0 ? "−" : "+"
+        let a = abs(v)
+        if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
+        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
+        return sign + "$\(a)"
     }
 }
 
@@ -297,8 +310,17 @@ struct AircraftTooltip: View {
             row("TYPE", aircraft.type.name)
             row("STATUS", statusText, valueColor: aircraft.isHeld ? heldColor : .white)
             row("CREW", crewText, valueColor: crewValueColor)
+            row("LOAD", loadText)
             row("CYCLES", cyclesText)
-            // ── revenue / fees / operating cost / net rows land here (Phase 5) ──
+
+            Divider().overlay(Color.white.opacity(0.15)).padding(.vertical, 2)
+
+            let econ = sim.legEconomics(for: aircraft)
+            row("REVENUE", money(econ.revenue))
+            row("FEES", "−" + money(econ.fees))
+            row("OP COST", "−" + money(econ.operatingCost))
+            row("NET / LEG", (econ.net < 0 ? "−" : "") + money(abs(econ.net)),
+                valueColor: econ.net < 0 ? heldColor : climbColor)
         }
         .foregroundStyle(.white)
         .padding(12)
@@ -348,6 +370,17 @@ struct AircraftTooltip: View {
             return Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255)
         }
         return .white
+    }
+
+    private let climbColor = Color(red: 0x37/255, green: 0xFF/255, blue: 0xB0/255)
+
+    private var loadText: String {
+        let pct = Int((aircraft.currentLoadFactor * 100).rounded())
+        return "\(aircraft.currentPax) / \(aircraft.type.seats) pax (\(pct)%)"
+    }
+
+    private func money(_ v: Int) -> String {
+        "$" + v.formatted(.number.grouping(.automatic))
     }
 
     private var cyclesText: String {

@@ -29,7 +29,9 @@ enum AdvanceEvent {
     case aogHoldStarted     // held at the gate, needs an AOG decision card
     case aogRepairCompleted // timed standard repair finished on its own
     case crewHoldStarted    // held at the gate, needs a CREW decision card
-    case crewHoldResolved    // crew became available, hold cleared
+    case crewHoldResolved   // crew became available, hold cleared
+    case legScheduled       // entered PARKED — roll this leg's revenue
+    case legCompleted       // arrived (TURNAROUND) — settle this leg's economics
 }
 
 final class Aircraft: Identifiable {
@@ -66,6 +68,12 @@ final class Aircraft: Identifiable {
 
     /// Assigned crew's id within its family pool (nil = none assigned yet).
     var crewId: Int?
+
+    // Economics (Phase 5). Revenue is rolled at SCHEDULING (leg start) and
+    // stored, so a hold can erode `projectedRevenue` before it settles.
+    var projectedRevenue: Int = 0
+    var currentLoadFactor: Double = 0
+    var currentPax: Int = 0
 
     init(tail: String, type: AircraftType, origin: Airport, dest: Airport,
          stateIndex: Int = FlightState.parked.rawValue, cyclesAccrued: Int = 0) {
@@ -177,8 +185,12 @@ final class Aircraft: Identifiable {
         if newState == .turnaround {
             cyclesAccrued += 1
             releaseCrew(self)   // duty done for this leg — rest or return to pool
+            return .legCompleted   // arrived — settle this leg's economics
         }
-        if newState == .parked { swap(&origin, &dest) }   // fly the return leg
+        if newState == .parked {
+            swap(&origin, &dest)   // fly the return leg
+            return .legScheduled   // roll the next leg's revenue
+        }
         return event
     }
 
