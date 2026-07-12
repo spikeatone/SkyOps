@@ -55,12 +55,15 @@ struct ContentView: View {
             VStack(spacing: 10) {
                 Spacer()
                 if let ac = selected {
-                    AircraftTooltip(aircraft: ac, tick: sim.tick) {
+                    AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) {
                         selectedID = nil
                     }
                 }
                 ForEach(sim.decisionQueue) { decision in
-                    DecisionCard(decision: decision, sim: sim)
+                    switch decision.kind {
+                    case .aog:  AOGCard(decision: decision, sim: sim)
+                    case .crew: CrewCard(decision: decision, sim: sim)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -175,56 +178,90 @@ struct ContentView: View {
     }
 }
 
-/// One pending player decision. AOG-only for now; CREW/SELL cards arrive with
-/// their systems (crew slice, Phase 5 economy).
-struct DecisionCard: View {
-    let decision: Simulation.Decision
-    let sim: Simulation
+private let heldColor = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
 
-    private let heldColor = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
+/// Shared decision-card chrome (red-bordered, titled, subject line + buttons).
+/// The sim never pauses while a card is up (core design thesis).
+struct DecisionCardChrome<Buttons: View>: View {
+    let title: String
+    let subject: String
+    @ViewBuilder let buttons: () -> Buttons
 
     var body: some View {
-        let ac = decision.aircraft
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Circle().fill(heldColor).frame(width: 7, height: 7)
-                Text("AOG — GROUNDED FOR MAINTENANCE")
+                Text(title)
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundStyle(heldColor)
             }
-            Text("\(ac.tail) · \(ac.type.name) · at \(ac.origin.code)")
+            Text(subject)
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.85))
-            HStack(spacing: 8) {
-                Button {
-                    sim.resolveAOGExpedite(decision)
-                } label: {
-                    Text("Expedite · $15,000 · ready now")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(heldColor.opacity(0.22))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-                Button {
-                    sim.resolveAOGStandard(decision)
-                } label: {
-                    Text("Standard · $3,000 · ~3hr")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(Color.white.opacity(0.10))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-            }
+            HStack(spacing: 8) { buttons() }
         }
         .foregroundStyle(.white)
         .padding(12)
         .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.96))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(heldColor.opacity(0.45), lineWidth: 1))
+    }
+}
+
+/// A single decision-card action button.
+struct CardButton: View {
+    let label: String
+    var emphasized = false
+    var disabled = false
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(emphasized ? heldColor.opacity(0.22) : Color.white.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .opacity(disabled ? 0.4 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+    }
+}
+
+struct AOGCard: View {
+    let decision: Simulation.Decision
+    let sim: Simulation
+    var body: some View {
+        let ac = decision.aircraft
+        DecisionCardChrome(title: "AOG — GROUNDED FOR MAINTENANCE",
+                           subject: "\(ac.tail) · \(ac.type.name) · at \(ac.origin.code)") {
+            CardButton(label: "Expedite · $15,000 · ready now", emphasized: true) {
+                sim.resolveAOGExpedite(decision)
+            }
+            CardButton(label: "Standard · $3,000 · ~3hr") {
+                sim.resolveAOGStandard(decision)
+            }
+        }
+    }
+}
+
+struct CrewCard: View {
+    let decision: Simulation.Decision
+    let sim: Simulation
+    var body: some View {
+        let ac = decision.aircraft
+        let hasReserve = sim.hasReserve(for: ac)
+        DecisionCardChrome(title: "NO LEGAL CREW AVAILABLE",
+                           subject: "\(ac.tail) · \(ac.type.name) · at \(ac.origin.code)") {
+            CardButton(label: hasReserve ? "Call reserve · $5,000" : "No reserves left",
+                       emphasized: true, disabled: !hasReserve) {
+                sim.resolveCrewReserve(decision)
+            }
+            CardButton(label: "Wait for next crew") {
+                sim.resolveCrewWait(decision)
+            }
+        }
     }
 }
 
@@ -236,7 +273,8 @@ struct DecisionCard: View {
 /// aesthetic; the real Figma restyle is the Phase 4 pass (designer decision).
 struct AircraftTooltip: View {
     let aircraft: Aircraft
-    let tick: Int            // changing value input — keeps status text live
+    let sim: Simulation
+    let tick: Int            // changing value input — keeps status/crew live
     let onClose: () -> Void
 
     private let heldColor = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
@@ -258,8 +296,8 @@ struct AircraftTooltip: View {
             row("TAIL", aircraft.tail)
             row("TYPE", aircraft.type.name)
             row("STATUS", statusText, valueColor: aircraft.isHeld ? heldColor : .white)
+            row("CREW", crewText, valueColor: crewValueColor)
             row("CYCLES", cyclesText)
-            // ── crew legal hours row lands here (crew slice) ──
             // ── revenue / fees / operating cost / net rows land here (Phase 5) ──
         }
         .foregroundStyle(.white)
@@ -291,8 +329,25 @@ struct AircraftTooltip: View {
                 : "HELD — ground stop at \(aircraft.origin.code)"
         case .rejoin:  return "Rejoining approach at \(aircraft.dest.code)"
         case .aog:     return "AOG — grounded at \(aircraft.origin.code)"
+        case .crew:    return "HELD — no legal crew at \(aircraft.origin.code)"
         case nil:      return phaseLabel(aircraft.state)
         }
+    }
+
+    /// Crew legal hours (Part 117 duty clock), or the reason there's no crew.
+    private var crewText: String {
+        if aircraft.holdReason == .crew { return "none — awaiting legal crew" }
+        guard let d = sim.crewDuty(for: aircraft) else { return "—" }
+        return String(format: "%.1f / %.0f duty hrs", d.used, d.max)
+    }
+
+    private var crewValueColor: Color {
+        if aircraft.holdReason == .crew { return heldColor }
+        // amber as the crew nears its duty limit
+        if let d = sim.crewDuty(for: aircraft), d.used > d.max * 0.8 {
+            return Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255)
+        }
+        return .white
     }
 
     private var cyclesText: String {

@@ -1315,6 +1315,41 @@ where numbers are involved.
   control, then granted it once the on-screen readout wasn't enough — ask
   for it when a gesture genuinely can't be verified any other way.)
 
+- **Phase 3 slice 3 — crew, DONE. Phase 3 now COMPLETE (weather + AOG +
+  crew).** Per-family pools (`Crew`, `crewPoolsByFamily`), real Part 117
+  duty/rest (`maxDutyTicks`/`restTicks` = 600/600), duty accrues ACROSS
+  flights and resets ONLY after a completed rest (the corrected version —
+  verified duty reaching 926 before rest). Boarding gate holds an aircraft
+  red for a legal crew and pushes a CREW card (Call reserve $5,000 / Wait);
+  staggered spawns get backfilled crew with partial duty. The pool lives on
+  `Simulation`; `Aircraft.advance` takes `assignCrew`/`releaseCrew` CLOSURES
+  so the aircraft stays pool-free and headless-testable. Same event-return
+  pattern as AOG (`crewHoldStarted`/`crewHoldResolved` → push/clear card).
+  Tooltip's crew-legal-hours slot is now filled.
+- **A real balance bug found and fixed BY the headless harness, not in
+  play: crew provisioning has a hard CLIFF at the duty/rest break-even.**
+  A crew flies ~55% of the time (2 cycles on, one 600-tick rest), so you
+  need ~1.8 crews/aircraft just to keep aircraft flying. At/below 1.8 there
+  is ZERO margin: any timing cluster starts a shortage that CASCADES into a
+  permanent fleet-wide jam (I first shipped 1.8 → the whole screen filled
+  with CREW cards). At 2.6+ it never holds at all (trivial, the thing
+  CLAUDE.md warned about). A headless sweep (1.9–2.4 all steady, max 1–2
+  simultaneous holds) pinned the usable band; locked `crewsPerAircraft =
+  2.1`. LESSON: this behavior is bimodal (cascade vs dead) with a sharp
+  edge — any future change to duty/rest timing, cycle length, or the ratio
+  must be re-swept with the balance probe, not eyeballed. The real
+  crew-management tension (starting under-crewed, hiring up) is the Phase 5
+  player-driven model; this auto-provisioned ratio is the pre-ownership
+  stand-in (same ownership-scoping debt as AOG — re-scope to `purchased`
+  when it lands).
+- **The headless harness now has a third proven catch** (after nothing,
+  then the AOG lifecycle): it caught the crew cascade as a design/balance
+  bug a unit test wouldn't frame. Two harness kinds now live in the session
+  scratchpad: lifecycle assertions (`CrewMain` — 12/12) and a balance probe
+  (`BalanceMain` — steady-state / max-simultaneous sweep). Both compile the
+  real `Sim/*.swift`. Reach for the balance probe whenever a change alters
+  rates, capacities, or timing.
+
 ## Open / not yet decided
 
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on

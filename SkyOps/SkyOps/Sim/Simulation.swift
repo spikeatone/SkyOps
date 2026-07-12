@@ -177,7 +177,7 @@ final class Simulation {
         // type, a random city pair it flies back and forth, and a staggered
         // start so the fleet isn't synchronized.
         airports = Airport.all
-        setFleetSize(60)
+        setFleetSize(60)   // provisions crew as part of sizing the fleet
     }
 
     // MARK: - Fleet
@@ -211,6 +211,9 @@ final class Simulation {
         } else {
             while aircraft.count < target { aircraft.append(makeAircraft()) }
         }
+        // re-size the crew roster to the new fleet (a stress-test control; the
+        // player-driven Phase 5 model won't re-provision like this)
+        if !crewPoolsByFamily.isEmpty || !aircraft.isEmpty { provisionCrew() }
     }
 
     var fleetCount: Int { aircraft.count }
@@ -256,10 +259,106 @@ final class Simulation {
         }
     }
 
-    // MARK: - Decisions (AOG cards; CREW/SELL arrive with their systems)
+    // MARK: - Crew (per-family pools, FAA Part 117 duty/rest)
+
+    /// Pre-ownership provisioning ratio: crews per aircraft in a family. Sized
+    /// so ops mostly flow but a crew resting occasionally leaves an aircraft
+    /// briefly short → a real, OCCASIONAL crew hold. When ownership (Phase 5)
+    /// lands, this auto-provisioning is REPLACED by the player-driven model
+    /// (1 crew bundled per purchase + the ADD CREW hire panel) — same scoping
+    /// debt as AOG. Real `crewsPerTail` (6 short / 11 long haul) stays a
+    /// reference figure the player reasons about, not consumed here.
+    /// Crews per aircraft in a family. TUNED via a headless balance sweep:
+    /// ~1.8 is the duty/rest break-even (a crew flies ~55% of the time), so at
+    /// or below it a shortage CASCADES into a permanent jam (whole fleet held);
+    /// at 1.9–2.4 the system is steady with only occasional 1–2 aircraft holds;
+    /// 2.6+ never holds at all. 2.1 gives occasional, recoverable crew holds.
+    /// (The real crew-management tension — starting under-crewed and hiring —
+    /// arrives with the player-driven Phase 5 model; this is the stand-in.)
+    private static let crewsPerAircraft = 2.1
+    private static let reservesPerFamily = 2
+
+    private(set) var crewPoolsByFamily: [String: [Crew]] = [:]
+    private(set) var reserveCrewsByFamily: [String: Int] = [:]
+
+    /// (Re)build the crew pools sized to the current fleet, then backfill crews
+    /// for aircraft that spawned mid-flight with partial duty already elapsed
+    /// (staggered starts represent a running operation, not an all-fresh one).
+    private func provisionCrew() {
+        for ac in aircraft { ac.crewId = nil }
+        crewPoolsByFamily = [:]
+        reserveCrewsByFamily = [:]
+        var counts: [String: Int] = [:]
+        for ac in aircraft { counts[ac.type.family, default: 0] += 1 }
+        for (family, count) in counts {
+            let size = max(1, Int((Double(count) * Simulation.crewsPerAircraft).rounded()))
+            crewPoolsByFamily[family] = (0..<size).map { Crew(id: $0) }
+            reserveCrewsByFamily[family] = Simulation.reservesPerFamily
+        }
+        backfillStaggeredCrews()
+    }
+
+    private func backfillStaggeredCrews() {
+        for ac in aircraft where ac.crewId == nil && ac.state != .parked {
+            guard let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.status == .available }) else { continue }
+            crew.status = .onDuty
+            crew.dutyTicks = Int.random(in: 0..<(Crew.maxDutyTicks / 2))  // partial duty already elapsed
+            ac.crewId = crew.id
+        }
+    }
+
+    /// Duty/rest clock. Ported from tickCrewPool(): on-duty accrues duty time;
+    /// a completed rest period is the ONLY place dutyTicks resets (Part 117).
+    private func tickCrewPool() {
+        for pool in crewPoolsByFamily.values {
+            for c in pool {
+                switch c.status {
+                case .onDuty:
+                    c.dutyTicks += 1
+                case .resting:
+                    c.restTicksLeft -= 1
+                    if c.restTicksLeft <= 0 { c.status = .available; c.dutyTicks = 0 }
+                case .available:
+                    break
+                }
+            }
+        }
+    }
+
+    /// Injected into Aircraft.advance — take an available crew (keeping its
+    /// duty clock), or fail.
+    private func assignCrew(_ ac: Aircraft) -> Bool {
+        guard let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.status == .available }) else { return false }
+        crew.status = .onDuty
+        ac.crewId = crew.id   // dutyTicks NOT reset — the Part 117 fix
+        return true
+    }
+
+    /// Injected into Aircraft.advance — release the crew to rest (if it hit the
+    /// duty limit) or back to the pool, and clear the assignment.
+    private func releaseCrew(_ ac: Aircraft) {
+        if let id = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == id }) {
+            if crew.dutyTicks >= Crew.maxDutyTicks {
+                crew.status = .resting
+                crew.restTicksLeft = Crew.restTicks
+            } else {
+                crew.status = .available
+            }
+        }
+        ac.crewId = nil
+    }
+
+    /// Assigned crew's duty hours for the tooltip, or nil if none / held.
+    func crewDuty(for ac: Aircraft) -> (used: Double, max: Double)? {
+        guard let id = ac.crewId,
+              let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == id }) else { return nil }
+        return (Double(crew.dutyTicks) / 60.0, Double(Crew.maxDutyTicks) / 60.0)
+    }
+
+    // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
 
     struct Decision: Identifiable {
-        enum Kind { case aog }
+        enum Kind { case aog, crew }
         let id: String
         let kind: Kind
         let aircraft: Aircraft
@@ -297,15 +396,44 @@ final class Simulation {
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
+    /// True if a family still has a reserve crew to call in.
+    func hasReserve(for ac: Aircraft) -> Bool { (reserveCrewsByFamily[ac.type.family] ?? 0) > 0 }
+
+    /// CREW card option 1: call in a reserve crew ($5,000), assigned now so the
+    /// aircraft boards this cycle. Disabled when the family is out of reserves.
+    func resolveCrewReserve(_ decision: Decision) {
+        let ac = decision.aircraft
+        let family = ac.type.family
+        guard (reserveCrewsByFamily[family] ?? 0) > 0 else { return }
+        reserveCrewsByFamily[family]! -= 1
+        maintenanceSpend += 5_000
+        let crew = Crew(id: crewPoolsByFamily[family]?.count ?? 0)
+        crew.status = .onDuty
+        crewPoolsByFamily[family, default: []].append(crew)
+        ac.crewId = crew.id
+        ac.holdReason = nil
+        ac.holdLogged = false
+        decisionQueue.removeAll { $0.id == decision.id }
+    }
+
+    /// CREW card option 2: dismiss and let the aircraft keep waiting on the
+    /// pool — the boarding gate assigns a crew the moment one frees up.
+    func resolveCrewWait(_ decision: Decision) {
+        decisionQueue.removeAll { $0.id == decision.id }
+    }
+
     /// One sim-minute for the whole world.
     func advanceTick() {
         tick += 1
         tickWeather()
+        tickCrewPool()
         tickAOGOnset()
         for ac in aircraft {
-            switch ac.advance(tick: tick) {
+            switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {
             case .aogHoldStarted:      pushDecision(.aog, for: ac)
             case .aogRepairCompleted:  clearDecision(.aog, for: ac)   // defensive — card normally already resolved
+            case .crewHoldStarted:     pushDecision(.crew, for: ac)
+            case .crewHoldResolved:    clearDecision(.crew, for: ac)  // crew freed up outside the card's own buttons
             case nil:                  break
             }
         }

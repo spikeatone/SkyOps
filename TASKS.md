@@ -124,8 +124,19 @@ as the work, not "later."
       NOTE: applies to the whole stress-test fleet for now — ownership
       (Phase 5) must re-scope this to purchased aircraft only, exactly
       the retrofit the prototype documents getting wrong once.
-- [ ] Crew pools per family + duty/rest (FAA Part 117 timings) + the
-      boarding-gate crew gating + CREW decision cards.
+- [x] Crew pools per family + duty/rest (FAA Part 117) + boarding-gate
+      gating + CREW cards. Duty accrues ACROSS flights, resets only after
+      a completed 600-tick rest (the corrected version — verified: duty
+      reached 926 before rest). Aircraft hold red for a legal crew, push a
+      CREW card (Call reserve $5,000 / Wait). Tooltip now shows the crew
+      duty-hours row. Balance TUNED via a headless sweep: 1.8 crews/tail is
+      the duty/rest break-even and CASCADES into a fleet-wide jam; locked
+      2.1 for occasional, recoverable holds. Verified: 12/12 headless
+      lifecycle checks + a balance probe (steady, no cascade) + in-sim
+      (cards, red holds, tooltip crew row). Pre-ownership stand-in — Phase 5
+      swaps to player-driven crew (same scoping debt as AOG).
+
+## Phase 3 — COMPLETE (crew + AOG + weather all ported & verified)
 - [x] Aircraft tap-tooltip (hover has no touch equivalent — tap-to-select
       with a highlight ring, tap empty map to dismiss). Field order per
       the documented designer decision (Route → Tail → Type → Status →

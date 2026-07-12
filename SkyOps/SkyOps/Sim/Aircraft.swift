@@ -19,6 +19,7 @@ enum HoldReason {
     case weather   // ground stop at origin (departure) or dest (arrival)
     case rejoin    // easing out of the holding pattern back onto approach
     case aog       // grounded for unscheduled maintenance, awaiting decision
+    case crew      // no legal crew available to board
 }
 
 /// Things that happen inside Aircraft.advance() that the Simulation must act
@@ -27,6 +28,8 @@ enum HoldReason {
 enum AdvanceEvent {
     case aogHoldStarted     // held at the gate, needs an AOG decision card
     case aogRepairCompleted // timed standard repair finished on its own
+    case crewHoldStarted    // held at the gate, needs a CREW decision card
+    case crewHoldResolved    // crew became available, hold cleared
 }
 
 final class Aircraft: Identifiable {
@@ -61,6 +64,9 @@ final class Aircraft: Identifiable {
     var aogAutoClearTick: Int?
     var holdLogged: Bool = false
 
+    /// Assigned crew's id within its family pool (nil = none assigned yet).
+    var crewId: Int?
+
     init(tail: String, type: AircraftType, origin: Airport, dest: Airport,
          stateIndex: Int = FlightState.parked.rawValue, cyclesAccrued: Int = 0) {
         self.tail = tail
@@ -79,8 +85,15 @@ final class Aircraft: Identifiable {
     /// only fire at the transition boundary (stateTick >= duration - 1); every
     /// other tick clears holdReason and advances normally. Returns an event
     /// when the Simulation needs to push/clear a decision card.
+    /// `assignCrew` tries to take an available crew from this aircraft's family
+    /// pool (setting crewId, WITHOUT resetting its duty clock) → true on
+    /// success. `releaseCrew` returns the current crew to rest-or-available and
+    /// clears crewId. Both are injected by the Simulation, which owns the pools
+    /// — the aircraft stays free of pool knowledge (and stays headless-testable).
     @discardableResult
-    func advance(tick: Int) -> AdvanceEvent? {
+    func advance(tick: Int,
+                 assignCrew: (Aircraft) -> Bool = { _ in true },
+                 releaseCrew: (Aircraft) -> Void = { _ in }) -> AdvanceEvent? {
         // A scheduled "standard repair" (player-chosen) completes on its own
         // timer — the hold then clears through the normal gate below.
         var event: AdvanceEvent?
@@ -103,6 +116,22 @@ final class Aircraft: Identifiable {
                         return .aogHoldStarted
                     }
                     return event
+                }
+                // must have a legal crew before boarding
+                if crewId == nil {
+                    if assignCrew(self) {
+                        if holdReason == .crew { event = .crewHoldResolved }
+                        holdReason = nil
+                        holdLogged = false
+                        // fall through — the aircraft boards this tick
+                    } else {
+                        holdReason = .crew
+                        if !holdLogged {
+                            holdLogged = true
+                            return .crewHoldStarted
+                        }
+                        return event
+                    }
                 }
 
             case .taxiOut:
@@ -145,7 +174,10 @@ final class Aircraft: Identifiable {
         stateTick = 0
         let newState = state
 
-        if newState == .turnaround { cyclesAccrued += 1 }
+        if newState == .turnaround {
+            cyclesAccrued += 1
+            releaseCrew(self)   // duty done for this leg — rest or return to pool
+        }
         if newState == .parked { swap(&origin, &dest) }   // fly the return leg
         return event
     }
@@ -176,8 +208,8 @@ final class Aircraft: Identifiable {
                                    y: rejoinStart.y + (target.y - rejoinStart.y) * eased),
                     alt: 0.5 - eased * 0.2,
                     heading: FlightPath.lerpAngle(rejoinStartHeading, targetHeading, eased))
-            case .aog:
-                break   // AOG holds only happen at the gate (PARKED), not on approach
+            case .aog, .crew:
+                break   // AOG/crew holds only happen at the gate (PARKED), not on approach
             }
         }
 
