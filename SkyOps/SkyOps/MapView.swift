@@ -21,6 +21,8 @@ struct MapView: View {
     let tick: Int
     let cameraZoom: CGFloat
     let cameraCenter: CGPoint
+    /// Tap-selected aircraft (tooltip target) — gets a highlight ring.
+    let selectedID: UUID?
 
     // Per-phase colours, ported from the prototype.
     private let climbColor   = Color(red: 0x37/255, green: 0xFF/255, blue: 0xB0/255) // #37FFB0
@@ -175,6 +177,16 @@ struct MapView: View {
         for ac in sim.aircraft {
             let pos = ac.position(tick: tick)
             let color = ac.isHeld ? heldColor : color(for: ac.state)
+
+            // Selection ring (under the icon) so the tooltip's subject is
+            // unambiguous on a busy map.
+            if ac.id == selectedID {
+                let rr = ac.type.bodyType.iconLength * es * 0.9 + 5
+                ctx.stroke(
+                    Path(ellipseIn: CGRect(x: pos.point.x - rr, y: pos.point.y - rr,
+                                           width: rr * 2, height: rr * 2)),
+                    with: .color(.white.opacity(0.85)), lineWidth: 1.5)
+            }
 
             var g = ctx
             g.translateBy(x: pos.point.x, y: pos.point.y)

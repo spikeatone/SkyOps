@@ -131,6 +131,19 @@ final class Simulation {
         for ap in airports { ap.screen = project(ap.unit) }
     }
 
+    /// Nearest aircraft within `tolerance` screen points of a tap, or nil.
+    /// Lives in the sim layer (not the view) so the headless harness can
+    /// verify hit-testing without driving real touches.
+    func aircraft(atScreenPoint p: CGPoint, tolerance: CGFloat = 24) -> Aircraft? {
+        var best: (ac: Aircraft, d: CGFloat)?
+        for ac in aircraft {
+            let pos = ac.position(tick: tick).point
+            let d = hypot(pos.x - p.x, pos.y - p.y)
+            if d <= tolerance && d < (best?.d ?? .infinity) { best = (ac, d) }
+        }
+        return best?.ac
+    }
+
     // MARK: - Camera controls (driven by gestures / buttons)
 
     func pan(by delta: CGSize) {

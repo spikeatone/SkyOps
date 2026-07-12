@@ -126,6 +126,15 @@ as the work, not "later."
       the retrofit the prototype documents getting wrong once.
 - [ ] Crew pools per family + duty/rest (FAA Part 117 timings) + the
       boarding-gate crew gating + CREW decision cards.
+- [x] Aircraft tap-tooltip (hover has no touch equivalent — tap-to-select
+      with a highlight ring, tap empty map to dismiss). Field order per
+      the documented designer decision (Route → Tail → Type → Status →
+      Cycles); crew legal-hours and economy rows have marked slots in the
+      layout for when those systems land. DESIGN decision (designer
+      confirmed): functional dev-aesthetic now, single coherent Figma
+      restyle of ALL surfaces in Phase 4 when the data behind them is
+      real. Verified: headless hit-test checks (4/4 — exact hit,
+      tolerance, miss, nearest-wins) + visual in-sim (ring + card).
 - Note: with no ownership yet (Phase 5), AOG/crew/decisions will apply to
       the whole stress-test fleet for now; ownership-scoping comes later
       (see CLAUDE.md — the prototype had a real bug from that retrofit).

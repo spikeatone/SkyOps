@@ -18,28 +18,44 @@ struct ContentView: View {
     @State private var dragLast: CGSize = .zero
     @State private var magLast: CGFloat = 1
 
+    /// Tap-selected aircraft (tooltip subject). UI state, not sim state.
+    @State private var selectedID: UUID?
+
     private let speeds: [Double] = [1, 5, 10, 25]
     private let fleetSizes: [Int] = [10, 60, 120, 250]
 
     var body: some View {
+        // Resolve the selection every render — a shrunk fleet must not leave
+        // the tooltip pointing at an aircraft that no longer exists (same
+        // stale-reference family as the decision-card cleanup).
+        let selected = sim.aircraft.first(where: { $0.id == selectedID })
+
         ZStack(alignment: .top) {
             MapView(sim: sim,
                     tick: sim.tick,
                     cameraZoom: sim.cameraZoom,
-                    cameraCenter: sim.cameraCenter)
+                    cameraCenter: sim.cameraCenter,
+                    selectedID: selected?.id)
+                .gesture(tapGesture)
                 .gesture(panGesture.simultaneously(with: zoomGesture))
 
             hud
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
-            // Decision cards — the sim NEVER pauses for these (core design
-            // thesis). Stable Decision.id keeps SwiftUI diffing the cards
-            // instead of recreating them each tick — the SwiftUI idiom for
-            // the prototype's thrice-recurring "per-tick re-render destroys
-            // buttons" bug family. Don't key these off tick.
-            VStack {
+            // Bottom stack: aircraft tooltip (when selected), then decision
+            // cards — the sim NEVER pauses for any of these (core design
+            // thesis). Stable IDs keep SwiftUI diffing instead of recreating
+            // views each tick — the SwiftUI idiom for the prototype's
+            // thrice-recurring "per-tick re-render destroys buttons" bug
+            // family. Don't key these off tick.
+            VStack(spacing: 10) {
                 Spacer()
+                if let ac = selected {
+                    AircraftTooltip(aircraft: ac, tick: sim.tick) {
+                        selectedID = nil
+                    }
+                }
                 ForEach(sim.decisionQueue) { decision in
                     DecisionCard(decision: decision, sim: sim)
                 }
@@ -51,6 +67,15 @@ struct ContentView: View {
             // Start the async tick loop; it cancels when the view goes away.
             await sim.run()
         }
+    }
+
+    /// Tap: select the aircraft under the finger, or clear the selection when
+    /// tapping empty map.
+    private var tapGesture: some Gesture {
+        SpatialTapGesture()
+            .onEnded { v in
+                selectedID = sim.aircraft(atScreenPoint: v.location)?.id
+            }
     }
 
     // MARK: - Map gestures
@@ -190,6 +215,85 @@ struct DecisionCard: View {
         .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.96))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(heldColor.opacity(0.45), lineWidth: 1))
+    }
+}
+
+/// Tap-selected aircraft info card. Field ORDER follows the prototype's
+/// documented designer decision (Route → Tail → Type → Status → …). The crew
+/// legal-hours and Revenue/Fees/Operating-cost/Net rows slot in RIGHT HERE
+/// once the crew system and Phase 5 economy are ported — the layout is built
+/// to receive them, not to be rebuilt. Visual design is deliberately the dev
+/// aesthetic; the real Figma restyle is the Phase 4 pass (designer decision).
+struct AircraftTooltip: View {
+    let aircraft: Aircraft
+    let tick: Int            // changing value input — keeps status text live
+    let onClose: () -> Void
+
+    private let heldColor = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text("\(aircraft.origin.code) → \(aircraft.dest.code)")
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .padding(6)
+                }
+                .buttonStyle(.plain)
+            }
+            row("TAIL", aircraft.tail)
+            row("TYPE", aircraft.type.name)
+            row("STATUS", statusText, valueColor: aircraft.isHeld ? heldColor : .white)
+            row("CYCLES", cyclesText)
+            // ── crew legal hours row lands here (crew slice) ──
+            // ── revenue / fees / operating cost / net rows land here (Phase 5) ──
+        }
+        .foregroundStyle(.white)
+        .padding(12)
+        .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10)
+            .stroke(Color.white.opacity(0.18), lineWidth: 1))
+    }
+
+    private func row(_ label: String, _ value: String, valueColor: Color = .white) -> some View {
+        HStack(alignment: .top) {
+            Text(label)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .frame(width: 58, alignment: .leading)
+            Text(value)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(valueColor.opacity(0.92))
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var statusText: String {
+        switch aircraft.holdReason {
+        case .weather:
+            return aircraft.state == .approach
+                ? "HELD — holding pattern at \(aircraft.dest.code) (weather)"
+                : "HELD — ground stop at \(aircraft.origin.code)"
+        case .rejoin:  return "Rejoining approach at \(aircraft.dest.code)"
+        case .aog:     return "AOG — grounded at \(aircraft.origin.code)"
+        case nil:      return phaseLabel(aircraft.state)
+        }
+    }
+
+    private var cyclesText: String {
+        let pct = 100 * aircraft.cyclesAccrued / max(1, aircraft.type.expectedLifespanCycles)
+        return "\(aircraft.cyclesAccrued.formatted()) / \(aircraft.type.expectedLifespanCycles.formatted()) (\(pct)%)"
+    }
+
+    private func phaseLabel(_ state: FlightState) -> String {
+        String(describing: state)
+            .replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
+            .uppercased()
     }
 }
 
