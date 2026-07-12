@@ -105,8 +105,9 @@ struct MapView: View {
         ctx.fill(dots, with: .color(climbColor.opacity(0.85)))
         ctx.stroke(stopped, with: .color(heldColor.opacity(0.9)), lineWidth: 1.5)
 
-        // Labels — constant, legible size; pan/zoom separates dense clusters.
-        let fontSize = min(11, 8.5 * es)
+        // Labels — grow with zoom, reaching +15% over other elements at max
+        // zoom (their own labelScale) where legibility matters most.
+        let fontSize = min(13, 8.5 * sim.labelScale)
         for ap in sim.airports {
             let text = Text(ap.code)
                 .font(.system(size: fontSize, weight: .medium, design: .monospaced))

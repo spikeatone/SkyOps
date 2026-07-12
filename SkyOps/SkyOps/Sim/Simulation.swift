@@ -108,11 +108,21 @@ final class Simulation {
     /// range is anchored to a FIXED zoom span (not cameraMaxZoom) so raising
     /// the max zoom doesn't change how icons feel at the zoom levels the
     /// designer already tuned — extra zoom just keeps icons at the +15% cap.
+    private var elementGrowthEnd: CGFloat { defaultZoom * 2.5 }
+
     var elementScale: CGFloat {
         guard cameraZoom > defaultZoom else { return 1 }
-        let growthEnd = defaultZoom * 2.5   // reach +15% here; stay capped beyond
-        let t = min(1, (cameraZoom - defaultZoom) / (growthEnd - defaultZoom))
+        let t = min(1, (cameraZoom - defaultZoom) / (elementGrowthEnd - defaultZoom))
         return 1 + Simulation.elementZoomGrowthMax * t
+    }
+
+    /// Airport labels grow like other elements, PLUS an extra +15% that ramps
+    /// in between the element cap and the max zoom — so labels read 15% larger
+    /// than everything else at the highest zoom (designer request), where
+    /// there's room for it and legibility matters most.
+    var labelScale: CGFloat {
+        let extra = min(1, max(0, (cameraZoom - elementGrowthEnd) / (Simulation.cameraMaxZoom - elementGrowthEnd)))
+        return elementScale * (1 + Simulation.elementZoomGrowthMax * extra)
     }
 
     /// Recompute every airport's screen position (call each frame after
