@@ -36,9 +36,9 @@ final class Simulation {
     // camera maps unit→screen each frame. Default view frames the continental
     // US (resetCameraToConus); zoom clamps to [0.4×, 4×].
 
-    static let cameraMinZoom: CGFloat = 0.4   // out enough to see AK+HI+CONUS
-    static let cameraMaxZoom: CGFloat = 4      // in enough to separate NY/Bay clusters
-    private static let elementZoomGrowthMax: CGFloat = 0.15  // +15% at max zoom
+    static let cameraMinZoom: CGFloat = 0.4    // out enough to see AK+HI+CONUS
+    static let cameraMaxZoom: CGFloat = 14     // in close enough to inspect a single metro
+    private static let elementZoomGrowthMax: CGFloat = 0.15  // icon growth cap
 
     /// Zoom multiplier (× the whole-world fit). Observable → drives redraw.
     var cameraZoom: CGFloat = 1
@@ -104,11 +104,14 @@ final class Simulation {
     }
 
     /// Damped element-scale curve: airports/aircraft stay constant size up to
-    /// the default zoom, then grow modestly (+15% at max). Ported from
-    /// getMapElementVisualScale().
+    /// the default zoom, then grow modestly to +15% and hold there. The growth
+    /// range is anchored to a FIXED zoom span (not cameraMaxZoom) so raising
+    /// the max zoom doesn't change how icons feel at the zoom levels the
+    /// designer already tuned — extra zoom just keeps icons at the +15% cap.
     var elementScale: CGFloat {
         guard cameraZoom > defaultZoom else { return 1 }
-        let t = min(1, (cameraZoom - defaultZoom) / (Simulation.cameraMaxZoom - defaultZoom))
+        let growthEnd = defaultZoom * 2.5   // reach +15% here; stay capped beyond
+        let t = min(1, (cameraZoom - defaultZoom) / (growthEnd - defaultZoom))
         return 1 + Simulation.elementZoomGrowthMax * t
     }
 
