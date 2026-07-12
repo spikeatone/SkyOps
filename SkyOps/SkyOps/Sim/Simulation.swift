@@ -32,6 +32,21 @@ final class Simulation {
     private var lastLayoutSize: CGSize = .zero
     private var nextTailNum = 1
 
+    /// The unit→screen transform computed by the last layout(). Airports and
+    /// the basemap geometry both project through this, so nothing can drift
+    /// out of alignment (same principle as the prototype's shared projection).
+    struct MapTransform {
+        var scale: CGFloat = 1
+        var minX: CGFloat = 0
+        var minY: CGFloat = 0
+        var offsetX: CGFloat = 0
+        var offsetY: CGFloat = 0
+        func callAsFunction(_ u: CGPoint) -> CGPoint {
+            CGPoint(x: offsetX + (u.x - minX) * scale, y: offsetY + (u.y - minY) * scale)
+        }
+    }
+    private(set) var transform = MapTransform()
+
     init() {
         // Phase 2: the full 48-airport network and a stress-test fleet flying
         // real routes between them. These are stress-test aircraft (no
@@ -107,9 +122,10 @@ final class Simulation {
         let offsetX = padding + (usableW - contentW) / 2
         let offsetY = padding + (usableH - contentH) / 2
 
+        transform = MapTransform(scale: scale, minX: minX, minY: minY,
+                                 offsetX: offsetX, offsetY: offsetY)
         for ap in airports {
-            ap.screen = CGPoint(x: offsetX + (ap.unit.x - minX) * scale,
-                                y: offsetY + (ap.unit.y - minY) * scale)
+            ap.screen = transform(ap.unit)
         }
     }
 

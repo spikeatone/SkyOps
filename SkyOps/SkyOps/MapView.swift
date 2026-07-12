@@ -39,6 +39,7 @@ struct MapView: View {
         Canvas { ctx, size in
             sim.layout(in: size)
             drawGrid(ctx, size)
+            drawBasemap(ctx)
             drawRoutes(ctx)
             drawAirports(ctx)
             drawAircraft(ctx)
@@ -57,6 +58,40 @@ struct MapView: View {
         var y: CGFloat = 0
         while y < size.height { path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y)); y += spacing }
         ctx.stroke(path, with: .color(.white.opacity(0.03)), lineWidth: 1)
+    }
+
+    /// Real geography beneath the network: Canada (muted context) first, then
+    /// the U.S. nation outline (faint green fill + brighter stroke), then state
+    /// borders (fainter). Colours/order ported from drawGeographyLayers().
+    /// Every point projects through the same transform as the airports.
+    private func drawBasemap(_ ctx: GraphicsContext) {
+        let t = sim.transform
+        let map = Basemap.shared
+
+        func ringPath(_ rings: [[CGPoint]]) -> Path {
+            var path = Path()
+            for ring in rings where ring.count >= 2 {
+                path.move(to: t(ring[0]))
+                for i in 1..<ring.count { path.addLine(to: t(ring[i])) }
+                path.closeSubpath()
+            }
+            return path
+        }
+
+        // Canada — neutral gray context, behind everything.
+        ctx.stroke(ringPath(map.canada),
+                   with: .color(Color(red: 108/255, green: 127/255, blue: 143/255).opacity(0.20)),
+                   lineWidth: 1)
+
+        // U.S. nation outline — faint green fill + brighter stroke.
+        let nation = ringPath(map.nation)
+        ctx.fill(nation, with: .color(climbColor.opacity(0.025)))
+        ctx.stroke(nation, with: .color(climbColor.opacity(0.35)), lineWidth: 1.25)
+
+        // State borders — fainter still (context, not focal).
+        ctx.stroke(ringPath(map.states.flatMap { $0 }),
+                   with: .color(Color(red: 108/255, green: 127/255, blue: 143/255).opacity(0.25)),
+                   lineWidth: 0.75)
     }
 
     private func drawRoutes(_ ctx: GraphicsContext) {

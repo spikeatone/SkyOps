@@ -1200,6 +1200,22 @@ where numbers are involved.
   revenue/operating-cost/economic-event systems into Phase 2, but they
   pair more naturally with the Phase 5 economy + the hover-tooltip UI —
   not yet ported. Phase 2 covered scale + types + icons only.
+- **Basemap (continent outline + state lines) — PULLED FORWARD from
+  Phase 4** at the designer's request while looking at the map. Real
+  geometry (`US_NATION_RINGS`/`US_STATE_RINGS`/`CANADA_RINGS`) extracted
+  from the prototype into a bundled `Basemap.json` (~58KB: 26 nation
+  rings, 51 state features, 22 Canada rings), decoded + pre-projected to
+  unit space once in `Basemap.swift`, drawn beneath airports in
+  `MapView.drawBasemap` with the prototype's colours/layer order (Canada
+  muted gray → US nation faint-green fill+stroke → state borders fainter).
+  Projects through `Simulation.transform` (the shared unit→screen map
+  transform, now exposed) so it can't drift from the airports. The rest of
+  Phase 4 (pan/zoom camera, label decluttering, the Figma UI pass) is
+  still deferred — only the static basemap was pulled forward.
+- **Resource bundling works with synchronized groups**: dropping
+  `Basemap.json` in the app folder (under `Resources/`) auto-bundles it —
+  confirmed it lands in the built `.app` and `Bundle.main.url(forResource:)`
+  finds it. No pbxproj resource-phase editing needed, same as source files.
 
 ## Open / not yet decided
 
