@@ -1216,6 +1216,35 @@ where numbers are involved.
   `Basemap.json` in the app folder (under `Resources/`) auto-bundles it —
   confirmed it lands in the built `.app` and `Bundle.main.url(forResource:)`
   finds it. No pbxproj resource-phase editing needed, same as source files.
+- **Pan/zoom camera + airport labels — ALSO PULLED FORWARD from Phase 4**
+  (same session, designer focused on the map). The projection is now
+  camera-based: everything lives in unit space and `Simulation` maps
+  unit→screen via `{cameraZoom, cameraCenter}` each frame (`project`/`unit(fromScreen:)`).
+  Ported from the prototype's camera: default view frames CONUS
+  (`resetCameraToConus` math, 0.92 pad), zoom clamps to [0.4×, 4×], and a
+  damped `elementScale` keeps airports/aircraft legible (constant size to
+  default zoom, +15% at max) instead of ballooning. Gestures: `DragGesture`
+  → `pan`, `MagnifyGesture` (anchored at pinch start) → `zoom`, plus a
+  RESET VIEW button. Airport code labels now render (constant size), and
+  zooming separates the dense NE / Bay-Area clusters.
+- **Redraw on camera change uses the same value-input pattern as `tick`**:
+  `MapView` takes `cameraZoom`/`cameraCenter` as inputs (ContentView reads
+  them from the `@Observable` sim), so a pan/zoom re-renders immediately,
+  not on the next tick. Same fix family as the Phase 1 freeze bug.
+- **Default-framing robustness**: a transient launch/rotation viewport size
+  briefly mis-framed the map once. Fixed with `userAdjustedCamera` — the
+  view auto-re-frames CONUS on every size change UNTIL the user first
+  pans/zooms, so a bad transient size can't lock the wrong framing.
+  RESET VIEW clears the flag (re-enables auto-framing).
+- **Verification caveat**: pan/zoom RENDERING was verified (exact camera
+  values confirmed via an on-screen debug readout; a forced zoomed-in view
+  confirmed basemap scaling + label separation + non-ballooning icons). The
+  live GESTURE input was NOT driven end-to-end — the user declined
+  Simulator control for computer-use — so the drag/pinch handlers
+  themselves are only verified by inspection, not by a real gesture.
+  Designer to confirm interactively. Still NOT built: leader-line label
+  decluttering (labels overlap at default zoom, rely on zoom to separate)
+  and the Figma UI pass.
 
 ## Open / not yet decided
 

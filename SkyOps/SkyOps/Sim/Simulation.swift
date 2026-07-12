@@ -29,23 +29,120 @@ final class Simulation {
     /// aircraft visibly steps every 250 ms, which is expected, not a bug).
     var speed: Double = 5
 
-    private var lastLayoutSize: CGSize = .zero
     private var nextTailNum = 1
 
-    /// The unit→screen transform computed by the last layout(). Airports and
-    /// the basemap geometry both project through this, so nothing can drift
-    /// out of alignment (same principle as the prototype's shared projection).
-    struct MapTransform {
-        var scale: CGFloat = 1
-        var minX: CGFloat = 0
-        var minY: CGFloat = 0
-        var offsetX: CGFloat = 0
-        var offsetY: CGFloat = 0
-        func callAsFunction(_ u: CGPoint) -> CGPoint {
-            CGPoint(x: offsetX + (u.x - minX) * scale, y: offsetY + (u.y - minY) * scale)
+    // MARK: - Camera (pan / zoom), ported from the prototype's camera model.
+    // Everything on the map lives in resolution-independent "unit" space; the
+    // camera maps unit→screen each frame. Default view frames the continental
+    // US (resetCameraToConus); zoom clamps to [0.4×, 4×].
+
+    static let cameraMinZoom: CGFloat = 0.4   // out enough to see AK+HI+CONUS
+    static let cameraMaxZoom: CGFloat = 4      // in enough to separate NY/Bay clusters
+    private static let elementZoomGrowthMax: CGFloat = 0.15  // +15% at max zoom
+
+    /// Zoom multiplier (× the whole-world fit). Observable → drives redraw.
+    var cameraZoom: CGFloat = 1
+    /// Unit-space point shown at screen centre. Observable → drives redraw.
+    var cameraCenter: CGPoint = .zero
+
+    private var viewport: CGSize = .zero
+    private var worldScale: CGFloat = 1     // px per unit at zoom = 1 (whole world fits)
+    private(set) var defaultZoom: CGFloat = 1
+    /// Set once the user pans/zooms. Until then the view auto-frames CONUS on
+    /// every size change, so a transient launch/rotation size can't lock the
+    /// camera to the wrong framing.
+    private var userAdjustedCamera = false
+
+    // World and CONUS-frame extents in unit space (computed once).
+    private static let worldUnitSize: CGSize = {
+        let br = GeoProjection.unit(lat: GeoProjection.latMin, lon: GeoProjection.lonMax)
+        return CGSize(width: br.x, height: br.y)   // top-left projects to (0,0)
+    }()
+    private static let conusFrame: (origin: CGPoint, size: CGSize, center: CGPoint) = {
+        let tl = GeoProjection.unit(lat: 49.5, lon: -125)
+        let br = GeoProjection.unit(lat: 24.5, lon: -66.5)
+        let size = CGSize(width: br.x - tl.x, height: br.y - tl.y)
+        return (tl, size, CGPoint(x: (tl.x + br.x) / 2, y: (tl.y + br.y) / 2))
+    }()
+
+    /// Ensure the camera is configured for the current viewport. Recomputes the
+    /// whole-world scale and the CONUS-fit default zoom on size change; frames
+    /// CONUS on first configure. Ported from resetCameraToConus() semantics.
+    func configure(viewport size: CGSize) {
+        guard size.width > 0, size.height > 0 else { return }
+        if size != viewport {
+            viewport = size
+            let w = Simulation.worldUnitSize
+            worldScale = min(size.width / w.width, size.height / w.height)
+            let conus = Simulation.conusFrame
+            let fit = min(size.width / (conus.size.width * worldScale),
+                          size.height / (conus.size.height * worldScale)) * 0.92
+            defaultZoom = min(Simulation.cameraMaxZoom, max(Simulation.cameraMinZoom, fit))
+            // Auto-frame CONUS until the user takes manual control.
+            if !userAdjustedCamera {
+                cameraZoom = defaultZoom
+                cameraCenter = conus.center
+            }
         }
     }
-    private(set) var transform = MapTransform()
+
+    private var pixelsPerUnit: CGFloat { worldScale * cameraZoom }
+    private var viewportCentre: CGPoint { CGPoint(x: viewport.width / 2, y: viewport.height / 2) }
+
+    /// Unit → screen for the current camera. Airports and basemap both use this.
+    func project(_ u: CGPoint) -> CGPoint {
+        let ppu = pixelsPerUnit
+        return CGPoint(x: (u.x - cameraCenter.x) * ppu + viewportCentre.x,
+                       y: (u.y - cameraCenter.y) * ppu + viewportCentre.y)
+    }
+
+    /// Screen → unit (inverse), for gesture anchoring.
+    func unit(fromScreen s: CGPoint) -> CGPoint {
+        let ppu = pixelsPerUnit
+        return CGPoint(x: (s.x - viewportCentre.x) / ppu + cameraCenter.x,
+                       y: (s.y - viewportCentre.y) / ppu + cameraCenter.y)
+    }
+
+    /// Damped element-scale curve: airports/aircraft stay constant size up to
+    /// the default zoom, then grow modestly (+15% at max). Ported from
+    /// getMapElementVisualScale().
+    var elementScale: CGFloat {
+        guard cameraZoom > defaultZoom else { return 1 }
+        let t = min(1, (cameraZoom - defaultZoom) / (Simulation.cameraMaxZoom - defaultZoom))
+        return 1 + Simulation.elementZoomGrowthMax * t
+    }
+
+    /// Recompute every airport's screen position (call each frame after
+    /// configure, since the camera can change between frames).
+    func projectAirports() {
+        for ap in airports { ap.screen = project(ap.unit) }
+    }
+
+    // MARK: - Camera controls (driven by gestures / buttons)
+
+    func pan(by delta: CGSize) {
+        userAdjustedCamera = true
+        let ppu = pixelsPerUnit
+        cameraCenter.x -= delta.width / ppu
+        cameraCenter.y -= delta.height / ppu
+    }
+
+    /// Multiply zoom by `factor`, keeping the unit point under `anchor` fixed.
+    func zoom(by factor: CGFloat, anchor: CGPoint) {
+        userAdjustedCamera = true
+        let anchorUnit = unit(fromScreen: anchor)
+        cameraZoom = min(Simulation.cameraMaxZoom, max(Simulation.cameraMinZoom, cameraZoom * factor))
+        // keep anchorUnit projecting back to `anchor`
+        let ppu = pixelsPerUnit
+        cameraCenter = CGPoint(x: anchorUnit.x - (anchor.x - viewportCentre.x) / ppu,
+                               y: anchorUnit.y - (anchor.y - viewportCentre.y) / ppu)
+    }
+
+    func resetCamera() {
+        userAdjustedCamera = false
+        cameraZoom = defaultZoom
+        cameraCenter = Simulation.conusFrame.center
+    }
 
     init() {
         // Phase 2: the full 48-airport network and a stress-test fleet flying
@@ -87,47 +184,6 @@ final class Simulation {
     }
 
     var fleetCount: Int { aircraft.count }
-
-    // MARK: - Layout
-
-    /// Fit every airport's projected world-unit position into `size` (pixels)
-    /// with padding, preserving aspect ratio. Mirrors the prototype projecting
-    /// into canvas pixels; the flight-path math then works in this pixel space.
-    func layout(in size: CGSize) {
-        guard size.width > 0, size.height > 0 else { return }
-        if size == lastLayoutSize { return }
-        lastLayoutSize = size
-
-        let padding: CGFloat = 80
-        let usableW = max(1, size.width - padding * 2)
-        let usableH = max(1, size.height - padding * 2)
-
-        // Frame continental US by default (like the prototype's
-        // resetCameraToConus). ANC/HNL are geographic outliers that would
-        // squish CONUS into a tiny cluster if included in the bounds; they
-        // still render, just off the framed area until the Phase 4 pan/zoom
-        // camera lands. All airports are positioned with the SAME scale/offset.
-        let framed = airports.filter { $0.code != "ANC" && $0.code != "HNL" }
-        let xs = framed.map { $0.unit.x }
-        let ys = framed.map { $0.unit.y }
-        let minX = xs.min() ?? 0, maxX = xs.max() ?? 1
-        let minY = ys.min() ?? 0, maxY = ys.max() ?? 1
-        let spanX = max(0.0001, maxX - minX)
-        let spanY = max(0.0001, maxY - minY)
-
-        let scale = min(usableW / spanX, usableH / spanY)
-        // centre the fitted content
-        let contentW = spanX * scale
-        let contentH = spanY * scale
-        let offsetX = padding + (usableW - contentW) / 2
-        let offsetY = padding + (usableH - contentH) / 2
-
-        transform = MapTransform(scale: scale, minX: minX, minY: minY,
-                                 offsetX: offsetX, offsetY: offsetY)
-        for ap in airports {
-            ap.screen = transform(ap.unit)
-        }
-    }
 
     // MARK: - Tick
 

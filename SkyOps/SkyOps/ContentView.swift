@@ -14,12 +14,20 @@ import SwiftUI
 struct ContentView: View {
     @State private var sim = Simulation()
 
+    // Gesture accumulators (cumulative values → per-frame deltas).
+    @State private var dragLast: CGSize = .zero
+    @State private var magLast: CGFloat = 1
+
     private let speeds: [Double] = [1, 5, 10, 25]
     private let fleetSizes: [Int] = [10, 60, 120, 250]
 
     var body: some View {
         ZStack(alignment: .top) {
-            MapView(sim: sim, tick: sim.tick)
+            MapView(sim: sim,
+                    tick: sim.tick,
+                    cameraZoom: sim.cameraZoom,
+                    cameraCenter: sim.cameraCenter)
+                .gesture(panGesture.simultaneously(with: zoomGesture))
 
             hud
                 .padding(.horizontal, 16)
@@ -29,6 +37,29 @@ struct ContentView: View {
             // Start the async tick loop; it cancels when the view goes away.
             await sim.run()
         }
+    }
+
+    // MARK: - Map gestures
+
+    private var panGesture: some Gesture {
+        DragGesture()
+            .onChanged { v in
+                let delta = CGSize(width: v.translation.width - dragLast.width,
+                                   height: v.translation.height - dragLast.height)
+                sim.pan(by: delta)
+                dragLast = v.translation
+            }
+            .onEnded { _ in dragLast = .zero }
+    }
+
+    private var zoomGesture: some Gesture {
+        MagnifyGesture()
+            .onChanged { v in
+                let factor = v.magnification / magLast
+                sim.zoom(by: factor, anchor: v.startLocation)
+                magLast = v.magnification
+            }
+            .onEnded { _ in magLast = 1 }
     }
 
     private var hud: some View {
@@ -53,6 +84,15 @@ struct ContentView: View {
                 controlRow(fleetSizes, isActive: { sim.fleetCount == $0 }, label: { "\($0)" }) {
                     sim.setFleetSize($0)
                 }
+                Spacer()
+                Button { sim.resetCamera() } label: {
+                    Text("RESET VIEW")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .padding(.vertical, 5).padding(.horizontal, 8)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
             }
         }
         .foregroundStyle(.white)
