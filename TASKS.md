@@ -79,11 +79,31 @@ as the work, not "later."
      about. Same lesson as the prototype's `operatingCost` ReferenceError:
      build success ≠ correct behaviour; drive it in the simulator.
 
-## Up next (Phase 2 — multi-aircraft + fleet types)
+## Phase 2 — mostly DONE (multi-aircraft + fleet types)
 
-- [ ] Scale to full fleet; port AIRCRAFT_TYPES (30 types / 15 crew
-      families) + the 4 real icon tiers + revenue/cost/economic-event
-      systems. See ROADMAP Phase 2 (bigger than its original framing).
+- [x] Scale to full fleet. Verified: 250 aircraft render and tick at the
+      full ~20 ticks/sec (5×) in the simulator, no drops. Fleet-size
+      control (10/60/120/250) in the HUD.
+- [x] Port AIRCRAFT_TYPES — 30 real variants / 15 crew families, verbatim,
+      with real-world-proportional weighted spawn (`pickWeighted`) and
+      BodyType tiers (`AircraftType.swift`). 48-airport network ported too
+      (`Airport.swift`), with `randomPair()` routing.
+- [x] The 4 real icon tiers — real Figma vector paths render via a small
+      SVG-path parser (`SVGPath.swift` + `AircraftIcon.swift`), scaled per
+      tier and oriented by heading, replacing the placeholder triangles.
+      Verified in-sim: recognizable aircraft silhouettes, tiers distinct
+      by size. See CLAUDE.md native-port section.
+- [ ] NOT YET (deferred within Phase 2 — these are the economy layer the
+      ROADMAP folded in): real load-factor × fare revenue formula, real
+      per-flight operating cost, and the randomized economic-event system.
+      These pair naturally with the Phase 5 economy work and the
+      hover-tooltip UI; sequence them next or fold into Phase 5.
+
+## Up next
+
+- [ ] Decide ordering: Phase 3 (crew / AOG / weather systems) vs. the
+      deferred Phase 2 economy (revenue/cost/economic events). Both port
+      from validated prototype logic. See ROADMAP.
 
 ## Blocked
 

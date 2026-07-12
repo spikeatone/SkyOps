@@ -1179,6 +1179,27 @@ where numbers are involved.
   (`node --check` passed it). Drive the app in the simulator
   (`xcrun simctl` install/launch/screenshot) and actually WATCH the
   behavior before calling a phase done. This caught the freeze bug.
+- **Phase 2 (multi-aircraft + fleet + icons) — DONE.** Ported the full
+  fleet data as Swift structs (`AircraftType.all` = 30 variants, weighted
+  `pickWeighted`; `Airport.all` = 48 airports with real fee/ground-stop
+  fields). Stress-test fleet spawns weighted/staggered via `setFleetSize`
+  (10–250). Verified 250 aircraft tick at the full rate with no drops —
+  Canvas + tick-driven redraw scales fine. The 4 real Figma icon tiers
+  render via a hand-written `SVGPath.parse()` (M/L/H/V/C/Z, absolute +
+  relative, handles scientific-notation numbers like `4.8e-06`; no arcs/
+  shorthands — the icons don't use them) → SwiftUI `Path`, cached once in
+  `AircraftIcon.byBodyType`, scaled per-tier by `targetLength/viewBoxWidth`
+  and recentred, nose authored toward +x so `rotate(heading)` aims it. Same
+  transform order as the prototype's `drawAircraft`.
+- **Default map framing = continental US** (`Simulation.layout` excludes
+  ANC/HNL from the fit bounds, like the prototype's `resetCameraToConus`).
+  There is NO camera/pan-zoom yet — that's Phase 4; until then ANC/HNL
+  render off the framed area and AK/HI-bound flights fly off-screen. This
+  is expected, not a bug.
+- **Deferred out of Phase 2 into the economy work**: the ROADMAP folded
+  revenue/operating-cost/economic-event systems into Phase 2, but they
+  pair more naturally with the Phase 5 economy + the hover-tooltip UI —
+  not yet ported. Phase 2 covered scale + types + icons only.
 
 ## Open / not yet decided
 

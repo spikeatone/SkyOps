@@ -86,20 +86,28 @@ struct MapView: View {
             let pos = ac.position
             let color = color(for: ac.state)
 
-            // Triangle sized by body-type tier (RJ < narrowbody < 2-engine
-            // widebody < 4-engine), pointing along +x then rotated to heading.
-            // Slice 2 replaces these with the real Figma vector icons.
-            let len = ac.type.bodyType.iconLength
-            var tri = Path()
-            tri.move(to: CGPoint(x: len * 0.55, y: 0))
-            tri.addLine(to: CGPoint(x: -len * 0.45, y: len * 0.32))
-            tri.addLine(to: CGPoint(x: -len * 0.45, y: -len * 0.32))
-            tri.closeSubpath()
+            // Base transform: pivot on the aircraft position, rotate to heading
+            // (icons are authored nose-toward +x). Same order as the prototype.
+            var g = ctx
+            g.translateBy(x: pos.point.x, y: pos.point.y)
+            g.rotate(by: .radians(pos.heading))
 
-            var transform = ctx
-            transform.translateBy(x: pos.point.x, y: pos.point.y)
-            transform.rotate(by: .radians(pos.heading))
-            transform.fill(tri, with: .color(color))
+            if let icon = AircraftIcon.byBodyType[ac.type.bodyType] {
+                // Real Figma vector icon: scale into map space, recentre on its
+                // viewBox, fill with the phase colour.
+                g.scaleBy(x: icon.scale, y: icon.scale)
+                g.translateBy(x: -icon.center.x, y: -icon.center.y)
+                g.fill(icon.path, with: .color(color))
+            } else {
+                // Fallback triangle, sized by body-type tier.
+                let len = ac.type.bodyType.iconLength
+                var tri = Path()
+                tri.move(to: CGPoint(x: len * 0.55, y: 0))
+                tri.addLine(to: CGPoint(x: -len * 0.45, y: len * 0.32))
+                tri.addLine(to: CGPoint(x: -len * 0.45, y: -len * 0.32))
+                tri.closeSubpath()
+                g.fill(tri, with: .color(color))
+            }
         }
     }
 
