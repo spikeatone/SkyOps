@@ -17,6 +17,10 @@ struct ContentView: View {
     // Gesture accumulators (cumulative values → per-frame deltas).
     @State private var dragLast: CGSize = .zero
     @State private var magLast: CGFloat = 1
+    /// True once a touch has moved far enough to be a pan (vs a tap). Tracked
+    /// so ONE gesture handles both — separate tap + drag recognizers fought
+    /// each other (the tap fired, then the drag cleared it: "flash then gone").
+    @State private var isDragging = false
 
     /// Tap-selected aircraft (tooltip subject). UI state, not sim state.
     @State private var selectedID: UUID?
@@ -36,8 +40,7 @@ struct ContentView: View {
                     cameraZoom: sim.cameraZoom,
                     cameraCenter: sim.cameraCenter,
                     selectedID: selected?.id)
-                .gesture(tapGesture)
-                .gesture(panGesture.simultaneously(with: zoomGesture))
+                .gesture(dragOrTapGesture.simultaneously(with: zoomGesture))
 
             hud
                 .padding(.horizontal, 16)
@@ -69,26 +72,33 @@ struct ContentView: View {
         }
     }
 
-    /// Tap: select the aircraft under the finger, or clear the selection when
-    /// tapping empty map.
-    private var tapGesture: some Gesture {
-        SpatialTapGesture()
-            .onEnded { v in
-                selectedID = sim.aircraft(atScreenPoint: v.location)?.id
-            }
-    }
-
     // MARK: - Map gestures
 
-    private var panGesture: some Gesture {
-        DragGesture()
+    /// One gesture for both pan and tap-select, so they can't fight. A touch
+    /// that moves past the threshold pans; a touch that ends without moving is
+    /// a tap → select the aircraft under it (or clear on empty map).
+    private var dragOrTapGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
             .onChanged { v in
-                let delta = CGSize(width: v.translation.width - dragLast.width,
-                                   height: v.translation.height - dragLast.height)
-                sim.pan(by: delta)
-                dragLast = v.translation
+                if !isDragging, hypot(v.translation.width, v.translation.height) > 8 {
+                    isDragging = true
+                    dragLast = v.translation        // no jump on the frame it flips
+                }
+                if isDragging {
+                    let delta = CGSize(width: v.translation.width - dragLast.width,
+                                       height: v.translation.height - dragLast.height)
+                    sim.pan(by: delta)
+                    dragLast = v.translation
+                }
             }
-            .onEnded { _ in dragLast = .zero }
+            .onEnded { v in
+                if !isDragging {
+                    // genuine tap — set the selection exactly once
+                    selectedID = sim.aircraft(atScreenPoint: v.location)?.id
+                }
+                isDragging = false
+                dragLast = .zero
+            }
     }
 
     private var zoomGesture: some Gesture {

@@ -1289,6 +1289,32 @@ where numbers are involved.
   port (crew duty/rest is next and is exactly the kind of logic it
   catches).
 
+- **Aircraft tap-tooltip — DONE, and a real gesture bug shipped twice
+  before a fix stuck.** Tap-to-select (highlight ring + bottom card), tap
+  empty to dismiss, field order per the documented designer decision
+  (Route → Tail → Type → Status → Cycles) with marked slots for the crew
+  and economy rows. THE BUG: tap + pan were TWO separate recognizers
+  (`.onTapGesture` / `SpatialTapGesture` alongside `.gesture(DragGesture)`).
+  They fought — the tap fired then the drag machinery cleared it, exactly
+  the user's "flashes up then it's gone." First remote fix (swap
+  SpatialTap→onTapGesture) also failed. THE FIX THAT WORKS: ONE
+  `DragGesture(minimumDistance: 0)` that decides tap-vs-pan itself —
+  movement > 8pt = pan, ended-without-moving = tap → hit-test at
+  `v.location`. Simultaneous with the magnify gesture; nothing else
+  competes. **Lesson for every future map interaction: don't stack a tap
+  recognizer next to the pan recognizer — extend the ONE drag gesture.**
+- **Gesture bugs are invisible to the headless harness — they need a real
+  driven gesture.** The hit-test logic passed 4/4 headless checks and was
+  fine; the bug was 100% in SwiftUI gesture COMPOSITION, which only
+  surfaces through an actual tap. Verified the fix by driving the
+  Simulator via computer-use (an on-screen tap-debug readout —
+  `tap (x,y) → HIT/miss · sel yes/no` — pinpointed it as a hit that was
+  immediately cleared, not a miss). When a UI-interaction bug resists
+  reasoning, add a temporary on-screen state readout and drive it, rather
+  than shipping another blind fix. (The user initially declined Simulator
+  control, then granted it once the on-screen readout wasn't enough — ask
+  for it when a gesture genuinely can't be verified any other way.)
+
 ## Open / not yet decided
 
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on
