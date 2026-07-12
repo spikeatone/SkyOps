@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var sim = Simulation()
 
     private let speeds: [Double] = [1, 5, 10, 25]
+    private let fleetSizes: [Int] = [10, 60, 120, 250]
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -31,48 +32,56 @@ struct ContentView: View {
     }
 
     private var hud: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("SkyOps")
-                    .font(.system(size: 15, weight: .bold, design: .monospaced))
-                Text("tick \(sim.tick)")
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                if let ac = sim.aircraft.first {
-                    Text("\(ac.tail)  \(ac.origin.code)→\(ac.dest.code)  \(phaseLabel(ac.state))")
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("SkyOps")
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    Text("tick \(sim.tick)  ·  \(sim.fleetCount) aircraft")
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
+                Spacer()
+                controlRow(speeds, isActive: { sim.speed == $0 }, label: speedLabel) {
+                    sim.speed = $0
+                }
             }
-
-            Spacer()
-
-            HStack(spacing: 6) {
-                ForEach(speeds, id: \.self) { s in
-                    Button {
-                        sim.speed = s
-                    } label: {
-                        Text(speedLabel(s))
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .frame(minWidth: 34)
-                            .padding(.vertical, 5)
-                            .background(sim.speed == s ? Color.accentColor.opacity(0.85)
-                                                       : Color.white.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
-                    .buttonStyle(.plain)
+            HStack {
+                Text("FLEET")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                controlRow(fleetSizes, isActive: { sim.fleetCount == $0 }, label: { "\($0)" }) {
+                    sim.setFleetSize($0)
                 }
             }
         }
         .foregroundStyle(.white)
     }
 
-    private func speedLabel(_ s: Double) -> String {
-        s == s.rounded() ? "\(Int(s))×" : "\(s)×"
+    /// A row of pill buttons for a set of values.
+    private func controlRow<T: Hashable>(_ values: [T],
+                                         isActive: @escaping (T) -> Bool,
+                                         label: @escaping (T) -> String,
+                                         action: @escaping (T) -> Void) -> some View {
+        HStack(spacing: 6) {
+            ForEach(values, id: \.self) { v in
+                Button { action(v) } label: {
+                    Text(label(v))
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .frame(minWidth: 34)
+                        .padding(.vertical, 5)
+                        .padding(.horizontal, 2)
+                        .background(isActive(v) ? Color.accentColor.opacity(0.85)
+                                                : Color.white.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
-    private func phaseLabel(_ state: FlightState) -> String {
-        String(describing: state).uppercased()
+    private func speedLabel(_ s: Double) -> String {
+        s == s.rounded() ? "\(Int(s))×" : "\(s)×"
     }
 }
 

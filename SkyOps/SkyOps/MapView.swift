@@ -59,27 +59,26 @@ struct MapView: View {
     }
 
     private func drawRoutes(_ ctx: GraphicsContext) {
+        // One faint arc per aircraft's current leg — conveys the network
+        // without dominating the map at high fleet counts.
+        var arcs = Path()
         for ac in sim.aircraft {
             let pp = FlightPath.pathPoints(origin: ac.origin.screen, dest: ac.dest.screen)
-            var arc = Path()
-            arc.move(to: pp.start)
-            arc.addQuadCurve(to: pp.end, control: pp.mid)
-            ctx.stroke(arc, with: .color(cruiseColor.opacity(0.18)),
-                       style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
+            arcs.move(to: pp.start)
+            arcs.addQuadCurve(to: pp.end, control: pp.mid)
         }
+        ctx.stroke(arcs, with: .color(cruiseColor.opacity(0.07)), lineWidth: 1)
     }
 
     private func drawAirports(_ ctx: GraphicsContext) {
+        // All 48 airports as small dots. Real label decluttering / leader
+        // lines are a Phase 4 (map) concern; here they'd just overlap.
+        var dots = Path()
+        let r: CGFloat = 3.5
         for ap in sim.airports {
-            let r: CGFloat = 5
-            let rect = CGRect(x: ap.screen.x - r, y: ap.screen.y - r, width: r * 2, height: r * 2)
-            ctx.fill(Path(ellipseIn: rect), with: .color(climbColor))
-            ctx.stroke(Path(ellipseIn: rect.insetBy(dx: -3, dy: -3)),
-                       with: .color(climbColor.opacity(0.4)), lineWidth: 1)
-            let text = Text(ap.code).font(.system(size: 12, weight: .semibold, design: .monospaced))
-                .foregroundColor(.white.opacity(0.85))
-            ctx.draw(text, at: CGPoint(x: ap.screen.x, y: ap.screen.y - 16), anchor: .center)
+            dots.addEllipse(in: CGRect(x: ap.screen.x - r, y: ap.screen.y - r, width: r * 2, height: r * 2))
         }
+        ctx.fill(dots, with: .color(climbColor.opacity(0.85)))
     }
 
     private func drawAircraft(_ ctx: GraphicsContext) {
@@ -87,12 +86,14 @@ struct MapView: View {
             let pos = ac.position
             let color = color(for: ac.state)
 
-            // triangle pointing along +x, then rotated to heading
-            let s: CGFloat = 9
+            // Triangle sized by body-type tier (RJ < narrowbody < 2-engine
+            // widebody < 4-engine), pointing along +x then rotated to heading.
+            // Slice 2 replaces these with the real Figma vector icons.
+            let len = ac.type.bodyType.iconLength
             var tri = Path()
-            tri.move(to: CGPoint(x: s, y: 0))
-            tri.addLine(to: CGPoint(x: -s * 0.7, y: s * 0.6))
-            tri.addLine(to: CGPoint(x: -s * 0.7, y: -s * 0.6))
+            tri.move(to: CGPoint(x: len * 0.55, y: 0))
+            tri.addLine(to: CGPoint(x: -len * 0.45, y: len * 0.32))
+            tri.addLine(to: CGPoint(x: -len * 0.45, y: -len * 0.32))
             tri.closeSubpath()
 
             var transform = ctx

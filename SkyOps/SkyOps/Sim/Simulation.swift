@@ -1,13 +1,13 @@
 //
 //  Simulation.swift
-//  SkyOps — Phase 1
+//  SkyOps — Phase 1–2
 //
 //  Owns the world (airports + aircraft) and the tick clock. The tick loop is a
 //  Swift-Concurrency async task, decoupled from the render frame rate exactly
 //  like the prototype's requestAnimationFrame accumulator: 1 tick = BASE_TICK_MS
 //  of real time at 1× speed, divided by the speed multiplier, capped at 50
-//  catch-up ticks per wake so a stall can't spiral. The view renders every
-//  frame (TimelineView) and just reads whatever position the sim is currently at.
+//  catch-up ticks per wake so a stall can't spiral. The view re-renders on each
+//  tick (MapView takes `tick` as a value input) and reads current positions.
 //
 
 import Foundation
@@ -30,14 +30,48 @@ final class Simulation {
     var speed: Double = 5
 
     private var lastLayoutSize: CGSize = .zero
+    private var nextTailNum = 1
 
     init() {
-        // Phase 1: two real airports and one aircraft flying the route between.
-        let sfo = Airport(code: "SFO", lat: 37.6213, lon: -122.3790)
-        let jfk = Airport(code: "JFK", lat: 40.6413, lon: -73.7781)
-        airports = [sfo, jfk]
-        aircraft = [Aircraft(tail: "SKY001", origin: sfo, dest: jfk)]
+        // Phase 2: the full 48-airport network and a stress-test fleet flying
+        // real routes between them. These are stress-test aircraft (no
+        // ownership/economy yet — that's Phase 5); each gets a weighted-random
+        // type, a random city pair it flies back and forth, and a staggered
+        // start so the fleet isn't synchronized.
+        airports = Airport.all
+        setFleetSize(60)
     }
+
+    // MARK: - Fleet
+
+    /// Spawn one stress-test aircraft — weighted type, random route, staggered
+    /// start. Ported from makeAircraft().
+    private func makeAircraft() -> Aircraft {
+        let type = AircraftType.pickWeighted()
+        let (origin, dest) = Airport.randomPair()
+        let tail = "N\(nextTailNum)SK"
+        nextTailNum += 1
+        return Aircraft(tail: tail,
+                        type: type,
+                        origin: origin,
+                        dest: dest,
+                        stateIndex: Int.random(in: 0..<FlightState.allCases.count),
+                        cyclesAccrued: Int.random(in: 0..<Int(Double(type.expectedLifespanCycles) * 0.9)))
+    }
+
+    /// Grow or shrink the fleet to `n` (stress-test control; all aircraft are
+    /// non-owned so a plain trim is fine — the purchased-vs-spawn distinction
+    /// arrives with the Phase 5 economy).
+    func setFleetSize(_ n: Int) {
+        let target = max(0, n)
+        if target < aircraft.count {
+            aircraft.removeLast(aircraft.count - target)
+        } else {
+            while aircraft.count < target { aircraft.append(makeAircraft()) }
+        }
+    }
+
+    var fleetCount: Int { aircraft.count }
 
     // MARK: - Layout
 
@@ -53,8 +87,14 @@ final class Simulation {
         let usableW = max(1, size.width - padding * 2)
         let usableH = max(1, size.height - padding * 2)
 
-        let xs = airports.map { $0.unit.x }
-        let ys = airports.map { $0.unit.y }
+        // Frame continental US by default (like the prototype's
+        // resetCameraToConus). ANC/HNL are geographic outliers that would
+        // squish CONUS into a tiny cluster if included in the bounds; they
+        // still render, just off the framed area until the Phase 4 pan/zoom
+        // camera lands. All airports are positioned with the SAME scale/offset.
+        let framed = airports.filter { $0.code != "ANC" && $0.code != "HNL" }
+        let xs = framed.map { $0.unit.x }
+        let ys = framed.map { $0.unit.y }
         let minX = xs.min() ?? 0, maxX = xs.max() ?? 1
         let minY = ys.min() ?? 0, maxY = ys.max() ?? 1
         let spanX = max(0.0001, maxX - minX)

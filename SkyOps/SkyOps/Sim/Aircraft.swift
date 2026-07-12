@@ -15,6 +15,7 @@ import CoreGraphics
 final class Aircraft: Identifiable {
     let id = UUID()
     let tail: String
+    let type: AircraftType
 
     var origin: Airport
     var dest: Airport
@@ -25,10 +26,14 @@ final class Aircraft: Identifiable {
     /// One completed turnaround = one flight cycle (takeoff + landing).
     var cyclesAccrued: Int = 0
 
-    init(tail: String, origin: Airport, dest: Airport) {
+    init(tail: String, type: AircraftType, origin: Airport, dest: Airport,
+         stateIndex: Int = FlightState.parked.rawValue, cyclesAccrued: Int = 0) {
         self.tail = tail
+        self.type = type
         self.origin = origin
         self.dest = dest
+        self.stateIndex = stateIndex
+        self.cyclesAccrued = cyclesAccrued
     }
 
     var state: FlightState { FlightState(rawValue: stateIndex)! }
