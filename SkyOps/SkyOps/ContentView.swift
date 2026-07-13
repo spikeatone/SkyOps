@@ -16,20 +16,22 @@ struct ContentView: View {
     @State private var tab = 0
 
     var body: some View {
-        TabView(selection: $tab) {
-            NetworkView(sim: sim)
-                .tabItem { Label("Network", systemImage: "point.topleft.down.to.point.bottomright.curvepath") }
-                .tag(0)
-            placeholder("Fleet", "airplane")
-                .tabItem { Label("Fleet", systemImage: "airplane") }.tag(1)
-            placeholder("Crews", "person.2.fill")
-                .tabItem { Label("Crews", systemImage: "person.2.fill") }.tag(2)
-            placeholder("Ops", "list.clipboard.fill")
-                .tabItem { Label("Ops", systemImage: "list.clipboard.fill") }.tag(3)
-            placeholder("Finance", "chart.bar.fill")
-                .tabItem { Label("Finance", systemImage: "chart.bar.fill") }.tag(4)
+        // Custom bottom nav (SkyTabBar) — the Figma tab bar (yellow-on-dark /
+        // blue-on-light, custom icons) isn't a stock UITabBar, so we drive tab
+        // selection ourselves and switch the content. Only NETWORK is built;
+        // the others are placeholders. safeAreaInset reserves the bar's space
+        // so the content lays out above it.
+        Group {
+            switch tab {
+            case 0:  NetworkView(sim: sim)
+            case 1:  placeholder("Fleet", "airplane")
+            case 2:  placeholder("Crews", "person.2.fill")
+            case 3:  placeholder("Ops", "list.clipboard.fill")
+            default: placeholder("Finance", "chart.bar.fill")
+            }
         }
-        .tint(Sky.brightBlue)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .safeAreaInset(edge: .bottom, spacing: 0) { SkyTabBar(selection: $tab) }
         // Run the sim for the whole session, independent of the selected tab.
         .task { await sim.run() }
         .overlay {
@@ -49,9 +51,9 @@ struct ContentView: View {
             VStack(spacing: 12) {
                 Image(systemName: icon).font(.system(size: 44))
                     .foregroundStyle(Sky.brightBlue.opacity(0.6))
-                Text(title.uppercased()).font(.system(size: 22, weight: .bold))
+                Text(title.uppercased()).font(.karla(22, .bold))
                     .foregroundStyle(Sky.brightBlue)
-                Text("Coming soon").font(.system(size: 13)).foregroundStyle(.secondary)
+                Text("Coming soon").font(.karla(13)).foregroundStyle(.secondary)
             }
         }
     }

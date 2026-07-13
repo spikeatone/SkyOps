@@ -1491,13 +1491,40 @@ where numbers are involved.
   paths) — rendered NATIVELY via the existing `SVGPath.parse` into a
   `Canvas` (`SkyOpsLogo.swift`), no bundled raster and it scales crisply.
   Downloaded from the `figma.com/api/mcp/asset/...` URLs (valid ~7 days).
-- **Font substitution debt (Figma type fidelity):** the designs use
-  **Karla** (Light/Regular/Medium/SemiBold/Bold) and **Geist Regular** —
-  neither ships on iOS. Currently approximated with the system font at the
-  same weights/sizes. For pixel-exact type, download the OFL families and
-  bundle them (add to the app folder + register in Info.plist `UIAppFonts`).
-  This will apply to EVERY future Figma screen — decide the bundling
-  approach once, early.
+- **Karla font — BUNDLED (font-substitution debt resolved).** The 5 static
+  Karla weights (Light/Regular/Medium/SemiBold/Bold, OFL, from googlefonts/
+  karla) live in `Resources/Fonts/` (+ OFL.txt) and are registered in
+  `Info.plist` `UIAppFonts`. Confirmed in the built `.app`: the TTFs land FLAT
+  in the bundle root (the synchronized group flattens `Resources/Fonts/*` out),
+  so the bare-filename UIAppFonts entries resolve. `Font.karla(_:_:)`
+  (Typography.swift) maps a SwiftUI weight → the matching face
+  (Karla-Light/Regular/Medium/SemiBold/Bold); Font.custom falls back to system
+  if a face is missing, so it degrades gracefully. Applied across the NETWORK
+  chrome (header, control bar, speed bar, tab labels); apply `.karla(...)` on
+  every future Figma screen. NOTE: the project uses `GENERATE_INFOPLIST_FILE=YES`
+  AND `INFOPLIST_FILE=SkyOps/Info.plist` — Xcode MERGES them, so custom keys in
+  that Info.plist (UIAppFonts, UIBackgroundModes) DO take effect. (Geist was
+  dropped by the designer; only Karla is needed.)
+- **NETWORK control-bar spacing fixed + tab bar rebuilt to the Figma.** The
+  control bar was cramped ("Acquire A/C"/"Open Route" crowding); fixed with
+  Karla 12 + `lineLimit(1)` + `minimumScaleFactor(0.72)` so long labels shrink
+  to fit their equal columns instead of crowding the dividers. The bottom nav
+  was rebuilt as a CUSTOM bar (`SkyTabBar`) — the Figma tab bar (2:2001 dark /
+  2:1602 light) isn't a stock UITabBar: active tint is theme-dependent (Light
+  Yellow `#FFC73B` on dark, Bright Blue `#0EA5E9` on light), inactive is Light
+  Blue on dark / slate on light, with custom line icons and Karla labels. The
+  5 icons were extracted from the Figma as stroked SVGs (viewBox 24, stroke
+  1.5, round caps — commands all C/L/M/H/V/Z, no arcs) into `SkyTabIcons.swift`
+  and rendered via `SVGPath` into a tintable Canvas (same native-SVG approach
+  as SkyOpsLogo/AircraftIcon — no raster). ContentView dropped `TabView` for a
+  `switch`-on-`tab` + `.safeAreaInset(edge:.bottom){ SkyTabBar }`, driving
+  selection itself. Tradeoff (acceptable for now): switching tabs recreates the
+  content view, so NetworkView's transient UI state (open panel, route-in-
+  progress) resets — the sim state persists in `sim`. Verified live (via a temp
+  naming-skip, since a Simulator input glitch this session blocked driving the
+  UI directly — screenshots still worked): the custom tab bar icons render
+  correctly, Karla renders in the header/control bar, and the control-bar
+  spacing is clean.
 - **Leasing + used-aircraft market — DONE (native app).** Ported faithfully
   from the prototype. LEASING: 15% upfront (`leaseUpfrontRate`) + a fixed
   MONTHLY bill (`AircraftType.monthlyLeaseCost` = 0.8% of purchase price),

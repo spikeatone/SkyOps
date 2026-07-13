@@ -6,5 +6,13 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Karla-Light.ttf</string>
+		<string>Karla-Regular.ttf</string>
+		<string>Karla-Medium.ttf</string>
+		<string>Karla-SemiBold.ttf</string>
+		<string>Karla-Bold.ttf</string>
+	</array>
 </dict>
 </plist>

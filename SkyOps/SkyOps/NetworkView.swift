@@ -84,17 +84,17 @@ struct NetworkView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Text("Cash on hand:")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.karla(15, .semibold))
                     .foregroundStyle(isDark ? .white : .black)
                 Text(cashString)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.karla(15, .semibold))
                     .foregroundStyle(sim.playerBalance < 0 ? Sky.red : Sky.coreGreen)
                 Spacer()
             }
             Divider().overlay((isDark ? Sky.onDarkStroke : Color(skyHex: 0xE2E8F0)).opacity(0.6))
             HStack {
                 Text("NETWORK")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.karla(22, .bold))
                     .foregroundStyle(Sky.brightBlue)
                 Spacer()
                 Button { showOverlays.toggle() } label: {
@@ -208,10 +208,12 @@ struct NetworkView: View {
     private func barButton(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.karla(12, .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)   // long labels (Acquire A/C) shrink to fit rather than crowd
                 .foregroundStyle(active ? Sky.brightBlue : Sky.lightBlue)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+                .padding(.vertical, 7).padding(.horizontal, 5)
                 .background(active ? Sky.brightBlue.opacity(0.18) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
         }
@@ -219,7 +221,7 @@ struct NetworkView: View {
     }
 
     private var barDivider: some View {
-        Rectangle().fill(Sky.onDarkStroke.opacity(0.5)).frame(width: 1, height: 18)
+        Rectangle().fill(Sky.onDarkStroke.opacity(0.5)).frame(width: 1, height: 16)
     }
 
     // MARK: - Sim Speed Control Bar (¼×–25×, ¼× rate-limited)
@@ -231,7 +233,7 @@ struct NetworkView: View {
                 let quarterBlocked = (s == 0.25) && sim.quarterSpeedUsesRemaining == 0
                 Button { sim.requestSpeed(s) } label: {
                     Text(speedLabel(s))
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.karla(13, .semibold))
                         .foregroundStyle(active ? .white : (quarterBlocked ? Sky.lightBlue.opacity(0.35) : Sky.lightBlue))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
