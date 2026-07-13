@@ -1,13 +1,13 @@
 //
-//  SkyOpsUITestsLaunchTests.swift
-//  SkyOpsUITests
+//  AirlineArchitectUITestsLaunchTests.swift
+//  AirlineArchitectUITests
 //
 //  Created by Michael Stevens on 7/12/26.
 //
 
 import XCTest
 
-final class SkyOpsUITestsLaunchTests: XCTestCase {
+final class AirlineArchitectUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

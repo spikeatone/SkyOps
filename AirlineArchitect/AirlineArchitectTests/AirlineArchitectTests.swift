@@ -1,14 +1,14 @@
 //
-//  SkyOpsTests.swift
-//  SkyOpsTests
+//  AirlineArchitectTests.swift
+//  AirlineArchitectTests
 //
 //  Created by Michael Stevens on 7/12/26.
 //
 
 import Testing
-@testable import SkyOps
+@testable import AirlineArchitect
 
-struct SkyOpsTests {
+struct AirlineArchitectTests {
 
     @Test func example() async throws {
         // Write your test here and use APIs like `#expect(...)` to check expected conditions.
