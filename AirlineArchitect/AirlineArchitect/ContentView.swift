@@ -644,6 +644,17 @@ struct AircraftTooltip: View {
     private let onDarkGreen   = Color(skyHex: 0x87ED7A)
     private let othersColor   = Color(skyHex: 0xD767FF)
 
+    // Theme-aware card chrome (Figma 3:1542 light = white@90% + #64748B labels +
+    // #0EA5E9 values + #10B981/#D70000 for net/P&L). Dark keeps the navBarDark
+    // card. On the white light map the card is near-opaque white + a grey border
+    // + soft shadow so it reads.
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark.opacity(0.9) : Color.white.opacity(0.96) }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xC9C9C9) }
+    private var labelColor: Color { isDark ? .white : Color(skyHex: 0x64748B) }
+    private var valueColor: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x0EA5E9) }
+    private var greenValue: Color { isDark ? onDarkGreen : Color(skyHex: 0x10B981) }
+
     var body: some View {
         // Per Figma 3:1662: a stack of "Label:" (white Karla-Bold 14) + value
         // (light-blue Karla-Regular 14) rows. No close button (tap the map to
@@ -655,12 +666,12 @@ struct AircraftTooltip: View {
             if let airline = aircraft.airlineName {
                 row("Airline", airline, valueColor: othersColor)
             } else if let mine = sim.playerAirlineName {
-                row("Airline", mine, valueColor: onDarkGreen)
+                row("Airline", mine, valueColor: greenValue)
             }
             routeRow
             row("Tail", aircraft.isLeased ? "\(aircraft.tail) (leased)" : aircraft.tail)
             row("Type", aircraft.type.name)
-            row("Status", statusText, valueColor: aircraft.isHeld ? heldColor : Sky.lightBlue)
+            row("Status", statusText, valueColor: aircraft.isHeld ? heldColor : valueColor)
 
             // Crew / load / cycles / economics are the PLAYER's operational
             // detail only — a rival's books aren't visible. Ported from the
@@ -678,27 +689,27 @@ struct AircraftTooltip: View {
                 // (display-only); the real lease is a fixed monthly bill.
                 row("Operating cost", "−" + money(econ.displayOperatingCost), valueColor: heldColor)
                 row("Net for this leg", (econ.displayNet < 0 ? "−" : "") + money(abs(econ.displayNet)),
-                    valueColor: econ.displayNet < 0 ? heldColor : onDarkGreen)
+                    valueColor: econ.displayNet < 0 ? heldColor : greenValue)
                 if let pl = routePLText {
-                    row("Route P&L", pl.text, valueColor: pl.positive ? onDarkGreen : heldColor)
+                    row("Route P&L", pl.text, valueColor: pl.positive ? greenValue : heldColor)
                 }
             }
         }
         .padding(8)
-        .background(Sky.navBarDark.opacity(0.9))
+        .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4)
-            .stroke(Sky.onDarkStroke, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 
-    private func row(_ label: String, _ value: String, valueColor: Color = Sky.lightBlue) -> some View {
+    private func row(_ label: String, _ value: String, valueColor: Color? = nil) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text("\(label):")
                 .font(.karla(14, .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(labelColor)
             Text(value)
                 .font(.karla(14))
-                .foregroundStyle(valueColor)
+                .foregroundStyle(valueColor ?? self.valueColor)
             Spacer(minLength: 0)
         }
     }
@@ -709,21 +720,21 @@ struct AircraftTooltip: View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text("Route:")
                 .font(.karla(14, .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(labelColor)
             if aircraft.isIdleSpare {
                 Text("SPARE · at \(aircraft.origin.code)")
                     .font(.karla(12, .heavy))
-                    .foregroundStyle(Sky.lightBlue)
+                    .foregroundStyle(valueColor)
             } else {
                 Text(aircraft.origin.code)
                     .font(.karla(12, .heavy))
-                    .foregroundStyle(Sky.lightBlue)
+                    .foregroundStyle(valueColor)
                 Image(systemName: "arrow.right")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Sky.lightBlue)
+                    .foregroundStyle(valueColor)
                 Text(aircraft.dest.code)
                     .font(.karla(12, .heavy))
-                    .foregroundStyle(Sky.lightBlue)
+                    .foregroundStyle(valueColor)
             }
             Spacer(minLength: 0)
         }
@@ -769,7 +780,7 @@ struct AircraftTooltip: View {
         if let d = sim.crewDuty(for: aircraft), d.used > d.max * 0.8 {
             return Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255)
         }
-        return .white
+        return valueColor
     }
 
     private var loadText: String {
