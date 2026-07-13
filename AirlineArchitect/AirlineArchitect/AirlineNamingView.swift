@@ -45,8 +45,10 @@ struct AirlineNamingView: View {
                     Circle().fill(LinearGradient(colors: badgeGradient, startPoint: .top, endPoint: .bottom))
                     VStack(spacing: 8) {
                         AppLogo().frame(width: 117, height: 95)
-                        // Two-line wordmark (Karla Light 25, tight leading).
-                        VStack(spacing: -2) {
+                        // Two-line wordmark. Figma is Karla Light 25 with a
+                        // 20pt line-height; Karla's natural height at 25 is
+                        // ~29.2, so a −9 pitch tightens it to match.
+                        VStack(spacing: -9) {
                             Text("Airline")
                             Text("Architect")
                         }
