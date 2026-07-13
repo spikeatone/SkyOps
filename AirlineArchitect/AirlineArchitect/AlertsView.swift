@@ -111,6 +111,7 @@ struct NeedsAttentionCard: View {
     private var btnText: Color   { isDark ? .white : Color(skyHex: 0x4B4B4B) }
     private var accentRed: Color { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
     private let accentAmber = Color(skyHex: 0xFFB700)
+    private let accentBlue = Color(skyHex: 0x5B98CE)
 
     var body: some View {
         let _ = sim.tick   // keep erosion rate / affordability live
@@ -151,7 +152,19 @@ struct NeedsAttentionCard: View {
     }
 
     private func model(for d: Simulation.Decision) -> AlertModel {
-        let ac = d.aircraft
+        // Slot-value buyback (the one route/amount-based decision) — the blue
+        // "Offer" card. No aircraft; uses the SlotOffer payload.
+        if d.kind == .offer, let o = d.offer {
+            return AlertModel(
+                accent: accentBlue, icon: "dollarsign.circle.fill", category: "Offer",
+                title: "\(o.destCode) wants to buy your slot back",
+                subtitle: "\(o.originCode) ↔\u{FE0E} \(o.destCode): \(money(o.amount)) offered",
+                buttons: [
+                    ("Accept", { sim.resolveOfferAccept(d) }),
+                    ("Decline", { sim.resolveOfferDecline(d) }),
+                ])
+        }
+        let ac = d.aircraft!   // aog / crew / sell always carry an aircraft
         switch d.kind {
         case .aog:
             let rate = Int((Double(ac.type.holdCostPerTick) * sim.effectiveCostMultiplier).rounded())
@@ -186,6 +199,10 @@ struct NeedsAttentionCard: View {
                     ("Sell \(compactMoney(value))", { sim.resolveSell(d) }),
                     ("Keep flying", { sim.resolveSellKeep(d) }),
                 ])
+        case .offer:   // handled by the early return above; unreachable
+            return AlertModel(accent: accentBlue, icon: "dollarsign.circle.fill",
+                              category: "Offer", title: "Slot buyback", subtitle: "",
+                              buttons: [("Decline", { sim.resolveOfferDecline(d) })])
         }
     }
 

@@ -78,98 +78,6 @@ struct ContentView: View {
 }
 
 
-private let heldColor = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
-
-/// Shared decision-card chrome (red-bordered, titled, subject line + buttons).
-/// The sim never pauses while a card is up (core design thesis).
-struct DecisionCardChrome<Buttons: View>: View {
-    let title: String
-    let subject: String
-    @ViewBuilder let buttons: () -> Buttons
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Circle().fill(heldColor).frame(width: 7, height: 7)
-                Text(title)
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(heldColor)
-            }
-            Text(subject)
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.85))
-            HStack(spacing: 8) { buttons() }
-        }
-        .foregroundStyle(.white)
-        .padding(12)
-        .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(heldColor.opacity(0.45), lineWidth: 1))
-    }
-}
-
-/// A single decision-card action button.
-struct CardButton: View {
-    let label: String
-    var emphasized = false
-    var disabled = false
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(emphasized ? heldColor.opacity(0.22) : Color.white.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .opacity(disabled ? 0.4 : 1)
-        }
-        .buttonStyle(.plain)
-        .disabled(disabled)
-    }
-}
-
-struct AOGCard: View {
-    let decision: Simulation.Decision
-    let sim: Simulation
-    var body: some View {
-        let ac = decision.aircraft
-        DecisionCardChrome(title: "AOG — GROUNDED FOR MAINTENANCE",
-                           subject: "\(ac.tail) · \(ac.type.name) · at \(ac.origin.code)") {
-            CardButton(label: "Expedite · $15,000 · ready now", emphasized: true) {
-                sim.resolveAOGExpedite(decision)
-            }
-            CardButton(label: "Standard · $3,000 · ~3hr") {
-                sim.resolveAOGStandard(decision)
-            }
-        }
-    }
-}
-
-struct CrewCard: View {
-    let decision: Simulation.Decision
-    let sim: Simulation
-    var body: some View {
-        let ac = decision.aircraft
-        let hasReserve = sim.hasReserve(for: ac)
-        let canHire = sim.canAffordCrewHire(for: ac)
-        let hireCost = sim.crewHireCost(family: ac.type.family)
-        DecisionCardChrome(title: "NO LEGAL CREW AVAILABLE",
-                           subject: "\(ac.tail) · \(ac.type.name) · at \(ac.origin.code)") {
-            CardButton(label: hasReserve ? "Reserve · $5k" : "No reserves",
-                       emphasized: true, disabled: !hasReserve) {
-                sim.resolveCrewReserve(decision)
-            }
-            CardButton(label: canHire ? "Hire · \(compactMoney(hireCost))" : "Can't afford hire",
-                       disabled: !canHire) {
-                sim.resolveCrewHire(decision)
-            }
-            CardButton(label: "Wait") {
-                sim.resolveCrewWait(decision)
-            }
-        }
-    }
-}
 
 /// "$28k" / "$1.2M" compact money for tight decision-card buttons.
 func compactMoney(_ v: Int) -> String {
@@ -179,23 +87,6 @@ func compactMoney(_ v: Int) -> String {
     return sign + "$\(a)"
 }
 
-struct SellCard: View {
-    let decision: Simulation.Decision
-    let sim: Simulation
-    var body: some View {
-        let ac = decision.aircraft
-        let pct = 100 * ac.cyclesAccrued / max(1, ac.type.expectedLifespanCycles)
-        DecisionCardChrome(title: "NEARING END OF SERVICE LIFE",
-                           subject: "\(ac.tail) · \(ac.type.name) · \(pct)% of lifespan") {
-            CardButton(label: "Sell · $\(sim.sellValue(of: ac).formatted())", emphasized: true) {
-                sim.resolveSell(decision)
-            }
-            CardButton(label: "Keep flying") {
-                sim.resolveSellKeep(decision)
-            }
-        }
-    }
-}
 
 /// The route-opening flow's UI state.
 enum RouteMode: Equatable {

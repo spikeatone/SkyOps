@@ -723,10 +723,22 @@ final class Simulation {
     // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
 
     struct Decision: Identifiable {
-        enum Kind { case aog, crew, sell }
+        enum Kind { case aog, crew, sell, offer }
         let id: String
         let kind: Kind
-        let aircraft: Aircraft
+        /// The subject aircraft (aog / crew / sell). nil for an `.offer`.
+        let aircraft: Aircraft?
+        /// The slot-buyback details (`.offer` only).
+        var offer: SlotOffer? = nil
+    }
+
+    /// A slot-value buyback: an airport (the destination) offers to buy back a
+    /// route's slot. Accepting closes the route for cash; declining keeps it.
+    struct SlotOffer {
+        let routeId: Int
+        let originCode: String
+        let destCode: String
+        let amount: Int
     }
 
     private(set) var decisionQueue: [Decision] = []
@@ -757,7 +769,7 @@ final class Simulation {
     /// AOG card option 1: pay to have the aircraft ready now.
     func resolveAOGExpedite(_ decision: Decision) {
         chargeDecisionCost(15_000)
-        decision.aircraft.maint = false
+        decision.aircraft?.maint = false
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
@@ -765,7 +777,7 @@ final class Simulation {
     /// stays held until it completes.
     func resolveAOGStandard(_ decision: Decision) {
         chargeDecisionCost(3_000)
-        decision.aircraft.aogAutoClearTick = tick + 180
+        decision.aircraft?.aogAutoClearTick = tick + 180
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
@@ -775,7 +787,7 @@ final class Simulation {
     /// CREW card option 1: call in a reserve crew ($5,000), assigned now so the
     /// aircraft boards this cycle. Disabled when the family is out of reserves.
     func resolveCrewReserve(_ decision: Decision) {
-        let ac = decision.aircraft
+        guard let ac = decision.aircraft else { return }
         let family = ac.type.family
         guard (reserveCrewsByFamily[family] ?? 0) > 0 else { return }
         reserveCrewsByFamily[family]! -= 1
@@ -798,7 +810,7 @@ final class Simulation {
     /// held aircraft immediately, resolving the hold this cycle. Reuses
     /// hireCrew() — same cost/pool logic as the ADD CREW panel.
     func resolveCrewHire(_ decision: Decision) {
-        let ac = decision.aircraft
+        guard let ac = decision.aircraft else { return }
         guard let id = hireCrew(family: ac.type.family) else { return }
         // Put the freshly-hired crew straight on this aircraft.
         crewPoolsByFamily[ac.type.family]?.first { $0.id == id }?.status = .onDuty
@@ -856,6 +868,7 @@ final class Simulation {
     private static let atcDailyProbability = 0.04
     private static let securityDailyProbability = 0.03
     private static let expansionDailyProbability = 0.025
+    private static let slotOfferDailyProbability = 0.06
 
     private func tickWorldEvents() {
         guard tick % 1440 == 0 else { return }   // once per sim-day
@@ -878,6 +891,43 @@ final class Simulation {
             ap.slotsTotal += added; ap.slotsAvailable += added
             logOps(.structural, "\(ap.code) capacity expansion", "\(added) new slots available")
         }
+        // Slot-value buyback — an airport offers to buy back one route's slot.
+        // The one event that's a real player CHOICE (Accept/Decline card), not a
+        // passive effect. Only one open at a time; only when the player has a route.
+        if !decisionQueue.contains(where: { $0.kind == .offer }),
+           Double.random(in: 0..<1) < Simulation.slotOfferDailyProbability,
+           let r = playerRoutes.randomElement() {
+            let amount = Int((Double(r.openingCost) * Double.random(in: 2.0...4.0)).rounded())
+            decisionQueue.append(Decision(id: "offer_\(r.id)_\(tick)", kind: .offer, aircraft: nil,
+                offer: SlotOffer(routeId: r.id, originCode: r.originCode, destCode: r.destCode, amount: amount)))
+        }
+    }
+
+    /// OFFER card: accept the slot buyback — credit the cash and close the route
+    /// (its aircraft becomes an idle spare, crew released; the SLOT is sold, not
+    /// the plane). The route is archived, keeping its P&L history reviewable.
+    func resolveOfferAccept(_ decision: Decision) {
+        defer { decisionQueue.removeAll { $0.id == decision.id } }
+        guard let offer = decision.offer,
+              let idx = playerRoutes.firstIndex(where: { $0.id == offer.routeId }) else { return }
+        playerBalance += offer.amount
+        let r = playerRoutes.remove(at: idx)
+        r.closedTick = tick
+        closedPlayerRoutes.append(r)
+        for ac in aircraft where ac.assignedRouteId == offer.routeId {
+            ac.assignedRouteId = nil
+            if let cid = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == cid }) {
+                crew.status = .available
+            }
+            ac.crewId = nil
+            ac.holdReason = nil
+        }
+        logOps(.structural, "Slot sold", "\(offer.originCode) ↔\u{FE0E} \(offer.destCode): $\(offer.amount.formatted())")
+    }
+
+    /// OFFER card: decline — keep the route.
+    func resolveOfferDecline(_ decision: Decision) {
+        decisionQueue.removeAll { $0.id == decision.id }
     }
 
     private static let economicEventCheckInterval = 1440   // once per sim-day
@@ -1040,7 +1090,7 @@ final class Simulation {
     }
 
     /// SELL card option: sell at linear-depreciated value, close its route.
-    func resolveSell(_ decision: Decision) { sellAircraft(decision.aircraft) }
+    func resolveSell(_ decision: Decision) { if let ac = decision.aircraft { sellAircraft(ac) } }
 
     /// Sell an aircraft (from the SELL card OR the Fleet detail screen): credit
     /// its depreciated value, release its crew, archive its route, remove it,
@@ -1060,6 +1110,7 @@ final class Simulation {
             r.closedTick = tick
             closedPlayerRoutes.append(r)
             logOps(.structural, "Route closed", "\(r.originCode) ↔︎ \(r.destCode)")
+            decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == id }
             airports.first { $0.code == r.originCode }?.slotsAvailable += 1
             airports.first { $0.code == r.destCode }?.slotsAvailable += 1
         }
@@ -1070,7 +1121,7 @@ final class Simulation {
 
     /// SELL card option: keep flying (don't re-prompt this aircraft).
     func resolveSellKeep(_ decision: Decision) {
-        decision.aircraft.sellOfferDismissed = true
+        decision.aircraft?.sellOfferDismissed = true
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
