@@ -134,6 +134,17 @@ final class Simulation {
     /// Nearest aircraft within `tolerance` screen points of a tap, or nil.
     /// Lives in the sim layer (not the view) so the headless harness can
     /// verify hit-testing without driving real touches.
+    /// Nearest airport within `tolerance` of a tap (for the route picker).
+    /// 44pt ≈ a fingertip; nearest-wins keeps dense clusters unambiguous.
+    func airport(atScreenPoint p: CGPoint, tolerance: CGFloat = 44) -> Airport? {
+        var best: (ap: Airport, d: CGFloat)?
+        for ap in airports {
+            let d = hypot(ap.screen.x - p.x, ap.screen.y - p.y)
+            if d <= tolerance && d < (best?.d ?? .infinity) { best = (ap, d) }
+        }
+        return best?.ap
+    }
+
     func aircraft(atScreenPoint p: CGPoint, tolerance: CGFloat = 24) -> Aircraft? {
         var best: (ac: Aircraft, d: CGFloat)?
         for ac in aircraft {
@@ -177,7 +188,130 @@ final class Simulation {
         // type, a random city pair it flies back and forth, and a staggered
         // start so the fleet isn't synchronized.
         airports = Airport.all
-        setFleetSize(60)   // provisions crew as part of sizing the fleet
+        provisionSlots()
+        provisionCrew()    // empty until aircraft are bought
+        // Full-shift start: $20M, zero aircraft, zero routes. The FLEET buttons
+        // are a DEV stress-test control (spawn background/non-owned traffic).
+    }
+
+    // MARK: - Ownership economy (Phase 5)
+
+    static let startingCapital = 20_000_000
+
+    private(set) var playerBalance = startingCapital
+    private(set) var playerRoutes: [Route] = []
+    private var nextRouteId = 1
+
+    var ownedCount: Int { aircraft.lazy.filter { $0.purchased }.count }
+    var stressTestCount: Int { aircraft.lazy.filter { !$0.purchased }.count }
+    /// Purchased aircraft with no route yet — available to assign to a new one.
+    var idleSpares: [Aircraft] { aircraft.filter { $0.isIdleSpare } }
+
+    /// Slot scarcity: busier/more-expensive airports get fewer slots (3–13),
+    /// starting 30–70% available. Ported from the setup pass around AIRPORTS.
+    private func provisionSlots() {
+        let sorted = airports.sorted { $0.landingFeePerKlb < $1.landingFeePerKlb }
+        let n = max(1, sorted.count - 1)
+        for (i, ap) in sorted.enumerated() {
+            // cheapest (i=0) → ~13 slots, most expensive → floor of 3
+            ap.slotsTotal = max(3, 13 - Int((Double(i) / Double(n) * 10).rounded()))
+            ap.slotsAvailable = max(1, Int((Double(ap.slotsTotal) * (0.3 + Double.random(in: 0..<0.4))).rounded()))
+        }
+    }
+
+    /// Slots slowly free up (abstract background churn). ~5%/day per airport
+    /// under capacity. Ported from tickSlotAvailability().
+    private func tickSlotAvailability() {
+        guard tick % 1440 == 0 else { return }   // once per sim-day
+        for ap in airports where ap.slotsAvailable < ap.slotsTotal {
+            if Double.random(in: 0..<1) < 0.05 { ap.slotsAvailable += 1 }
+        }
+    }
+
+    // MARK: Buying
+
+    /// A genuinely fresh purchase — 0 cycles, PARKED at a random base, no route
+    /// (a spare). Separate from makeAircraft (stress-test) by design.
+    private func makePurchasedAircraft(_ type: AircraftType, startingCycles: Int = 0) -> Aircraft {
+        let base = airports.randomElement()!
+        let tail = "N\(nextTailNum)SK"
+        nextTailNum += 1
+        let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
+                          stateIndex: FlightState.parked.rawValue,
+                          cyclesAccrued: startingCycles, purchased: true)
+        rollRevenue(for: ac)
+        return ac
+    }
+
+    /// Buy an aircraft if affordable. Returns the new spare (to auto-assign to a
+    /// pending route) or nil.
+    @discardableResult
+    func buyAircraft(_ type: AircraftType) -> Aircraft? {
+        guard playerBalance >= type.purchasePrice else { return nil }
+        playerBalance -= type.purchasePrice
+        let ac = makePurchasedAircraft(type)
+        aircraft.append(ac)
+        provisionCrew()   // re-size the crew roster to include the new owned aircraft
+        return ac
+    }
+
+    // MARK: Routes
+
+    static let routeBaseCost = 50_000
+    static let routeCostPerGateFeeUnit = 50
+    static let routeSlotPurchasePremium = 75_000
+
+    func route(between a: String, _ b: String) -> Route? {
+        playerRoutes.first { ($0.originCode == a && $0.destCode == b) || ($0.originCode == b && $0.destCode == a) }
+    }
+
+    /// Real opening cost: base + both endpoints' gate fees, plus a premium per
+    /// endpoint with no free slot. Ported from computeRouteOpeningCost().
+    func routeOpeningCost(_ origin: Airport, _ dest: Airport) -> Int {
+        var cost = Double(Simulation.routeBaseCost)
+                 + Double(origin.gateFeeNarrowbody + dest.gateFeeNarrowbody) * Double(Simulation.routeCostPerGateFeeUnit)
+        if origin.slotsAvailable <= 0 { cost += Double(Simulation.routeSlotPurchasePremium) }
+        if dest.slotsAvailable <= 0 { cost += Double(Simulation.routeSlotPurchasePremium) }
+        return Int(cost.rounded())
+    }
+
+    enum OpenRouteResult { case success, sameAirport, alreadyOpen, noSpare, insufficientFunds(Int) }
+
+    /// Open a route and assign a spare to fly it. Ported from openRoute().
+    @discardableResult
+    func openRoute(from origin: Airport, to dest: Airport, using ac: Aircraft) -> OpenRouteResult {
+        if origin === dest { return .sameAirport }
+        if route(between: origin.code, dest.code) != nil { return .alreadyOpen }
+        guard ac.purchased, ac.assignedRouteId == nil else { return .noSpare }
+        let cost = routeOpeningCost(origin, dest)
+        guard playerBalance >= cost else { return .insufficientFunds(cost) }
+
+        playerBalance -= cost
+        if origin.slotsAvailable > 0 { origin.slotsAvailable -= 1 }
+        if dest.slotsAvailable > 0 { dest.slotsAvailable -= 1 }
+
+        let r = Route(id: nextRouteId, originCode: origin.code, destCode: dest.code,
+                      openedTick: tick, openingCost: cost)
+        nextRouteId += 1
+        playerRoutes.append(r)
+
+        ac.assignedRouteId = r.id
+        ac.origin = origin
+        ac.dest = dest
+        ac.stateIndex = FlightState.parked.rawValue
+        ac.stateTick = 0
+        rollRevenue(for: ac)
+        return .success
+    }
+
+    // MARK: Selling
+
+    /// Linear depreciation from purchase price, floored at 5%. Ported from
+    /// computeSellValue().
+    func sellValue(of ac: Aircraft) -> Int {
+        let used = Double(ac.cyclesAccrued) / Double(max(1, ac.type.expectedLifespanCycles))
+        let remaining = max(0.05, 1 - used)
+        return Int((Double(ac.type.purchasePrice) * remaining).rounded())
     }
 
     // MARK: - Fleet
@@ -202,20 +336,23 @@ final class Simulation {
     /// Grow or shrink the fleet to `n` (stress-test control; all aircraft are
     /// non-owned so a plain trim is fine — the purchased-vs-spawn distinction
     /// arrives with the Phase 5 economy).
+    /// DEV stress-test control — sets the count of NON-OWNED background
+    /// aircraft, never touching the player's purchased fleet.
     func setFleetSize(_ n: Int) {
         let target = max(0, n)
-        if target < aircraft.count {
-            let removed = aircraft[target...]
-            aircraft.removeLast(aircraft.count - target)
-            // don't leave decision cards pointing at aircraft that no longer
-            // exist (same stale-card bug family the prototype documented)
+        let current = stressTestCount
+        if target < current {
+            var toRemove = current - target
+            let removed = aircraft.filter { !$0.purchased }.suffix(toRemove)
+            aircraft.removeAll { ac in
+                if !ac.purchased && toRemove > 0 { toRemove -= 1; return true }
+                return false
+            }
             decisionQueue.removeAll { d in removed.contains(where: { $0 === d.aircraft }) }
         } else {
-            while aircraft.count < target { aircraft.append(makeAircraft()) }
+            while stressTestCount < target { aircraft.append(makeAircraft()) }
         }
-        // re-size the crew roster to the new fleet (a stress-test control; the
-        // player-driven Phase 5 model won't re-provision like this)
-        if !crewPoolsByFamily.isEmpty || !aircraft.isEmpty { provisionCrew() }
+        provisionCrew()
     }
 
     var fleetCount: Int { aircraft.count }
@@ -249,7 +386,7 @@ final class Simulation {
         for (f, left) in familyPressureTicksLeft where left > 0 {
             familyPressureTicksLeft[f] = left - 1
         }
-        for ac in aircraft where !ac.maint {
+        for ac in aircraft where ac.purchased && !ac.maint {
             let pressure = Double(familyPressureTicksLeft[ac.type.family] ?? 0)
                          / Double(Simulation.aogClusterDecayTicks)
             let multiplier = 1 + (Simulation.aogClusterMultiplier - 1) * pressure
@@ -291,7 +428,7 @@ final class Simulation {
         crewPoolsByFamily = [:]
         reserveCrewsByFamily = [:]
         var counts: [String: Int] = [:]
-        for ac in aircraft { counts[ac.type.family, default: 0] += 1 }
+        for ac in aircraft where ac.purchased { counts[ac.type.family, default: 0] += 1 }
         for (family, count) in counts {
             let size = max(1, Int((Double(count) * Simulation.crewsPerAircraft).rounded()))
             crewPoolsByFamily[family] = (0..<size).map { Crew(id: $0) }
@@ -301,7 +438,7 @@ final class Simulation {
     }
 
     private func backfillStaggeredCrews() {
-        for ac in aircraft where ac.crewId == nil && ac.state != .parked {
+        for ac in aircraft where ac.purchased && ac.crewId == nil && ac.state != .parked {
             guard let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.status == .available }) else { continue }
             crew.status = .onDuty
             crew.dutyTicks = Int.random(in: 0..<(Crew.maxDutyTicks / 2))  // partial duty already elapsed
@@ -360,7 +497,7 @@ final class Simulation {
     // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
 
     struct Decision: Identifiable {
-        enum Kind { case aog, crew }
+        enum Kind { case aog, crew, sell }
         let id: String
         let kind: Kind
         let aircraft: Aircraft
@@ -487,12 +624,43 @@ final class Simulation {
                             gateFee: gateFee, operatingCost: opCost)
     }
 
-    /// Settle a completed leg into the running totals.
+    /// Settle a completed leg. Only OWNED aircraft move the player's money /
+    /// route P&L; stress-test traffic is pure flavor.
     private func settleLeg(_ ac: Aircraft) {
         let econ = legEconomics(for: ac)
+        guard ac.purchased else { return }
         totalRevenue += econ.revenue
         totalFees += econ.fees
         totalOperatingCost += econ.operatingCost
+        playerBalance += econ.net
+        if let id = ac.assignedRouteId, let r = playerRoutes.first(where: { $0.id == id }) {
+            r.cumulativeNet += econ.net
+            r.flights += 1
+        }
+        // At 80% of expected lifespan, offer a one-time sell decision.
+        if !ac.sellOfferDismissed && ac.cyclesAccrued >= Int(Double(ac.type.expectedLifespanCycles) * 0.8) {
+            pushDecision(.sell, for: ac)
+        }
+    }
+
+    /// SELL card option: sell at linear-depreciated value, close its route.
+    func resolveSell(_ decision: Decision) {
+        let ac = decision.aircraft
+        playerBalance += sellValue(of: ac)
+        if let id = ac.assignedRouteId, let idx = playerRoutes.firstIndex(where: { $0.id == id }) {
+            let r = playerRoutes.remove(at: idx)
+            airports.first { $0.code == r.originCode }?.slotsAvailable += 1
+            airports.first { $0.code == r.destCode }?.slotsAvailable += 1
+        }
+        aircraft.removeAll { $0 === ac }
+        decisionQueue.removeAll { $0.id == decision.id }
+        provisionCrew()
+    }
+
+    /// SELL card option: keep flying (don't re-prompt this aircraft).
+    func resolveSellKeep(_ decision: Decision) {
+        decision.aircraft.sellOfferDismissed = true
+        decisionQueue.removeAll { $0.id == decision.id }
     }
 
     /// One sim-minute for the whole world.
@@ -502,13 +670,18 @@ final class Simulation {
         tickCrewPool()
         tickAOGOnset()
         tickEconomicEvents()
+        tickSlotAvailability()
         for ac in aircraft {
             switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {
             case .aogHoldStarted:      pushDecision(.aog, for: ac)
             case .aogRepairCompleted:  clearDecision(.aog, for: ac)   // defensive — card normally already resolved
             case .crewHoldStarted:     pushDecision(.crew, for: ac)
             case .crewHoldResolved:    clearDecision(.crew, for: ac)  // crew freed up outside the card's own buttons
-            case .legScheduled:        rollRevenue(for: ac)
+            case .legScheduled:
+                // Stress-test traffic wanders (random new pair); owned aircraft
+                // keep flying their assigned route (advance already swapped).
+                if !ac.purchased { (ac.origin, ac.dest) = Airport.randomPair() }
+                rollRevenue(for: ac)
             case .legCompleted:        settleLeg(ac)
             case nil:                  break
             }

@@ -23,6 +23,8 @@ struct MapView: View {
     let cameraCenter: CGPoint
     /// Tap-selected aircraft (tooltip target) — gets a highlight ring.
     let selectedID: UUID?
+    /// Airport codes highlighted by the route picker.
+    let highlightCodes: Set<String>
 
     // Per-phase colours, ported from the prototype.
     private let climbColor   = Color(red: 0x37/255, green: 0xFF/255, blue: 0xB0/255) // #37FFB0
@@ -82,13 +84,26 @@ struct MapView: View {
     }
 
     private func drawRoutes(_ ctx: GraphicsContext) {
+        // Faint arcs for current legs (mostly stress-test background traffic).
         var arcs = Path()
-        for ac in sim.aircraft {
+        for ac in sim.aircraft where !ac.isIdleSpare {
             let pp = FlightPath.pathPoints(origin: ac.origin.screen, dest: ac.dest.screen)
             arcs.move(to: pp.start)
             arcs.addQuadCurve(to: pp.end, control: pp.mid)
         }
         ctx.stroke(arcs, with: .color(cruiseColor.opacity(0.07)), lineWidth: 1)
+
+        // The player's opened routes — brighter, so the real network stands out.
+        var playerArcs = Path()
+        for route in sim.playerRoutes {
+            guard let o = sim.airports.first(where: { $0.code == route.originCode }),
+                  let d = sim.airports.first(where: { $0.code == route.destCode }) else { continue }
+            let pp = FlightPath.pathPoints(origin: o.screen, dest: d.screen)
+            playerArcs.move(to: pp.start)
+            playerArcs.addQuadCurve(to: pp.end, control: pp.mid)
+        }
+        ctx.stroke(playerArcs, with: .color(climbColor.opacity(0.55)),
+                   style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
     }
 
     private func drawAirports(_ ctx: GraphicsContext) {
@@ -107,6 +122,16 @@ struct MapView: View {
         }
         ctx.fill(dots, with: .color(climbColor.opacity(0.85)))
         ctx.stroke(stopped, with: .color(heldColor.opacity(0.9)), lineWidth: 1.5)
+
+        // Route-picker selection rings (amber).
+        if !highlightCodes.isEmpty {
+            var rings = Path()
+            for ap in sim.airports where highlightCodes.contains(ap.code) {
+                let rr = r + 6
+                rings.addEllipse(in: CGRect(x: ap.screen.x - rr, y: ap.screen.y - rr, width: rr * 2, height: rr * 2))
+            }
+            ctx.stroke(rings, with: .color(groundColor), lineWidth: 2.5)
+        }
 
         // Label declutter — ported from computeAirportLabelPositions(), with
         // the upgrade CLAUDE.md's Open list asked for: clusters recompute

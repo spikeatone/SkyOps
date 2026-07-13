@@ -52,6 +52,14 @@ final class Aircraft: Identifiable {
     /// One completed turnaround = one flight cycle (takeoff + landing).
     var cyclesAccrued: Int = 0
 
+    // Ownership (Phase 5). `purchased` = the player owns this aircraft (real
+    // stakes: crew, AOG, sell, and it feeds playerBalance). Non-purchased =
+    // stress-test/background traffic, pure visual flavor. A purchased aircraft
+    // with no `assignedRouteId` is a SPARE — it sits idle until routed.
+    var purchased: Bool = false
+    var assignedRouteId: Int?
+    var sellOfferDismissed = false
+
     // Hold state (Phase 3).
     var holdReason: HoldReason?
     var rejoinTick: Int = 0
@@ -76,15 +84,21 @@ final class Aircraft: Identifiable {
     var currentPax: Int = 0
 
     init(tail: String, type: AircraftType, origin: Airport, dest: Airport,
-         stateIndex: Int = FlightState.parked.rawValue, cyclesAccrued: Int = 0) {
+         stateIndex: Int = FlightState.parked.rawValue, cyclesAccrued: Int = 0,
+         purchased: Bool = false) {
         self.tail = tail
         self.type = type
         self.origin = origin
         self.dest = dest
         self.stateIndex = stateIndex
         self.cyclesAccrued = cyclesAccrued
+        self.purchased = purchased
         self.tailHash = tail.unicodeScalars.reduce(0) { $0 + Int($1.value) }
     }
+
+    /// A purchased aircraft not yet assigned to a route — sits idle (does not
+    /// enter the state machine, consumes no crew).
+    var isIdleSpare: Bool { purchased && assignedRouteId == nil }
 
     var state: FlightState { FlightState(rawValue: stateIndex)! }
     var isHeld: Bool { holdReason != nil }
@@ -102,6 +116,9 @@ final class Aircraft: Identifiable {
     func advance(tick: Int,
                  assignCrew: (Aircraft) -> Bool = { _ in true },
                  releaseCrew: (Aircraft) -> Void = { _ in }) -> AdvanceEvent? {
+        // A purchased spare (no route) is fully idle — no state machine.
+        if isIdleSpare { return nil }
+
         // A scheduled "standard repair" (player-chosen) completes on its own
         // timer — the hold then clears through the normal gate below.
         var event: AdvanceEvent?
@@ -125,8 +142,10 @@ final class Aircraft: Identifiable {
                     }
                     return event
                 }
-                // must have a legal crew before boarding
-                if crewId == nil {
+                // must have a legal crew before boarding — OWNED aircraft only.
+                // Stress-test/background traffic proceeds unconditionally (it
+                // doesn't compete for the player's real crew pool).
+                if purchased && crewId == nil {
                     if assignCrew(self) {
                         if holdReason == .crew { event = .crewHoldResolved }
                         holdReason = nil

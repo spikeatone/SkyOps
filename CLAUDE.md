@@ -1350,6 +1350,42 @@ where numbers are involved.
   real `Sim/*.swift`. Reach for the balance probe whenever a change alters
   rates, capacities, or timing.
 
+- **Phase 5 core loop — the FULL SHIFT to a player-driven game, DONE.**
+  Designer chose (over a hybrid) to match the prototype: a fresh session
+  starts EMPTY — `startingCapital` $20M, zero aircraft, zero routes. The
+  player BUYS aircraft (ACQUIRE panel, affordability-gated, sorted by
+  price) which sit as idle SPARES (`isIdleSpare` — a purchased aircraft
+  with no `assignedRouteId` returns early from `advance`, fully idle), and
+  OPENS routes (tap-origin → tap-dest → confirm). `openRoute` charges a
+  real cost (base + both gate fees + a per-endpoint slot-buyout premium
+  when none free), consumes airport slots (`slotsTotal`/`slotsAvailable`,
+  scaled inversely to landing fee, replenished slowly), and assigns a
+  spare. Owned aircraft fly ONLY their route (A↔B); `settleLeg` feeds
+  `playerBalance` + `Route.cumulativeNet` only for `purchased` aircraft.
+- **Ownership scoping retrofit — done deliberately, the exact thing the
+  prototype documents getting wrong once.** `purchased` gates: AOG onset,
+  the crew boarding-gate, crew provisioning/backfill, SELL, and economics
+  settlement. Non-owned = pure background flavor. The old FLEET slider is
+  now a DEV stress-test control spawning NON-owned traffic; `setFleetSize`
+  only ever trims non-purchased aircraft, so it can never delete an
+  aircraft the player paid for (`ownedCount`/`stressTestCount`).
+- **Architecture that kept it headless-testable**: `Aircraft.advance`
+  takes `assignCrew`/`releaseCrew` CLOSURES and returns `AdvanceEvent`s
+  (`legScheduled`/`legCompleted` now too) — the aircraft never reaches
+  into the pool, balance, or routes. So the whole buy→spare→openRoute→fly→
+  earn loop + scoping is verified by a standalone `swiftc` harness (23/23,
+  incl. "shrinking the dev fleet never removes an owned aircraft"). Then
+  the full loop was driven live in the Simulator ($20M → buy ERJ135 →
+  open SLC↔RDU → balance grows as it flies).
+- **Airport tap tolerance is 44pt** (`Simulation.airport(atScreenPoint:)`)
+  — a fingertip, and nearest-wins keeps dense clusters unambiguous. 26pt
+  (the first value) was too tight for real touch AND for driving via
+  computer-use on the small simulator; don't shrink it.
+- **Still additive in Phase 5** (core loop doesn't need them): leasing +
+  used-aircraft market, player/competitor airline identity, and the
+  ROUTES list/detail P&L panel (the `Route` model already carries
+  cumulativeNet / flights / openingCost for it).
+
 ## Open / not yet decided
 
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on

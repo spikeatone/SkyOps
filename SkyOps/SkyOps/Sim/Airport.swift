@@ -32,6 +32,11 @@ final class Airport: Identifiable {
     var groundStop: Bool = false
     var groundStopTicksLeft: Int = 0
 
+    // Route-slot scarcity (Phase 5). Abstract capacity for new player routes —
+    // busier/more-expensive airports have fewer. NOT real competitor modeling.
+    var slotsTotal: Int = 0
+    var slotsAvailable: Int = 0
+
     init(code: String, lat: Double, lon: Double,
          landingFeePerKlb: Double = 0, gateFeeNarrowbody: Double = 0,
          gateFeeWidebody: Double = 0, groundStopsPerMonth: Double = 0) {

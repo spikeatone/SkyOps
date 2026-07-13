@@ -168,13 +168,24 @@ as the work, not "later."
       emergent property — under an oil spike the A340 goes net −$45,619
       while the A320 stays +$6,524 (fell out of the math for free) — plus
       in-sim banner check.
-- [ ] Ownership economy (slice 3): playerBalance, $20M starting capital,
-      purchase/sell, cycle-based SELL decision, linear depreciation.
-- [ ] Leasing + used-aircraft market (slice 4).
-- [ ] Player route network + route-opening cost + slots + ROUTES panel
-      (slice 5) — the big behavioral change (owned aircraft fly opened
-      routes, not random).
-- [ ] Player + competitor airline identity (slice 6).
+- [x] Ownership + route network (slices 3+5, the FULL SHIFT). A fresh
+      session starts EMPTY: $20M, zero aircraft, zero routes. Buy
+      aircraft (ACQUIRE panel, affordability-gated), which sit as idle
+      spares; OPEN ROUTE via tap-origin → tap-dest → confirm (real cost =
+      base + gate fees + slot premium; abstract slot scarcity per airport);
+      the assigned owned aircraft flies the route (A↔B) and its net feeds
+      playerBalance + route P&L. Owned aircraft fly ONLY opened routes;
+      the FLEET buttons became a DEV stress-test toggle (non-owned
+      background traffic). Crew/AOG/SELL now scoped to purchased aircraft
+      (the retrofit the prototype documents). Cycle-based SELL decision +
+      linear depreciation (5% floor). Verified: 23/23 headless
+      (buy→spare→openRoute→fly→earn, scoping, shrink-protects-owned) +
+      full in-sim loop ($20M → buy → open SLC↔RDU → balance grows as it
+      flies). Airport tap tolerance set to 44pt (fingertip-sized).
+- [ ] Leasing + used-aircraft market (slice 4) — additive.
+- [ ] Player + competitor airline identity (slice 6) — additive.
+- [ ] ROUTES panel (list/detail P&L view) — data model is ready
+      (Route.cumulativeNet / flights / openingCost).
 
 ## Blocked
 
