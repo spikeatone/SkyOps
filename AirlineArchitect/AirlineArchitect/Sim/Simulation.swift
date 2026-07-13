@@ -418,6 +418,7 @@ final class Simulation {
                                                    typeName: ac.type.name, assignedTick: tick))
         nextRouteId += 1
         playerRoutes.append(r)
+        logOps(.structural, "Route opened", "\(origin.code) ↔︎ \(dest.code)")
 
         ac.assignedRouteId = r.id
         ac.origin = origin
@@ -819,6 +820,33 @@ final class Simulation {
     private(set) var currentEvent = EconomicEvent.normal
     private(set) var economicEventTicksLeft = 0
 
+    // MARK: - Ops event log (the Ops tab's Events feed)
+    private(set) var opsEventLog: [OpsEvent] = []
+    private var nextOpsEventId = 1
+
+    /// Record an event to the (capped, newest-first) Ops feed.
+    private func logOps(_ category: OpsEvent.Category, _ title: String, _ subtitle: String) {
+        opsEventLog.insert(OpsEvent(id: nextOpsEventId, category: category,
+                                    title: title, subtitle: subtitle, tick: tick), at: 0)
+        nextOpsEventId += 1
+        if opsEventLog.count > 40 { opsEventLog.removeLast(opsEventLog.count - 40) }
+    }
+
+    /// Airport codes on the player's open routes (weather there is worth logging).
+    private var playerRouteCodes: Set<String> {
+        Set(playerRoutes.flatMap { [$0.originCode, $0.destCode] })
+    }
+
+    private func opsEventSubtitle(_ e: EconomicEvent) -> String {
+        switch e.id {
+        case "OIL_SPIKE": return "Fuel costs surge \(Int(((e.costMultiplier - 1) * 100).rounded()))%"
+        case "FUEL_GLUT": return "Fuel costs drop \(Int(((1 - e.costMultiplier) * 100).rounded()))%"
+        case "ECON_BOOM": return "Demand up — fares +\(Int(((e.fareMultiplier - 1) * 100).rounded()))%"
+        case "RECESSION": return "Fares down \(Int(((1 - e.fareMultiplier) * 100).rounded()))%"
+        default:          return e.label
+        }
+    }
+
     private static let economicEventCheckInterval = 1440   // once per sim-day
     private static let economicEventDailyProbability = 0.15
     private static let economicEventMinDurationDays = 3
@@ -841,6 +869,7 @@ final class Simulation {
             let days = Double(Simulation.economicEventMinDurationDays)
                      + Double.random(in: 0..<1) * Double(Simulation.economicEventMaxDurationDays - Simulation.economicEventMinDurationDays)
             economicEventTicksLeft = Int((days * 24 * 60).rounded())
+            logOps(.market, currentEvent.label, opsEventSubtitle(currentEvent))
         }
     }
 
@@ -997,6 +1026,7 @@ final class Simulation {
             let r = playerRoutes.remove(at: idx)
             r.closedTick = tick
             closedPlayerRoutes.append(r)
+            logOps(.structural, "Route closed", "\(r.originCode) ↔︎ \(r.destCode)")
             airports.first { $0.code == r.originCode }?.slotsAvailable += 1
             airports.first { $0.code == r.destCode }?.slotsAvailable += 1
         }
@@ -1050,13 +1080,18 @@ final class Simulation {
     /// groundStopsPerMonth rate; duration 90–330 ticks (1.5–5.5 sim-hours).
     /// Ported from tickWeather(). Universal — applies to all traffic.
     private func tickWeather() {
+        let relevant = playerRouteCodes   // only log weather where the player flies
         for ap in airports {
             if ap.groundStop {
                 ap.groundStopTicksLeft -= 1
-                if ap.groundStopTicksLeft <= 0 { ap.groundStop = false }
+                if ap.groundStopTicksLeft <= 0 {
+                    ap.groundStop = false
+                    if relevant.contains(ap.code) { logOps(.disruption, "Ground stop lifted", ap.code) }
+                }
             } else if Double.random(in: 0..<1) < ap.groundStopsPerMonth / Double(Simulation.ticksPerMonth) {
                 ap.groundStop = true
                 ap.groundStopTicksLeft = 90 + Int.random(in: 0...240)
+                if relevant.contains(ap.code) { logOps(.disruption, "Ground stop", "Weather hold at \(ap.code)") }
             }
         }
     }

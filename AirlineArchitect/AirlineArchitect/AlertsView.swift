@@ -81,7 +81,7 @@ struct AlertsModal: View {
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 24)
             } else {
-                ForEach(sim.decisionQueue) { alertCard($0) }
+                ForEach(sim.decisionQueue) { NeedsAttentionCard(sim: sim, decision: $0) }
             }
         }
         .padding(16)
@@ -90,9 +90,31 @@ struct AlertsModal: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(modalBorder, lineWidth: 1))
     }
 
-    // MARK: One "Needs Attention" sub-card
-    @ViewBuilder private func alertCard(_ d: Simulation.Decision) -> some View {
-        let m = model(for: d)
+    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+}
+
+// MARK: - Shared "Needs Attention" sub-card (used by the Alerts modal AND Ops)
+
+/// One accent-bordered decision sub-card (AOG red / crew red / end-of-service
+/// amber), wired to the same resolvers the map cards used. Reused verbatim by
+/// the Alerts modal and the Ops tab's Needs Attention group.
+struct NeedsAttentionCard: View {
+    let sim: Simulation
+    let decision: Simulation.Decision
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+
+    private var subCardBG: Color { isDark ? Sky.darkBG : Color(skyHex: 0xF9F9F9) }
+    private var primary: Color   { isDark ? .white : .black }
+    private var subtitle: Color  { isDark ? Sky.lightBlue.opacity(0.7) : Color(skyHex: 0x64748B) }
+    private var btnBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xC9C9C9) }
+    private var btnText: Color   { isDark ? .white : Color(skyHex: 0x4B4B4B) }
+    private var accentRed: Color { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
+    private let accentAmber = Color(skyHex: 0xFFB700)
+
+    var body: some View {
+        let _ = sim.tick   // keep erosion rate / affordability live
+        let m = model(for: decision)
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: m.icon).font(.system(size: 18)).foregroundStyle(m.accent)
@@ -123,7 +145,6 @@ struct AlertsModal: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(m.accent, lineWidth: 1))
     }
 
-    // MARK: Alert content per decision kind (same resolvers as the map cards)
     private struct AlertModel {
         let accent: Color, icon: String, category: String, title: String, subtitle: String
         let buttons: [(label: String, action: () -> Void)]
