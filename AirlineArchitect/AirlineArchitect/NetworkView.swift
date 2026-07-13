@@ -45,6 +45,16 @@ struct NetworkView: View {
     /// #4E67A0 in light, light-blue in dark). Was the brighter #0EA5E9.
     private var titleColor: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x4E67A0) }
 
+    // Floating map-overlay bars (control bar / speed bar / dev controls). Dark
+    // slate on dark; on the white light map, opaque white + a grey border +
+    // soft shadow so they read as clean controls instead of black boxes (Figma
+    // 2:1592 uses white@80% + #497AA5 "Core Blue" text — opaque here since the
+    // map is white, not the Figma's dark screenshot).
+    private var barBG: Color     { isDark ? Sky.navBarDark.opacity(0.92) : .white }
+    private var barBorder: Color { isDark ? Sky.onDarkStroke.opacity(0.7) : Color(skyHex: 0xC9C9C9) }
+    private var barText: Color   { isDark ? Sky.lightBlue : Color(skyHex: 0x497AA5) }
+    private var barShadow: Color { isDark ? .clear : .black.opacity(0.12) }
+
     // Gesture accumulators.
     @State private var dragLast: CGSize = .zero
     @State private var magLast: CGFloat = 1
@@ -136,7 +146,7 @@ struct NetworkView: View {
         .overlay(alignment: .bottom) {
             VStack(spacing: 8) {
                 bottomStack(selected: selected)
-                if showOverlays { speedBar; trafficBar; devProToggle }
+                if showOverlays { speedBar; devControls }
             }
             .padding(8)
         }
@@ -188,9 +198,10 @@ struct NetworkView: View {
             barButton("Fuel Hedge", active: panel == .hedge) { toggle(.hedge) }
         }
         .padding(.vertical, 4)
-        .background(Sky.navBarDark.opacity(0.92))
+        .background(barBG)
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Sky.onDarkStroke.opacity(0.7), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(barBorder, lineWidth: 1))
+        .shadow(color: barShadow, radius: 3, y: 1)
     }
 
     private func toggle(_ p: NetPanel) {
@@ -205,7 +216,7 @@ struct NetworkView: View {
                 .font(.karla(12, .semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)   // long labels (Acquire A/C) shrink to fit rather than crowd
-                .foregroundStyle(active ? Sky.brightBlue : Sky.lightBlue)
+                .foregroundStyle(active ? Sky.brightBlue : barText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 7).padding(.horizontal, 5)
                 .background(active ? Sky.brightBlue.opacity(0.18) : Color.clear)
@@ -215,7 +226,7 @@ struct NetworkView: View {
     }
 
     private var barDivider: some View {
-        Rectangle().fill(Sky.onDarkStroke.opacity(0.5)).frame(width: 1, height: 16)
+        Rectangle().fill(barBorder.opacity(0.6)).frame(width: 1, height: 16)
     }
 
     // MARK: - Sim Speed Control Bar (¼×–25×, ¼× rate-limited)
@@ -228,7 +239,7 @@ struct NetworkView: View {
                 Button { sim.requestSpeed(s) } label: {
                     Text(speedLabel(s))
                         .font(.karla(13, .semibold))
-                        .foregroundStyle(active ? .white : (quarterBlocked ? Sky.lightBlue.opacity(0.35) : Sky.lightBlue))
+                        .foregroundStyle(active ? .white : (quarterBlocked ? barText.opacity(0.35) : barText))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .background(active ? Sky.brightBlue : Color.clear)
@@ -238,9 +249,10 @@ struct NetworkView: View {
             }
         }
         .padding(4)
-        .background(Sky.navBarDark.opacity(0.92))
+        .background(barBG)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Sky.onDarkStroke.opacity(0.7), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(barBorder, lineWidth: 1))
+        .shadow(color: barShadow, radius: 3, y: 1)
     }
 
     private func speedLabel(_ s: Double) -> String {
@@ -249,6 +261,20 @@ struct NetworkView: View {
         case 0.5:  return "½×"
         default:   return s == s.rounded() ? "\(Int(s))×" : "\(s)×"
         }
+    }
+
+    /// DEV controls (Competitive Traffic + Pro toggle) in a themed container so
+    /// they don't get lost on the white light map.
+    private var devControls: some View {
+        VStack(spacing: 8) {
+            trafficBar
+            devProToggle
+        }
+        .padding(.vertical, 8).padding(.horizontal, 4)
+        .background(barBG)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(barBorder, lineWidth: 1))
+        .shadow(color: barShadow, radius: 3, y: 1)
     }
 
     /// DEV: flip the Pro entitlement to exercise free-cap vs. unlocked play
@@ -279,7 +305,7 @@ struct NetworkView: View {
                 .fixedSize()
             trafficSlider
             Text("\(sim.stressTestCount)").font(.karla(12, .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(isDark ? .white : Color(skyHex: 0x497AA5))
                 .frame(width: 30, alignment: .trailing)
         }
         .padding(.horizontal, 6)

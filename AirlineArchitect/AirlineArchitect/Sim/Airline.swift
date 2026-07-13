@@ -52,44 +52,86 @@ struct Airline {
         .init(name: "Independent Operator", code: "", weight: 1, types: ["A319NEO","E190","E195","ERJ135","ERJ140"]),
     ]
 
-    /// Real Latin American carriers, painted on background traffic to/within
-    /// Mexico, Central America, and South America (added with the LatAm airport
-    /// expansion). Per-type eligibility is researched per carrier, limited to
-    /// the aircraft types in this game. Weights are relative within this pool
-    /// (roughly by fleet size); digit-bearing IATA codes (G3/Y4/H2) are real.
-    static let latamRoster: [Airline] = [
-        .init(name: "LATAM Airlines",        code: "LA", weight: 20, types: ["A319","A320","A321","A321NEO","B788","B789","B773"]),
-        .init(name: "Avianca",               code: "AV", weight: 9,  types: ["A319","A320","A321","A320NEO","A321NEO","B788"]),
-        .init(name: "Aeroméxico",            code: "AM", weight: 9,  types: ["B737800","MAX8","MAX9","B788","B789","E190"]),
-        .init(name: "GOL Linhas Aéreas",     code: "G3", weight: 9,  types: ["B737700","B737800","MAX8"]),
-        .init(name: "Azul",                  code: "AD", weight: 8,  types: ["A320NEO","A321NEO","E195","A339"]),
-        .init(name: "Copa Airlines",         code: "CM", weight: 7,  types: ["B737700","B737800","MAX8","MAX9"]),
-        .init(name: "Volaris",               code: "Y4", weight: 8,  types: ["A319","A320","A321","A320NEO","A321NEO"]),
-        .init(name: "Viva Aerobus",          code: "VB", weight: 5,  types: ["A320","A321","A320NEO","A321NEO"]),
-        .init(name: "Aerolíneas Argentinas", code: "AR", weight: 5,  types: ["B737700","B737800","MAX8","A339"]),
-        .init(name: "SKY Airline",           code: "H2", weight: 3,  types: ["A320NEO","A321NEO"]),
-        .init(name: "JetSMART",              code: "JA", weight: 3,  types: ["A320","A320NEO","A321NEO"]),
+    // MARK: - Regional rosters (background traffic by geography)
+
+    /// The five geographic regions a flight can touch. A leg draws carriers from
+    /// its endpoints' regions, so a Mexican domestic leg shows Mexican carriers,
+    /// a Brazilian one South American carriers, etc. — not a lumped LatAm pool.
+    enum Region { case us, canada, mexico, centralAmerica, southAmerica }
+
+    /// Real Canadian carriers. Per-type eligibility researched per carrier,
+    /// limited to the game's types. Air Canada also appears in the US roster
+    /// (transborder widebody); that overlap is intentional.
+    static let canadaRoster: [Airline] = [
+        .init(name: "Air Canada",      code: "AC", weight: 20, types: ["A220300","A319","A320","A321","MAX8","MAX9","B788","B789","A339","B773"]),
+        .init(name: "WestJet",         code: "WS", weight: 15, types: ["B737700","B737800","MAX8","B789"]),
+        .init(name: "Jazz",            code: "QK", weight: 8,  types: ["CRJ900","E175"]),
+        .init(name: "Porter Airlines", code: "PD", weight: 7,  types: ["E195"]),
+        .init(name: "Air Transat",     code: "TS", weight: 5,  types: ["A321NEO","A339"]),
+        .init(name: "Flair Airlines",  code: "F8", weight: 4,  types: ["B737800","MAX8"]),
     ]
 
-    /// The game's 45 Latin American airport codes — used to decide which roster
-    /// a background flight draws from (see the region-aware `pick`).
-    static let latamAirportCodes: Set<String> = [
-        "MEX","CUN","GDL","TIJ","MTY","SJD","PVR","NLU","MID","BJX","CUL","VER","HMO","OAX","MZT",
+    /// Real Mexican carriers.
+    static let mexicoRoster: [Airline] = [
+        .init(name: "Aeroméxico",   code: "AM", weight: 12, types: ["B737800","MAX8","MAX9","B788","B789","E190"]),
+        .init(name: "Volaris",      code: "Y4", weight: 12, types: ["A319","A320","A321","A320NEO","A321NEO"]),
+        .init(name: "Viva Aerobus", code: "VB", weight: 9,  types: ["A320","A321","A320NEO","A321NEO"]),
+    ]
+
+    /// Real Central American carriers (Copa Panama hub, Avianca's regional feed).
+    static let centralAmericaRoster: [Airline] = [
+        .init(name: "Copa Airlines", code: "CM", weight: 12, types: ["B737700","B737800","MAX8","MAX9"]),
+        .init(name: "Avianca",       code: "AV", weight: 8,  types: ["A319","A320","A321","A320NEO","A321NEO","B788"]),
+        .init(name: "Volaris",       code: "Y4", weight: 6,  types: ["A319","A320","A321","A320NEO","A321NEO"]),
+    ]
+
+    /// Real South American carriers.
+    static let southAmericaRoster: [Airline] = [
+        .init(name: "LATAM Airlines",        code: "LA", weight: 20, types: ["A319","A320","A321","A321NEO","B788","B789","B773"]),
+        .init(name: "GOL Linhas Aéreas",     code: "G3", weight: 11, types: ["B737700","B737800","MAX8"]),
+        .init(name: "Azul",                  code: "AD", weight: 10, types: ["A320NEO","A321NEO","E195","A339"]),
+        .init(name: "Avianca",               code: "AV", weight: 9,  types: ["A319","A320","A321","A320NEO","A321NEO","B788"]),
+        .init(name: "Aerolíneas Argentinas", code: "AR", weight: 6,  types: ["B737700","B737800","MAX8","A339"]),
+        .init(name: "SKY Airline",           code: "H2", weight: 4,  types: ["A320NEO","A321NEO"]),
+        .init(name: "JetSMART",              code: "JA", weight: 4,  types: ["A320","A320NEO","A321NEO"]),
+    ]
+
+    // Airport-code → region membership (US is the default / everything else).
+    static let canadaCodes: Set<String> = [
+        "YYZ","YVR","YUL","YYC","YEG","YOW","YWG","YHZ","YTZ","YLW","YYJ","YYT","YXE","YQR","YQM","YSJ","YQG","YFC","YQT","YMM",
+    ]
+    static let mexicoCodes: Set<String> = [
+        "MEX","CUN","GDL","TIJ","MTY","SJD","PVR","NLU","MID","BJX","CUL","VER","HMO","OAX","MZT","CZM",
+    ]
+    static let centralAmericaCodes: Set<String> = [
         "PTY","SJO","SAL","GUA","LIR","SAP","MGA","BZE","XPL","RTB",
+    ]
+    static let southAmericaCodes: Set<String> = [
         "BOG","GRU","SCL","LIM","CGH","AEP","GIG","VCP","MDE","BSB","EZE","UIO","SDU","CLO","CNF","CTG","POA","REC","SSA","GYE",
     ]
 
-    /// Region-aware weighted pick among carriers that actually fly `typeId`. An
-    /// intra-US leg draws the US roster; an intra-LatAm leg the LatAm roster; a
-    /// mixed (international) leg either. Every type resolves (Independent
-    /// Operator fallback), so this never returns nil.
-    static func pick(forType typeId: String, originLatam: Bool, destLatam: Bool) -> Airline {
-        let pool: [Airline]
-        switch (originLatam, destLatam) {
-        case (false, false): pool = roster
-        case (true, true):   pool = latamRoster
-        default:             pool = roster + latamRoster
+    static func region(_ code: String) -> Region {
+        if canadaCodes.contains(code) { return .canada }
+        if mexicoCodes.contains(code) { return .mexico }
+        if centralAmericaCodes.contains(code) { return .centralAmerica }
+        if southAmericaCodes.contains(code) { return .southAmerica }
+        return .us
+    }
+    static func roster(for r: Region) -> [Airline] {
+        switch r {
+        case .us:             return roster
+        case .canada:         return canadaRoster
+        case .mexico:         return mexicoRoster
+        case .centralAmerica: return centralAmericaRoster
+        case .southAmerica:   return southAmericaRoster
         }
+    }
+
+    /// Region-aware weighted pick among carriers that actually fly `typeId`.
+    /// A same-region leg draws that region's roster; a cross-region leg draws
+    /// both. Every type resolves (Independent Operator fallback).
+    static func pick(forType typeId: String, origin: Region, dest: Region) -> Airline {
+        let pool = origin == dest ? roster(for: origin) : roster(for: origin) + roster(for: dest)
         let eligible = pool.filter { $0.types.contains(typeId) }
         guard !eligible.isEmpty else { return fallback }
         var r = Int.random(in: 0..<max(1, eligible.reduce(0) { $0 + $1.weight }))
@@ -102,7 +144,7 @@ struct Airline {
 
     /// US-region convenience (unchanged behaviour for existing callers/tests).
     static func pick(forType typeId: String) -> Airline {
-        pick(forType: typeId, originLatam: false, destLatam: false)
+        pick(forType: typeId, origin: .us, dest: .us)
     }
 
     static let fallback = roster.last!   // Independent Operator
@@ -141,6 +183,8 @@ struct Airline {
         // Latin American carriers (added with the LatAm airport expansion; the
         // majors AM/CM/LA/AV/AR are already listed above)
         "AD": "Azul", "VB": "Viva Aerobus", "JA": "JetSMART",
+        // Canadian carriers (WS/AC already listed above)
+        "TS": "Air Transat", "PD": "Porter Airlines", "QK": "Jazz",
     ]
 
     /// A random 2-uppercase-letter code that isn't a real airline code — used

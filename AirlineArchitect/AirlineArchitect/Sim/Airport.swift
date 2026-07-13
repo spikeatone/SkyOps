@@ -2,7 +2,7 @@
 //  Airport.swift
 //  Airline Architect — Phase 2
 //
-//  113 real airports — 48 U.S. (ported from AIRPORTS) + 45 Latin American
+//  114 real airports — 48 U.S. (ported from AIRPORTS) + 46 Latin American
 //  (Mexico/Central/South America) + 20 Canadian. Each has
 //  real lat/lon plus real fee/ground-stop data (used from Phase 2's economy
 //  onward). `unit` is the resolution-independent projected position; `screen`
@@ -52,7 +52,7 @@ final class Airport: Identifiable {
     }
 
     /// The real airport network: 48 U.S. (top-50 by fee, minus 2 cross-batch
-    /// duplicates; includes ANC/HNL) + 45 Latin American + 20 Canadian, 113 total.
+    /// duplicates; includes ANC/HNL) + 46 Latin American + 20 Canadian, 114 total.
     static let all: [Airport] = [
         .init(code: "ORD", lat: 41.9786, lon: -87.9048,  landingFeePerKlb: 10.58, gateFeeNarrowbody: 600,  gateFeeWidebody: 1500, groundStopsPerMonth: 9.4),
         .init(code: "ATL", lat: 33.6407, lon: -84.4277,  landingFeePerKlb: 1.63,  gateFeeNarrowbody: 250,  gateFeeWidebody: 450,  groundStopsPerMonth: 4.8),
@@ -127,6 +127,7 @@ final class Airport: Identifiable {
         .init(code: "HMO", lat: 29.0959, lon: -111.0478, landingFeePerKlb: 1.75, gateFeeNarrowbody: 245, gateFeeWidebody: 490, groundStopsPerMonth: 2.2),
         .init(code: "OAX", lat: 16.9999, lon: -96.7266,  landingFeePerKlb: 1.65, gateFeeNarrowbody: 235, gateFeeWidebody: 470, groundStopsPerMonth: 2.5),
         .init(code: "MZT", lat: 23.1614, lon: -106.2661, landingFeePerKlb: 1.70, gateFeeNarrowbody: 240, gateFeeWidebody: 480, groundStopsPerMonth: 2.0),
+        .init(code: "CZM", lat: 20.5224, lon: -86.9256,  landingFeePerKlb: 1.80, gateFeeNarrowbody: 250, gateFeeWidebody: 500, groundStopsPerMonth: 2.5),
 
         // Central America (top 10)
         .init(code: "PTY", lat: 9.0714,  lon: -79.3835,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 360, gateFeeWidebody: 780, groundStopsPerMonth: 2.5),

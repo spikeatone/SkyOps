@@ -1277,26 +1277,42 @@ where numbers are involved.
     fill + 0.20 stroke). Verified in the Simulator: all 45 airports sit on their
     countries (BOG/Colombia, LIM/Peru coast, GRU-CGH/São Paulo, EZE-AEP/Buenos
     Aires, SCL/Chile, REC-SSA/Brazil east coast), US map pixel-identical.
-  - **LatAm competitor airlines — DONE (follow-up).** `Airline.latamRoster` (11
-    real carriers: LATAM, Avianca, Aeroméxico, GOL, Azul, Copa, Volaris, Viva
-    Aerobus, Aerolíneas Argentinas, SKY, JetSMART) with researched per-type
-    eligibility (limited to in-game types) + real IATA codes (incl. digit codes
-    G3/Y4/H2). `pick(forType:originLatam:destLatam:)` is now **region-aware**:
-    an intra-US leg draws the US `roster`, an intra-LatAm leg the `latamRoster`,
-    a mixed/international leg either (`roster + latamRoster`); the old
-    `pick(forType:)` delegates to the US case (callers/tests unchanged).
-    `makeAircraft` classifies each leg via `Airline.latamAirportCodes` (the 45
-    codes). New alpha codes AD/VB/JA added to `realCodes` (majors AM/CM/LA/AV/AR
-    were already there). Verified 11/11 headless (region isolation both ways,
-    every type resolves in every region, spawned traffic carries LatAm carriers
-    with correct tail codes — Copa→CM). At the default CONUS view the player
-    still mostly sees US carriers (US airports on-screen); LatAm carriers appear
-    on southern routes when panning down.
-  - **Remaining scope note (deliberate)**: still no region-SELECTION and the
-    US↔international weighting is simple (US-major weights dominate the mixed
-    pool). The equirectangular projection stretches the far south modestly
-    (pinned cosine) — accepted, consistent with the "not a true global
-    projection" limitation.
+  - **Region-aware competitor airlines — DONE, then EXPANDED to 5 regions.**
+    `Airline.Region` = {us, canada, mexico, centralAmerica, southAmerica}, each
+    with its OWN roster (`roster` US / `canadaRoster` / `mexicoRoster` /
+    `centralAmericaRoster` / `southAmericaRoster`) and its own airport-code Set
+    (`canadaCodes`/`mexicoCodes`/…; US is the default). `Airline.region(code)`
+    classifies an airport; `pick(forType:origin:dest:)` draws that region's
+    roster for a same-region leg, or BOTH rosters for a cross-region leg (every
+    type resolves → Independent Operator fallback). `makeAircraft` calls it with
+    `Airline.region(origin.code)`/`dest.code`. This replaced the old binary
+    `latamRoster`/`latamAirportCodes`/`pick(…originLatam:destLatam:)` — the LatAm
+    pool was too coarse (MEX↔CUN could show LATAM). Carriers (real, per-type
+    researched, real IATA codes incl. digit ones): Canada — Air Canada, WestJet,
+    Jazz, Porter, Air Transat, Flair; Mexico — Aeroméxico, Volaris, Viva Aerobus;
+    Central America — Copa, Avianca, Volaris; South America — LATAM, GOL, Azul,
+    Avianca, Aerolíneas Argentinas, SKY, JetSMART. New codes in `realCodes`:
+    AD/VB/JA (LatAm) + TS/PD/QK (Canada). Verified 17/18 headless (the one
+    "fail" was a bad test expectation — Air Canada correctly doesn't fly the
+    737-800, only the MAX 8): region isolation both ways, transborder shows both,
+    every type resolves in every region pair, tails carry real codes.
+  - **Remaining scope note (deliberate)**: still no region-SELECTION (player
+    always starts US). The equirectangular projection stretches the far south
+    modestly (pinned cosine) — accepted per the "not a true global projection"
+    limitation.
+- **Cozumel (CZM) added — 114 airports (48 US + 46 LatAm + 20 Canada).** For the
+  scuba divers. Real lat/lon (20.52, −86.93), Mexico-tier fees; added to
+  `mexicoCodes` so it draws Mexican carriers.
+- **NETWORK control bars restyled for light (Figma 2:1592) — DONE.** The control
+  bar / speed bar were dark navBarDark boxes that read as "black" on the white
+  light map. Now theme-aware via `barBG`/`barBorder`/`barText`/`barShadow` in
+  NetworkView: dark = navBarDark @0.92 (unchanged); **light = opaque white + a
+  #C9C9C9 border + soft shadow + #497AA5 "Core Blue" text** (Figma uses white@80%
+  but opaque here since our map is white, not the Figma's dark screenshot). The
+  active speed pill stays bright-blue+white in both. The DEV Competitive-Traffic
+  + Pro-toggle controls (previously loose) are now wrapped in a matching
+  `devControls` container so they don't get lost on white; the traffic count
+  colour is theme-aware too. Verified both themes.
 - **Map is now THEME-AWARE (was dark in both themes) — DONE (designer request).**
   `MapView` reads `@Environment(\.colorScheme)`: **light mode = white canvas**,
   dark mode unchanged. Only the background, grid, labels, and selection ring
