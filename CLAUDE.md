@@ -1864,12 +1864,21 @@ where numbers are involved.
     aircraft of one type at once (daily 1.5%) by setting `maint = true`, so each
     AOGs at its next gate via the existing mechanism (an AOG card per tail).
     Both log DISRUPTIONS. Headless + visually verified.
-  - **Remaining (Phase 4, not built): cost/revenue passive events** — #11
-    Insurance Premium (recurring monthly bill vs fleet value + occasional
-    hard-market ×), #12 Maintenance Cost Inflation (spikes AOG REPAIR cost only,
-    separate from fuel), #13 FX Shock (widebody fare only), #14 Competitor Fare
-    War (depresses one existing player route's fare, names a competitor).
-    Magnitudes for the built events are DESIGNED pacing, not sourced.
+  - **Phase 4 — DONE** (`e33bbd5`): the cost/revenue passive events — #11
+    Insurance Premium (recurring MONTHLY bill via `tickInsuranceBilling` = fleet
+    value × 0.08%/mo, occasional ×1.8 hard market; `totalInsuranceSpent` tracked
+    for the Finance tab), #12 Maintenance Cost Inflation (temporary ×1.6 on AOG
+    REPAIR cost only, via `maintCostMultiplier` in the resolvers), #13 FX Shock
+    (widebody fare ×0.85 in `rollRevenue`, gated on owning a widebody), #14
+    Competitor Fare War (one existing player route's fare ×0.75, names a
+    Big-Four competitor). Headless-verified over 300 sim-days (insurance/maint/
+    fare-war fire; FX correctly gated off with a regional fleet — its
+    widebody-gated firing wasn't exercised end-to-end since a widebody is
+    unaffordable at the $20M start, but the effect is one line analogous to the
+    verified fare-war line).
+  - **ALL 16 external events are now built.** Magnitudes for every built event
+    are DESIGNED pacing, not sourced. All surface in the Ops feed and/or the
+    economics; the only one that's a player choice is #16 (the Offer card).
 
 ## Open / not yet decided
 
