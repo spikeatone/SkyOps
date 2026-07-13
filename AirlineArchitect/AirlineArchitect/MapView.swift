@@ -77,6 +77,11 @@ struct MapView: View {
         }
 
         ctx.stroke(ringPath(map.canada), with: .color(borderColor.opacity(0.20)), lineWidth: 1)
+        // Latin America — same muted context treatment as Canada, with a very
+        // faint fill so large landmasses (Brazil, etc.) read as land.
+        let latam = ringPath(map.latam)
+        ctx.fill(latam, with: .color(climbColor.opacity(0.02)))
+        ctx.stroke(latam, with: .color(borderColor.opacity(0.20)), lineWidth: 1)
         let nation = ringPath(map.nation)
         ctx.fill(nation, with: .color(climbColor.opacity(0.025)))
         ctx.stroke(nation, with: .color(climbColor.opacity(0.35)), lineWidth: 1.25)

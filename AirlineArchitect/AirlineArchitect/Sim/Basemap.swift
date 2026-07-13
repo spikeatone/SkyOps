@@ -20,6 +20,9 @@ struct Basemap {
     /// State features — each is a set of rings.
     let states: [[[CGPoint]]]
     let canada: [[CGPoint]]
+    /// Latin America (Mexico + Central + South America) context outlines —
+    /// rendered muted like Canada. Not interactive.
+    let latam: [[CGPoint]]
 
     /// Decoded + projected once at first use.
     static let shared: Basemap = load()
@@ -28,6 +31,7 @@ struct Basemap {
         let nation: [[[Double]]]
         let states: [[[[Double]]]]
         let canada: [[[Double]]]
+        let latam: [[[Double]]]?
     }
 
     /// Project one [lon, lat] pair to unit space.
@@ -41,11 +45,12 @@ struct Basemap {
               let data = try? Data(contentsOf: url),
               let raw = try? JSONDecoder().decode(Raw.self, from: data) else {
             // No basemap available — render airports/aircraft without it.
-            return Basemap(nation: [], states: [], canada: [])
+            return Basemap(nation: [], states: [], canada: [], latam: [])
         }
         let nation = raw.nation.map { $0.map(project) }
         let states = raw.states.map { $0.map { $0.map(project) } }
         let canada = raw.canada.map { $0.map(project) }
-        return Basemap(nation: nation, states: states, canada: canada)
+        let latam = (raw.latam ?? []).map { $0.map(project) }
+        return Basemap(nation: nation, states: states, canada: canada, latam: latam)
     }
 }

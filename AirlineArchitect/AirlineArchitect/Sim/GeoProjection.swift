@@ -14,18 +14,25 @@ import Foundation
 import CoreGraphics
 
 enum GeoProjection {
-    /// Same bounds as the prototype's WORLD_BOUNDS (Alaska → Hawaii → East Coast).
-    static let latMin: Double = 18
+    /// World bounds. Extended south to Tierra del Fuego and east to Brazil's
+    /// coast so the map covers Alaska → Hawaii → the Americas down to Argentina.
+    /// `lonMin`/`latMax` are UNCHANGED and the cosine reference is PINNED (see
+    /// `cosRefLat`), so every previously-added point (US/Canada, all US
+    /// airports) projects to the exact same unit position as before — only the
+    /// canvas grows to the south and east.
+    static let latMin: Double = -56    // was 18 — now includes South America
     static let latMax: Double = 71
     static let lonMin: Double = -170
-    static let lonMax: Double = -66.5
+    static let lonMax: Double = -33     // was -66.5 — now includes eastern Brazil
 
-    /// Longitude compression at the centre latitude, so east–west distances
-    /// aren't overstated the further north you go.
-    static let lonCorrection: Double = {
-        let avgLatRad = ((latMin + latMax) / 2) * .pi / 180
-        return cos(avgLatRad)
-    }()
+    /// Latitude the longitude compression is anchored to. Pinned at the ORIGINAL
+    /// map centre (18…71 → 44.5) so extending the bounds doesn't re-scale or
+    /// shift the existing North American geometry.
+    static let cosRefLat: Double = 44.5
+
+    /// Longitude compression, so east–west distances aren't overstated. Anchored
+    /// at `cosRefLat` (not the new bounds' centre) to preserve existing layout.
+    static let lonCorrection: Double = cos(cosRefLat * .pi / 180)
 
     /// Project real lat/lon to unscaled world units (y grows southward, so
     /// higher latitude → smaller y, matching screen coordinates).

@@ -1249,6 +1249,40 @@ where numbers are involved.
   `Basemap.json` in the app folder (under `Resources/`) auto-bundles it —
   confirmed it lands in the built `.app` and `Bundle.main.url(forResource:)`
   finds it. No pbxproj resource-phase editing needed, same as source files.
+- **LATIN AMERICA expansion — DONE (native app). 48 → 93 airports; map now
+  covers Alaska → the Americas down to Argentina.** Added 15 Mexico + 10
+  Central America + 20 South America airports (`Airport.all`), real lat/lon.
+  Fee/ground-stop figures are **TIER-BASED ESTIMATES** calibrated to the US
+  ranges + each airport's real size/role — NOT per-airport sourced signatory
+  rates (unavailable for most); same "weakest tier" confidence as the RJ
+  weights. Flagged in the code.
+  - **Projection extended WITHOUT disturbing the existing North American map**
+    — the key trick: `GeoProjection` keeps `lonMin = -170` and `latMax = 71`
+    UNCHANGED and PINS the longitude cosine correction to a new constant
+    `cosRefLat = 44.5` (the ORIGINAL bounds' centre) instead of recomputing it
+    from the new centre. Since `unit()` only uses `lonMin`, `latMax`, and
+    `lonCorrection`, every previously-placed point (US/Canada geometry, all US
+    airports, the CONUS frame) projects to the EXACT same unit position; only
+    `latMin` (−56, Tierra del Fuego) and `lonMax` (−33, Recife) grew, extending
+    the canvas south/east. Default CONUS framing is unchanged (verified) —
+    `conusFrame` uses fixed CONUS bounds, and `defaultZoom`/`worldScale` cancel
+    so CONUS fills the frame identically; the previously-empty southern margin
+    now shows Mexico peeking in, inviting pan-down.
+  - **Basemap geometry**: pulled Natural Earth 110m country outlines (same
+    fidelity as the existing Canada layer) for the 20 countries via `curl` +
+    a Python extract (outer rings only, tiny-island drop, 2-dp round) → a new
+    `"latam"` key in `Basemap.json` (22 rings, ~1.4k pts, +22KB). `Basemap.swift`
+    decodes it (optional, back-compatible) and projects it through the SAME
+    `GeoProjection`; `MapView.drawBasemap` renders it muted like Canada (faint
+    fill + 0.20 stroke). Verified in the Simulator: all 45 airports sit on their
+    countries (BOG/Colombia, LIM/Peru coast, GRU-CGH/São Paulo, EZE-AEP/Buenos
+    Aires, SCL/Chile, REC-SSA/Brazil east coast), US map pixel-identical.
+  - **Scope note (unchanged, deliberate)**: the airline roster is still
+    US-weighted — background traffic CAN fly to/from LatAm airports (US carriers
+    do), but there are no LatAm carriers yet, and no region-selection. The
+    equirectangular projection stretches the far south modestly (pinned cosine)
+    — accepted, consistent with the documented "not a true global projection"
+    limitation.
 - **Pan/zoom camera + airport labels — ALSO PULLED FORWARD from Phase 4**
   (same session, designer focused on the map). The projection is now
   camera-based: everything lives in unit space and `Simulation` maps
