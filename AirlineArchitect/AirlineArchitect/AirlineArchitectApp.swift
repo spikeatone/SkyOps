@@ -14,6 +14,10 @@ import SwiftUI
 
 @main
 struct AirlineArchitectApp: App {
+    init() {
+        // Configure RevenueCat once, before anything reads Purchases.shared.
+        Store.configure()
+    }
     var body: some Scene {
         WindowGroup {
             ContentView()

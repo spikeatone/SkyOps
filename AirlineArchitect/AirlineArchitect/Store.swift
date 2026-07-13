@@ -7,39 +7,45 @@
 //  scale — "build a real empire" — rather than unlocking crippled features.
 //  Two Pro tiers (monthly / annual) unlock the same thing (uncapped play).
 //
-//  RevenueCat wiring is DEFERRED: `isPro`, prices, purchase() and restore() are
-//  STUBS today (a local flag toggled by the paywall / a dev control), so the
-//  whole gating experience is buildable and testable now. To go live: add the
-//  RevenueCat SPM package, set the public SDK key, and in this one file drive
-//  `isPro` from `Purchases.shared` customerInfo (entitlement "pro") and route
-//  purchase()/restore() through `Purchases.shared`. Nothing else in the app
-//  changes — every gate reads this type.
+//  RevenueCat wiring: the real SDK drives `isPro` from the "Airline Architect
+//  Pro" entitlement, with real offerings/prices and real purchase/restore. All
+//  RevenueCat code is behind `#if canImport(RevenueCat)` with a local stub
+//  fallback, so the app still compiles if the package is ever removed. To fully
+//  go live you still need the App Store Connect subscription products
+//  (ids `yearly` / `monthly`) + a RevenueCat Offering + the entitlement — until
+//  then offerings() returns nothing and the paywall shows the fallback prices.
 //
 
+#if canImport(RevenueCat)
+import RevenueCat
+#endif
 import Foundation
 
 @MainActor @Observable
 final class Store {
-    /// Whether the player has unlocked Pro (uncapped play). STUB — see file note.
+    /// RevenueCat public SDK key (safe to embed — it's a client key). Supplied
+    /// by the designer. NB: iOS public keys are usually `appl_…`; double-check
+    /// this is the iOS SDK key if entitlements don't resolve.
+    static let apiKey = "test_HezjILZFKVEdSqzUSMYrXohcnjp"
+    /// The entitlement identifier configured in the RevenueCat dashboard.
+    static let entitlementID = "Airline Architect Pro"
+
+    /// Whether the player has unlocked Pro (uncapped play). Driven by the
+    /// RevenueCat entitlement when configured; a local flag otherwise.
     var isPro = false
+
+    /// Purchase-flow UI state (paywall reads these).
+    var purchasing = false
+    var purchaseError: String?
 
     // MARK: - Free-tier caps (ignored entirely when isPro)
 
-    /// A free airline can own at most this many aircraft (bought + leased)…
     static let freeFleetCap = 3
-    /// …and keep at most this many routes open at once.
     static let freeRouteCap = 2
 
-    /// True if the player may acquire another aircraft right now.
-    func canAcquireAircraft(_ sim: Simulation) -> Bool {
-        isPro || sim.ownedCount < Self.freeFleetCap
-    }
-    /// True if the player may open another route right now.
-    func canOpenRoute(_ sim: Simulation) -> Bool {
-        isPro || sim.playerRoutes.count < Self.freeRouteCap
-    }
+    func canAcquireAircraft(_ sim: Simulation) -> Bool { isPro || sim.ownedCount < Self.freeFleetCap }
+    func canOpenRoute(_ sim: Simulation) -> Bool { isPro || sim.playerRoutes.count < Self.freeRouteCap }
 
-    /// Short "why you hit the wall" line for the paywall, given what was tapped.
     enum Gate { case fleet, route }
     func capMessage(_ gate: Gate) -> String {
         switch gate {
@@ -48,8 +54,9 @@ final class Store {
         }
     }
 
-    // MARK: - Plans (STUB display — RevenueCat's Offering supplies real,
-    // localized prices at runtime once wired)
+    // MARK: - Plans (paywall display). Prices come from the live RevenueCat
+    // offering when available, else these fallbacks. `id` matches the package
+    // lookup below.
 
     struct Plan: Identifiable, Equatable {
         let id: String
@@ -58,13 +65,94 @@ final class Store {
         let cadence: String
         let note: String?
     }
-    let plans: [Plan] = [
+    private static let fallbackPlans: [Plan] = [
         .init(id: "annual",  title: "Annual",  price: "$49.99", cadence: "per year",  note: "Best value · save 30%"),
         .init(id: "monthly", title: "Monthly", price: "$5.99",  cadence: "per month", note: nil),
     ]
+    private(set) var plans: [Plan] = Store.fallbackPlans
 
-    /// STUB — flips the local flag. Replace with `Purchases.shared.purchase(...)`.
-    func purchase(_ plan: Plan) { isPro = true }
-    /// STUB — no-op. Replace with `Purchases.shared.restorePurchases()`.
-    func restore() { /* RevenueCat restore; stub */ }
+    // MARK: - RevenueCat-backed implementation (or a local stub)
+
+    #if canImport(RevenueCat)
+    private var offering: Offering?
+
+    /// Configure the SDK once, before anything reads `Purchases.shared`.
+    /// Called from the App's init.
+    static func configure() {
+        Purchases.logLevel = .warn
+        Purchases.configure(withAPIKey: apiKey)
+    }
+
+    /// Load current entitlement + offerings, then observe live updates
+    /// (renewals, cross-device purchases). Call from a long-lived `.task`.
+    func start() async {
+        await refresh()
+        for await info in Purchases.shared.customerInfoStream { apply(info) }
+    }
+
+    func refresh() async {
+        if let info = try? await Purchases.shared.customerInfo() { apply(info) }
+        await loadOfferings()
+    }
+
+    private func apply(_ info: CustomerInfo) {
+        isPro = info.entitlements[Self.entitlementID]?.isActive == true
+    }
+
+    private func loadOfferings() async {
+        guard let current = try? await Purchases.shared.offerings().current else { return }
+        offering = current
+        var built: [Plan] = []
+        if let annual = current.annual ?? current.package(identifier: "yearly") {
+            built.append(.init(id: "annual", title: "Annual",
+                               price: annual.storeProduct.localizedPriceString,
+                               cadence: "per year", note: "Best value · save 30%"))
+        }
+        if let monthly = current.monthly ?? current.package(identifier: "monthly") {
+            built.append(.init(id: "monthly", title: "Monthly",
+                               price: monthly.storeProduct.localizedPriceString,
+                               cadence: "per month", note: nil))
+        }
+        if !built.isEmpty { plans = built }
+    }
+
+    private func package(for planID: String) -> Package? {
+        guard let offering else { return nil }
+        switch planID {
+        case "annual":  return offering.annual ?? offering.package(identifier: "yearly")
+        case "monthly": return offering.monthly ?? offering.package(identifier: "monthly")
+        default:        return nil
+        }
+    }
+
+    func purchase(planID: String) async {
+        guard let pkg = package(for: planID) else {
+            purchaseError = "That plan isn’t available right now. Check back once billing is set up."
+            return
+        }
+        purchasing = true
+        defer { purchasing = false }
+        do {
+            let (_, info, cancelled) = try await Purchases.shared.purchase(package: pkg)
+            if !cancelled { apply(info) }
+        } catch {
+            purchaseError = (error as NSError).localizedDescription
+        }
+    }
+
+    func restore() async {
+        purchasing = true
+        defer { purchasing = false }
+        do { apply(try await Purchases.shared.restorePurchases()) }
+        catch { purchaseError = (error as NSError).localizedDescription }
+    }
+    #else
+    // STUB — no package present. Flips the local flag so the gating experience
+    // is still testable end-to-end.
+    static func configure() {}
+    func start() async {}
+    func refresh() async {}
+    func purchase(planID: String) async { isPro = true }
+    func restore() async {}
+    #endif
 }

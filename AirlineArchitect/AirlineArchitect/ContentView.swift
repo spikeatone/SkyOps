@@ -38,6 +38,8 @@ struct ContentView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { SkyTabBar(selection: $tab) }
         // Run the sim for the whole session, independent of the selected tab.
         .task { await sim.run() }
+        // Load + observe the Pro entitlement from RevenueCat.
+        .task { await store.start() }
         .overlay {
             // First-launch: name the airline before anything else.
             if sim.playerAirlineName == nil {

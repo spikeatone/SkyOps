@@ -132,6 +132,7 @@ struct FinanceView: View {
                             .font(.karla(12)).foregroundStyle(secondary)
                     }
                     Spacer(minLength: 0)
+                    ManageSubscriptionButton(tint: titleColor)
                 }
             }
         } else {

@@ -10,6 +10,32 @@
 //
 
 import SwiftUI
+#if canImport(RevenueCatUI)
+import RevenueCatUI
+#endif
+
+/// "Manage subscription" — presents RevenueCat's Customer Center (cancel,
+/// refund requests, plan changes) when the package is available; otherwise
+/// deep-links to the system subscription-management screen. Shown on the
+/// Finance Pro card for active subscribers.
+struct ManageSubscriptionButton: View {
+    var tint: Color
+    @State private var show = false
+
+    var body: some View {
+        #if canImport(RevenueCatUI)
+        Button { show = true } label: { label }
+            .buttonStyle(.plain)
+            .presentCustomerCenter(isPresented: $show)
+        #else
+        Link(destination: URL(string: "https://apps.apple.com/account/subscriptions")!) { label }
+        #endif
+    }
+
+    private var label: some View {
+        Text("Manage subscription").font(.karla(13, .semibold)).foregroundStyle(tint)
+    }
+}
 
 struct PaywallView: View {
     let store: Store
@@ -85,21 +111,28 @@ struct PaywallView: View {
             // CTA + restore + fine print
             VStack(spacing: 12) {
                 Button {
-                    if let plan = store.plans.first(where: { $0.id == selected }) {
-                        store.purchase(plan)
-                        onClose()
-                    }
+                    Task { await store.purchase(planID: selected); if store.isPro { onClose() } }
                 } label: {
-                    Text("Continue")
-                        .font(.karla(17, .bold)).foregroundStyle(.white)
-                        .frame(maxWidth: .infinity).frame(height: 52)
-                        .background(Sky.coreGreen)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }.buttonStyle(.plain)
+                    ZStack {
+                        Text("Continue").font(.karla(17, .bold)).foregroundStyle(.white)
+                            .opacity(store.purchasing ? 0 : 1)
+                        if store.purchasing { ProgressView().tint(.white) }
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 52)
+                    .background(Sky.coreGreen)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }.buttonStyle(.plain).disabled(store.purchasing)
 
-                Button { store.restore(); onClose() } label: {
+                Button {
+                    Task { await store.restore(); if store.isPro { onClose() } }
+                } label: {
                     Text("Restore Purchases").font(.karla(13, .semibold)).foregroundStyle(secondary)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain).disabled(store.purchasing)
+
+                if let err = store.purchaseError {
+                    Text(err).font(.karla(11)).foregroundStyle(isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000))
+                        .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                }
 
                 Text("Subscriptions auto-renew until cancelled. Manage or cancel anytime in Settings. Payment is charged to your Apple Account.")
                     .font(.karla(10)).foregroundStyle(secondary.opacity(0.8))
