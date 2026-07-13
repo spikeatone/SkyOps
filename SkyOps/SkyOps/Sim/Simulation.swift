@@ -27,7 +27,36 @@ final class Simulation {
 
     /// Speed multiplier. Prototype default is 5× (feels smooth; at 1× the
     /// aircraft visibly steps every 250 ms, which is expected, not a bug).
-    var speed: Double = 5
+    private(set) var speed: Double = 5
+
+    /// Selectable speeds (¼×/½× are the slow-mo tiers; ¼× is rate-limited).
+    static let speedOptions: [Double] = [0.25, 0.5, 1, 5, 10, 25]
+
+    // ¼× is rate-limited: 3 uses per FIXED sim-calendar-day (resets when the
+    // day-of-sim number changes, NOT a rolling 24h window). Exhausting it snaps
+    // speed to 1× (not back to the previous speed). Ported from the prototype.
+    static let quarterSpeedDailyLimit = 3
+    private(set) var quarterSpeedUsesToday = 0
+    private var quarterSpeedDay = 0
+
+    /// Uses of ¼× left today (the UI shows/greys the ¼× control by this).
+    var quarterSpeedUsesRemaining: Int {
+        let day = tick / 1440
+        return day == quarterSpeedDay ? max(0, Simulation.quarterSpeedDailyLimit - quarterSpeedUsesToday)
+                                      : Simulation.quarterSpeedDailyLimit
+    }
+
+    /// Set the speed, enforcing the ¼× daily rate limit. Requesting ¼× when
+    /// it's exhausted snaps to 1× instead. Non-¼× speeds set directly.
+    func requestSpeed(_ s: Double) {
+        if s == 0.25 {
+            let day = tick / 1440
+            if day != quarterSpeedDay { quarterSpeedDay = day; quarterSpeedUsesToday = 0 }
+            guard quarterSpeedUsesToday < Simulation.quarterSpeedDailyLimit else { speed = 1; return }
+            quarterSpeedUsesToday += 1
+        }
+        speed = s
+    }
 
     private var nextTailNum = 1
 

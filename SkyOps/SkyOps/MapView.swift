@@ -46,7 +46,6 @@ struct MapView: View {
             drawAircraft(ctx)
         }
         .background(Color(red: 0.03, green: 0.05, blue: 0.06))
-        .ignoresSafeArea()
     }
 
     // MARK: - Layers

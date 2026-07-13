@@ -1373,6 +1373,53 @@ where numbers are involved.
   hire cost/deduction, sell-clears-only-at-zero + crew release, decision-cost
   balance deductions, resolveCrewHire assign+resolve, and the CREW-hold
   tension arising on a busy single-crew route).
+- **NETWORK view — DONE (native app), the FIRST full app screen from Figma.**
+  The app is now a 5-tab shell (`ContentView` = `TabView`: Network / Fleet /
+  Crews / Ops / Finance — the latter four are "Coming soon" placeholders,
+  designed later). `NetworkView.swift` is the Network tab, built to the Figma
+  (2:1592 light / 2:1994 dark): a **Cash-on-hand + NETWORK header** (cash value
+  green `#10B981`, live), an **eye** toggle (`View Overlay Menus` — hides the
+  Control Bar + Speed Bar for a clean map; icon flips eye↔eye.slash) and a
+  **bell** (`Events Icon`, badge on pending decisions — the events feed itself
+  is NOT built yet, a real TODO), the **Network Control Bar** (Acquire A/C /
+  Open Route / Routes / Hire Crew / Fuel Hedge — mutually-exclusive panels via
+  a `NetPanel` enum, except Open Route which drives `routeMode`), the map, and
+  the **Sim Speed Control Bar** (¼× ½× 1× 5× 10× 25×). Design tokens in the
+  `Sky` enum (`brightBlue #0EA5E9`, `coreGreen #10B981`, `navBarDark #1F232D`,
+  `darkBG #2B303D`, `onDarkStroke #4C5D88`, etc.); theme-aware via colorScheme.
+  Karla/SF-Pro approximated with the system font (bundle OFL Karla for exact
+  type). Tab icons are SF Symbol approximations of the Figma glyphs. The DEV
+  TRAFFIC stress-test control (not in the Figma) is tucked under the eye
+  overlays, labelled DEV.
+- **The map is now a BOUNDED ROUNDED CARD, not full-screen — this reworked the
+  tap coordinate space AGAIN.** The Figma insets the map (rounded card below
+  the header, above the tab bar). So MapView's Canvas `.ignoresSafeArea()` was
+  REMOVED (it now fills the card), and taps are read in a NAMED coordinate
+  space (`.named("mapCanvas")` on the card) instead of the earlier full-screen
+  `.global` fix — because the Canvas now fills the card, the card's local
+  space IS the Canvas draw space. Verified live: route-picker DEN selection
+  landed correctly in the new bounded card. (Lesson: the correct tap space is
+  whatever matches the Canvas's actual frame — `.global` when it's full-screen
+  ignoresSafeArea, a named/local card space when it's bounded.)
+- **¼×/½× speeds + the ¼× rate limit — ported.** `Simulation.speedOptions` is
+  now [0.25, 0.5, 1, 5, 10, 25]; `speed` is `private(set)` and set via
+  `requestSpeed(_:)`. ¼× is capped at 3 uses per FIXED sim-day
+  (`quarterSpeedUsesRemaining`, resets when `tick/1440` changes, NOT a rolling
+  window); the 4th request snaps to 1× (not the previous speed). Verified 8/8
+  headless. NetworkView reads/greys the ¼× control by the remaining count.
+- **Two NEW control-bar panels (functional; Figma restyle is the next pass):**
+  `AddCrewPanel` (Hire Crew — lists owned families with crew count + real hire
+  cost, verified showing "ERJ · 1 crew · 1 aircraft · Hire $28k" live after a
+  purchase) and `FuelHedgePanel` (Fuel Hedge — empty-fleet / active-countdown /
+  30-60-90-day-buy states, verified showing the empty-fleet message with no
+  fleet). Both use a shared `NetPanelBox` dev chrome.
+- Verified live in the Simulator: header + live cash update ($20M→$6M on a
+  buy), all five control-bar buttons + panel switching, the eye toggle
+  hiding/showing the bars, the bounded-card map tap (route picker), the speed
+  bar, and the 5-tab nav. Existing panels (BuyPanel/RoutesPanel/tooltip/
+  decision cards) carried over unchanged into the new view — their Figma
+  restyle (Acquire, Routes, Open Route flow, tooltip, Fuel Hedge) is the
+  designer's NEXT batch of frames.
 - **The headless harness now has a third proven catch** (after nothing,
   then the AOG lifecycle): it caught the crew cascade as a design/balance
   bug a unit test wouldn't frame. Two harness kinds now live in the session

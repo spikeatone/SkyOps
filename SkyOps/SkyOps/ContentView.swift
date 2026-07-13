@@ -13,98 +13,27 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var sim = Simulation()
-
-    // Gesture accumulators (cumulative values → per-frame deltas).
-    @State private var dragLast: CGSize = .zero
-    @State private var magLast: CGFloat = 1
-    /// True once a touch has moved far enough to be a pan (vs a tap). Tracked
-    /// so ONE gesture handles both — separate tap + drag recognizers fought
-    /// each other (the tap fired, then the drag cleared it: "flash then gone").
-    @State private var isDragging = false
-
-    /// Tap-selected aircraft (tooltip subject). UI state, not sim state.
-    @State private var selectedID: UUID?
-
-    /// Route-opening flow + buy panel (UI state).
-    @State private var routeMode: RouteMode = .off
-    @State private var showBuyPanel = false
-    @State private var flash: String?
-
-    /// ROUTES panel (UI state). `routesDetailId` nil = list view.
-    @State private var showRoutesPanel = false
-    @State private var routesDetailId: Int?
-
-    private let speeds: [Double] = [1, 5, 10, 25]
-    private let fleetSizes: [Int] = [10, 60, 120, 250]
-
-    /// Airports the route picker is currently highlighting.
-    private var routeHighlights: Set<String> {
-        switch routeMode {
-        case .off, .pickOrigin: return []
-        case .pickDest(let o):  return [o]
-        case .confirm(let o, let d): return [o, d]
-        }
-    }
+    @State private var tab = 0
 
     var body: some View {
-        // Resolve the selection every render — a shrunk fleet must not leave
-        // the tooltip pointing at an aircraft that no longer exists (same
-        // stale-reference family as the decision-card cleanup).
-        let selected = sim.aircraft.first(where: { $0.id == selectedID })
-
-        ZStack(alignment: .top) {
-            MapView(sim: sim,
-                    tick: sim.tick,
-                    cameraZoom: sim.cameraZoom,
-                    cameraCenter: sim.cameraCenter,
-                    selectedID: selected?.id,
-                    highlightCodes: routeHighlights)
-                // Full-screen so the whole map (incl. the safe-area margins) is
-                // tappable; the tap location itself is read in .global space to
-                // match the Canvas — see dragOrTapGesture.
-                .ignoresSafeArea()
-                .gesture(dragOrTapGesture.simultaneously(with: zoomGesture))
-
-            hud
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-
-            // Bottom stack: buy panel / route-confirm / route-hint, then the
-            // aircraft tooltip, then decision cards. The sim NEVER pauses for
-            // any of these. Stable IDs keep SwiftUI diffing instead of
-            // recreating views each tick (don't key these off tick).
-            VStack(spacing: 10) {
-                Spacer()
-                if let flash {
-                    Text(flash).font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(.white).padding(8)
-                        .background(Color.black.opacity(0.7)).clipShape(Capsule())
-                }
-                if showBuyPanel {
-                    BuyPanel(sim: sim, onBought: handleBought)
-                }
-                if showRoutesPanel {
-                    RoutesPanel(sim: sim, detailId: $routesDetailId) { showRoutesPanel = false }
-                }
-                routeFlowPanel
-                if let ac = selected {
-                    AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { selectedID = nil }
-                }
-                ForEach(sim.decisionQueue) { decision in
-                    switch decision.kind {
-                    case .aog:  AOGCard(decision: decision, sim: sim)
-                    case .crew: CrewCard(decision: decision, sim: sim)
-                    case .sell: SellCard(decision: decision, sim: sim)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
+        TabView(selection: $tab) {
+            NetworkView(sim: sim)
+                .tabItem { Label("Network", systemImage: "point.topleft.down.to.point.bottomright.curvepath") }
+                .tag(0)
+            placeholder("Fleet", "airplane")
+                .tabItem { Label("Fleet", systemImage: "airplane") }.tag(1)
+            placeholder("Crews", "person.2.fill")
+                .tabItem { Label("Crews", systemImage: "person.2.fill") }.tag(2)
+            placeholder("Ops", "list.clipboard.fill")
+                .tabItem { Label("Ops", systemImage: "list.clipboard.fill") }.tag(3)
+            placeholder("Finance", "chart.bar.fill")
+                .tabItem { Label("Finance", systemImage: "chart.bar.fill") }.tag(4)
         }
+        .tint(Sky.brightBlue)
+        // Run the sim for the whole session, independent of the selected tab.
         .task { await sim.run() }
         .overlay {
-            // First-launch: name the airline before anything else. Blocks the
-            // game (which idles behind it — no owned aircraft exist yet).
+            // First-launch: name the airline before anything else.
             if sim.playerAirlineName == nil {
                 AirlineNamingView { name in sim.nameAirline(name) }
                     .transition(.opacity)
@@ -113,264 +42,21 @@ struct ContentView: View {
         .animation(.easeOut(duration: 0.25), value: sim.playerAirlineName)
     }
 
-    // MARK: - Route-opening flow
-
-    @ViewBuilder private var routeFlowPanel: some View {
-        switch routeMode {
-        case .off:
-            EmptyView()
-        case .pickOrigin:
-            routeHint("OPEN ROUTE — tap the ORIGIN airport")
-        case .pickDest:
-            routeHint("OPEN ROUTE — tap the DESTINATION airport")
-        case .confirm(let o, let d):
-            if let origin = sim.airports.first(where: { $0.code == o }),
-               let dest = sim.airports.first(where: { $0.code == d }) {
-                RouteConfirmPanel(sim: sim, origin: origin, dest: dest,
-                                  onOpen: { openConfirmedRoute(origin, dest) },
-                                  onBuy: { showBuyPanel = true },
-                                  onCancel: { routeMode = .off })
+    /// Fleet / Crews / Ops / Finance — the other four tabs are designed later.
+    private func placeholder(_ title: String, _ icon: String) -> some View {
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+            VStack(spacing: 12) {
+                Image(systemName: icon).font(.system(size: 44))
+                    .foregroundStyle(Sky.brightBlue.opacity(0.6))
+                Text(title.uppercased()).font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(Sky.brightBlue)
+                Text("Coming soon").font(.system(size: 13)).foregroundStyle(.secondary)
             }
         }
-    }
-
-    private func routeHint(_ text: String) -> some View {
-        HStack {
-            Text(text).font(.system(size: 12, weight: .semibold, design: .monospaced))
-            Spacer()
-            Button("Cancel") { routeMode = .off }
-                .font(.system(size: 12, design: .monospaced))
-        }
-        .foregroundStyle(.white).padding(12)
-        .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor.opacity(0.6), lineWidth: 1))
-    }
-
-    private func handleTap(at p: CGPoint) {
-        switch routeMode {
-        case .off:
-            selectedID = sim.aircraft(atScreenPoint: p)?.id
-        case .pickOrigin:
-            if let ap = sim.airport(atScreenPoint: p) { routeMode = .pickDest(ap.code) }
-        case .pickDest(let o):
-            if let ap = sim.airport(atScreenPoint: p), ap.code != o { routeMode = .confirm(o, ap.code) }
-        case .confirm:
-            break
-        }
-    }
-
-    private func openConfirmedRoute(_ origin: Airport, _ dest: Airport) {
-        guard let spare = sim.idleSpares.first else {
-            showFlash("No spare aircraft — buy one to fly this route")
-            showBuyPanel = true
-            return
-        }
-        switch sim.openRoute(from: origin, to: dest, using: spare) {
-        case .success:
-            showFlash("Route \(origin.code) ↔ \(dest.code) opened — \(spare.tail) assigned")
-            routeMode = .off; showBuyPanel = false
-        case .insufficientFunds(let c):
-            showFlash("Need $\(c.formatted()) to open this route")
-        case .alreadyOpen:   showFlash("That route is already open")
-        case .sameAirport:   showFlash("Pick two different airports")
-        case .noSpare:       showFlash("No spare aircraft available")
-        }
-    }
-
-    private func handleBought(_ ac: Aircraft) {
-        let verb = ac.isLeased ? "Leased" : "Bought"
-        showFlash("\(verb) \(ac.type.name) — now a spare")
-        // If we're mid-route-open, try to complete it with the new aircraft.
-        if case .confirm(let o, let d) = routeMode,
-           let origin = sim.airports.first(where: { $0.code == o }),
-           let dest = sim.airports.first(where: { $0.code == d }) {
-            openConfirmedRoute(origin, dest)
-        }
-    }
-
-    private func showFlash(_ msg: String) {
-        flash = msg
-        Task { try? await Task.sleep(for: .seconds(3)); if flash == msg { flash = nil } }
-    }
-
-    // MARK: - Map gestures
-
-    /// One gesture for both pan and tap-select, so they can't fight. A touch
-    /// that moves past the threshold pans; a touch that ends without moving is
-    /// a tap → select the aircraft under it (or clear on empty map).
-    private var dragOrTapGesture: some Gesture {
-        // Read in .global space: its origin is the physical screen top-left,
-        // which is exactly where the Canvas draws (the Canvas ignoresSafeArea,
-        // so airport/aircraft screen positions are in full-screen coords). The
-        // default .local space is inset by the layout and lands taps ~80pt off.
-        DragGesture(minimumDistance: 0, coordinateSpace: .global)
-            .onChanged { v in
-                if !isDragging, hypot(v.translation.width, v.translation.height) > 8 {
-                    isDragging = true
-                    dragLast = v.translation        // no jump on the frame it flips
-                }
-                if isDragging {
-                    let delta = CGSize(width: v.translation.width - dragLast.width,
-                                       height: v.translation.height - dragLast.height)
-                    sim.pan(by: delta)
-                    dragLast = v.translation
-                }
-            }
-            .onEnded { v in
-                if !isDragging { handleTap(at: v.location) }
-                isDragging = false
-                dragLast = .zero
-            }
-    }
-
-    private var zoomGesture: some Gesture {
-        MagnifyGesture()
-            .onChanged { v in
-                let factor = v.magnification / magLast
-                sim.zoom(by: factor, anchor: v.startLocation)
-                magLast = v.magnification
-            }
-            .onEnded { _ in magLast = 1 }
-    }
-
-    private var hud: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(balanceString)
-                        .font(.system(size: 17, weight: .bold, design: .monospaced))
-                        .foregroundStyle(sim.playerBalance < 0 ? Color(red: 1, green: 0x5C/255, blue: 0x5C/255)
-                                                              : Color(red: 0x37/255, green: 1, blue: 0xB0/255))
-                    Text("\(sim.ownedCount) owned · \(sim.playerRoutes.count) routes · tick \(sim.tick)")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                controlRow(speeds, isActive: { sim.speed == $0 }, label: speedLabel) {
-                    sim.speed = $0
-                }
-            }
-            if !sim.currentEvent.isNormal {
-                economicEventBanner
-            }
-            // Primary player actions.
-            HStack(spacing: 8) {
-                actionButton("ACQUIRE", active: showBuyPanel) {
-                    showBuyPanel.toggle()
-                }
-                actionButton("OPEN ROUTE", active: routeMode != .off) {
-                    if routeMode == .off { routeMode = .pickOrigin; selectedID = nil }
-                    else { routeMode = .off }
-                }
-                actionButton("ROUTES", active: showRoutesPanel) {
-                    showRoutesPanel.toggle()
-                    if showRoutesPanel { routesDetailId = nil }
-                }
-                Spacer()
-                Button { sim.resetCamera() } label: {
-                    Text("RESET VIEW")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .padding(.vertical, 6).padding(.horizontal, 8)
-                        .background(Color.white.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-            }
-            // Competitor background traffic — real other airlines, to make the
-            // airspace feel alive. Tap to set how busy the skies are.
-            HStack {
-                Text("TRAFFIC")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                controlRow(fleetSizes, isActive: { sim.stressTestCount == $0 }, label: { "\($0)" }) {
-                    sim.setFleetSize(sim.stressTestCount == $0 ? 0 : $0)
-                }
-            }
-        }
-        .foregroundStyle(.white)
-    }
-
-    private func actionButton(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                .padding(.vertical, 7).padding(.horizontal, 12)
-                .background(active ? Color.accentColor.opacity(0.85) : Color.white.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var balanceString: String {
-        let v = sim.playerBalance
-        let sign = v < 0 ? "−" : ""
-        let a = abs(v)
-        if a >= 1_000_000 { return sign + "$" + String(format: "%.2fM", Double(a) / 1_000_000) }
-        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-        return sign + "$\(a)"
-    }
-
-    /// Active economic-event banner — red when it hurts the airline (higher
-    /// costs or lower fares), green when it helps.
-    private var economicEventBanner: some View {
-        let e = sim.currentEvent
-        let hurts = e.costMultiplier > 1 || e.fareMultiplier < 1
-        let color = hurts ? Color(red: 1, green: 0x5C/255, blue: 0x5C/255)
-                          : Color(red: 0x37/255, green: 1, blue: 0xB0/255)
-        return HStack(spacing: 8) {
-            Text(e.label.uppercased())
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-            Text("cost \(pct(e.costMultiplier)) · fare \(pct(e.fareMultiplier)) · demand \(pct(e.loadMultiplier)) · \(sim.eventDaysLeft)d left")
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.75))
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(color)
-        .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(color.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(RoundedRectangle(cornerRadius: 6).stroke(color.opacity(0.5), lineWidth: 1))
-    }
-
-    private func pct(_ m: Double) -> String { "\(Int((m * 100).rounded()))%" }
-
-    /// A row of pill buttons for a set of values.
-    private func controlRow<T: Hashable>(_ values: [T],
-                                         isActive: @escaping (T) -> Bool,
-                                         label: @escaping (T) -> String,
-                                         action: @escaping (T) -> Void) -> some View {
-        HStack(spacing: 6) {
-            ForEach(values, id: \.self) { v in
-                Button { action(v) } label: {
-                    Text(label(v))
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                        .frame(minWidth: 34)
-                        .padding(.vertical, 5)
-                        .padding(.horizontal, 2)
-                        .background(isActive(v) ? Color.accentColor.opacity(0.85)
-                                                : Color.white.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private func speedLabel(_ s: Double) -> String {
-        s == s.rounded() ? "\(Int(s))×" : "\(s)×"
-    }
-
-    /// Compact signed money for the HUD (e.g. "+$1.2M", "−$340k").
-    private var netString: String {
-        let v = sim.netRevenue
-        let sign = v < 0 ? "−" : "+"
-        let a = abs(v)
-        if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-        return sign + "$\(a)"
     }
 }
+
 
 private let heldColor = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
 
