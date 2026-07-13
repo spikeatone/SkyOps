@@ -74,6 +74,20 @@ struct AircraftType: Identifiable {
     /// Operating cost per sim-minute (1 tick). Ported: round(costPerHour / 60).
     var holdCostPerTick: Int { Int((Double(costPerHour) / 60).rounded()) }
 
+    /// Practical range in nautical miles — representative published figures per
+    /// type (shown in the Acquire card). Display-only; not sim-critical.
+    var rangeNM: Int { AircraftType.rangeByID[id] ?? 3000 }
+    private static let rangeByID: [String: Int] = [
+        "A319": 3700, "A320": 3300, "A321": 3200, "A319NEO": 3750, "A320NEO": 3400, "A321NEO": 4000,
+        "B737700": 3010, "B737800": 2935, "B739": 2950, "MAX8": 3550, "MAX9": 3300,
+        "A220300": 3350, "A220100": 3400,
+        "B773": 6014, "B788": 7565, "A339": 7200, "A359": 8100,
+        "B747": 7730, "A380": 8000, "A340": 7400,
+        "E170": 2150, "E175": 2200, "E190": 2450, "E195": 2300,
+        "CRJ900": 1550, "CRJ1000": 1650,
+        "ERJ135": 1750, "ERJ140": 1630, "ERJ145": 1550, "ARJ21": 1200,
+    ]
+
     /// Fixed MONTHLY lease payment: 0.8% of purchase price (LEASE_MONTHLY_RATE
     /// — the midpoint of the real 0.6–1.2% "lease rate factor", Acumen Aero,
     /// cross-checked against real narrowbody lease quotes). Charged every

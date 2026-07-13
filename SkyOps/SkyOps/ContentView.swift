@@ -187,137 +187,131 @@ enum RouteMode: Equatable {
     case confirm(String, String)
 }
 
-/// Acquire panel: NEW (buy outright or lease) and USED (buy pre-owned) tabs.
-/// Every action re-checks affordability against the LIVE balance (which changes
-/// every completed flight — @Observable re-renders this on change, no per-tick
-/// refresh needed, avoiding the prototype's thrice-recurring flicker bug).
+/// ACQUIRE — per-aircraft profile cards (Figma 4:1993 / 3:2052): name, an
+/// illustration (placeholder = the app's body-type vector icon until real
+/// side-view art is supplied), a Seats / Range / Lifespan spec row, then Buy
+/// new / Lease new / Buy used(×listings) rows each with a BUY (green) or LEASE
+/// (gray) button. Live affordability; @Observable re-renders on balance change.
 struct BuyPanel: View {
     let sim: Simulation
     let onBought: (Aircraft) -> Void
-    @State private var showUsed = false
-
-    private let mint = Color(red: 0x37/255, green: 1, blue: 0xB0/255)
-    private let amber = Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("ACQUIRE AIRCRAFT")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                HStack(spacing: 4) {
-                    tab("NEW", active: !showUsed) { showUsed = false }
-                    tab("USED", active: showUsed) { showUsed = true }
-                }
-            }
-            ScrollView {
-                VStack(spacing: 3) {
-                    if showUsed { usedRows } else { newRows }
-                }
-            }
-            .frame(maxHeight: 260)
-        }
-        .padding(12)
-        .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.97))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.18), lineWidth: 1))
-    }
-
-    // NEW: buy outright or lease (15% upfront + a fixed monthly bill).
-    @ViewBuilder private var newRows: some View {
-        ForEach(AircraftType.all.sorted { $0.purchasePrice < $1.purchasePrice }) { t in
-            let leaseUp = sim.leaseUpfront(t)
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(t.name).font(.system(size: 12, weight: .medium, design: .monospaced))
-                    Text("\(t.seats) seats · \(FAMILY_LABELS[t.family] ?? t.family)")
-                        .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-                    Text("lease \(priceLabel(t.monthlyLeaseCost))/mo")
-                        .font(.system(size: 9, design: .monospaced)).foregroundStyle(amber.opacity(0.75))
-                }
-                Spacer()
-                VStack(spacing: 3) {
-                    acquireButton("Buy · \(priceLabel(t.purchasePrice))", tint: mint,
-                                  afford: sim.playerBalance >= t.purchasePrice) {
-                        if let ac = sim.buyAircraft(t) { onBought(ac) }
-                    }
-                    acquireButton("Lease · \(priceLabel(leaseUp))", tint: amber,
-                                  afford: sim.playerBalance >= leaseUp) {
-                        if let ac = sim.leaseAircraft(t) { onBought(ac) }
-                    }
-                }
-            }
-            .foregroundStyle(.white)
-            .padding(.vertical, 4).padding(.horizontal, 6)
-        }
-    }
-
-    // USED: persistent pre-owned inventory, cheapest first; each inherits its
-    // real cycle count. Buy-only (no lease), matching the designer's decision.
-    @ViewBuilder private var usedRows: some View {
-        let listings = sim.usedListings
-        if listings.isEmpty {
-            Text("No used aircraft on the market right now.")
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .padding(.vertical, 12)
-        } else {
-            ForEach(listings) { l in
-                if let t = AircraftType.all.first(where: { $0.id == l.typeId }) {
-                    let pct = 100 * l.cyclesAccrued / max(1, t.expectedLifespanCycles)
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(t.name).font(.system(size: 12, weight: .medium, design: .monospaced))
-                            Text("\(l.cyclesAccrued.formatted()) cycles · \(pct)% of life used")
-                                .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        acquireButton("Buy · \(priceLabel(l.price))", tint: mint,
-                                      afford: sim.playerBalance >= l.price) {
-                            if let ac = sim.buyUsedAircraft(l) { onBought(ac) }
-                        }
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.vertical, 4).padding(.horizontal, 6)
+        ScrollView {
+            VStack(spacing: 8) {
+                // Priciest/biggest first, matching the Figma card order.
+                ForEach(AircraftType.all.sorted { $0.purchasePrice > $1.purchasePrice }) { t in
+                    AircraftProfileCard(sim: sim, type: t, onBought: onBought)
                 }
             }
         }
-    }
-
-    private func tab(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .padding(.vertical, 4).padding(.horizontal, 10)
-                .background(active ? Color.accentColor.opacity(0.85) : Color.white.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: 5))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func acquireButton(_ label: String, tint: Color, afford: Bool,
-                               action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .frame(width: 118)
-                .padding(.vertical, 6)
-                .background((afford ? tint : Color.white).opacity(afford ? 0.22 : 0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .opacity(afford ? 1 : 0.4)
-        }
-        .buttonStyle(.plain).disabled(!afford)
-    }
-
-    /// "$14M" for clean values ≥ $10M, "$2.1M" below, "$340k" under $1M.
-    private func priceLabel(_ v: Int) -> String {
-        let m = Double(v) / 1_000_000
-        if m >= 10 { return "$\(Int(m.rounded()))M" }
-        if m >= 1  { return String(format: "$%.1fM", m) }
-        return "$\(Int((Double(v) / 1000).rounded()))k"
+        .frame(maxHeight: 460)
+        .padding(8)
+        .background(Sky.navBarDark)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Sky.onDarkStroke, lineWidth: 1))
     }
 }
+
+/// One aircraft's acquisition card.
+struct AircraftProfileCard: View {
+    let sim: Simulation
+    let type: AircraftType
+    let onBought: (Aircraft) -> Void
+
+    private let gray = Color(skyHex: 0x8C8C8C)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(type.name).font(.karla(20, .heavy)).foregroundStyle(.white)
+
+            illustration
+
+            HStack(alignment: .top) {
+                spec("Seats:", "\(type.seats)")
+                Spacer()
+                spec("Practical Range:", "\(type.rangeNM.formatted()) NM")
+                Spacer()
+                spec("Avg Lifespan:", "\(type.expectedLifespanCycles.formatted()) cycles")
+            }
+
+            Rectangle().fill(Sky.onDarkStroke).frame(height: 1)
+
+            row("Buy new:", money(type.purchasePrice), lease: false,
+                afford: sim.playerBalance >= type.purchasePrice) {
+                if let ac = sim.buyAircraft(type) { onBought(ac) }
+            }
+            row("Lease new:",
+                "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
+                lease: true, afford: sim.playerBalance >= sim.leaseUpfront(type)) {
+                if let ac = sim.leaseAircraft(type) { onBought(ac) }
+            }
+            ForEach(sim.usedInventory[type.id] ?? []) { listing in
+                let pct = 100 * listing.cyclesAccrued / max(1, type.expectedLifespanCycles)
+                row("Buy used:",
+                    "\(money(listing.price)) - \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
+                    lease: false, afford: sim.playerBalance >= listing.price) {
+                    if let ac = sim.buyUsedAircraft(listing) { onBought(ac) }
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Sky.navBarDark)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+    }
+
+    /// Placeholder illustration: the app's body-type vector aircraft icon,
+    /// centred and enlarged (swap for real side-view art when supplied).
+    private var illustration: some View {
+        Canvas { ctx, size in
+            guard let icon = AircraftIcon.byBodyType[type.bodyType] else { return }
+            let len = min(size.width * 0.82, 210)
+            let rs = len * icon.scale / type.bodyType.iconLength
+            var g = ctx
+            g.translateBy(x: size.width / 2, y: size.height / 2)
+            g.scaleBy(x: rs, y: rs)
+            g.translateBy(x: -icon.center.x, y: -icon.center.y)
+            g.fill(icon.path, with: .color(.white.opacity(0.85)))
+        }
+        .frame(height: 66)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func spec(_ label: String, _ value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(label).font(.karla(14, .bold)).foregroundStyle(Sky.lightBlue)
+            Text(value).font(.karla(14)).foregroundStyle(.white)
+        }
+    }
+
+    private func row(_ label: String, _ detail: String, lease: Bool, afford: Bool,
+                     action: @escaping () -> Void) -> some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label).font(.karla(14, .bold)).foregroundStyle(Sky.lightBlue)
+                Text(detail).font(.karla(14)).foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Button(action: action) {
+                Text(lease ? "LEASE" : "BUY")
+                    .font(.karla(12, .bold)).foregroundStyle(.white)
+                    .padding(.horizontal, 8).frame(height: 24)
+                    .background(lease ? gray : Sky.coreGreen)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .opacity(afford ? 1 : 0.4)
+            }
+            .buttonStyle(.plain).disabled(!afford)
+        }
+    }
+
+    private func money(_ v: Int) -> String {
+        "$" + v.formatted(.number.grouping(.automatic))
+    }
+}
+
 
 /// Confirm panel for a picked origin→dest pair.
 struct RouteConfirmPanel: View {

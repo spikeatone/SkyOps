@@ -21,7 +21,8 @@ extension Font {
         case .ultraLight, .thin, .light: return "Karla-Light"
         case .medium:                    return "Karla-Medium"
         case .semibold:                  return "Karla-SemiBold"
-        case .bold, .heavy, .black:      return "Karla-Bold"
+        case .bold:                      return "Karla-Bold"
+        case .heavy, .black:             return "Karla-ExtraBold"
         default:                         return "Karla-Regular"
         }
     }
