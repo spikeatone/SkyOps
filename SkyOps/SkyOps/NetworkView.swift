@@ -158,7 +158,7 @@ struct NetworkView: View {
             case .acquire: BuyPanel(sim: sim, onBought: handleBought)
             case .routes:  RoutesPanel(sim: sim)
             case .hire:    AddCrewPanel(sim: sim) { panel = .none }
-            case .hedge:   FuelHedgePanel(sim: sim) { panel = .none }
+            case .hedge:   FuelHedgePanel(sim: sim)
             case .none:    EmptyView()
             }
             routeFlowPanel
@@ -282,30 +282,34 @@ struct NetworkView: View {
         case .off:
             EmptyView()
         case .pickOrigin:
-            routeHint("OPEN ROUTE — tap the ORIGIN airport")
+            routeHint("Step One: Tap one of the airports you want in the city pair")
         case .pickDest:
-            routeHint("OPEN ROUTE — tap the DESTINATION airport")
+            routeHint("Step Two: Now tap the other airport pair")
         case .confirm(let o, let d):
             if let origin = sim.airports.first(where: { $0.code == o }),
                let dest = sim.airports.first(where: { $0.code == d }) {
                 RouteConfirmPanel(sim: sim, origin: origin, dest: dest,
                                   onOpen: { openConfirmedRoute(origin, dest) },
-                                  onBuy: { panel = .acquire },
                                   onCancel: { routeMode = .off })
             }
         }
     }
 
+    /// Figma "Alert box" (5:8040 / 19:6705): a solid dark bar with a single
+    /// Karla-Bold instruction line. Cancel is the highlighted "Open Route"
+    /// control-bar button (tapping it again exits the flow).
     private func routeHint(_ text: String) -> some View {
-        HStack {
-            Text(text).font(.system(size: 12, weight: .semibold, design: .monospaced))
-            Spacer()
-            Button("Cancel") { routeMode = .off }.font(.system(size: 12, design: .monospaced))
+        HStack(spacing: 0) {
+            Text(text)
+                .font(.karla(14, .bold))
+                .foregroundStyle(Sky.lightBlue)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
         }
-        .foregroundStyle(.white).padding(12)
-        .background(Sky.navBarDark.opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Sky.brightBlue.opacity(0.6), lineWidth: 1))
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Sky.navBarDark)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
     // MARK: - Handlers
@@ -452,45 +456,69 @@ struct AddCrewPanel: View {
     }
 }
 
-/// FUEL HEDGE — buy a call option on fuel cost (Figma restyle comes next).
+/// FUEL HEDGE — Figma "Fuel Hedge Card" (19:6920): title, an explainer, then a
+/// 30/60/90-day premium row each with a green BUY. Closing is the highlighted
+/// "Fuel Hedge" control-bar button (toggle), so the card carries no X — matching
+/// the Figma.
 struct FuelHedgePanel: View {
     let sim: Simulation
-    let onClose: () -> Void
     var body: some View {
-        NetPanelBox(title: "FUEL HEDGE", onClose: onClose) {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Fuel Hedge").font(.karla(20, .heavy)).foregroundStyle(.white)
+
             if sim.ownedCount == 0 {
-                Text("No aircraft owned yet — nothing to hedge.")
-                    .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
-                    .padding(.vertical, 10)
-            } else if sim.fuelHedgeActive {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Hedge active · \(sim.fuelHedgeDaysRemaining) days left")
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Sky.coreGreen)
-                    Text("Caps a fuel-price spike at today's cost. A genuine price drop still helps you — the hedge only removes the upside risk, not the downside benefit.")
-                        .font(.system(size: 10, design: .monospaced)).foregroundStyle(.white.opacity(0.7))
-                }
+                Text("No aircraft owned yet — nothing to hedge. The premium is priced against your current fleet's real hold cost, so buy an aircraft first.")
+                    .font(.karla(14)).foregroundStyle(.white)
             } else {
-                ForEach(Simulation.fuelHedgeDurations, id: \.self) { days in
-                    let premium = sim.fuelHedgePremium(days: days)
-                    let afford = sim.playerBalance >= premium
-                    HStack {
-                        Text("\(days) days").font(.system(size: 12, weight: .medium, design: .monospaced))
-                        Spacer()
-                        Button { sim.buyFuelHedge(days: days) } label: {
-                            Text("Buy · \(compactMoney(premium))")
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                                .padding(.vertical, 6).padding(.horizontal, 10)
-                                .background((afford ? Sky.lightYellow : Color.white).opacity(afford ? 0.22 : 0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 6)).opacity(afford ? 1 : 0.4)
-                        }.buttonStyle(.plain).disabled(!afford)
+                let owned = sim.ownedCount
+                Text("Fuel hedging locks your operating costs at a baseline for the chosen term, regardless of future oil-price spikes. Premium is based on your current fleet's real hold cost (\(owned) aircraft owned). Real airline fuel hedges work the same way, priced against expected consumption at purchase time and not adjusted later if your fleet size changes.")
+                    .font(.karla(14)).foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                divider
+
+                if sim.fuelHedgeActive {
+                    Text("Hedge active · \(sim.fuelHedgeDaysRemaining) days left")
+                        .font(.karla(14, .bold)).foregroundStyle(Sky.coreGreen)
+                    Text("A genuine price drop still helps you — the hedge only removes the upside risk, not the downside benefit.")
+                        .font(.karla(14)).foregroundStyle(.white.opacity(0.8))
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(Array(Simulation.fuelHedgeDurations.enumerated()), id: \.element) { i, days in
+                        if i > 0 { divider }
+                        hedgeSlot(days: days)
                     }
-                    .padding(.vertical, 3)
                 }
-                Text("A call option: pay now to cap a future spike. If no spike hits, the premium is a sunk cost — not free insurance.")
-                    .font(.system(size: 9, design: .monospaced)).foregroundStyle(.white.opacity(0.6))
-                    .padding(.top, 2)
             }
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Sky.navBarDark)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+    }
+
+    private func hedgeSlot(days: Int) -> some View {
+        let premium = sim.fuelHedgePremium(days: days)
+        let afford = sim.playerBalance >= premium
+        return HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(days)-day hedge:").font(.karla(14, .bold)).foregroundStyle(Sky.lightBlue)
+                Text("$\(premium.formatted()) premium").font(.karla(14)).foregroundStyle(.white)
+            }
+            Spacer()
+            Button { sim.buyFuelHedge(days: days) } label: {
+                Text("BUY")
+                    .font(.karla(12, .bold)).foregroundStyle(.white)
+                    .frame(height: 24).padding(.horizontal, 8)
+                    .background(Sky.coreGreen)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .opacity(afford ? 1 : 0.4)
+            }.buttonStyle(.plain).disabled(!afford)
+        }
+    }
+
+    private var divider: some View {
+        Rectangle().fill(Sky.onDarkStroke).frame(height: 1)
     }
 }

@@ -319,34 +319,91 @@ struct AircraftProfileCard: View {
 
 
 /// Confirm panel for a picked origin→dest pair.
+/// Open Route — step three ("New Route Confirm", Figma 19:6758): the ORIG → DEST
+/// header, a Distance / Slots / Range check / Opening cost readout, and the
+/// Open route / Abandon buttons. Buying mid-flow is still reachable — with no
+/// spare, "Open route" opens the Acquire panel (which auto-assigns on purchase).
 struct RouteConfirmPanel: View {
     let sim: Simulation
     let origin: Airport
     let dest: Airport
     let onOpen: () -> Void
-    let onBuy: () -> Void
     let onCancel: () -> Void
+
+    private let netGreen = Color(skyHex: 0x87ED7A)
+    private let netRed   = Color(skyHex: 0xFF9292)
 
     var body: some View {
         let cost = sim.routeOpeningCost(origin, dest)
-        let spares = sim.idleSpares.count
+        let spare = sim.idleSpares.first
+        let slotsOK = origin.slotsAvailable > 0 && dest.slotsAvailable > 0
+        let affordable = sim.playerBalance >= cost
         VStack(alignment: .leading, spacing: 8) {
-            Text("OPEN ROUTE  \(origin.code) ↔ \(dest.code)")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
-            Text("cost $\(cost.formatted()) · slots \(origin.slotsAvailable)+\(dest.slotsAvailable) free · \(spares) spare\(spares == 1 ? "" : "s")")
-                .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
+            // Header: ORIG → DEST
             HStack(spacing: 8) {
-                CardButton(label: spares > 0 ? "Open Route" : "Buy an aircraft first",
-                           emphasized: true, disabled: spares > 0 && sim.playerBalance < cost) {
-                    spares > 0 ? onOpen() : onBuy()
-                }
-                CardButton(label: "Cancel") { onCancel() }
+                Text(origin.code).font(.karla(20, .heavy)).foregroundStyle(.white)
+                Image(systemName: "arrow.right").font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
+                Text(dest.code).font(.karla(20, .heavy)).foregroundStyle(.white)
+                Spacer(minLength: 0)
             }
+            infoRow("Distance", "\(distanceNM.formatted()) nm", .white)
+            infoRow("Slots", slotsOK ? "Avail both ends" : "Buyout needed",
+                    slotsOK ? netGreen : netRed)
+            infoRow("Range check", rangeCheck(spare).text, rangeCheck(spare).ok ? netGreen : netRed)
+            infoRow("Opening cost", "$\(cost.formatted())", affordable ? netGreen : netRed)
+
+            Rectangle().fill(Sky.onDarkStroke).frame(height: 1).padding(.vertical, 2)
+
+            HStack(spacing: 8) {
+                confirmButton("Open route", disabled: spare != nil && !affordable, action: onOpen)
+                confirmButton("Abandon", disabled: false, action: onCancel)
+            }
+            .frame(height: 32)
         }
-        .foregroundStyle(.white).padding(12)
-        .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.97))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor.opacity(0.6), lineWidth: 1))
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Sky.navBarDark)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+    }
+
+    private func infoRow(_ label: String, _ value: String, _ valueColor: Color) -> some View {
+        HStack {
+            Text(label).font(.karla(14)).foregroundStyle(.white)
+            Spacer()
+            Text(value).font(.karla(14, .bold)).foregroundStyle(valueColor)
+        }
+    }
+
+    private func confirmButton(_ label: String, disabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.karla(16, .medium))
+                .foregroundStyle(disabled ? .white.opacity(0.35) : .white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 8)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+    }
+
+    /// Great-circle distance origin→dest in nautical miles.
+    private var distanceNM: Int {
+        let r = 3440.065
+        let lat1 = origin.lat * .pi / 180, lat2 = dest.lat * .pi / 180
+        let dLat = (dest.lat - origin.lat) * .pi / 180
+        let dLon = (dest.lon - origin.lon) * .pi / 180
+        let a = sin(dLat/2) * sin(dLat/2) + cos(lat1) * cos(lat2) * sin(dLon/2) * sin(dLon/2)
+        return Int((r * 2 * atan2(sqrt(a), sqrt(1 - a))).rounded())
+    }
+
+    /// Range check reflects the spare that would be assigned (idleSpares.first).
+    private func rangeCheck(_ spare: Aircraft?) -> (text: String, ok: Bool) {
+        guard let spare else { return ("a/c not assigned", false) }
+        return spare.type.rangeNM >= distanceNM
+            ? ("in range (\(spare.type.rangeNM.formatted()) nm)", true)
+            : ("out of range", false)
     }
 }
 
@@ -631,85 +688,106 @@ struct AircraftTooltip: View {
     let tick: Int            // changing value input — keeps status/crew live
     let onClose: () -> Void
 
-    private let heldColor = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
-
-    private let othersColor = Color(red: 0xD7/255, green: 0x67/255, blue: 0xFF/255)
+    // Figma tokens (3:1662): On Dark Green / Red for the P&L rows, purple for
+    // competitor identity, light blue for ordinary values.
+    private let heldColor    = Color(skyHex: 0xFF9292)   // On Dark Red
+    private let onDarkGreen   = Color(skyHex: 0x87ED7A)
+    private let othersColor   = Color(skyHex: 0xD767FF)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            // Header airline name: the competitor's for background traffic,
-            // the player's own airline (green) for owned aircraft.
+        // Per Figma 3:1662: a stack of "Label:" (white Karla-Bold 14) + value
+        // (light-blue Karla-Regular 14) rows. No close button (tap the map to
+        // dismiss) and no separate LEASED badge (folded into the Tail value).
+        VStack(alignment: .leading, spacing: 4) {
+            // Airline identity: competitor (purple) for background traffic, the
+            // player's own (green) for owned — a useful ownership signal layered
+            // on the Figma row layout.
             if let airline = aircraft.airlineName {
-                Text(airline.uppercased())
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(othersColor)
+                row("Airline", airline, valueColor: othersColor)
             } else if let mine = sim.playerAirlineName {
-                Text(mine.uppercased())
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(climbColor)
+                row("Airline", mine, valueColor: onDarkGreen)
             }
-            HStack {
-                Text(aircraft.isIdleSpare ? "SPARE · at \(aircraft.origin.code)"
-                                          : "\(aircraft.origin.code) → \(aircraft.dest.code)")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.6))
-                        .padding(6)
-                }
-                .buttonStyle(.plain)
-            }
-            // Leased aircraft carry a fixed monthly obligation — flag it (amber)
-            // so a higher op-cost line reads as expected, not a bug.
-            if aircraft.isLeased {
-                Text("LEASED · \(money(aircraft.type.monthlyLeaseCost))/mo")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255))
-            }
-            row("TAIL", aircraft.tail)
-            row("TYPE", aircraft.type.name)
-            row("STATUS", statusText, valueColor: aircraft.isHeld ? heldColor : .white)
+            routeRow
+            row("Tail", aircraft.isLeased ? "\(aircraft.tail) (leased)" : aircraft.tail)
+            row("Type", aircraft.type.name)
+            row("Status", statusText, valueColor: aircraft.isHeld ? heldColor : Sky.lightBlue)
 
             // Crew / load / cycles / economics are the PLAYER's operational
             // detail only — a rival's books aren't visible. Ported from the
             // prototype's deliberately-reduced background-traffic tooltip.
             if aircraft.airlineName == nil {
-                row("CREW", crewText, valueColor: crewValueColor)
-                row("LOAD", loadText)
-                row("CYCLES", cyclesText)
-
-                Divider().overlay(Color.white.opacity(0.15)).padding(.vertical, 2)
+                row("Cycles", cyclesText)
+                row("Crew legal hours", crewText, valueColor: crewValueColor)
+                row("Load", loadText)
 
                 let econ = sim.legEconomics(for: aircraft)
-                row("REVENUE", money(econ.revenue))
-                row("FEES", "−" + money(econ.fees))
+                row("Revenue", money(econ.revenue))
+                row("Fees", "−" + money(econ.fees))
                 // Op cost folds in a smoothed lease estimate for leased aircraft
                 // (display-only); the real lease is a fixed monthly bill.
-                row("OP COST", "−" + money(econ.displayOperatingCost))
-                row("NET / LEG", (econ.displayNet < 0 ? "−" : "") + money(abs(econ.displayNet)),
-                    valueColor: econ.displayNet < 0 ? heldColor : climbColor)
+                row("Operating cost", "−" + money(econ.displayOperatingCost))
+                row("Net for this leg", (econ.displayNet < 0 ? "−" : "") + money(abs(econ.displayNet)),
+                    valueColor: econ.displayNet < 0 ? heldColor : onDarkGreen)
+                if let pl = routePLText {
+                    row("Route P&L", pl.text, valueColor: pl.positive ? onDarkGreen : heldColor)
+                }
             }
         }
-        .foregroundStyle(.white)
-        .padding(12)
-        .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10)
-            .stroke(Color.white.opacity(0.18), lineWidth: 1))
+        .padding(8)
+        .background(Sky.navBarDark.opacity(0.9))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4)
+            .stroke(Sky.onDarkStroke, lineWidth: 1))
     }
 
-    private func row(_ label: String, _ value: String, valueColor: Color = .white) -> some View {
-        HStack(alignment: .top) {
-            Text(label)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .frame(width: 58, alignment: .leading)
+    private func row(_ label: String, _ value: String, valueColor: Color = Sky.lightBlue) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("\(label):")
+                .font(.karla(14, .bold))
+                .foregroundStyle(.white)
             Text(value)
-                .font(.system(size: 12, design: .monospaced))
-                .foregroundStyle(valueColor.opacity(0.92))
+                .font(.karla(14))
+                .foregroundStyle(valueColor)
             Spacer(minLength: 0)
+        }
+    }
+
+    /// Route row: airport codes in Karla-ExtraBold 12 with an arrow between,
+    /// or a SPARE marker when the aircraft has no assigned route.
+    private var routeRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("Route:")
+                .font(.karla(14, .bold))
+                .foregroundStyle(.white)
+            if aircraft.isIdleSpare {
+                Text("SPARE · at \(aircraft.origin.code)")
+                    .font(.karla(12, .heavy))
+                    .foregroundStyle(Sky.lightBlue)
+            } else {
+                Text(aircraft.origin.code)
+                    .font(.karla(12, .heavy))
+                    .foregroundStyle(Sky.lightBlue)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Sky.lightBlue)
+                Text(aircraft.dest.code)
+                    .font(.karla(12, .heavy))
+                    .foregroundStyle(Sky.lightBlue)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Route P&L vs opening cost — a route is only "profitable" once its
+    /// cumulative net recoups the opening cost (Route.isProfitable), matching
+    /// the Figma "$X short of $Y opening cost" phrasing.
+    private var routePLText: (text: String, positive: Bool)? {
+        guard let id = aircraft.assignedRouteId,
+              let r = sim.playerRoutes.first(where: { $0.id == id }) else { return nil }
+        if r.isProfitable {
+            return ("recouped its \(money(r.openingCost)) opening cost, +\(money(r.netVsOpeningCost))", true)
+        } else {
+            return ("\(money(-r.netVsOpeningCost)) short of \(money(r.openingCost)) opening cost", false)
         }
     }
 
@@ -727,10 +805,11 @@ struct AircraftTooltip: View {
     }
 
     /// Crew legal hours (Part 117 duty clock), or the reason there's no crew.
+    /// Figma phrasing: "N.N hrs remaining".
     private var crewText: String {
         if aircraft.holdReason == .crew { return "none — awaiting legal crew" }
         guard let d = sim.crewDuty(for: aircraft) else { return "—" }
-        return String(format: "%.1f / %.0f duty hrs", d.used, d.max)
+        return String(format: "%.1f hrs remaining", max(0, d.max - d.used))
     }
 
     private var crewValueColor: Color {
@@ -741,8 +820,6 @@ struct AircraftTooltip: View {
         }
         return .white
     }
-
-    private let climbColor = Color(red: 0x37/255, green: 0xFF/255, blue: 0xB0/255)
 
     private var loadText: String {
         let pct = Int((aircraft.currentLoadFactor * 100).rounded())
