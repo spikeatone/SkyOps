@@ -1449,14 +1449,16 @@ where numbers are involved.
   Simulator (exact $2.1M lease deduction on an ERJ135, NEW/USED tabs, USED
   listings with real cycle data, a leased aircraft flown SLC↔DEN with the
   `LEASED · $112,000/mo` tooltip and lease-folded OP COST confirmed).
-- **A real UX gap surfaced while verifying (not a lease bug, pre-existing):**
-  `makePurchasedAircraft` picks `airports.randomElement()` as a bought/leased
-  spare's base — which can be an OFF-SCREEN AK/HI airport (ANC/HNL) in the
-  CONUS-framed default view, making a fresh spare invisible and untappable
-  until a route is opened (openRoute sets its origin onto the visible map).
-  Fine in the prototype (whole map visible); a real gap in the native CONUS
-  view. Not fixed — candidate fix: bias spare spawn to CONUS airports, or
-  frame the map to include a new spare. Flagged in Open below.
+- **Off-screen spare base — FIXED.** `makePurchasedAircraft` used to pick
+  `airports.randomElement()` as a bought/leased spare's base, which could be
+  an OFF-SCREEN AK/HI airport (ANC lat 61 / HNL lat 21) in the CONUS-framed
+  default view — making a fresh spare invisible/untappable until routed. Now
+  it picks from `conusAirports` (airports within the CONUS frame bounds
+  lat 24.5–49.5 / lon −125…−66.5), so a new spare is always visible. The base
+  is cosmetic anyway (openRoute reassigns origin), so this purely improves
+  visibility; background traffic is unaffected (it can still fly AK/HI).
+  Verified: 400 purchases across buy/lease/used all base in CONUS (46 distinct
+  airports, never ANC/HNL).
 - **ROUTES P&L panel — DONE (native app).** A ROUTES button (HUD action row)
   toggles a bottom panel. LIST view: every route open+closed, newest first,
   each row "`ORIG ↔ DEST` OPEN/CLOSED · profitable|$X short · N flts", tap for
@@ -1488,10 +1490,6 @@ where numbers are involved.
 
 ## Open / not yet decided
 
-- **Off-screen spare base (native app):** a bought/leased spare can spawn at
-  an AK/HI airport (ANC/HNL), invisible in the CONUS-framed default view until
-  a route is opened. Real UX gap in the native view (fine in the prototype).
-  Not fixed — see the Leasing/Used note above for candidate fixes.
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on
   a Mac (can't be done from a Linux sandbox). See ROADMAP Phase 0.
 - SwiftData vs Core Data for persistence — leaning SwiftData (iOS 17+) for

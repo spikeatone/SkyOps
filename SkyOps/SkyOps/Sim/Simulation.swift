@@ -252,10 +252,26 @@ final class Simulation {
 
     // MARK: Buying
 
-    /// A genuinely fresh purchase — 0 cycles, PARKED at a random base, no route
-    /// (a spare). Separate from makeAircraft (stress-test) by design.
+    // CONUS bounds (matches the default camera frame). A fresh spare spawns at
+    // a CONUS airport so it's VISIBLE in the default view — spawning at an
+    // off-screen AK/HI base (ANC lat 61 / HNL lat 21) made a new spare
+    // invisible and untappable until it was routed. The base is cosmetic
+    // (openRoute reassigns origin), so restricting it purely improves
+    // visibility; background traffic is unaffected (it can fly AK/HI freely).
+    private static let conusLatRange = 24.5...49.5
+    private static let conusLonRange = (-125.0)...(-66.5)
+    /// Airports inside the CONUS frame (falls back to all if somehow empty).
+    private var conusAirports: [Airport] {
+        let inside = airports.filter {
+            Simulation.conusLatRange.contains($0.lat) && Simulation.conusLonRange.contains($0.lon)
+        }
+        return inside.isEmpty ? airports : inside
+    }
+
+    /// A genuinely fresh purchase — 0 cycles, PARKED at a random CONUS base, no
+    /// route (a spare). Separate from makeAircraft (stress-test) by design.
     private func makePurchasedAircraft(_ type: AircraftType, startingCycles: Int = 0) -> Aircraft {
-        let base = airports.randomElement()!
+        let base = conusAirports.randomElement()!
         let tail = "N\(nextTailNum)SK"
         nextTailNum += 1
         let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
