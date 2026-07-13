@@ -843,7 +843,40 @@ final class Simulation {
         case "FUEL_GLUT": return "Fuel costs drop \(Int(((1 - e.costMultiplier) * 100).rounded()))%"
         case "ECON_BOOM": return "Demand up — fares +\(Int(((e.fareMultiplier - 1) * 100).rounded()))%"
         case "RECESSION": return "Fares down \(Int(((1 - e.fareMultiplier) * 100).rounded()))%"
+        case "FFR_SURGE": return "Seats fill (+\(Int(((e.loadMultiplier - 1) * 100).rounded()))%), less cash per seat"
         default:          return e.label
+        }
+    }
+
+    // MARK: - World disruption / structural events (Phase 1 of the event system)
+    // Regional ATC shortages and single-airport security incidents both reuse
+    // the SAME ground-stop mechanism as weather (distinguished only by cause /
+    // scope / duration). Airport expansion is the one DURABLE event (a permanent
+    // slot increase). Daily probabilities are designed pacing, not sourced.
+    private static let atcDailyProbability = 0.04
+    private static let securityDailyProbability = 0.03
+    private static let expansionDailyProbability = 0.025
+
+    private func tickWorldEvents() {
+        guard tick % 1440 == 0 else { return }   // once per sim-day
+        // ATC staffing shortage — regional, 2–4 airports grounded at once,
+        // moderate duration (2.5–5 sim-hours).
+        if Double.random(in: 0..<1) < Simulation.atcDailyProbability {
+            let hit = Array(airports.shuffled().prefix(Int.random(in: 2...4)))
+            for ap in hit { ap.groundStop = true; ap.groundStopTicksLeft = 150 + Int.random(in: 0...150) }
+            logOps(.disruption, "ATC staffing shortage", "Ground stops: \(hit.map { $0.code }.joined(separator: ", "))")
+        }
+        // Security incident — single airport, sharper & SHORTER than weather
+        // (0.75–2 sim-hours vs weather's 1.5–5.5).
+        if Double.random(in: 0..<1) < Simulation.securityDailyProbability, let ap = airports.randomElement() {
+            ap.groundStop = true; ap.groundStopTicksLeft = 45 + Int.random(in: 0...75)
+            logOps(.disruption, "Security incident", "Ground stop at \(ap.code)")
+        }
+        // Airport expansion — PERMANENT slot capacity increase (durable).
+        if Double.random(in: 0..<1) < Simulation.expansionDailyProbability, let ap = airports.randomElement() {
+            let added = Int.random(in: 2...3)
+            ap.slotsTotal += added; ap.slotsAvailable += added
+            logOps(.structural, "\(ap.code) capacity expansion", "\(added) new slots available")
         }
     }
 
@@ -1048,6 +1081,7 @@ final class Simulation {
         tickCrewPool()
         tickAOGOnset()
         tickEconomicEvents()
+        tickWorldEvents()
         tickSlotAvailability()
         tickLeaseBilling()
         tickUsedMarketReplenishment()
