@@ -190,6 +190,7 @@ final class Simulation {
         airports = Airport.all
         provisionSlots()
         provisionCrew()    // empty until aircraft are bought
+        initializeUsedInventory()   // 1–2 pre-owned listings per type at start
         // Full-shift start: $20M, zero aircraft, zero routes. The FLEET buttons
         // are a DEV stress-test control (spawn background/non-owned traffic).
     }
@@ -263,6 +264,60 @@ final class Simulation {
         return ac
     }
 
+    // MARK: Leasing
+
+    /// Upfront cost to lease instead of buy: 15% of purchase price
+    /// (LEASE_UPFRONT_RATE). Lower capital now, but the fixed monthly bill
+    /// (type.monthlyLeaseCost, tickLeaseBilling) makes a leased aircraft cost
+    /// more over time — a genuine tradeoff, not a strictly-better option.
+    static let leaseUpfrontRate = 0.15
+
+    func leaseUpfront(_ type: AircraftType) -> Int {
+        Int((Double(type.purchasePrice) * Simulation.leaseUpfrontRate).rounded())
+    }
+
+    /// Running total of all fixed lease bills paid (a separate line from
+    /// operating cost at the data layer, per the prototype's design).
+    private(set) var totalLeaseCost = 0
+
+    /// Lease an aircraft if the upfront cost is affordable. Returns the new
+    /// spare (to auto-assign to a pending route) or nil. Ported from
+    /// leaseAircraft().
+    @discardableResult
+    func leaseAircraft(_ type: AircraftType) -> Aircraft? {
+        let upfront = leaseUpfront(type)
+        guard playerBalance >= upfront else { return nil }
+        playerBalance -= upfront
+        let ac = makePurchasedAircraft(type)
+        ac.isLeased = true
+        ac.nextLeaseBillTick = tick + Simulation.ticksPerMonth  // first bill in one sim-month
+        aircraft.append(ac)
+        provisionCrew()
+        return ac
+    }
+
+    /// Bill every leased aircraft its fixed monthly obligation the moment it
+    /// comes due — checked every tick (cheap; a handful of leased aircraft) so
+    /// billing lands exactly one sim-month after the lease started/was last
+    /// billed, regardless of whether the aircraft is flying, held, or an idle
+    /// spare. This fixed-obligation-regardless-of-use model is what keeps
+    /// leasing a real tradeoff (an earlier prototype version prorated per-leg,
+    /// so an idle leased aircraft cost nothing — nearly strictly dominant).
+    /// playerBalance is allowed to go negative (no bankruptcy mechanic yet).
+    private func tickLeaseBilling() {
+        for ac in aircraft {
+            guard ac.isLeased, let due = ac.nextLeaseBillTick, tick >= due else { continue }
+            let bill = ac.type.monthlyLeaseCost
+            playerBalance -= bill
+            totalLeaseCost += bill
+            if let id = ac.assignedRouteId, let r = playerRoutes.first(where: { $0.id == id }) {
+                r.totalLeaseCost += bill
+                r.cumulativeNet -= bill   // a real cost against this route's P&L
+            }
+            ac.nextLeaseBillTick = due + Simulation.ticksPerMonth
+        }
+    }
+
     // MARK: Routes
 
     static let routeBaseCost = 50_000
@@ -320,6 +375,81 @@ final class Simulation {
         let used = Double(ac.cyclesAccrued) / Double(max(1, ac.type.expectedLifespanCycles))
         let remaining = max(0.05, 1 - used)
         return Int((Double(ac.type.purchasePrice) * remaining).rounded())
+    }
+
+    // MARK: - Used-aircraft market (buy-only, persistent inventory)
+
+    /// One pre-owned listing: a specific airframe at a real cycle count and its
+    /// depreciated price. Persists in `usedInventory` until bought or replaced.
+    struct UsedListing: Identifiable {
+        let id: Int
+        let typeId: String
+        let cyclesAccrued: Int
+        let price: Int
+    }
+
+    /// Listings per type id. Generated at game start, removed on purchase,
+    /// slowly replenished (so a long session doesn't permanently deplete it).
+    private(set) var usedInventory: [String: [UsedListing]] = [:]
+    private var nextUsedListingId = 1
+
+    /// Pricing reuses the EXACT SAME linear depreciation as sellValue() — a
+    /// deliberate consistency with the sell mechanic, not a new formula.
+    private func usedPrice(_ type: AircraftType, cyclesAccrued: Int) -> Int {
+        let usedFraction = Double(cyclesAccrued) / Double(max(1, type.expectedLifespanCycles))
+        return Int((Double(type.purchasePrice) * max(0.05, 1 - usedFraction)).rounded())
+    }
+
+    /// A listing at 15–75% of expected life — meaningfully used, not
+    /// near-new or near-scrap, so the market has real variety.
+    private func generateUsedListing(_ type: AircraftType) -> UsedListing {
+        let cycles = Int((Double(type.expectedLifespanCycles) * (0.15 + Double.random(in: 0..<0.6))).rounded())
+        defer { nextUsedListingId += 1 }
+        return UsedListing(id: nextUsedListingId, typeId: type.id,
+                           cyclesAccrued: cycles, price: usedPrice(type, cyclesAccrued: cycles))
+    }
+
+    /// 1–2 listings per type at game start (called once from init).
+    private func initializeUsedInventory() {
+        for type in AircraftType.all {
+            let count = 1 + Int.random(in: 0...1)
+            usedInventory[type.id] = (0..<count).map { _ in generateUsedListing(type) }
+        }
+    }
+
+    /// Slowly refill toward 2 listings/type (another airline selling, a lessor's
+    /// aircraft coming off lease). Once per sim-day, 10% chance per under-stocked
+    /// type. Ported from tickUsedMarketReplenishment().
+    private func tickUsedMarketReplenishment() {
+        guard tick % 1440 == 0 else { return }
+        for type in AircraftType.all {
+            let listings = usedInventory[type.id] ?? []
+            if listings.count < 2, Double.random(in: 0..<1) < 0.1 {
+                usedInventory[type.id, default: []].append(generateUsedListing(type))
+            }
+        }
+    }
+
+    /// All current listings flattened, cheapest first (for the USED panel).
+    var usedListings: [UsedListing] {
+        usedInventory.values.flatMap { $0 }.sorted { $0.price < $1.price }
+    }
+
+    /// Buy a specific used listing. A purchased used aircraft inherits the
+    /// listing's real cycle count (NOT 0). Returns the new spare or nil.
+    @discardableResult
+    func buyUsedAircraft(_ listing: UsedListing) -> Aircraft? {
+        guard let type = AircraftType.all.first(where: { $0.id == listing.typeId }),
+              var listings = usedInventory[listing.typeId],
+              let idx = listings.firstIndex(where: { $0.id == listing.id }),
+              playerBalance >= listing.price else { return nil }
+        playerBalance -= listing.price
+        let ac = makePurchasedAircraft(type, startingCycles: listing.cyclesAccrued)
+        aircraft.append(ac)
+        provisionCrew()
+        listings.remove(at: idx)          // sold — gone until replenishment
+        usedInventory[listing.typeId] = listings
+        return ac
     }
 
     // MARK: - Fleet
@@ -629,8 +759,15 @@ final class Simulation {
         let gateFee = Int(ac.type.bodyType.usesWidebodyGateFee ? ac.dest.gateFeeWidebody : ac.dest.gateFeeNarrowbody)
         let opCost = Int((Double(ac.type.bodyType.operatingCostBlockMinutes)
                           * Double(ac.type.holdCostPerTick) * currentEvent.costMultiplier).rounded())
+        // DISPLAY-ONLY: a smoothed lease-per-leg figure for the tooltip. Does
+        // not affect net/settlement — real lease is billed monthly. Ported
+        // from computeLegEconomics: blockMinutes × (monthlyLeaseCost / month).
+        let leaseEst = ac.isLeased
+            ? Int((Double(ac.type.bodyType.operatingCostBlockMinutes)
+                   * Double(ac.type.monthlyLeaseCost) / Double(Simulation.ticksPerMonth)).rounded())
+            : 0
         return LegEconomics(revenue: ac.projectedRevenue, landingFee: landingFee,
-                            gateFee: gateFee, operatingCost: opCost)
+                            gateFee: gateFee, operatingCost: opCost, leaseCostEstimate: leaseEst)
     }
 
     /// Settle a completed leg. Only OWNED aircraft move the player's money /
@@ -680,6 +817,8 @@ final class Simulation {
         tickAOGOnset()
         tickEconomicEvents()
         tickSlotAvailability()
+        tickLeaseBilling()
+        tickUsedMarketReplenishment()
         for ac in aircraft {
             switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {
             case .aogHoldStarted:      pushDecision(.aog, for: ac)

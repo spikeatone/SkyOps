@@ -1420,12 +1420,53 @@ where numbers are involved.
   bundle them (add to the app folder + register in Info.plist `UIAppFonts`).
   This will apply to EVERY future Figma screen — decide the bundling
   approach once, early.
-- **Still additive in Phase 5** (core loop doesn't need them): leasing +
-  used-aircraft market, and the ROUTES list/detail P&L panel (the `Route`
-  model already carries cumulativeNet / flights / openingCost).
+- **Leasing + used-aircraft market — DONE (native app).** Ported faithfully
+  from the prototype. LEASING: 15% upfront (`leaseUpfrontRate`) + a fixed
+  MONTHLY bill (`AircraftType.monthlyLeaseCost` = 0.8% of purchase price),
+  billed by `tickLeaseBilling()` every tick the moment it comes due
+  (`nextLeaseBillTick`), REGARDLESS of utilization — an idle leased spare
+  that never flies still bleeds money (the whole reason leasing is a real
+  tradeoff, not strictly dominant; the prototype's original per-leg proration
+  bug made idle leases free — did NOT reappear here). Leased aircraft are
+  still `purchased: true`. Route P&L absorbs lease bills (`Route.totalLeaseCost`
+  + `cumulativeNet -= bill`). USED MARKET: buy-only, persistent per-type
+  inventory (`usedInventory`, 1–2 listings/type at start via
+  `initializeUsedInventory()`, replenished ~10%/day per under-stocked type),
+  each listing at 15–75% of life, priced with the EXACT SAME linear
+  depreciation as `sellValue()`; a bought used aircraft inherits its real
+  cycle count (not 0). UI: `BuyPanel` now has NEW/USED tabs — NEW shows Buy +
+  Lease per type, USED lists pre-owned airframes cheapest-first with cycle/%
+  -of-life. The tooltip folds a DISPLAY-ONLY smoothed lease estimate
+  (`LegEconomics.leaseCostEstimate` → `displayOperatingCost`/`displayNet`,
+  does NOT affect settlement) into OP COST and shows an amber `LEASED · $X/mo`
+  line. Crew still uses the auto-ratio `provisionCrew()` model (leasing/used
+  buying call it like `buyAircraft` does) — the prototype's separate
+  player-driven crew-hiring rebuild (grantBundledCrew + ADD CREW panel) is a
+  distinct future item, deliberately NOT bundled into this work. Verified: a
+  20/20 headless harness (`scratchpad/LeaseUsedMain.swift` → rename to
+  `main.swift` to run; covers upfront math, idle-spare monthly billing, used
+  price = sell formula, cycle inheritance, listing removal) PLUS live in the
+  Simulator (exact $2.1M lease deduction on an ERJ135, NEW/USED tabs, USED
+  listings with real cycle data, a leased aircraft flown SLC↔DEN with the
+  `LEASED · $112,000/mo` tooltip and lease-folded OP COST confirmed).
+- **A real UX gap surfaced while verifying (not a lease bug, pre-existing):**
+  `makePurchasedAircraft` picks `airports.randomElement()` as a bought/leased
+  spare's base — which can be an OFF-SCREEN AK/HI airport (ANC/HNL) in the
+  CONUS-framed default view, making a fresh spare invisible and untappable
+  until a route is opened (openRoute sets its origin onto the visible map).
+  Fine in the prototype (whole map visible); a real gap in the native CONUS
+  view. Not fixed — candidate fix: bias spare spawn to CONUS airports, or
+  frame the map to include a new spare. Flagged in Open below.
+- **Still additive in Phase 5** (core loop doesn't need it): the ROUTES
+  list/detail P&L panel (the `Route` model already carries cumulativeNet /
+  flights / openingCost / totalLeaseCost) — NEXT up.
 
 ## Open / not yet decided
 
+- **Off-screen spare base (native app):** a bought/leased spare can spawn at
+  an AK/HI airport (ANC/HNL), invisible in the CONUS-framed default view until
+  a route is opened. Real UX gap in the native view (fine in the prototype).
+  Not fixed — see the Leasing/Used note above for candidate fixes.
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on
   a Mac (can't be done from a Linux sandbox). See ROADMAP Phase 0.
 - SwiftData vs Core Data for persistence — leaning SwiftData (iOS 17+) for

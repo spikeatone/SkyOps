@@ -24,6 +24,10 @@ final class Route: Identifiable {
     var cumulativeNet: Int = 0
     /// Legs flown on this route.
     var flights: Int = 0
+    /// Real fixed lease bills charged while this route's aircraft was leased
+    /// (billed by tickLeaseBilling, NOT a flight event) — a real cost against
+    /// this route's profitability even when no flight happened at that tick.
+    var totalLeaseCost: Int = 0
 
     init(id: Int, originCode: String, destCode: String, openedTick: Int, openingCost: Int) {
         self.id = id

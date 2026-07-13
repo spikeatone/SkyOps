@@ -172,7 +172,8 @@ struct ContentView: View {
     }
 
     private func handleBought(_ ac: Aircraft) {
-        showFlash("Bought \(ac.type.name) — now a spare")
+        let verb = ac.isLeased ? "Leased" : "Bought"
+        showFlash("\(verb) \(ac.type.name) — now a spare")
         // If we're mid-route-open, try to complete it with the new aircraft.
         if case .confirm(let o, let d) = routeMode,
            let origin = sim.airports.first(where: { $0.code == o }),
@@ -473,51 +474,135 @@ enum RouteMode: Equatable {
     case confirm(String, String)
 }
 
-/// Scrollable buy list (cheapest first); each row's Buy disables when unaffordable.
+/// Acquire panel: NEW (buy outright or lease) and USED (buy pre-owned) tabs.
+/// Every action re-checks affordability against the LIVE balance (which changes
+/// every completed flight — @Observable re-renders this on change, no per-tick
+/// refresh needed, avoiding the prototype's thrice-recurring flicker bug).
 struct BuyPanel: View {
     let sim: Simulation
     let onBought: (Aircraft) -> Void
+    @State private var showUsed = false
+
+    private let mint = Color(red: 0x37/255, green: 1, blue: 0xB0/255)
+    private let amber = Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("ACQUIRE AIRCRAFT")
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .foregroundStyle(.secondary)
-            ScrollView {
-                VStack(spacing: 3) {
-                    ForEach(AircraftType.all.sorted { $0.purchasePrice < $1.purchasePrice }) { t in
-                        let afford = sim.playerBalance >= t.purchasePrice
-                        HStack {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(t.name).font(.system(size: 12, weight: .medium, design: .monospaced))
-                                Text("\(t.seats) seats · \(FAMILY_LABELS[t.family] ?? t.family)")
-                                    .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Button {
-                                if let ac = sim.buyAircraft(t) { onBought(ac) }
-                            } label: {
-                                Text("$\((t.purchasePrice / 1_000_000))M")
-                                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                    .padding(.vertical, 6).padding(.horizontal, 10)
-                                    .background((afford ? Color(red: 0x37/255, green: 1, blue: 0xB0/255)
-                                                        : Color.white).opacity(afford ? 0.22 : 0.08))
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                                    .opacity(afford ? 1 : 0.4)
-                            }
-                            .buttonStyle(.plain).disabled(!afford)
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 4).padding(.horizontal, 6)
-                    }
+            HStack {
+                Text("ACQUIRE AIRCRAFT")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                HStack(spacing: 4) {
+                    tab("NEW", active: !showUsed) { showUsed = false }
+                    tab("USED", active: showUsed) { showUsed = true }
                 }
             }
-            .frame(maxHeight: 240)
+            ScrollView {
+                VStack(spacing: 3) {
+                    if showUsed { usedRows } else { newRows }
+                }
+            }
+            .frame(maxHeight: 260)
         }
         .padding(12)
         .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.97))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.18), lineWidth: 1))
+    }
+
+    // NEW: buy outright or lease (15% upfront + a fixed monthly bill).
+    @ViewBuilder private var newRows: some View {
+        ForEach(AircraftType.all.sorted { $0.purchasePrice < $1.purchasePrice }) { t in
+            let leaseUp = sim.leaseUpfront(t)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(t.name).font(.system(size: 12, weight: .medium, design: .monospaced))
+                    Text("\(t.seats) seats · \(FAMILY_LABELS[t.family] ?? t.family)")
+                        .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                    Text("lease \(priceLabel(t.monthlyLeaseCost))/mo")
+                        .font(.system(size: 9, design: .monospaced)).foregroundStyle(amber.opacity(0.75))
+                }
+                Spacer()
+                VStack(spacing: 3) {
+                    acquireButton("Buy · \(priceLabel(t.purchasePrice))", tint: mint,
+                                  afford: sim.playerBalance >= t.purchasePrice) {
+                        if let ac = sim.buyAircraft(t) { onBought(ac) }
+                    }
+                    acquireButton("Lease · \(priceLabel(leaseUp))", tint: amber,
+                                  afford: sim.playerBalance >= leaseUp) {
+                        if let ac = sim.leaseAircraft(t) { onBought(ac) }
+                    }
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.vertical, 4).padding(.horizontal, 6)
+        }
+    }
+
+    // USED: persistent pre-owned inventory, cheapest first; each inherits its
+    // real cycle count. Buy-only (no lease), matching the designer's decision.
+    @ViewBuilder private var usedRows: some View {
+        let listings = sim.usedListings
+        if listings.isEmpty {
+            Text("No used aircraft on the market right now.")
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 12)
+        } else {
+            ForEach(listings) { l in
+                if let t = AircraftType.all.first(where: { $0.id == l.typeId }) {
+                    let pct = 100 * l.cyclesAccrued / max(1, t.expectedLifespanCycles)
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(t.name).font(.system(size: 12, weight: .medium, design: .monospaced))
+                            Text("\(l.cyclesAccrued.formatted()) cycles · \(pct)% of life used")
+                                .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        acquireButton("Buy · \(priceLabel(l.price))", tint: mint,
+                                      afford: sim.playerBalance >= l.price) {
+                            if let ac = sim.buyUsedAircraft(l) { onBought(ac) }
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.vertical, 4).padding(.horizontal, 6)
+                }
+            }
+        }
+    }
+
+    private func tab(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .padding(.vertical, 4).padding(.horizontal, 10)
+                .background(active ? Color.accentColor.opacity(0.85) : Color.white.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func acquireButton(_ label: String, tint: Color, afford: Bool,
+                               action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .frame(width: 118)
+                .padding(.vertical, 6)
+                .background((afford ? tint : Color.white).opacity(afford ? 0.22 : 0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .opacity(afford ? 1 : 0.4)
+        }
+        .buttonStyle(.plain).disabled(!afford)
+    }
+
+    /// "$14M" for clean values ≥ $10M, "$2.1M" below, "$340k" under $1M.
+    private func priceLabel(_ v: Int) -> String {
+        let m = Double(v) / 1_000_000
+        if m >= 10 { return "$\(Int(m.rounded()))M" }
+        if m >= 1  { return String(format: "$%.1fM", m) }
+        return "$\(Int((Double(v) / 1000).rounded()))k"
     }
 }
 
@@ -595,6 +680,13 @@ struct AircraftTooltip: View {
                 }
                 .buttonStyle(.plain)
             }
+            // Leased aircraft carry a fixed monthly obligation — flag it (amber)
+            // so a higher op-cost line reads as expected, not a bug.
+            if aircraft.isLeased {
+                Text("LEASED · \(money(aircraft.type.monthlyLeaseCost))/mo")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255))
+            }
             row("TAIL", aircraft.tail)
             row("TYPE", aircraft.type.name)
             row("STATUS", statusText, valueColor: aircraft.isHeld ? heldColor : .white)
@@ -612,9 +704,11 @@ struct AircraftTooltip: View {
                 let econ = sim.legEconomics(for: aircraft)
                 row("REVENUE", money(econ.revenue))
                 row("FEES", "−" + money(econ.fees))
-                row("OP COST", "−" + money(econ.operatingCost))
-                row("NET / LEG", (econ.net < 0 ? "−" : "") + money(abs(econ.net)),
-                    valueColor: econ.net < 0 ? heldColor : climbColor)
+                // Op cost folds in a smoothed lease estimate for leased aircraft
+                // (display-only); the real lease is a fixed monthly bill.
+                row("OP COST", "−" + money(econ.displayOperatingCost))
+                row("NET / LEG", (econ.displayNet < 0 ? "−" : "") + money(abs(econ.displayNet)),
+                    valueColor: econ.displayNet < 0 ? heldColor : climbColor)
             }
         }
         .foregroundStyle(.white)

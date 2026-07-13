@@ -62,6 +62,14 @@ final class Aircraft: Identifiable {
     var assignedRouteId: Int?
     var sellOfferDismissed = false
 
+    // Leasing (Phase 5). A leased aircraft is still `purchased: true` (real
+    // stakes, flies the player's routes, feeds the balance) but carries a
+    // fixed MONTHLY lease obligation instead of a full upfront purchase. The
+    // bill is charged regardless of utilization — see tickLeaseBilling.
+    var isLeased = false
+    /// Tick the next monthly lease bill is due (nil = not leased).
+    var nextLeaseBillTick: Int?
+
     // Hold state (Phase 3).
     var holdReason: HoldReason?
     var rejoinTick: Int = 0

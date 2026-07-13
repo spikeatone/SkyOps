@@ -74,6 +74,12 @@ struct AircraftType: Identifiable {
     /// Operating cost per sim-minute (1 tick). Ported: round(costPerHour / 60).
     var holdCostPerTick: Int { Int((Double(costPerHour) / 60).rounded()) }
 
+    /// Fixed MONTHLY lease payment: 0.8% of purchase price (LEASE_MONTHLY_RATE
+    /// — the midpoint of the real 0.6–1.2% "lease rate factor", Acumen Aero,
+    /// cross-checked against real narrowbody lease quotes). Charged every
+    /// sim-month regardless of utilization — see Simulation.tickLeaseBilling().
+    var monthlyLeaseCost: Int { Int((Double(purchasePrice) * 0.008).rounded()) }
+
     /// Full fleet catalogue — ported verbatim from AIRCRAFT_TYPES.
     static let all: [AircraftType] = [
         // A320 family (ceo + neo) — one crew family

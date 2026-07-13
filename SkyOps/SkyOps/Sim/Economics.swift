@@ -49,6 +49,17 @@ struct LegEconomics {
     var landingFee: Int
     var gateFee: Int
     var operatingCost: Int
+    /// DISPLAY-ONLY smoothed per-leg lease estimate (0 unless leased). Real
+    /// lease is a fixed monthly bill billed separately (tickLeaseBilling), so
+    /// this does NOT affect `net` / settlement — it only lets the in-flight
+    /// tooltip fold a readable lease figure into its shown operating cost.
+    var leaseCostEstimate: Int = 0
+
     var net: Int { revenue - landingFee - gateFee - operatingCost }
     var fees: Int { landingFee + gateFee }
+
+    /// Tooltip-only: operating cost with the smoothed lease estimate folded in.
+    var displayOperatingCost: Int { operatingCost + leaseCostEstimate }
+    /// Tooltip-only net, internally consistent with displayOperatingCost.
+    var displayNet: Int { revenue - fees - displayOperatingCost }
 }
