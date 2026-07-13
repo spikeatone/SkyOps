@@ -57,8 +57,6 @@ struct NetworkView: View {
 
     enum NetPanel { case none, acquire, routes, hire, hedge }
 
-    private let fleetSizes: [Int] = [10, 60, 120, 250]
-
     private var routeHighlights: Set<String> {
         switch routeMode {
         case .off, .pickOrigin: return []
@@ -244,24 +242,23 @@ struct NetworkView: View {
         }
     }
 
-    /// DEV stress-test traffic control (not in the Figma) — kept behind the eye
-    /// overlays so it's out of the way in the clean map view.
+    /// Competitive-traffic control — a continuous slider (0…250) setting how
+    /// much background (rival-airline) traffic fills the airspace. Kept behind
+    /// the eye overlays, out of the way in the clean map view.
     private var trafficBar: some View {
-        HStack(spacing: 6) {
-            Text("DEV · TRAFFIC").font(.system(size: 9, weight: .semibold, design: .monospaced))
-                .foregroundStyle(Sky.lightBlue.opacity(0.6))
-            ForEach(fleetSizes, id: \.self) { n in
-                Button { sim.setFleetSize(sim.stressTestCount == n ? 0 : n) } label: {
-                    Text("\(n)").font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(sim.stressTestCount == n ? .white : Sky.lightBlue.opacity(0.7))
-                        .padding(.vertical, 3).padding(.horizontal, 7)
-                        .background(sim.stressTestCount == n ? Sky.brightBlue.opacity(0.7) : Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 5))
-                }.buttonStyle(.plain)
-            }
-            Spacer()
+        HStack(spacing: 10) {
+            Text("Competitive Traffic").font(.karla(12, .semibold))
+                .foregroundStyle(Sky.lightBlue.opacity(0.85))
+                .fixedSize()
+            Slider(value: Binding(get: { Double(sim.stressTestCount) },
+                                  set: { sim.setFleetSize(Int($0.rounded())) }),
+                   in: 0...250, step: 5)
+                .tint(Sky.brightBlue)
+            Text("\(sim.stressTestCount)").font(.karla(12, .bold))
+                .foregroundStyle(.white)
+                .frame(width: 30, alignment: .trailing)
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 6)
     }
 
     // MARK: - Route-opening flow

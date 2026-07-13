@@ -706,9 +706,12 @@ struct AircraftTooltip: View {
     let tick: Int            // changing value input — keeps status/crew live
     let onClose: () -> Void
 
+    @Environment(\.colorScheme) private var scheme
+
     // Figma tokens (3:1662): On Dark Green / Red for the P&L rows, purple for
-    // competitor identity, light blue for ordinary values.
-    private let heldColor    = Color(skyHex: 0xFF9292)   // On Dark Red
+    // competitor identity, light blue for ordinary values. Negative numbers use
+    // the app-wide red convention: #FF9292 dark / #D70000 light.
+    private var heldColor: Color { scheme == .dark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
     private let onDarkGreen   = Color(skyHex: 0x87ED7A)
     private let othersColor   = Color(skyHex: 0xD767FF)
 
@@ -740,10 +743,11 @@ struct AircraftTooltip: View {
 
                 let econ = sim.legEconomics(for: aircraft)
                 row("Revenue", money(econ.revenue))
-                row("Fees", "−" + money(econ.fees))
+                // Fees and operating cost are always negative (costs) → red.
+                row("Fees", "−" + money(econ.fees), valueColor: heldColor)
                 // Op cost folds in a smoothed lease estimate for leased aircraft
                 // (display-only); the real lease is a fixed monthly bill.
-                row("Operating cost", "−" + money(econ.displayOperatingCost))
+                row("Operating cost", "−" + money(econ.displayOperatingCost), valueColor: heldColor)
                 row("Net for this leg", (econ.displayNet < 0 ? "−" : "") + money(abs(econ.displayNet)),
                     valueColor: econ.displayNet < 0 ? heldColor : onDarkGreen)
                 if let pl = routePLText {
