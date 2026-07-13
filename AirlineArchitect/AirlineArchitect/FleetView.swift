@@ -3,11 +3,13 @@
 //  Airline Architect — the FLEET tab
 //
 //  Built to the Figma (Airline-Architect-Production, fleet home 1:725 light /
-//  1:1057 dark). A My Fleet / Marketplace segmented screen: a 4-box status bar
-//  (Total / Flying / Idle / Grounded) and a scrollable list of fleet cards
-//  (tail, type, live status chip, current route, ownership chip, airframe-life
-//  bar). Theme-aware via the Sky tokens + light-mode Figma colours. Marketplace
-//  and the per-aircraft detail screen land in follow-up passes.
+//  1:1057 dark, marketplace 5:6501 / 5:6941). A My Fleet / Marketplace
+//  segmented screen. My Fleet: a 4-box status bar (Total / Flying / Idle /
+//  Grounded) and a scrollable list of fleet cards (tail, type, live status
+//  chip, current route, ownership chip, airframe-life bar); tapping a card
+//  opens FleetDetailView. Marketplace: buy-new / lease-new / buy-used profile
+//  cards per type (reuses the sim's real purchase functions). Theme-aware via
+//  the Sky tokens + light-mode Figma colours.
 //
 
 import SwiftUI
@@ -78,7 +80,8 @@ struct FleetView: View {
             }
             Divider().overlay(cardBorder)
             HStack {
-                Text("FLEET HOME").font(.karla(22, .bold)).foregroundStyle(titleColor)
+                Text(segment == .myFleet ? "FLEET HOME" : "MARKETPLACE")
+                    .font(.karla(22, .bold)).foregroundStyle(titleColor)
                 Spacer()
                 Image(systemName: "bell")
                     .font(.system(size: 18)).foregroundStyle(titleColor)
@@ -272,13 +275,88 @@ struct FleetView: View {
         }
     }
 
-    // MARK: Marketplace (built in a follow-up pass)
+    // MARK: Marketplace — buy new / lease new / buy used per type (Figma 5:6501).
+    // Reuses the sim's real purchase functions; live affordability from balance.
     private var marketplacePlaceholder: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "cart").font(.system(size: 40)).foregroundStyle(titleColor.opacity(0.6))
-            Text("Marketplace").font(.karla(18, .bold)).foregroundStyle(primary)
-            Text("Coming next").font(.karla(14)).foregroundStyle(secondary)
+        let types = AircraftType.all.sorted { $0.purchasePrice < $1.purchasePrice }
+        return ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(types) { marketplaceCard($0) }
+            }
+            .padding(.bottom, 8)
         }
-        .frame(maxWidth: .infinity).padding(.top, 60)
     }
+
+    private func marketplaceCard(_ type: AircraftType) -> some View {
+        let used = sim.usedInventory[type.id] ?? []
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(type.name).font(.karla(20, .heavy)).foregroundStyle(primary)
+            if let img = AircraftArt.image(for: type.id) {
+                img.resizable().scaledToFit().frame(maxWidth: .infinity)
+            }
+            // Spec row
+            HStack(alignment: .top) {
+                spec("Seats:", "\(type.seats)")
+                Spacer()
+                spec("Practical Range:", "\(type.rangeNM.formatted()) NM")
+                Spacer()
+                spec("Avg Lifespan:", "\(type.expectedLifespanCycles.formatted()) cycles")
+            }
+            Rectangle().fill(cardBorder).frame(height: 1)
+            // Buy new
+            offerRow("Buy new:", money(type.purchasePrice),
+                     kind: .buy, afford: sim.playerBalance >= type.purchasePrice) {
+                _ = sim.buyAircraft(type)
+            }
+            // Lease new
+            offerRow("Lease new:",
+                     "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
+                     kind: .lease, afford: sim.playerBalance >= sim.leaseUpfront(type)) {
+                _ = sim.leaseAircraft(type)
+            }
+            // Buy used (one row per listing, cheapest first)
+            ForEach(used.sorted { $0.price < $1.price }) { listing in
+                let pct = 100 * listing.cyclesAccrued / max(1, type.expectedLifespanCycles)
+                offerRow("Buy used:",
+                         "\(money(listing.price)) · \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
+                         kind: .buy, afford: sim.playerBalance >= listing.price) {
+                    _ = sim.buyUsedAircraft(listing)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    private func spec(_ label: String, _ value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(label).font(.karla(14, .bold)).foregroundStyle(secondary)
+            Text(value).font(.karla(14)).foregroundStyle(secondary)
+        }
+    }
+
+    private enum OfferKind { case buy, lease }
+    private func offerRow(_ label: String, _ detail: String, kind: OfferKind,
+                          afford: Bool, action: @escaping () -> Void) -> some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label).font(.karla(14, .bold)).foregroundStyle(secondary)
+                Text(detail).font(.karla(14)).foregroundStyle(secondary)
+            }
+            Spacer(minLength: 8)
+            Button(action: action) {
+                Text(kind == .buy ? "BUY" : "LEASE")
+                    .font(.karla(12, .bold)).foregroundStyle(.white)
+                    .frame(height: 24).padding(.horizontal, 8)
+                    .background(kind == .buy ? Sky.coreGreen : Color(skyHex: 0x4B4B4B))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .opacity(afford ? 1 : 0.4)
+            }.buttonStyle(.plain).disabled(!afford)
+        }
+    }
+
+    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
 }
