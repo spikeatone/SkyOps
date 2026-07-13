@@ -250,15 +250,39 @@ struct NetworkView: View {
             Text("Competitive Traffic").font(.karla(12, .semibold))
                 .foregroundStyle(Sky.lightBlue.opacity(0.85))
                 .fixedSize()
-            Slider(value: Binding(get: { Double(sim.stressTestCount) },
-                                  set: { sim.setFleetSize(Int($0.rounded())) }),
-                   in: 0...250, step: 5)
-                .tint(Sky.brightBlue)
+            trafficSlider
             Text("\(sim.stressTestCount)").font(.karla(12, .bold))
                 .foregroundStyle(.white)
                 .frame(width: 30, alignment: .trailing)
         }
         .padding(.horizontal, 6)
+    }
+
+    /// Compact custom slider — a small themed handle (native Slider's thumb is
+    /// too large/distracting). Handle: #2B303D on dark, white on light.
+    private var trafficSlider: some View {
+        let handleD: CGFloat = 13
+        return GeometryReader { geo in
+            let usable = max(1, geo.size.width - handleD)
+            let frac = CGFloat(sim.stressTestCount) / 250
+            let x = frac * usable
+            ZStack(alignment: .leading) {
+                Capsule().fill(Sky.onDarkStroke.opacity(0.45)).frame(height: 3)
+                Capsule().fill(Sky.brightBlue).frame(width: x + handleD / 2, height: 3)
+                Circle()
+                    .fill(isDark ? Sky.darkBG : Color.white)
+                    .frame(width: handleD, height: handleD)
+                    .overlay(Circle().stroke(isDark ? Sky.brightBlue.opacity(0.9) : Color(skyHex: 0xC9C9C9), lineWidth: 1.5))
+                    .offset(x: x)
+            }
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+                let t = max(0, min(1, (v.location.x - handleD / 2) / usable))
+                sim.setFleetSize(Int((t * 250 / 5).rounded()) * 5)
+            })
+        }
+        .frame(height: handleD)
     }
 
     // MARK: - Route-opening flow
