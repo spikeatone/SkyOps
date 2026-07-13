@@ -189,7 +189,8 @@ final class Simulation {
         // start so the fleet isn't synchronized.
         airports = Airport.all
         provisionSlots()
-        provisionCrew()    // empty until aircraft are bought
+        // Crew pools start EMPTY — the player-driven model fills them as aircraft
+        // are bought/leased (grantBundledCrew), not by any startup ratio.
         initializeUsedInventory()   // 1–2 pre-owned listings per type at start
         // Full-shift start: $20M, zero aircraft, zero routes. The FLEET buttons
         // are a DEV stress-test control (spawn background/non-owned traffic).
@@ -289,7 +290,7 @@ final class Simulation {
         playerBalance -= type.purchasePrice
         let ac = makePurchasedAircraft(type)
         aircraft.append(ac)
-        provisionCrew()   // re-size the crew roster to include the new owned aircraft
+        grantBundledCrew(type.family)   // 1 crew bundled; the player hires more
         return ac
     }
 
@@ -321,7 +322,7 @@ final class Simulation {
         ac.isLeased = true
         ac.nextLeaseBillTick = tick + Simulation.ticksPerMonth  // first bill in one sim-month
         aircraft.append(ac)
-        provisionCrew()
+        grantBundledCrew(type.family)   // 1 crew bundled; the player hires more
         return ac
     }
 
@@ -477,7 +478,7 @@ final class Simulation {
         playerBalance -= listing.price
         let ac = makePurchasedAircraft(type, startingCycles: listing.cyclesAccrued)
         aircraft.append(ac)
-        provisionCrew()
+        grantBundledCrew(type.family)   // 1 crew bundled; the player hires more
         listings.remove(at: idx)          // sold — gone until replenishment
         usedInventory[listing.typeId] = listings
         return ac
@@ -522,7 +523,7 @@ final class Simulation {
         } else {
             while stressTestCount < target { aircraft.append(makeAircraft()) }
         }
-        provisionCrew()
+        resizeCrewPools()   // cleanup only (background traffic uses no crew)
     }
 
     var fleetCount: Int { aircraft.count }
@@ -570,50 +571,75 @@ final class Simulation {
 
     // MARK: - Crew (per-family pools, FAA Part 117 duty/rest)
 
-    /// Pre-ownership provisioning ratio: crews per aircraft in a family. Sized
-    /// so ops mostly flow but a crew resting occasionally leaves an aircraft
-    /// briefly short → a real, OCCASIONAL crew hold. When ownership (Phase 5)
-    /// lands, this auto-provisioning is REPLACED by the player-driven model
-    /// (1 crew bundled per purchase + the ADD CREW hire panel) — same scoping
-    /// debt as AOG. Real `crewsPerTail` (6 short / 11 long haul) stays a
-    /// reference figure the player reasons about, not consumed here.
-    /// Crews per aircraft in a family. TUNED via a headless balance sweep:
-    /// ~1.8 is the duty/rest break-even (a crew flies ~55% of the time), so at
-    /// or below it a shortage CASCADES into a permanent jam (whole fleet held);
-    /// at 1.9–2.4 the system is steady with only occasional 1–2 aircraft holds;
-    /// 2.6+ never holds at all. 2.1 gives occasional, recoverable crew holds.
-    /// (The real crew-management tension — starting under-crewed and hiring —
-    /// arrives with the player-driven Phase 5 model; this is the stand-in.)
-    private static let crewsPerAircraft = 2.1
-    private static let reservesPerFamily = 2
+    // PLAYER-DRIVEN crew model (ported from the prototype, replacing the native
+    // app's auto-ratio stand-in). Buying/leasing an aircraft bundles exactly 1
+    // crew — deliberately NOT enough for continuous operation once duty/rest
+    // limits kick in (a crew flies ~55% of the time), which is the real pressure
+    // toward hiring more via the ADD CREW panel. A family's FIRST aircraft also
+    // seeds 1 reserve (1 bundled + 1 reserve = 2 crew total on the first tail —
+    // the corrected count, was 2 reserves). `crewsPerTail` (6 short / 11 long
+    // haul) is now purely a REFERENCE figure the player reasons about — no code
+    // consumes it, so the old cascade-prone auto-ratio is gone entirely.
+    private static let reservesPerFamily = 1
+    /// Crew hire cost = 0.2% of a representative aircraft's price (scales with
+    /// complexity: ~$28K regional-jet crew … ~$578K widebody crew). A DESIGNED
+    /// estimate, not deeply sourced.
+    private static let crewHireCostRate = 0.002
 
     private(set) var crewPoolsByFamily: [String: [Crew]] = [:]
     private(set) var reserveCrewsByFamily: [String: Int] = [:]
 
-    /// (Re)build the crew pools sized to the current fleet, then backfill crews
-    /// for aircraft that spawned mid-flight with partial duty already elapsed
-    /// (staggered starts represent a running operation, not an all-fresh one).
-    private func provisionCrew() {
-        for ac in aircraft { ac.crewId = nil }
-        crewPoolsByFamily = [:]
-        reserveCrewsByFamily = [:]
-        var counts: [String: Int] = [:]
-        for ac in aircraft where ac.purchased { counts[ac.type.family, default: 0] += 1 }
-        for (family, count) in counts {
-            let size = max(1, Int((Double(count) * Simulation.crewsPerAircraft).rounded()))
-            crewPoolsByFamily[family] = (0..<size).map { Crew(id: $0) }
+    /// Families the player currently owns aircraft in (for the ADD CREW panel —
+    /// never the full 15). Insertion-ordered by first-owned.
+    var ownedFamilies: [String] {
+        var seen = Set<String>(), out = [String]()
+        for ac in aircraft where ac.purchased && !seen.contains(ac.type.family) {
+            seen.insert(ac.type.family); out.append(ac.type.family)
+        }
+        return out
+    }
+    func crewCount(family: String) -> Int { crewPoolsByFamily[family]?.count ?? 0 }
+    func ownedCount(family: String) -> Int { aircraft.lazy.filter { $0.purchased && $0.type.family == family }.count }
+
+    /// Bundle exactly 1 crew with a bought/leased aircraft; seed 1 reserve if
+    /// this is the family's first aircraft. Ported from grantBundledCrew().
+    private func grantBundledCrew(_ family: String) {
+        if crewPoolsByFamily[family]?.isEmpty ?? true {
             reserveCrewsByFamily[family] = Simulation.reservesPerFamily
         }
-        backfillStaggeredCrews()
+        let id = crewPoolsByFamily[family]?.count ?? 0
+        crewPoolsByFamily[family, default: []].append(Crew(id: id))
     }
 
-    private func backfillStaggeredCrews() {
-        for ac in aircraft where ac.purchased && ac.crewId == nil && ac.state != .parked {
-            guard let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.status == .available }) else { continue }
-            crew.status = .onDuty
-            crew.dutyTicks = Int.random(in: 0..<(Crew.maxDutyTicks / 2))  // partial duty already elapsed
-            ac.crewId = crew.id
+    /// Cleanup pass ONLY — clears a family's pool/reserves to 0 once its owned
+    /// count hits zero (last one sold). Never grows or shrinks by any ratio
+    /// (that's the player's job now). Ported from the rewritten resizeCrewPools().
+    private func resizeCrewPools() {
+        for family in Array(crewPoolsByFamily.keys) where ownedCount(family: family) == 0 {
+            crewPoolsByFamily[family] = nil
+            reserveCrewsByFamily[family] = nil
         }
+    }
+
+    /// Cost to hire one crew in a family (0.2% of a representative aircraft's
+    /// price). Same function the ADD CREW panel and the CREW card's hire option
+    /// both use.
+    func crewHireCost(family: String) -> Int {
+        let price = AircraftType.all.first { $0.family == family }?.purchasePrice ?? 0
+        return Int((Double(price) * Simulation.crewHireCostRate).rounded())
+    }
+
+    /// Hire one crew into a family if affordable (real playerBalance cost).
+    /// Returns the new crew's id, or nil if unaffordable.
+    @discardableResult
+    func hireCrew(family: String) -> Int? {
+        let cost = crewHireCost(family: family)
+        guard playerBalance >= cost else { return nil }
+        playerBalance -= cost
+        maintenanceSpend += cost
+        let id = crewPoolsByFamily[family]?.count ?? 0
+        crewPoolsByFamily[family, default: []].append(Crew(id: id))
+        return id
     }
 
     /// Duty/rest clock. Ported from tickCrewPool(): on-duty accrues duty time;
@@ -690,9 +716,17 @@ final class Simulation {
         decisionQueue.removeAll { $0.aircraft === ac && $0.kind == kind }
     }
 
+    /// Charge a real decision cost against the balance (and track the running
+    /// maintenance stat). Previously `maintenanceSpend` accumulated but never
+    /// touched `playerBalance` — decisions were silently free; now they cost.
+    private func chargeDecisionCost(_ amount: Int) {
+        playerBalance -= amount
+        maintenanceSpend += amount
+    }
+
     /// AOG card option 1: pay to have the aircraft ready now.
     func resolveAOGExpedite(_ decision: Decision) {
-        maintenanceSpend += 15_000
+        chargeDecisionCost(15_000)
         decision.aircraft.maint = false
         decisionQueue.removeAll { $0.id == decision.id }
     }
@@ -700,7 +734,7 @@ final class Simulation {
     /// AOG card option 2: cheaper repair on a ~3 sim-hour timer; the aircraft
     /// stays held until it completes.
     func resolveAOGStandard(_ decision: Decision) {
-        maintenanceSpend += 3_000
+        chargeDecisionCost(3_000)
         decision.aircraft.aogAutoClearTick = tick + 180
         decisionQueue.removeAll { $0.id == decision.id }
     }
@@ -715,7 +749,7 @@ final class Simulation {
         let family = ac.type.family
         guard (reserveCrewsByFamily[family] ?? 0) > 0 else { return }
         reserveCrewsByFamily[family]! -= 1
-        maintenanceSpend += 5_000
+        chargeDecisionCost(5_000)
         let crew = Crew(id: crewPoolsByFamily[family]?.count ?? 0)
         crew.status = .onDuty
         crewPoolsByFamily[family, default: []].append(crew)
@@ -725,7 +759,26 @@ final class Simulation {
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
-    /// CREW card option 2: dismiss and let the aircraft keep waiting on the
+    /// True if the player can afford to hire a crew for this aircraft's family.
+    func canAffordCrewHire(for ac: Aircraft) -> Bool {
+        playerBalance >= crewHireCost(family: ac.type.family)
+    }
+
+    /// CREW card option 2: hire a NEW crew (real cost) and assign it to this
+    /// held aircraft immediately, resolving the hold this cycle. Reuses
+    /// hireCrew() — same cost/pool logic as the ADD CREW panel.
+    func resolveCrewHire(_ decision: Decision) {
+        let ac = decision.aircraft
+        guard let id = hireCrew(family: ac.type.family) else { return }
+        // Put the freshly-hired crew straight on this aircraft.
+        crewPoolsByFamily[ac.type.family]?.first { $0.id == id }?.status = .onDuty
+        ac.crewId = id
+        ac.holdReason = nil
+        ac.holdLogged = false
+        decisionQueue.removeAll { $0.id == decision.id }
+    }
+
+    /// CREW card option 3: dismiss and let the aircraft keep waiting on the
     /// pool — the boarding gate assigns a crew the moment one frees up.
     func resolveCrewWait(_ decision: Decision) {
         decisionQueue.removeAll { $0.id == decision.id }
@@ -893,6 +946,12 @@ final class Simulation {
     func resolveSell(_ decision: Decision) {
         let ac = decision.aircraft
         playerBalance += sellValue(of: ac)
+        // Release the sold aircraft's crew back to the pool (it isn't sold with
+        // the aircraft) before the cleanup pass.
+        if let cid = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == cid }) {
+            crew.status = .available
+        }
+        ac.crewId = nil
         if let id = ac.assignedRouteId, let idx = playerRoutes.firstIndex(where: { $0.id == id }) {
             // Archive, don't discard — the route's full P&L history stays
             // reviewable (including one that never recouped its cost).
@@ -904,7 +963,7 @@ final class Simulation {
         }
         aircraft.removeAll { $0 === ac }
         decisionQueue.removeAll { $0.id == decision.id }
-        provisionCrew()
+        resizeCrewPools()   // clears the family's pool only if this was its last aircraft
     }
 
     /// SELL card option: keep flying (don't re-prompt this aircraft).

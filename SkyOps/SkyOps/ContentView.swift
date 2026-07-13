@@ -446,17 +446,31 @@ struct CrewCard: View {
     var body: some View {
         let ac = decision.aircraft
         let hasReserve = sim.hasReserve(for: ac)
+        let canHire = sim.canAffordCrewHire(for: ac)
+        let hireCost = sim.crewHireCost(family: ac.type.family)
         DecisionCardChrome(title: "NO LEGAL CREW AVAILABLE",
                            subject: "\(ac.tail) · \(ac.type.name) · at \(ac.origin.code)") {
-            CardButton(label: hasReserve ? "Call reserve · $5,000" : "No reserves left",
+            CardButton(label: hasReserve ? "Reserve · $5k" : "No reserves",
                        emphasized: true, disabled: !hasReserve) {
                 sim.resolveCrewReserve(decision)
             }
-            CardButton(label: "Wait for next crew") {
+            CardButton(label: canHire ? "Hire · \(compactMoney(hireCost))" : "Can't afford hire",
+                       disabled: !canHire) {
+                sim.resolveCrewHire(decision)
+            }
+            CardButton(label: "Wait") {
                 sim.resolveCrewWait(decision)
             }
         }
     }
+}
+
+/// "$28k" / "$1.2M" compact money for tight decision-card buttons.
+func compactMoney(_ v: Int) -> String {
+    let a = abs(v), sign = v < 0 ? "−" : ""
+    if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
+    if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
+    return sign + "$\(a)"
 }
 
 struct SellCard: View {

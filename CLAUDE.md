@@ -1341,7 +1341,38 @@ where numbers are involved.
   crew-management tension (starting under-crewed, hiring up) is the Phase 5
   player-driven model; this auto-provisioned ratio is the pre-ownership
   stand-in (same ownership-scoping debt as AOG — re-scope to `purchased`
-  when it lands).
+  when it lands). **UPDATE: this auto-ratio stand-in is now GONE — replaced
+  by the player-driven model below.**
+- **Player-driven crew hiring — DONE (native app), replacing the auto-ratio
+  `crewsPerAircraft = 2.1` stand-in entirely.** Ported the prototype spec
+  (re-supplied by the designer). Buying/leasing/used-buying an aircraft now
+  `grantBundledCrew(family)` — exactly 1 crew, plus 1 reserve seeded on the
+  family's FIRST aircraft (1 bundled + 1 reserve = 2 total, the corrected
+  count — was 2 reserves). `resizeCrewPools()` is CLEANUP-ONLY now: it clears
+  a family's pool/reserves to 0 when its owned count hits zero (last sold),
+  and NEVER grows/shrinks by any ratio — so the old cascade-prone 2.1 sweep is
+  irrelevant (the balance probe no longer applies to crew sizing; the player
+  sizes the pool). `hireCrew(family:)` costs a real `crewHireCost` (0.2% of a
+  representative aircraft's price — ERJ $28k … 777 $578k, verified) charged to
+  `playerBalance`. The CREW decision card gained a 3rd option "Hire · $X"
+  (`resolveCrewHire`, disabled "Can't afford hire" when broke) alongside
+  Reserve/Wait. `ownedFamilies`/`crewCount(family:)`/`ownedCount(family:)`
+  feed the ADD CREW panel (which lands with the NETWORK view). Duty/rest is
+  UNCHANGED (already correct: dutyTicks resets only on a completed rest). The
+  intended tension is now REAL: a fresh 1-aircraft-1-crew operator hits a CREW
+  hold within ~2 flight cycles and must hire — verified headlessly. Also
+  removed `backfillStaggeredCrews` (dead — purchased aircraft always spawn
+  PARKED and get crew at the boarding gate; background traffic uses no crew).
+- **Fixed a real pre-existing gap while here: decision costs were FREE.**
+  `maintenanceSpend` accumulated AOG-expedite ($15k) / AOG-standard ($3k) /
+  crew-reserve ($5k) charges but NEVER subtracted from `playerBalance` and was
+  never displayed — a dead accumulator, so every decision was silently free.
+  Now a shared `chargeDecisionCost()` deducts from `playerBalance` (and still
+  tracks the stat) at all three points, plus `hireCrew`. Verified headlessly.
+- Crew model verified: 22/22 headless (bundled 1+reserve, per-family seeding,
+  hire cost/deduction, sell-clears-only-at-zero + crew release, decision-cost
+  balance deductions, resolveCrewHire assign+resolve, and the CREW-hold
+  tension arising on a busy single-crew route).
 - **The headless harness now has a third proven catch** (after nothing,
   then the AOG lifecycle): it caught the crew cascade as a design/balance
   bug a unit test wouldn't frame. Two harness kinds now live in the session
