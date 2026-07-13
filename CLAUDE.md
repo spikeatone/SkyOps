@@ -1,4 +1,4 @@
-# CLAUDE.md — Persistent Context for SkyOps
+# CLAUDE.md — Persistent Context for Airline Architect
 
 Read this before doing anything else. It exists so a new session (different
 day, different context window, possibly a different agent) doesn't have to
@@ -50,7 +50,7 @@ THREE separate times in this codebase (decision panel, route-picker
 dropdowns, buy/lease panel) — if a fourth panel shows this symptom, don't
 apply a fourth one-off fix, see the note in the Fleet Lifecycle section.
 
-## What SkyOps actually is
+## What Airline Architect actually is
 
 NOT a combat RTS. It's an airline operations/logistics tycoon sim — closer to
 Airline Tycoon / Transport Fever than Command & Conquer. Player automates the
@@ -704,7 +704,7 @@ one contradicts the design thesis.)
 
 - **Player airline naming**: a styled modal blocks the game on load,
   asking the player to name their airline (Enter or button submits;
-  defaults to "SkyOps Air" if left blank rather than blocking
+  defaults to "New Airline" if left blank rather than blocking
   submission). Stored in `playerAirlineName`, shown as the first line
   in the player's own aircraft tooltip.
 - **Background traffic now carries a real competitor airline name**,
@@ -1142,10 +1142,28 @@ The prototype (`prototype-reference/…Stress Test.html`) remains the source
 of truth for all sim behavior — the Swift code ports FROM it, verbatim
 where numbers are involved.
 
-- **Project shape**: `SkyOps/SkyOps.xcodeproj`, SwiftUI + SwiftData
+- **App RENAMED SkyOps → Airline Architect (designer direction).** Full deep
+  rename done and build-verified: the `.xcodeproj`, all three targets
+  (`AirlineArchitect` / `AirlineArchitectTests` / `AirlineArchitectUITests`),
+  the source/test/container folders, the scheme (autocreated from the target,
+  so `xcodebuild -scheme AirlineArchitect`), the entitlements file, the app
+  struct (`AirlineArchitectApp`), the logo type (`SkyOpsLogo` → `AppLogo`),
+  and the **bundle id** (`Postmark-Digital.SkyOps` → `Postmark-Digital.AirlineArchitect`)
+  all carry the new name. `CFBundleDisplayName` = "Airline Architect" (in the
+  merged `Info.plist`). The default blank-name airline is now "New Airline"
+  (was "SkyOps Air"). Identifiers use the NO-SPACE `AirlineArchitect`; the
+  human display name uses the space. **Deliberately still named SkyOps** (not
+  a miss): the git REPO directory (`GitHub/SkyOps`), the Figma file
+  (`SkyOps-Production`, an external name), and the prototype artifact
+  (`prototype-reference/SkyOps — Multi-Aircraft Stress Test.html`). The
+  launch/naming screen reuses the SAME winged-plane badge mark; only the
+  wordmark changed to the two-line "Airline Architect" (Karla Light 25), and
+  the whole naming screen now uses the bundled Karla family.
+
+- **Project shape**: `AirlineArchitect/AirlineArchitect.xcodeproj`, SwiftUI + SwiftData
   template. objectVersion 77 → uses **file-system-synchronized groups**
   (`PBXFileSystemSynchronizedRootGroup`): any `.swift` file dropped inside
-  `SkyOps/SkyOps/` is auto-compiled into the app target — NO `.pbxproj`
+  `AirlineArchitect/AirlineArchitect/` is auto-compiled into the app target — NO `.pbxproj`
   editing needed to add files. This is a real workflow win; don't hand-edit
   the project file to register new sources, just create them in the folder.
 - **Min deployment target: iOS 18.0** (was 26.5 from the template default).
@@ -1492,7 +1510,7 @@ where numbers are involved.
   ordering (AA/DL/UA on top) and per-type correctness are right.
 - **Player airline naming — DONE, and the FIRST Figma-built screen.**
   First-launch modal (`AirlineNamingView`, overlaid in ContentView while
-  `sim.playerAirlineName == nil`; blank submits as "SkyOps Air"). Built to
+  `sim.playerAirlineName == nil`; blank submits as "New Airline"). Built to
   the designer's real Figma (file `wRMkEaLt6bJdZoHsOz9JWH`, node 1:2 light
   / 1:456 dark), theme-aware via `@Environment(\.colorScheme)`, all
   colours/sizes/spacing ported from the Figma tokens. The player's airline
@@ -1504,9 +1522,9 @@ where numbers are involved.
   raster the old CLAUDE.md note feared for full-screen mockups. So the
   caveat did NOT bite here; design-to-code gave real structure. Adapt the
   React/Tailwind to SwiftUI by hand (colours as hex, Tailwind sizes →
-  points 1:1). The SkyOps LOGO came back as an SVG asset (7 solid-fill
+  points 1:1). The Airline Architect LOGO came back as an SVG asset (7 solid-fill
   paths) — rendered NATIVELY via the existing `SVGPath.parse` into a
-  `Canvas` (`SkyOpsLogo.swift`), no bundled raster and it scales crisply.
+  `Canvas` (`AppLogo.swift`), no bundled raster and it scales crisply.
   Downloaded from the `figma.com/api/mcp/asset/...` URLs (valid ~7 days).
 - **Karla font — BUNDLED (font-substitution debt resolved).** The 5 static
   Karla weights (Light/Regular/Medium/SemiBold/Bold, OFL, from googlefonts/
@@ -1519,7 +1537,7 @@ where numbers are involved.
   if a face is missing, so it degrades gracefully. Applied across the NETWORK
   chrome (header, control bar, speed bar, tab labels); apply `.karla(...)` on
   every future Figma screen. NOTE: the project uses `GENERATE_INFOPLIST_FILE=YES`
-  AND `INFOPLIST_FILE=SkyOps/Info.plist` — Xcode MERGES them, so custom keys in
+  AND `INFOPLIST_FILE=AirlineArchitect/Info.plist` — Xcode MERGES them, so custom keys in
   that Info.plist (UIAppFonts, UIBackgroundModes) DO take effect. (Geist was
   dropped by the designer; only Karla is needed.)
 - **NETWORK control-bar spacing fixed + tab bar rebuilt to the Figma.** The
@@ -1533,7 +1551,7 @@ where numbers are involved.
   5 icons were extracted from the Figma as stroked SVGs (viewBox 24, stroke
   1.5, round caps — commands all C/L/M/H/V/Z, no arcs) into `SkyTabIcons.swift`
   and rendered via `SVGPath` into a tintable Canvas (same native-SVG approach
-  as SkyOpsLogo/AircraftIcon — no raster). ContentView dropped `TabView` for a
+  as AppLogo/AircraftIcon — no raster). ContentView dropped `TabView` for a
   `switch`-on-`tab` + `.safeAreaInset(edge:.bottom){ SkyTabBar }`, driving
   selection itself. Tradeoff (acceptable for now): switching tabs recreates the
   content view, so NetworkView's transient UI state (open panel, route-in-

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Airline Architect</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Karla-Light.ttf</string>
+		<string>Karla-Regular.ttf</string>
+		<string>Karla-Medium.ttf</string>
+		<string>Karla-SemiBold.ttf</string>
+		<string>Karla-Bold.ttf</string>
+		<string>Karla-ExtraBold.ttf</string>
+	</array>
+</dict>
+</plist>

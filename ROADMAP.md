@@ -1,4 +1,4 @@
-# SkyOps Roadmap
+# Airline Architect Roadmap
 
 Phases are sequential but not rigidly time-boxed — each has an exit condition,
 not a deadline. Don't start a phase until the previous one's exit condition

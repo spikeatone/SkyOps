@@ -39,7 +39,7 @@ as the work, not "later."
 ## Phase 0 — DONE (native project foundation)
 
 - [x] Create real Xcode project shell on a Mac — SwiftUI + SwiftData
-      template, `SkyOps/SkyOps.xcodeproj`. Builds clean on the iPhone 17
+      template, `AirlineArchitect/AirlineArchitect.xcodeproj`. Builds clean on the iPhone 17
       Pro simulator (`** BUILD SUCCEEDED **`), launches to the template's
       placeholder to-do UI. Verified via `xcodebuild` + simulator launch.
 - [x] Decide SwiftData vs Core Data — SwiftData (kept the template's
@@ -63,7 +63,7 @@ as the work, not "later."
       cycle), phase colours track the real flight phase (green climb / blue
       cruise / amber descent / amber ground), tick timing matches exactly
       (142 ticks in 7s at 5× = the prototype's 50ms/tick). Files under
-      `SkyOps/SkyOps/Sim/` + `MapView.swift`; async tick loop
+      `AirlineArchitect/AirlineArchitect/Sim/` + `MapView.swift`; async tick loop
       (`Simulation.run()`) decoupled from render, BASE_TICK_MS=250.
 - Two real bugs caught by watching it run, not by the build:
   1. Aircraft frozen at the launch frame while the HUD advanced. Root
@@ -197,10 +197,10 @@ as the work, not "later."
       vs 18%) because airline is picked AFTER type and Southwest is
       737-only — a faithful artifact of the prototype's type-first model.
 - [x] Player airline NAMING — first Figma-built screen. First-launch modal
-      (blocks the game until named; blank → "SkyOps Air"), built to the
+      (blocks the game until named; blank → "New Airline"), built to the
       designer's Figma (SkyOps-Production 1:2 light / 1:456 dark),
       theme-aware, colours/spacing ported from the Figma tokens. The
-      SkyOps winged logo renders NATIVELY from the Figma SVG (7 paths, via
+      Airline Architect winged logo renders NATIVELY from the Figma SVG (7 paths, via
       the existing SVGPath parser) — no bundled raster. playerAirlineName
       shows (green) as the header of the player's own aircraft tooltip.
       Verified in-sim (light + dark match Figma; launch → game, blank
