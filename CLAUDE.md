@@ -1775,6 +1775,30 @@ where numbers are involved.
     to buy a slot back). That event type doesn't exist in the sim yet, so the
     modal renders only the three real decision kinds; the card layout is generic
     (`AlertModel`) so adding Offer later is a one-case addition.
+- **CREWS tab — DONE.** `CrewsView.swift` (Figma crews home 5:2439 light /
+  5:2218 dark; hire success 12:4509 / 12:4713), wired into the Crews tab. One
+  card per crew family the player owns aircraft in (`sim.ownedFamilies`):
+  family name + type-rating coverage, a 2×2 grid of Available (green #10B981) /
+  On duty (blue #497AA5) / Resting (slate — #555E70 dark / #F1F1F1 light) /
+  Reserve (purple #6E43A6), computed live from `crewPoolsByFamily` +
+  `reserveCrewsByFamily`, a "New crew · $X · HIRE" action, and a "RUNNING THIN"
+  chip (orange #FFAB44) when `available == 0 && ownedCount > 0`.
+  - **`CREW_FAMILY_INFO` added to Crew.swift** — a hand-maintained (name,
+    coverage) map for all 14 families (like FAMILY_LABELS; keep the coverage in
+    sync if the fleet changes). Coverage strings verified against the real
+    AircraftType variants per family.
+  - **Hire "confirmation" is an inline SUCCESS BANNER, not a modal** — the
+    Figma "hire confirmation" frame is just Crews Home with a green
+    #10B981/#87ED7A banner ("New {family} crew successfully hired!") at the top.
+    So HIRE fires immediately (`sim.hireCrew`, affordability-gated) and shows
+    the banner for ~3s; no confirm dialog.
+  - The Figma also shows an "Alert box" (red — "N sidelined; labor action - D
+    days left") inside the card; that's a labor-action EVENT the sim doesn't
+    have yet, so it's omitted for now (add when that event exists).
+  - Verification note: the HIRE button is small; driving it via computer-use on
+    the scaled Simulator kept missing the target (NOT a dropped-click bug — the
+    banner rendered fine when forced on; SwiftUI preserves button identity
+    across the per-tick re-render, unlike the JS prototype's innerHTML flicker).
 
 ## Open / not yet decided
 
