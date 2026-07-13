@@ -1913,6 +1913,47 @@ where numbers are involved.
     during a recession run), and the Last-month view shows that period's own
     numbers reconciling exactly ($934,633 − $1,079,046 − $187,128 = −$331,541),
     with capital spending correctly $0 (acquisitions were in earlier months).
+- **IN-APP PURCHASES — scaffolded behind a stub (native app). Designer has a
+  RevenueCat account; two tiers ($5.99/mo, $49.99/yr) + a free preview.**
+  Decisions (designer): free tier gates SCALE not features (route + fleet cap),
+  custom SwiftUI paywall (not RevenueCatUI), and build the whole gating
+  experience NOW behind a local stub so it's testable before the account is
+  wired.
+  - **`Store.swift`** (`@MainActor @Observable`): `isPro` (STUB flag),
+    `freeFleetCap = 3` / `freeRouteCap = 2`, `canAcquireAircraft(sim)` /
+    `canOpenRoute(sim)` (= `isPro || count < cap`), `capMessage(.fleet/.route)`,
+    a `plans` list (annual/monthly display stubs), and `purchase()`/`restore()`
+    STUBS. **RevenueCat wiring is deferred and localized to THIS file**: add the
+    SPM package + public SDK key, then drive `isPro` from `Purchases.shared`
+    customerInfo (entitlement "pro") and route purchase/restore through it —
+    nothing else in the app changes (every gate reads `Store`).
+  - **`PaywallView.swift`**: custom Karla/Sky paywall (logo badge, contextual
+    reason line, 3 feature rows, annual-preselected plan cards with a "save 30%"
+    badge, Continue, Restore Purchases, fine print, close X). Theme-aware.
+    Presented as a ContentView overlay (`showPaywall`/`paywallReason`) via an
+    `upgrade(reason:)` helper.
+  - **Gating is at the UI entry points** (single-player local game, no server —
+    UI-level is sufficient; sim methods unchanged): Network "Open Route" button,
+    the ACQUIRE panel's Buy/Lease/Used rows (`AircraftProfileCard.gated`), and
+    the Fleet Marketplace rows (`FleetView.gatedAcquire`) all check the Store and
+    call `onUpgrade(reason)` at the cap instead of acting. Finance has a **PLAN
+    card** (free: live "N/3 aircraft · N/2 routes" usage + Upgrade; pro: a
+    confirmation). A **DEV "Pro (DEV)" toggle** sits under the eye-overlay dev
+    row in NetworkView to flip `isPro` without a purchase (remove once RevenueCat
+    drives it).
+  - **Cap reachability note**: on the $20M start a free player affords ~1
+    regional jet, so CASH is the early gate and the 3-aircraft/2-route caps are
+    the growth ceiling reached after playing — intended. Numbers are easily
+    tunable constants.
+  - Verified: 9/9 headless (isPro bypasses both gates, predicate tracks the
+    count, purchase stub flips isPro, cap messages present) + Simulator
+    screenshots (paywall dark + light, Finance free-plan card with live usage).
+  - **What's needed to go live (designer/account side; I can't configure these):**
+    RevenueCat public iOS SDK key, an entitlement id (e.g. "pro"), the two
+    product ids + an Offering, the App Store Connect subscription products +
+    "Paid Apps" agreement, and adding the `purchases-ios` SPM package (cleanest
+    via Xcode's Add Package UI, since a package dependency isn't auto-added by
+    the file-synchronized groups the way source files are).
 - **External-events system — the designer specced 16 events; being built in
   PHASES.** The full list (designer, verbatim intent): Market/economic (mutually
   exclusive) — Oil Spike, Fuel Drop, Boom, Recession, **FFR Redemption Surge**

@@ -17,7 +17,14 @@ import SwiftUI
 struct FleetView: View {
     let sim: Simulation
     @Binding var tab: Int
+    var store: Store
     var onBell: () -> Void = {}
+    var onUpgrade: (String?) -> Void = { _ in }
+
+    /// Free-tier gate for Marketplace acquires — paywall at the fleet cap.
+    private func gatedAcquire(_ perform: () -> Void) {
+        if store.canAcquireAircraft(sim) { perform() } else { onUpgrade(store.capMessage(.fleet)) }
+    }
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
 
@@ -313,13 +320,13 @@ struct FleetView: View {
             // Buy new
             offerRow("Buy new:", money(type.purchasePrice),
                      kind: .buy, afford: sim.playerBalance >= type.purchasePrice) {
-                _ = sim.buyAircraft(type)
+                gatedAcquire { _ = sim.buyAircraft(type) }
             }
             // Lease new
             offerRow("Lease new:",
                      "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
                      kind: .lease, afford: sim.playerBalance >= sim.leaseUpfront(type)) {
-                _ = sim.leaseAircraft(type)
+                gatedAcquire { _ = sim.leaseAircraft(type) }
             }
             // Buy used (one row per listing, cheapest first)
             ForEach(used.sorted { $0.price < $1.price }) { listing in
@@ -327,7 +334,7 @@ struct FleetView: View {
                 offerRow("Buy used:",
                          "\(money(listing.price)) · \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
                          kind: .buy, afford: sim.playerBalance >= listing.price) {
-                    _ = sim.buyUsedAircraft(listing)
+                    gatedAcquire { _ = sim.buyUsedAircraft(listing) }
                 }
             }
         }

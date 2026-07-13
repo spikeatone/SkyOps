@@ -19,7 +19,9 @@ import SwiftUI
 
 struct FinanceView: View {
     let sim: Simulation
+    var store: Store
     var onBell: () -> Void = {}
+    var onUpgrade: () -> Void = {}
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
 
@@ -57,6 +59,7 @@ struct FinanceView: View {
                 periodSelector
                 ScrollView {
                     VStack(spacing: 16) {
+                        planCard
                         if !sim.currentEvent.isNormal { marketBanner }
                         netWorthCard
                         if netWorthSeries.count >= 2 { trendCard }
@@ -115,6 +118,41 @@ struct FinanceView: View {
         .background(trackBG)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(cardBorder, lineWidth: 1))
+    }
+
+    // MARK: Plan card (free-tier usage vs caps + upgrade, or Pro confirmation)
+    @ViewBuilder private var planCard: some View {
+        if store.isPro {
+            card {
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.seal.fill").font(.system(size: 20)).foregroundStyle(green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Airline Architect Pro").font(.karla(16, .bold)).foregroundStyle(primary)
+                        Text("Unlimited routes & fleet — thanks for your support.")
+                            .font(.karla(12)).foregroundStyle(secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        } else {
+            card {
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        sectionTitle("FREE PLAN")
+                        Text("\(sim.ownedCount)/\(Store.freeFleetCap) aircraft · \(sim.playerRoutes.count)/\(Store.freeRouteCap) routes")
+                            .font(.karla(14, .semibold)).foregroundStyle(primary)
+                        Text("Upgrade for an unlimited fleet and network.")
+                            .font(.karla(11)).foregroundStyle(secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Button(action: onUpgrade) {
+                        Text("Upgrade").font(.karla(13, .bold)).foregroundStyle(.white)
+                            .padding(.horizontal, 16).frame(height: 38)
+                            .background(green).clipShape(RoundedRectangle(cornerRadius: 8))
+                    }.buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     // MARK: Market condition banner (active economic event)

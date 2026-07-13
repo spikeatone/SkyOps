@@ -13,8 +13,11 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var sim = Simulation()
+    @State private var store = Store()
     @State private var tab = 0
     @State private var showAlerts = false
+    @State private var paywallReason: String?
+    @State private var showPaywall = false
 
     var body: some View {
         // Custom bottom nav (SkyTabBar) — the Figma tab bar (yellow-on-dark /
@@ -24,11 +27,11 @@ struct ContentView: View {
         // so the content lays out above it.
         Group {
             switch tab {
-            case 0:  NetworkView(sim: sim, onBell: { showAlerts = true })
-            case 1:  FleetView(sim: sim, tab: $tab, onBell: { showAlerts = true })
+            case 0:  NetworkView(sim: sim, store: store, onBell: { showAlerts = true }, onUpgrade: upgrade)
+            case 1:  FleetView(sim: sim, tab: $tab, store: store, onBell: { showAlerts = true }, onUpgrade: upgrade)
             case 2:  CrewsView(sim: sim, onBell: { showAlerts = true })
             case 3:  OpsView(sim: sim, onBell: { showAlerts = true })
-            default: FinanceView(sim: sim, onBell: { showAlerts = true })
+            default: FinanceView(sim: sim, store: store, onBell: { showAlerts = true }, onUpgrade: { upgrade(nil) })
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -58,8 +61,31 @@ struct ContentView: View {
                 .transition(.opacity)
             }
         }
+        // Paywall — the target of every in-context upgrade prompt, over any tab.
+        .overlay {
+            if showPaywall {
+                ZStack {
+                    Color.black.opacity(0.5).ignoresSafeArea()
+                        .onTapGesture { showPaywall = false }
+                    ScrollView {
+                        PaywallView(store: store, reason: paywallReason,
+                                    onClose: { showPaywall = false })
+                            .frame(maxWidth: 440)
+                            .padding(16)
+                    }
+                }
+                .transition(.opacity)
+            }
+        }
         .animation(.easeOut(duration: 0.25), value: sim.playerAirlineName)
         .animation(.easeOut(duration: 0.2), value: showAlerts)
+        .animation(.easeOut(duration: 0.2), value: showPaywall)
+    }
+
+    /// Show the paywall with an optional context line (which cap was hit).
+    private func upgrade(_ reason: String?) {
+        paywallReason = reason
+        showPaywall = true
     }
 
     /// Fleet / Crews / Ops / Finance — the other four tabs are designed later.
@@ -103,6 +129,8 @@ enum RouteMode: Equatable {
 /// (gray) button. Live affordability; @Observable re-renders on balance change.
 struct BuyPanel: View {
     let sim: Simulation
+    var store: Store
+    var onUpgrade: () -> Void = {}
     let onBought: (Aircraft) -> Void
 
     var body: some View {
@@ -110,7 +138,7 @@ struct BuyPanel: View {
             VStack(spacing: 8) {
                 // Priciest/biggest first, matching the Figma card order.
                 ForEach(AircraftType.all.sorted { $0.purchasePrice < $1.purchasePrice }) { t in
-                    AircraftProfileCard(sim: sim, type: t, onBought: onBought)
+                    AircraftProfileCard(sim: sim, type: t, store: store, onUpgrade: onUpgrade, onBought: onBought)
                 }
             }
         }
@@ -126,9 +154,17 @@ struct BuyPanel: View {
 struct AircraftProfileCard: View {
     let sim: Simulation
     let type: AircraftType
+    var store: Store
+    var onUpgrade: () -> Void = {}
     let onBought: (Aircraft) -> Void
 
     private let gray = Color(skyHex: 0x8C8C8C)
+
+    /// Free-tier gate: at the fleet cap, tapping any acquire button opens the
+    /// paywall instead of purchasing. `perform` runs only when allowed.
+    private func gated(_ perform: () -> Void) {
+        if store.canAcquireAircraft(sim) { perform() } else { onUpgrade() }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -148,19 +184,19 @@ struct AircraftProfileCard: View {
 
             row("Buy new:", money(type.purchasePrice), lease: false,
                 afford: sim.playerBalance >= type.purchasePrice) {
-                if let ac = sim.buyAircraft(type) { onBought(ac) }
+                gated { if let ac = sim.buyAircraft(type) { onBought(ac) } }
             }
             row("Lease new:",
                 "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
                 lease: true, afford: sim.playerBalance >= sim.leaseUpfront(type)) {
-                if let ac = sim.leaseAircraft(type) { onBought(ac) }
+                gated { if let ac = sim.leaseAircraft(type) { onBought(ac) } }
             }
             ForEach(sim.usedInventory[type.id] ?? []) { listing in
                 let pct = 100 * listing.cyclesAccrued / max(1, type.expectedLifespanCycles)
                 row("Buy used:",
                     "\(money(listing.price)) - \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
                     lease: false, afford: sim.playerBalance >= listing.price) {
-                    if let ac = sim.buyUsedAircraft(listing) { onBought(ac) }
+                    gated { if let ac = sim.buyUsedAircraft(listing) { onBought(ac) } }
                 }
             }
         }

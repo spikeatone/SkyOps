@@ -36,7 +36,9 @@ enum Sky {
 
 struct NetworkView: View {
     let sim: Simulation
+    var store: Store
     var onBell: () -> Void = {}
+    var onUpgrade: (String?) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
 
@@ -131,7 +133,7 @@ struct NetworkView: View {
         .overlay(alignment: .bottom) {
             VStack(spacing: 8) {
                 bottomStack(selected: selected)
-                if showOverlays { speedBar; trafficBar }
+                if showOverlays { speedBar; trafficBar; devProToggle }
             }
             .padding(8)
         }
@@ -146,7 +148,7 @@ struct NetworkView: View {
                     .background(Color.black.opacity(0.75)).clipShape(Capsule())
             }
             switch panel {
-            case .acquire: BuyPanel(sim: sim, onBought: handleBought)
+            case .acquire: BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
             case .routes:  RoutesPanel(sim: sim)
             case .hire:    AddCrewPanel(sim: sim) { panel = .none }
             case .hedge:   FuelHedgePanel(sim: sim)
@@ -169,7 +171,11 @@ struct NetworkView: View {
             barDivider
             barButton("Open Route", active: routeMode != .off) {
                 panel = .none
-                if routeMode == .off { routeMode = .pickOrigin; selectedID = nil } else { routeMode = .off }
+                if routeMode == .off {
+                    // Free tier: block a new route at the cap, show the paywall.
+                    guard store.canOpenRoute(sim) else { onUpgrade(store.capMessage(.route)); return }
+                    routeMode = .pickOrigin; selectedID = nil
+                } else { routeMode = .off }
             }
             barDivider
             barButton("Routes", active: panel == .routes) { toggle(.routes) }
@@ -240,6 +246,24 @@ struct NetworkView: View {
         case 0.5:  return "½×"
         default:   return s == s.rounded() ? "\(Int(s))×" : "\(s)×"
         }
+    }
+
+    /// DEV: flip the Pro entitlement to exercise free-cap vs. unlocked play
+    /// without a real purchase. Removed once RevenueCat drives `store.isPro`.
+    private var devProToggle: some View {
+        HStack(spacing: 10) {
+            Text("Pro (DEV)").font(.karla(12, .semibold))
+                .foregroundStyle(Sky.lightBlue.opacity(0.85)).fixedSize()
+            Spacer()
+            Button { store.isPro.toggle() } label: {
+                Text(store.isPro ? "ON" : "OFF")
+                    .font(.karla(12, .bold)).foregroundStyle(.white)
+                    .frame(width: 44, height: 22)
+                    .background(store.isPro ? Sky.coreGreen : Sky.onDarkStroke)
+                    .clipShape(Capsule())
+            }.buttonStyle(.plain)
+        }
+        .padding(.horizontal, 6)
     }
 
     /// Competitive-traffic control — a continuous slider (0…250) setting how
