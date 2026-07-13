@@ -112,13 +112,19 @@ one contradicts the design thesis.)
 
 ## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 30 / 15)
 
-- **Fleet size**: 30 distinct playable aircraft types (net — two removed,
-  two added since the last count). Running history: 32 (initial big
-  expansion) -> 31 (Sukhoi Superjet 100 removed) -> 30 (Bombardier CRJ700
-  removed — aging out of most real fleets, nearing retirement, per
-  designer direction) -> 28 (737 MAX 7 and MAX 10 removed — see the new
-  "not yet certified" principle below) -> 30 (Airbus A330-900 and
-  A350-900 added — see the new Airline Identity section for why). Family
+- **Fleet size**: 31 distinct playable aircraft types (native-app era).
+  Running history: 32 (initial big expansion) -> 31 (Sukhoi Superjet 100
+  removed) -> 30 (Bombardier CRJ700 removed — aging out of most real fleets,
+  nearing retirement, per designer direction) -> 28 (737 MAX 7 and MAX 10
+  removed — see the new "not yet certified" principle below) -> 30 (Airbus
+  A330-900 and A350-900 added — see the new Airline Identity section for why)
+  -> 31 (Boeing 787-10 Dreamliner added, id `B78J`, B787 family — a widely
+  flown Dreamliner stretch; United/British Airways operators). ALSO changed,
+  not a count change: the `B747` entry was re-modelled from Boeing 747-8 →
+  **Boeing 747-400** (the -8 passenger variant was essentially freighter-only;
+  the -400 is the passenger 747 airlines actually flew) — seats 416, MLW
+  652,700 lb, range 7,260 NM updated; its cost/price/lifespan still carry the
+  -8 figures pending a realism pass. Family
   count grew from 13 to 15 with the two new widebody families (`A330`,
   `A350`). `CRJ_FAMILY` stays real (CRJ900/1000 remain). See the "stale
   comment" note near the end of this section for a real gotcha this kind
@@ -769,7 +775,12 @@ one contradicts the design thesis.)
   real Boeing 787-10 order (Jan 2026, 30 firm + 30 options) — a genuine
   order, confirmed via search, but explicitly NOT added to Delta's fleet
   yet since an order isn't a delivery. Revisit both MAX7/10 and Delta's
-  787 once they've actually entered real service, not before.
+  787 once they've actually entered real service, not before. **UPDATE: the
+  Boeing 787-10 TYPE has since been added (id `B78J`) — consistent with the
+  certified-and-in-service bar, since the -10 is widely flown (United, Singapore,
+  BA, etc.). What stays excluded is DELTA specifically flying it — Delta's
+  order is still undelivered, so `B78J` is NOT in Delta's roster `types` (it's
+  on United + British Airways).**
 - **Airbus A330-900 and A350-900 added specifically because Delta's
   entire real widebody fleet is Airbus** — this is what actually
   resolved the "Delta excluded from every widebody" gap noted above.
