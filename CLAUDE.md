@@ -1297,6 +1297,17 @@ where numbers are involved.
     pool). The equirectangular projection stretches the far south modestly
     (pinned cosine) — accepted, consistent with the "not a true global
     projection" limitation.
+- **Map is now THEME-AWARE (was dark in both themes) — DONE (designer request).**
+  `MapView` reads `@Environment(\.colorScheme)`: **light mode = white canvas**,
+  dark mode unchanged. The GEOGRAPHY keeps the same green hue (climb-green
+  outlines/fill + green airport dots) in both — only the background, grid,
+  labels, and selection ring flip: `mapBackground` (white/dark), `gridColor`
+  (black-tint/white-tint), `labelColor` (slate #334155 / white), `selectionRing`
+  (black/white). Green + gray strokes get a `strokeBoost` (×1.7 in light, ×1.0
+  in dark) because a light colour at low opacity vanishes on white; the LatAm/
+  nation FILL opacities are also bumped in light. Verified both themes in the
+  Simulator (dark pixel-unchanged). Note: the player's own cruise-phase colour
+  (#83C9FF light blue) is a touch faint on white — left as-is unless flagged.
 - **Pan/zoom camera + airport labels — ALSO PULLED FORWARD from Phase 4**
   (same session, designer focused on the map). The projection is now
   camera-based: everything lives in unit space and `Simulation` maps

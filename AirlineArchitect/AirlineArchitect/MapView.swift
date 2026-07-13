@@ -13,6 +13,8 @@ import SwiftUI
 
 struct MapView: View {
     let sim: Simulation
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
 
     // Changing VALUE inputs that force this view's body to re-run (SwiftUI
     // diffs MapView as identical otherwise, since `sim` is a stable reference —
@@ -35,6 +37,18 @@ struct MapView: View {
     private let othersColor  = Color(red: 0xD7/255, green: 0x67/255, blue: 0xFF/255) // #D767FF — competitor traffic
     private let borderColor  = Color(red: 108/255, green: 127/255, blue: 143/255)    // basemap gray
 
+    // Theme-aware chrome. The geography (green outlines/fill) and airports keep
+    // the SAME green hue in both themes; only the canvas background, grid,
+    // labels, and rings flip so they stay legible on white. Green/gray strokes
+    // get a small opacity boost in light mode (a light colour at low opacity
+    // vanishes on white).
+    private var mapBackground: Color { isDark ? Color(red: 0.03, green: 0.05, blue: 0.06) : .white }
+    private var gridColor: Color     { isDark ? .white.opacity(0.03) : .black.opacity(0.045) }
+    private var labelColor: Color    { isDark ? .white.opacity(0.6) : Color(red: 0x33/255, green: 0x41/255, blue: 0x55/255).opacity(0.85) }
+    private var selectionRing: Color { isDark ? .white.opacity(0.85) : .black.opacity(0.5) }
+    /// Opacity multiplier for green/gray strokes so they read on white.
+    private var strokeBoost: Double  { isDark ? 1.0 : 1.7 }
+
     var body: some View {
         Canvas { ctx, size in
             sim.configure(viewport: size)
@@ -45,7 +59,7 @@ struct MapView: View {
             drawAirports(ctx)
             drawAircraft(ctx)
         }
-        .background(Color(red: 0.03, green: 0.05, blue: 0.06))
+        .background(mapBackground)
     }
 
     // MARK: - Layers
@@ -57,7 +71,7 @@ struct MapView: View {
         while x < size.width { path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height)); x += spacing }
         var y: CGFloat = 0
         while y < size.height { path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y)); y += spacing }
-        ctx.stroke(path, with: .color(.white.opacity(0.03)), lineWidth: 1)
+        ctx.stroke(path, with: .color(gridColor), lineWidth: 1)
     }
 
     /// Real geography beneath the network: Canada (muted) → US outline (faint
@@ -76,16 +90,16 @@ struct MapView: View {
             return path
         }
 
-        ctx.stroke(ringPath(map.canada), with: .color(borderColor.opacity(0.20)), lineWidth: 1)
+        ctx.stroke(ringPath(map.canada), with: .color(borderColor.opacity(0.20 * strokeBoost)), lineWidth: 1)
         // Latin America — same muted context treatment as Canada, with a very
         // faint fill so large landmasses (Brazil, etc.) read as land.
         let latam = ringPath(map.latam)
-        ctx.fill(latam, with: .color(climbColor.opacity(0.02)))
-        ctx.stroke(latam, with: .color(borderColor.opacity(0.20)), lineWidth: 1)
+        ctx.fill(latam, with: .color(climbColor.opacity(isDark ? 0.02 : 0.05)))
+        ctx.stroke(latam, with: .color(borderColor.opacity(0.20 * strokeBoost)), lineWidth: 1)
         let nation = ringPath(map.nation)
-        ctx.fill(nation, with: .color(climbColor.opacity(0.025)))
-        ctx.stroke(nation, with: .color(climbColor.opacity(0.35)), lineWidth: 1.25)
-        ctx.stroke(ringPath(map.states.flatMap { $0 }), with: .color(borderColor.opacity(0.25)), lineWidth: 0.75)
+        ctx.fill(nation, with: .color(climbColor.opacity(isDark ? 0.025 : 0.06)))
+        ctx.stroke(nation, with: .color(climbColor.opacity(0.35 * strokeBoost)), lineWidth: 1.25)
+        ctx.stroke(ringPath(map.states.flatMap { $0 }), with: .color(borderColor.opacity(0.25 * strokeBoost)), lineWidth: 0.75)
     }
 
     private func drawRoutes(_ ctx: GraphicsContext) {
@@ -197,7 +211,7 @@ struct MapView: View {
         for (i, ap) in sim.airports.enumerated() {
             let text = Text(ap.code)
                 .font(.system(size: fontSize, weight: .medium, design: .monospaced))
-                .foregroundColor(ap.groundStop ? heldColor : .white.opacity(0.6))
+                .foregroundColor(ap.groundStop ? heldColor : labelColor)
             ctx.draw(text, at: labelPos[i], anchor: .center)
         }
     }
@@ -220,7 +234,7 @@ struct MapView: View {
                 ctx.stroke(
                     Path(ellipseIn: CGRect(x: pos.point.x - rr, y: pos.point.y - rr,
                                            width: rr * 2, height: rr * 2)),
-                    with: .color(.white.opacity(0.85)), lineWidth: 1.5)
+                    with: .color(selectionRing), lineWidth: 1.5)
             }
 
             var g = ctx
