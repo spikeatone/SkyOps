@@ -1799,6 +1799,31 @@ where numbers are involved.
     the scaled Simulator kept missing the target (NOT a dropped-click bug — the
     banner rendered fine when forced on; SwiftUI preserves button identity
     across the per-tick re-render, unlike the JS prototype's innerHTML flicker).
+- **OPS tab — DONE, and it introduced a real EVENT LOG.** `OpsView.swift`
+  (Figma ops home 5:3458 light / 5:3707 dark), wired into the Ops tab. Two
+  groups:
+  - **Needs Attention** = the sim's `decisionQueue` (AOG/crew/sell), rendered
+    with a NEW shared `NeedsAttentionCard` (extracted from AlertsModal — the
+    Alerts modal and Ops now render IDENTICAL decision sub-cards from one
+    source; refactor removed the duplicate).
+  - **Events** = a real, capped (40) event log: NEW `Sim/OpsEvent.swift`
+    (`OpsEvent` + `Category` = disruption/market/structural) and
+    `Simulation.opsEventLog` + `logOps()`. Grouped in the UI into DISRUPTIONS /
+    MARKET / STRUCTURAL with relative timestamps (`sim.tick − event.tick`,
+    1 tick = 1 min → Xm/Xh/Xd ago). Fed from REAL mechanics via three hooks:
+    economic-event onset (`tickEconomicEvents` → MARKET, with the real %
+    change), weather ground-stop onset/lift **only at the player's route
+    airports** (`tickWeather` → DISRUPTIONS, kept relevant), and route
+    open/close (`openRoute` / `sellAircraft` archive → STRUCTURAL).
+  - **The Figma's flavour events with no sim mechanic (ATC shortage, fare war,
+    ORD capacity expansion) are NOT fabricated** — the feed shows only real
+    events. Add them if/when those mechanics exist. Also folded in: the "Offer"
+    alert type (blue slot-buyback) still doesn't exist, so Needs Attention shows
+    only the three real decision kinds.
+  - Gotcha fixed: a plain `↔` in a Text string renders as an EMOJI (blue box);
+    the route-log strings use `↔\u{FE0E}` (text variation selector) to force
+    text presentation. Watch for this with any bare arrow/symbol char in a
+    string (elsewhere the app uses `Image(systemName: "arrow.right")` instead).
 
 ## Open / not yet decided
 
