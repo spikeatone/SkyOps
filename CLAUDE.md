@@ -1716,6 +1716,41 @@ where numbers are involved.
     `NetPanelBox`/`onClose` — the toggle-off is the highlighted control-bar
     button, matching the Figma (no X). `AddCrewPanel` still uses the dev
     `NetPanelBox` chrome (no Figma frame for Hire Crew in this batch).
+- **FLEET tab — DONE (all three screens).** The Fleet tab (was a placeholder)
+  is now `FleetView` + `FleetDetailView`, built to the Figma
+  (Airline-Architect-Production: fleet home 1:725/1:1057, detail 2:561/2:1273,
+  marketplace 5:6501/5:6941). Theme-aware via the Sky tokens + light Figma
+  colours; reads `sim.tick` so statuses/counts refresh live (the owned fleet is
+  small, so a per-tick body re-eval is cheap — no Canvas freeze concern here).
+  - **My Fleet**: My Fleet / Marketplace segmented control, a 4-box status bar
+    (Total / Flying / Idle / Grounded — live counts), and a scrollable list of
+    fleet cards (tail, type, live status chip, current route or "No route",
+    OWNED/LEASED chip, airframe-life bar). Fleet status: `grounded` = AOG,
+    `idle` = spare (no route), `flying` = in service — a STABLE mapping
+    (doesn't flicker per flight phase), chosen over the literal
+    airborne/on-ground reading so the chip/counts don't churn every landing.
+  - **Detail** (tap a card): back header, tail/type/ownership + the bundled
+    side-view illustration, a Current Status card (live phase + ETA computed
+    from the state-machine tick budget + leg-progress bar), a Maintenance &
+    Value card (airframe-life bar + market value = real `sellValue` +
+    depreciation-vs-new), and a Last Leg Economics card from the route's last
+    `FlightRecord`. Actions: ASSIGN TO NEW ROUTE (jumps to the Network tab —
+    route reassignment on an existing route still isn't a real feature, so this
+    is a nav shortcut, not in-place reassignment) and SELL AIRCRAFT (confirm →
+    `sim.sellAircraft`, factored out of `resolveSell` so the SELL card and the
+    detail share ONE sell path).
+  - **Marketplace**: cheapest-first aircraft profile cards (name, illustration,
+    Seats/Practical Range/Avg Lifespan, then Buy new / Lease new / Buy used
+    rows), reusing the sim's real `buyAircraft`/`leaseAircraft`/`buyUsedAircraft`
+    with live affordability gating. **Deliberate overlap, designer's call:** the
+    Network tab's ACQUIRE panel STAYS (it auto-assigns a bought aircraft to the
+    pending route mid-flow — a convenience the Marketplace doesn't replicate).
+    So there are now TWO acquire entry points; not a bug to "dedupe."
+  - Verified live in the Simulator (light + dark) with a seeded fleet: all three
+    screens, live phase/ETA/cycles, real economics (Net Income math checks),
+    illustrations with the fixed transparent backgrounds, and the buy/lease/used
+    rows. `FleetView` takes a `@Binding var tab` (from ContentView) so the
+    detail's Assign action can switch tabs.
 
 ## Open / not yet decided
 
