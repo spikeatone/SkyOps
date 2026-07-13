@@ -978,8 +978,12 @@ final class Simulation {
     }
 
     /// SELL card option: sell at linear-depreciated value, close its route.
-    func resolveSell(_ decision: Decision) {
-        let ac = decision.aircraft
+    func resolveSell(_ decision: Decision) { sellAircraft(decision.aircraft) }
+
+    /// Sell an aircraft (from the SELL card OR the Fleet detail screen): credit
+    /// its depreciated value, release its crew, archive its route, remove it,
+    /// and clear any pending decision cards for it.
+    func sellAircraft(_ ac: Aircraft) {
         playerBalance += sellValue(of: ac)
         // Release the sold aircraft's crew back to the pool (it isn't sold with
         // the aircraft) before the cleanup pass.
@@ -997,7 +1001,7 @@ final class Simulation {
             airports.first { $0.code == r.destCode }?.slotsAvailable += 1
         }
         aircraft.removeAll { $0 === ac }
-        decisionQueue.removeAll { $0.id == decision.id }
+        decisionQueue.removeAll { $0.aircraft === ac }
         resizeCrewPools()   // clears the family's pool only if this was its last aircraft
     }
 

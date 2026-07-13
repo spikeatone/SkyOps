@@ -14,10 +14,12 @@ import SwiftUI
 
 struct FleetView: View {
     let sim: Simulation
+    @Binding var tab: Int
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
 
     @State private var segment: Segment = .myFleet
+    @State private var detailID: UUID?
     enum Segment: Hashable { case myFleet, marketplace }
 
     // MARK: Theme tokens (light Figma / dark Sky)
@@ -42,19 +44,26 @@ struct FleetView: View {
         let _ = sim.tick
         ZStack {
             bg.ignoresSafeArea()
-            VStack(spacing: 16) {
-                header
-                segmentedControl
-                if segment == .myFleet {
-                    statusBar
-                    fleetList
-                } else {
-                    marketplacePlaceholder
+            if let id = detailID, let ac = sim.aircraft.first(where: { $0.id == id }) {
+                FleetDetailView(sim: sim, aircraft: ac,
+                                onBack: { detailID = nil },
+                                onAssignRoute: { detailID = nil; tab = 0 },
+                                onSold: { detailID = nil })
+            } else {
+                VStack(spacing: 16) {
+                    header
+                    segmentedControl
+                    if segment == .myFleet {
+                        statusBar
+                        fleetList
+                    } else {
+                        marketplacePlaceholder
+                    }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                .padding(.horizontal, 16)
+                .padding(.top, 6)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 6)
         }
     }
 
@@ -216,6 +225,8 @@ struct FleetView: View {
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .contentShape(Rectangle())
+        .onTapGesture { detailID = ac.id }
     }
 
     // MARK: Status model
