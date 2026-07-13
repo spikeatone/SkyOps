@@ -262,21 +262,26 @@ struct AircraftProfileCard: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
     }
 
-    /// Placeholder illustration: the app's body-type vector aircraft icon,
-    /// centred and enlarged (swap for real side-view art when supplied).
-    private var illustration: some View {
-        Canvas { ctx, size in
-            guard let icon = AircraftIcon.byBodyType[type.bodyType] else { return }
-            let len = min(size.width * 0.82, 210)
-            let rs = len * icon.scale / type.bodyType.iconLength
-            var g = ctx
-            g.translateBy(x: size.width / 2, y: size.height / 2)
-            g.scaleBy(x: rs, y: rs)
-            g.translateBy(x: -icon.center.x, y: -icon.center.y)
-            g.fill(icon.path, with: .color(.white.opacity(0.85)))
+    /// Real side-view illustration if one is bundled for this type; otherwise
+    /// the body-type vector icon as a placeholder (enlarged, centred).
+    @ViewBuilder private var illustration: some View {
+        if let art = AircraftArt.image(for: type.id) {
+            art.resizable().aspectRatio(contentMode: .fit)
+                .frame(maxWidth: .infinity)
+        } else {
+            Canvas { ctx, size in
+                guard let icon = AircraftIcon.byBodyType[type.bodyType] else { return }
+                let len = min(size.width * 0.82, 210)
+                let rs = len * icon.scale / type.bodyType.iconLength
+                var g = ctx
+                g.translateBy(x: size.width / 2, y: size.height / 2)
+                g.scaleBy(x: rs, y: rs)
+                g.translateBy(x: -icon.center.x, y: -icon.center.y)
+                g.fill(icon.path, with: .color(.white.opacity(0.85)))
+            }
+            .frame(height: 66)
+            .frame(maxWidth: .infinity)
         }
-        .frame(height: 66)
-        .frame(maxWidth: .infinity)
     }
 
     private func spec(_ label: String, _ value: String) -> some View {
