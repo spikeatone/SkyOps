@@ -209,7 +209,20 @@ final class Simulation {
 
     private(set) var playerBalance = startingCapital
     private(set) var playerRoutes: [Route] = []
+    /// Routes archived (not deleted) when their aircraft was sold — full
+    /// history preserved so a closed route stays reviewable.
+    private(set) var closedPlayerRoutes: [Route] = []
     private var nextRouteId = 1
+
+    /// Open + closed routes, newest first (for the ROUTES panel).
+    var allRoutes: [Route] { (playerRoutes + closedPlayerRoutes).sorted { $0.openedTick > $1.openedTick } }
+
+    /// "Day N · HH:MM" from a tick (1 tick = 1 sim-minute).
+    static func simDate(fromTick t: Int) -> String {
+        let day = t / 1440 + 1
+        let mins = t % 1440
+        return String(format: "Day %d · %02d:%02d", day, mins / 60, mins % 60)
+    }
 
     var ownedCount: Int { aircraft.lazy.filter { $0.purchased }.count }
     var stressTestCount: Int { aircraft.lazy.filter { !$0.purchased }.count }
@@ -355,6 +368,8 @@ final class Simulation {
 
         let r = Route(id: nextRouteId, originCode: origin.code, destCode: dest.code,
                       openedTick: tick, openingCost: cost)
+        r.assignmentHistory.append(RouteAssignment(id: 0, tail: ac.tail,
+                                                   typeName: ac.type.name, assignedTick: tick))
         nextRouteId += 1
         playerRoutes.append(r)
 
@@ -782,6 +797,12 @@ final class Simulation {
         if let id = ac.assignedRouteId, let r = playerRoutes.first(where: { $0.id == id }) {
             r.cumulativeNet += econ.net
             r.flights += 1
+            r.history.append(FlightRecord(
+                id: r.history.count, tick: tick, tail: ac.tail,
+                revenue: econ.revenue, fees: econ.fees, operatingCost: econ.operatingCost,
+                leaseCostEstimate: econ.leaseCostEstimate, net: econ.net,
+                pax: ac.currentPax, seats: ac.type.seats, loadFactor: ac.currentLoadFactor,
+                cumulativeNet: r.cumulativeNet))
         }
         // At 80% of expected lifespan, offer a one-time sell decision.
         if !ac.sellOfferDismissed && ac.cyclesAccrued >= Int(Double(ac.type.expectedLifespanCycles) * 0.8) {
@@ -794,7 +815,11 @@ final class Simulation {
         let ac = decision.aircraft
         playerBalance += sellValue(of: ac)
         if let id = ac.assignedRouteId, let idx = playerRoutes.firstIndex(where: { $0.id == id }) {
+            // Archive, don't discard — the route's full P&L history stays
+            // reviewable (including one that never recouped its cost).
             let r = playerRoutes.remove(at: idx)
+            r.closedTick = tick
+            closedPlayerRoutes.append(r)
             airports.first { $0.code == r.originCode }?.slotsAvailable += 1
             airports.first { $0.code == r.destCode }?.slotsAvailable += 1
         }

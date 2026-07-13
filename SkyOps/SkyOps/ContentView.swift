@@ -30,6 +30,10 @@ struct ContentView: View {
     @State private var showBuyPanel = false
     @State private var flash: String?
 
+    /// ROUTES panel (UI state). `routesDetailId` nil = list view.
+    @State private var showRoutesPanel = false
+    @State private var routesDetailId: Int?
+
     private let speeds: [Double] = [1, 5, 10, 25]
     private let fleetSizes: [Int] = [10, 60, 120, 250]
 
@@ -78,6 +82,9 @@ struct ContentView: View {
                 }
                 if showBuyPanel {
                     BuyPanel(sim: sim, onBought: handleBought)
+                }
+                if showRoutesPanel {
+                    RoutesPanel(sim: sim, detailId: $routesDetailId) { showRoutesPanel = false }
                 }
                 routeFlowPanel
                 if let ac = selected {
@@ -255,6 +262,10 @@ struct ContentView: View {
                 actionButton("OPEN ROUTE", active: routeMode != .off) {
                     if routeMode == .off { routeMode = .pickOrigin; selectedID = nil }
                     else { routeMode = .off }
+                }
+                actionButton("ROUTES", active: showRoutesPanel) {
+                    showRoutesPanel.toggle()
+                    if showRoutesPanel { routesDetailId = nil }
                 }
                 Spacer()
                 Button { sim.resetCamera() } label: {
@@ -635,6 +646,185 @@ struct RouteConfirmPanel: View {
         .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.97))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.accentColor.opacity(0.6), lineWidth: 1))
+    }
+}
+
+/// ROUTES panel: list of every route (open + closed, newest first); tap one
+/// for full P&L detail. All figures read from @Observable sim state, so an
+/// open route's numbers tick up live as its aircraft completes flights.
+struct RoutesPanel: View {
+    let sim: Simulation
+    @Binding var detailId: Int?
+    let onClose: () -> Void
+
+    private let mint = Color(red: 0x37/255, green: 1, blue: 0xB0/255)
+    private let red = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let id = detailId, let route = sim.allRoutes.first(where: { $0.id == id }) {
+                detail(route)
+            } else {
+                list
+            }
+        }
+        .padding(12)
+        .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.97))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.18), lineWidth: 1))
+    }
+
+    // MARK: List
+
+    private var list: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("ROUTES").font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                closeButton
+            }
+            let routes = sim.allRoutes
+            if routes.isEmpty {
+                Text("No routes opened yet.")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.secondary).padding(.vertical, 10)
+            } else {
+                ScrollView {
+                    VStack(spacing: 3) {
+                        ForEach(routes) { r in
+                            Button { detailId = r.id } label: { listRow(r) }
+                                .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .frame(maxHeight: 240)
+            }
+        }
+    }
+
+    private func listRow(_ r: Route) -> some View {
+        let remaining = r.openingCost - r.cumulativeNet
+        let good = remaining <= 0
+        return HStack {
+            HStack(spacing: 6) {
+                Text("\(r.originCode) ↔ \(r.destCode)")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                Text(r.isOpen ? "OPEN" : "CLOSED")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(r.isOpen ? mint : .secondary)
+            }
+            Spacer()
+            Text(good ? "profitable · \(r.flights) flts"
+                      : "\(money(remaining)) short · \(r.flights) flts")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(good ? mint : .white.opacity(0.7))
+        }
+        .foregroundStyle(.white)
+        .padding(.vertical, 5).padding(.horizontal, 6)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    // MARK: Detail
+
+    private func detail(_ r: Route) -> some View {
+        let remaining = r.openingCost - r.cumulativeNet
+        let profitable = remaining <= 0
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Button { detailId = nil } label: {
+                    Text("← Back").font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .padding(.vertical, 4).padding(.horizontal, 8)
+                        .background(Color.white.opacity(0.08)).clipShape(RoundedRectangle(cornerRadius: 5))
+                }.buttonStyle(.plain)
+                Text("\(r.originCode) ↔ \(r.destCode) · \(r.isOpen ? "OPEN" : "CLOSED")")
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                Spacer()
+                closeButton
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    section {
+                        line("Start", Simulation.simDate(fromTick: r.openedTick))
+                        if let c = r.closedTick { line("Closed", Simulation.simDate(fromTick: c)) }
+                        line("Flights", "\(r.flights)")
+                        line("Opening cost", money(r.openingCost))
+                        line("Cumulative net", money(r.cumulativeNet),
+                             color: r.cumulativeNet < 0 ? red : .white)
+                        line("Status",
+                             profitable ? "profitable (+\(money(abs(remaining))))"
+                                        : "\(money(remaining)) short",
+                             color: profitable ? mint : red)
+                    }
+                    section {
+                        line("Revenue", money(r.totalRevenue))
+                        line("Fees", "−" + money(r.totalFees))
+                        line("Operating cost", "−" + money(r.totalOperatingCost))
+                        line("Lease cost", "−" + money(r.totalLeaseCost))
+                        line("Avg load", "\(r.averageLoadPct)%")
+                    }
+                    section {
+                        Text("ASSIGNED AIRCRAFT")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                        ForEach(r.assignmentHistory) { a in
+                            Text("\(a.tail) (\(a.typeName)) — \(Simulation.simDate(fromTick: a.assignedTick))")
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.85))
+                        }
+                    }
+                    section {
+                        Text(r.history.count > 15 ? "RECENT FLIGHTS (last 15 of \(r.history.count))"
+                                                  : "RECENT FLIGHTS")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                        if r.history.isEmpty {
+                            Text("No completed flights yet.")
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.6))
+                        } else {
+                            ForEach(r.history.suffix(15).reversed()) { h in
+                                Text("\(Simulation.simDate(fromTick: h.tick)): \(h.pax)/\(h.seats) (\(Int((h.loadFactor*100).rounded()))%) · rev \(money(h.revenue)) · net \(h.net < 0 ? "−" : "")\(money(abs(h.net)))")
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(h.net < 0 ? red : .white.opacity(0.85))
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(maxHeight: 280)
+        }
+    }
+
+    // MARK: Bits
+
+    private func section<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 3) { content() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(8)
+            .background(Color.white.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    private func line(_ label: String, _ value: String, color: Color = .white) -> some View {
+        HStack(alignment: .top) {
+            Text(label).font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.secondary).frame(width: 110, alignment: .leading)
+            Text(value).font(.system(size: 11, design: .monospaced)).foregroundStyle(color)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var closeButton: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark").font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white.opacity(0.6)).padding(6)
+        }.buttonStyle(.plain)
+    }
+
+    private func money(_ v: Int) -> String {
+        (v < 0 ? "−$" : "$") + abs(v).formatted(.number.grouping(.automatic))
     }
 }
 

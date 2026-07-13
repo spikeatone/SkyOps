@@ -1457,9 +1457,34 @@ where numbers are involved.
   Fine in the prototype (whole map visible); a real gap in the native CONUS
   view. Not fixed — candidate fix: bias spare spawn to CONUS airports, or
   frame the map to include a new spare. Flagged in Open below.
-- **Still additive in Phase 5** (core loop doesn't need it): the ROUTES
-  list/detail P&L panel (the `Route` model already carries cumulativeNet /
-  flights / openingCost / totalLeaseCost) — NEXT up.
+- **ROUTES P&L panel — DONE (native app).** A ROUTES button (HUD action row)
+  toggles a bottom panel. LIST view: every route open+closed, newest first,
+  each row "`ORIG ↔ DEST` OPEN/CLOSED · profitable|$X short · N flts", tap for
+  DETAIL. DETAIL view (Back button): start date, close date (if archived),
+  flights, opening cost, cumulative net, profitability status (green
+  "profitable (+$X)" / red "$X short"), then total revenue/fees/operating
+  cost/lease cost/avg load, assigned-aircraft history, and a recent-flights
+  log CAPPED at the last 15 for display (header reads "last 15 of N") while
+  every aggregate is computed from the FULL history. The `Route` model gained
+  `history: [FlightRecord]` (per-flight tick/tail/rev/fees/opcost/leaseEst/net/
+  pax/seats/load/cumulativeNet — the data a future chart needs),
+  `assignmentHistory`, `closedTick`, and history-derived aggregates.
+  `settleLeg` appends a FlightRecord; `resolveSell` now ARCHIVES the route to
+  `closedPlayerRoutes` (closedTick set, history intact) instead of deleting it
+  — so a route that never recouped stays reviewable. All @Observable, so an
+  open route's numbers tick up LIVE. The actual profitability CHART is still
+  not built (the data model is verified sufficient for it). Verified: 18/18
+  headless (`scratchpad` RoutesMain: history accumulation, field sanity,
+  cumulativeNet consistency, archival-preserves-history) + live in the
+  Simulator (watched a SLC↔DEN route recoup from $50,951 short → $7,112 short
+  over ~30 flights, correct P&L math rev−fees−opcost=cumulativeNet, the
+  "last 15 of N" cap, and the recent-flights log).
+- **A real SwiftUI note from the ROUTES detail scroll:** at high sim speed the
+  recent-flights `ForEach(history.suffix(15).reversed())` churns its element
+  identity every completed flight (a new flight shifts the 15-window), which
+  fights manual scroll position — expected, not a bug; scrolling is fine at
+  low speed. If a chart view is built later, snapshot the history for display
+  rather than binding a live-growing slice if scroll stability matters.
 
 ## Open / not yet decided
 
