@@ -1844,12 +1844,22 @@ where numbers are involved.
     Security Incident (ground-stop causes reusing the weather mechanism), and
     Airport Expansion (structural). New `tickWorldEvents()` = once-per-sim-day
     check (designed daily probs 4%/3%/2.5%). Headless-verified over 120 sim-days.
-  - **Remaining phases** (not yet built): Slot-Value Buyback (#16 — needs a
-    Decision refactor: `Decision` is currently AIRCRAFT-based; the offer is
-    ROUTE/amount-based; this also lights up the blue "Offer" card in the Alerts
-    modal + Ops Needs Attention). Crew/fleet (#9 Labor Action, #10 Recall/AD).
-    Cost/revenue (#11 Insurance, #12 Maint inflation, #13 FX shock, #14 Fare
-    war). Magnitudes for the built ones are DESIGNED pacing, not sourced.
+  - **Phase 2 — DONE** (`f94fb56`): Slot-Value Buyback (#16), the one event
+    that's a real CHOICE. Daily 6% check when the player has a route (one open
+    at a time); the dest airport offers 2–4× the route's opening cost. Accept =
+    credit cash + close/archive the route + its aircraft becomes an idle spare
+    (SLOT sold, not plane); Decline = keep it. **Decision refactor**:
+    `Decision.aircraft` is now OPTIONAL and `Decision` gained an `.offer` kind +
+    `SlotOffer` payload (route-based, not aircraft-based). The blue "Offer" card
+    renders via the shared `NeedsAttentionCard` → shows in the Alerts modal AND
+    Ops Needs Attention. Also removed the now-dead AOGCard/CrewCard/SellCard/
+    DecisionCardChrome/CardButton structs from ContentView (they blocked the
+    optional-aircraft change). Headless + visually verified.
+  - **Remaining phases** (not yet built): Crew/fleet (#9 Labor Action, #10
+    Recall/AD). Cost/revenue (#11 Insurance, #12 Maint inflation, #13 FX shock,
+    #14 Fare war). Magnitudes for the built ones are DESIGNED pacing, not sourced.
+    The "labor action" event (#9) is what would light up the red crew-alert box
+    the Crews tab currently omits.
 
 ## Open / not yet decided
 
