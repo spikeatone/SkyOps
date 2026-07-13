@@ -223,6 +223,7 @@ final class Simulation {
         initializeUsedInventory()   // 1–2 pre-owned listings per type at start
         // Full-shift start: $20M, zero aircraft, zero routes. The FLEET buttons
         // are a DEV stress-test control (spawn background/non-owned traffic).
+        financeSnapshots = [financeSnapshotNow()]   // launch baseline (tick 0, $20M)
     }
 
     // MARK: - Ownership economy (Phase 5)
@@ -1176,6 +1177,31 @@ final class Simulation {
     private(set) var totalHedgeSpend = 0         // fuel-hedge premiums
     private(set) var totalSaleProceeds = 0       // aircraft sales
     private(set) var totalOfferIncome = 0        // slot-buyback offers accepted
+    private(set) var totalFlightsFlown = 0       // owned-aircraft legs settled
+
+    // MARK: Per-period finance history (for the Finance tab's period views)
+
+    /// A frozen copy of every cumulative total (plus cash / net worth) at one
+    /// instant. One is captured at launch (tick 0) and at each sim-month
+    /// boundary; a period's activity is the difference between two snapshots,
+    /// which reconciles the same way the cumulative ledger does.
+    struct FinanceSnapshot {
+        let tick, revenue, fees, operatingCost: Int
+        let leaseCost, insurance, maintenance: Int
+        let acquisition, routeSpend, hedgeSpend: Int
+        let saleProceeds, offerIncome, flights: Int
+        let cash, netWorth: Int
+    }
+    private(set) var financeSnapshots: [FinanceSnapshot] = []
+    private func financeSnapshotNow() -> FinanceSnapshot {
+        FinanceSnapshot(tick: tick, revenue: totalRevenue, fees: totalFees,
+                        operatingCost: totalOperatingCost, leaseCost: totalLeaseCost,
+                        insurance: totalInsuranceSpent, maintenance: maintenanceSpend,
+                        acquisition: totalAcquisitionSpend, routeSpend: totalRouteSpend,
+                        hedgeSpend: totalHedgeSpend, saleProceeds: totalSaleProceeds,
+                        offerIncome: totalOfferIncome, flights: totalFlightsFlown,
+                        cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
+    }
 
     /// Roll a leg's revenue at scheduling time — pax-first so displayed pax and
     /// revenue always agree. Ported from rollRevenue(). Stored on the aircraft.
@@ -1224,6 +1250,7 @@ final class Simulation {
     private func settleLeg(_ ac: Aircraft) {
         let econ = legEconomics(for: ac)
         guard ac.purchased else { return }
+        totalFlightsFlown += 1
         totalRevenue += econ.revenue
         totalFees += econ.fees
         totalOperatingCost += econ.operatingCost
@@ -1285,6 +1312,9 @@ final class Simulation {
     /// One sim-minute for the whole world.
     func advanceTick() {
         tick += 1
+        // Capture a finance snapshot at each sim-month boundary (the launch
+        // baseline is seeded in init) for the Finance tab's period views.
+        if tick % Simulation.ticksPerMonth == 0 { financeSnapshots.append(financeSnapshotNow()) }
         tickWeather()
         tickCrewPool()
         tickAOGOnset()

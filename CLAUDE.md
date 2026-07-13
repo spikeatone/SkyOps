@@ -1886,6 +1886,33 @@ where numbers are involved.
   - Verified live in the Simulator (dark + light) with a seeded fleet; a random
     run rolled an Oil Price Spike, correctly showing the market banner + an
     operating LOSS + net worth down — the real emergent economy, not a happy path.
+- **FINANCE per-period views + net-worth trend — DONE (native app).** Added a
+  **period selector** (Total / This month / Last month) that drives the P&L,
+  overhead/capital, and cash-flow cards, plus a **NET WORTH TREND** sparkline.
+  - **Month-boundary snapshots** power it: `Simulation.FinanceSnapshot` freezes
+    every cumulative total (+cash +netWorth +flights) at a moment;
+    `financeSnapshots` gets a **launch baseline seeded in `init`** (tick 0, $20M
+    — NOT lazily on first tick, so it's pristine regardless of when the player
+    first buys) and one appended at each sim-month boundary in `advanceTick`
+    (`tick % ticksPerMonth == 0`). A period's activity = difference between two
+    snapshots, so it reconciles the SAME way the cumulative ledger does:
+    cashStart + operatingProfit − overhead − capitalOut + capitalIn == cashEnd.
+    Verified 5/5 headless over ~3.2 sim-months (every completed month
+    reconciles, this-month reconciles to live cash, flights partition exactly).
+  - Added `totalFlightsFlown` (owned-leg counter, per-period via snapshot delta).
+  - The Cash Flow card relabels for periods ("Cash, period start" → "Cash,
+    period end") vs Total ("Starting capital" → "Cash on hand"); the hero delta
+    and label follow the selected period ("this month" / "last month" / "since
+    launch").
+  - **NET WORTH TREND** = a small `NetWorthSparkline` (private Canvas) plotting
+    `financeSnapshots.map(netWorth) + [live]`, green above / red below the dashed
+    launch baseline, split per segment. Kept as a **value-input** view (`values`
+    changes every tick via the live last point) so it re-renders and never hits
+    the documented Canvas-freeze bug — do NOT make it a stable-input child.
+  - Verified live (dark): trend line renders (red below the $20M launch dash
+    during a recession run), and the Last-month view shows that period's own
+    numbers reconciling exactly ($934,633 − $1,079,046 − $187,128 = −$331,541),
+    with capital spending correctly $0 (acquisitions were in earlier months).
 - **External-events system — the designer specced 16 events; being built in
   PHASES.** The full list (designer, verbatim intent): Market/economic (mutually
   exclusive) — Oil Spike, Fuel Drop, Boom, Recession, **FFR Redemption Surge**
