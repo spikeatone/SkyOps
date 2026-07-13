@@ -37,7 +37,8 @@ struct FleetView: View {
     private var track: Color      { isDark ? Color.white.opacity(0.12) : Color(skyHex: 0xE6E6E6) }
     private let fill = Sky.brightBlue
     private let yellow = Color(skyHex: 0xFFB700)
-    private let red = Color(skyHex: 0xD70000)
+    // Red reads too dark on the dark theme — use the On-Dark red there.
+    private var red: Color { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
 
     // Status-bar palette (Figma 1:1060 dark / 1:955 light). Its BOXES sit at the
     // page-bg shade (#2B303D) inside a DARKER container (#1F232D) in dark, and

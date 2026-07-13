@@ -33,7 +33,8 @@ struct FleetDetailView: View {
     private var track: Color       { isDark ? Color.white.opacity(0.12) : Color(skyHex: 0xE6E6E6) }
     private let fill = Sky.brightBlue
     private let green = Sky.coreGreen
-    private let red = Color(skyHex: 0xD70000)
+    // Red reads too dark on the dark theme — use the On-Dark red there.
+    private var red: Color { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
 
     var body: some View {
         let _ = sim.tick   // keep status/progress live
