@@ -37,6 +37,15 @@ struct MapView: View {
     private let othersColor  = Color(red: 0xD7/255, green: 0x67/255, blue: 0xFF/255) // #D767FF — competitor traffic
     private let borderColor  = Color(red: 108/255, green: 127/255, blue: 143/255)    // basemap gray
 
+    // Per-region geography hues (same brightness as the old US outline, one
+    // colour each): US blue · Mexico green · Canada red · Central America orange
+    // · South America yellow.
+    private let usColor      = Color(red: 0x4A/255, green: 0x9E/255, blue: 0xFF/255) // blue
+    private let mexicoColor  = Color(red: 0x35/255, green: 0xC7/255, blue: 0x5A/255) // green
+    private let canadaColor  = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255) // red
+    private let centralColor = Color(red: 0xFF/255, green: 0x9A/255, blue: 0x3C/255) // orange
+    private let southColor   = Color(red: 0xED/255, green: 0xB9/255, blue: 0x3C/255) // yellow
+
     // Theme-aware chrome. The geography (green outlines/fill) and airports keep
     // the SAME green hue in both themes; only the canvas background, grid,
     // labels, and rings flip so they stay legible on white. Green/gray strokes
@@ -74,9 +83,10 @@ struct MapView: View {
         ctx.stroke(path, with: .color(gridColor), lineWidth: 1)
     }
 
-    /// Real geography beneath the network: Canada (muted) → US outline (faint
-    /// green fill + stroke) → state borders (fainter). Projects through the
-    /// same camera as the airports, so it can't drift.
+    /// Real geography beneath the network, one hue per region (US blue · Mexico
+    /// green · Canada red · Central America orange · South America yellow), each
+    /// a faint fill + coloured outline at a shared brightness, plus faint US
+    /// state borders. Projects through the same camera as the airports.
     private func drawBasemap(_ ctx: GraphicsContext) {
         let map = Basemap.shared
 
@@ -90,16 +100,20 @@ struct MapView: View {
             return path
         }
 
-        ctx.stroke(ringPath(map.canada), with: .color(borderColor.opacity(0.20 * strokeBoost)), lineWidth: 1)
-        // Latin America — same muted context treatment as Canada, with a very
-        // faint fill so large landmasses (Brazil, etc.) read as land.
-        let latam = ringPath(map.latam)
-        ctx.fill(latam, with: .color(climbColor.opacity(isDark ? 0.02 : 0.05)))
-        ctx.stroke(latam, with: .color(borderColor.opacity(0.20 * strokeBoost)), lineWidth: 1)
-        let nation = ringPath(map.nation)
-        ctx.fill(nation, with: .color(climbColor.opacity(isDark ? 0.025 : 0.06)))
-        ctx.stroke(nation, with: .color(climbColor.opacity(0.35 * strokeBoost)), lineWidth: 1.25)
-        ctx.stroke(ringPath(map.states.flatMap { $0 }), with: .color(borderColor.opacity(0.25 * strokeBoost)), lineWidth: 0.75)
+        // Each region: a very faint fill + a coloured outline, all at the same
+        // brightness (the old US-outline treatment), one hue per region.
+        func region(_ rings: [[CGPoint]], _ color: Color) {
+            let p = ringPath(rings)
+            ctx.fill(p, with: .color(color.opacity(isDark ? 0.028 : 0.06)))
+            ctx.stroke(p, with: .color(color.opacity(0.35 * strokeBoost)), lineWidth: 1.2)
+        }
+        region(map.canada, canadaColor)
+        region(map.southAmerica, southColor)
+        region(map.centralAmerica, centralColor)
+        region(map.mexico, mexicoColor)
+        region(map.nation, usColor)                       // drawn last (on top at shared borders)
+        // US internal state borders — a faint version of the US blue.
+        ctx.stroke(ringPath(map.states.flatMap { $0 }), with: .color(usColor.opacity(0.22 * strokeBoost)), lineWidth: 0.75)
     }
 
     private func drawRoutes(_ ctx: GraphicsContext) {

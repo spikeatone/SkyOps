@@ -1299,15 +1299,36 @@ where numbers are involved.
     projection" limitation.
 - **Map is now THEME-AWARE (was dark in both themes) — DONE (designer request).**
   `MapView` reads `@Environment(\.colorScheme)`: **light mode = white canvas**,
-  dark mode unchanged. The GEOGRAPHY keeps the same green hue (climb-green
-  outlines/fill + green airport dots) in both — only the background, grid,
-  labels, and selection ring flip: `mapBackground` (white/dark), `gridColor`
-  (black-tint/white-tint), `labelColor` (slate #334155 / white), `selectionRing`
-  (black/white). Green + gray strokes get a `strokeBoost` (×1.7 in light, ×1.0
-  in dark) because a light colour at low opacity vanishes on white; the LatAm/
-  nation FILL opacities are also bumped in light. Verified both themes in the
-  Simulator (dark pixel-unchanged). Note: the player's own cruise-phase colour
+  dark mode unchanged. Only the background, grid, labels, and selection ring
+  flip: `mapBackground` (white/dark), `gridColor` (black-tint/white-tint),
+  `labelColor` (slate #334155 / white), `selectionRing` (black/white). Coloured
+  strokes get a `strokeBoost` (×1.7 in light, ×1.0 in dark) because a light
+  colour at low opacity vanishes on white; region FILL opacities are also
+  bumped in light. Airport dots stay green (climb-green) in both. Verified both
+  themes (dark pixel-unchanged). Note: the player's own cruise-phase colour
   (#83C9FF light blue) is a touch faint on white — left as-is unless flagged.
+- **Per-region geography COLOURS — DONE (designer request).** The basemap used
+  to be all one green; now each region has its own hue at a shared brightness
+  (the old US-outline treatment: faint fill + `0.35×strokeBoost` outline, one
+  colour each): **US blue `#4A9EFF` · Mexico green `#35C75A` · Canada red
+  `#FF5C5C` · Central America orange `#FF9A3C` · South America yellow `#EDB93C`**.
+  Required SPLITTING the old single `latam` basemap layer into `mexico` /
+  `centralAmerica` / `southAmerica` keys in `Basemap.json` (re-extracted from the
+  same Natural Earth 110m geojson, per-region; `Basemap.swift` decodes the new
+  optional keys). Canada gained a fill (was stroke-only muted grey). US state
+  borders are a faint US-blue now (were grey). `MapView.drawBasemap` has a
+  `region(rings, color)` helper. Colours defined as `usColor`/`mexicoColor`/etc.
+  in MapView. Verified both themes framed to the whole Americas.
+- **Canada airports — DONE. 93 → 113 airports (48 US + 45 LatAm + 20 Canada).**
+  Top-20 Canadian airports added to `Airport.all`, real lat/lon; fee/ground-stop
+  figures are tier-based ESTIMATES like the LatAm set (ground-stops lean high for
+  winter/Atlantic-weather airports). **Correction applied:** the requested "YKA
+  — Kelowna" is wrong (YKA is Kamloops); added Kelowna as **YLW** (correct code).
+  No WORLD_BOUNDS change needed (all within existing lat/lon extent). SCOPE NOTE:
+  no Canadian CARRIERS yet — Canadian domestic legs draw the US roster (Air
+  Canada is in it for widebodies only), so YYZ↔YVR shows US carriers; the
+  region-aware `pick` only splits US vs LatAm. Adding WestJet/Porter/Flair + a
+  Canada region is an easy follow-up if wanted.
 - **Pan/zoom camera + airport labels — ALSO PULLED FORWARD from Phase 4**
   (same session, designer focused on the map). The projection is now
   camera-based: everything lives in unit space and `Simulation` maps

@@ -2,8 +2,8 @@
 //  Airport.swift
 //  Airline Architect — Phase 2
 //
-//  93 real airports — 48 U.S. (ported from AIRPORTS) + 45 Latin American
-//  (Mexico/Central/South America, added this session). Each has
+//  113 real airports — 48 U.S. (ported from AIRPORTS) + 45 Latin American
+//  (Mexico/Central/South America) + 20 Canadian. Each has
 //  real lat/lon plus real fee/ground-stop data (used from Phase 2's economy
 //  onward). `unit` is the resolution-independent projected position; `screen`
 //  is the pixel position assigned by Simulation.layout(in:).
@@ -52,7 +52,7 @@ final class Airport: Identifiable {
     }
 
     /// The real airport network: 48 U.S. (top-50 by fee, minus 2 cross-batch
-    /// duplicates; includes ANC/HNL) + 45 Latin American, 93 total.
+    /// duplicates; includes ANC/HNL) + 45 Latin American + 20 Canadian, 113 total.
     static let all: [Airport] = [
         .init(code: "ORD", lat: 41.9786, lon: -87.9048,  landingFeePerKlb: 10.58, gateFeeNarrowbody: 600,  gateFeeWidebody: 1500, groundStopsPerMonth: 9.4),
         .init(code: "ATL", lat: 33.6407, lon: -84.4277,  landingFeePerKlb: 1.63,  gateFeeNarrowbody: 250,  gateFeeWidebody: 450,  groundStopsPerMonth: 4.8),
@@ -161,6 +161,30 @@ final class Airport: Identifiable {
         .init(code: "REC", lat: -8.1265,  lon: -34.9236,  landingFeePerKlb: 1.95, gateFeeNarrowbody: 265, gateFeeWidebody: 530, groundStopsPerMonth: 3.0),
         .init(code: "SSA", lat: -12.9086, lon: -38.3225,  landingFeePerKlb: 1.95, gateFeeNarrowbody: 265, gateFeeWidebody: 530, groundStopsPerMonth: 3.2),
         .init(code: "GYE", lat: -2.1574,  lon: -79.8836,  landingFeePerKlb: 2.40, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 2.8),
+
+        // Canada (top 20). Same tier-based fee ESTIMATES as the LatAm set;
+        // ground-stops lean high for the winter/Atlantic-weather airports.
+        // NOTE: Kelowna is YLW (the requested "YKA" is actually Kamloops).
+        .init(code: "YYZ", lat: 43.6777, lon: -79.6248,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 380, gateFeeWidebody: 850, groundStopsPerMonth: 5.5),
+        .init(code: "YVR", lat: 49.1967, lon: -123.1815, landingFeePerKlb: 3.40, gateFeeNarrowbody: 370, gateFeeWidebody: 820, groundStopsPerMonth: 3.5),
+        .init(code: "YUL", lat: 45.4706, lon: -73.7408,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 350, gateFeeWidebody: 760, groundStopsPerMonth: 5.0),
+        .init(code: "YYC", lat: 51.1315, lon: -114.0106, landingFeePerKlb: 2.70, gateFeeNarrowbody: 330, gateFeeWidebody: 680, groundStopsPerMonth: 4.5),
+        .init(code: "YEG", lat: 53.3097, lon: -113.5801, landingFeePerKlb: 2.40, gateFeeNarrowbody: 310, gateFeeWidebody: 640, groundStopsPerMonth: 4.8),
+        .init(code: "YOW", lat: 45.3225, lon: -75.6692,  landingFeePerKlb: 2.30, gateFeeNarrowbody: 300, gateFeeWidebody: 620, groundStopsPerMonth: 4.5),
+        .init(code: "YWG", lat: 49.9100, lon: -97.2399,  landingFeePerKlb: 2.20, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 5.0),
+        .init(code: "YHZ", lat: 44.8808, lon: -63.5086,  landingFeePerKlb: 2.30, gateFeeNarrowbody: 300, gateFeeWidebody: 620, groundStopsPerMonth: 4.5),
+        .init(code: "YTZ", lat: 43.6275, lon: -79.3962,  landingFeePerKlb: 2.60, gateFeeNarrowbody: 320, gateFeeWidebody: 640, groundStopsPerMonth: 4.0),
+        .init(code: "YLW", lat: 49.9561, lon: -119.3778, landingFeePerKlb: 1.90, gateFeeNarrowbody: 260, gateFeeWidebody: 520, groundStopsPerMonth: 3.0),
+        .init(code: "YYJ", lat: 48.6469, lon: -123.4258, landingFeePerKlb: 1.90, gateFeeNarrowbody: 260, gateFeeWidebody: 520, groundStopsPerMonth: 2.8),
+        .init(code: "YYT", lat: 47.6186, lon: -52.7519,  landingFeePerKlb: 1.80, gateFeeNarrowbody: 250, gateFeeWidebody: 500, groundStopsPerMonth: 5.5),
+        .init(code: "YXE", lat: 52.1708, lon: -106.6997, landingFeePerKlb: 1.85, gateFeeNarrowbody: 255, gateFeeWidebody: 510, groundStopsPerMonth: 4.5),
+        .init(code: "YQR", lat: 50.4319, lon: -104.6658, landingFeePerKlb: 1.85, gateFeeNarrowbody: 255, gateFeeWidebody: 510, groundStopsPerMonth: 4.5),
+        .init(code: "YQM", lat: 46.1122, lon: -64.6786,  landingFeePerKlb: 1.75, gateFeeNarrowbody: 245, gateFeeWidebody: 490, groundStopsPerMonth: 4.0),
+        .init(code: "YSJ", lat: 45.3161, lon: -65.8903,  landingFeePerKlb: 1.70, gateFeeNarrowbody: 240, gateFeeWidebody: 480, groundStopsPerMonth: 4.0),
+        .init(code: "YQG", lat: 42.2756, lon: -82.9556,  landingFeePerKlb: 1.70, gateFeeNarrowbody: 240, gateFeeWidebody: 480, groundStopsPerMonth: 3.0),
+        .init(code: "YFC", lat: 45.8689, lon: -66.5372,  landingFeePerKlb: 1.70, gateFeeNarrowbody: 240, gateFeeWidebody: 480, groundStopsPerMonth: 3.5),
+        .init(code: "YQT", lat: 48.3719, lon: -89.3239,  landingFeePerKlb: 1.75, gateFeeNarrowbody: 245, gateFeeWidebody: 490, groundStopsPerMonth: 4.0),
+        .init(code: "YMM", lat: 56.6533, lon: -111.2223, landingFeePerKlb: 1.80, gateFeeNarrowbody: 250, gateFeeWidebody: 500, groundStopsPerMonth: 4.5),
     ]
 
     /// Two distinct random airports — ported from randomRoutePair().

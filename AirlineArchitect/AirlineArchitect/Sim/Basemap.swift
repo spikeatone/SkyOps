@@ -20,9 +20,11 @@ struct Basemap {
     /// State features — each is a set of rings.
     let states: [[[CGPoint]]]
     let canada: [[CGPoint]]
-    /// Latin America (Mexico + Central + South America) context outlines —
-    /// rendered muted like Canada. Not interactive.
-    let latam: [[CGPoint]]
+    /// Per-region context outlines, each rendered in its own hue (see
+    /// MapView.drawBasemap). Not interactive.
+    let mexico: [[CGPoint]]
+    let centralAmerica: [[CGPoint]]
+    let southAmerica: [[CGPoint]]
 
     /// Decoded + projected once at first use.
     static let shared: Basemap = load()
@@ -31,7 +33,9 @@ struct Basemap {
         let nation: [[[Double]]]
         let states: [[[[Double]]]]
         let canada: [[[Double]]]
-        let latam: [[[Double]]]?
+        let mexico: [[[Double]]]?
+        let centralAmerica: [[[Double]]]?
+        let southAmerica: [[[Double]]]?
     }
 
     /// Project one [lon, lat] pair to unit space.
@@ -45,12 +49,15 @@ struct Basemap {
               let data = try? Data(contentsOf: url),
               let raw = try? JSONDecoder().decode(Raw.self, from: data) else {
             // No basemap available — render airports/aircraft without it.
-            return Basemap(nation: [], states: [], canada: [], latam: [])
+            return Basemap(nation: [], states: [], canada: [], mexico: [], centralAmerica: [], southAmerica: [])
         }
         let nation = raw.nation.map { $0.map(project) }
         let states = raw.states.map { $0.map { $0.map(project) } }
         let canada = raw.canada.map { $0.map(project) }
-        let latam = (raw.latam ?? []).map { $0.map(project) }
-        return Basemap(nation: nation, states: states, canada: canada, latam: latam)
+        let mexico = (raw.mexico ?? []).map { $0.map(project) }
+        let central = (raw.centralAmerica ?? []).map { $0.map(project) }
+        let south = (raw.southAmerica ?? []).map { $0.map(project) }
+        return Basemap(nation: nation, states: states, canada: canada,
+                       mexico: mexico, centralAmerica: central, southAmerica: south)
     }
 }
