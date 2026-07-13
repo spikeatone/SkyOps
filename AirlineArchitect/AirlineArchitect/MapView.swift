@@ -30,7 +30,11 @@ struct MapView: View {
 
     // Per-phase colours, ported from the prototype.
     private let climbColor   = Color(red: 0x37/255, green: 0xFF/255, blue: 0xB0/255) // #37FFB0
-    private let cruiseColor  = Color(red: 0x83/255, green: 0xC9/255, blue: 0xFF/255) // #83C9FF
+    // Cruise-phase blue for the player's own aircraft. Light-blue #83C9FF reads
+    // fine on the dark map but washes out on white, so light mode uses the
+    // darker #4E67A0 (the app's section-header blue).
+    private var cruiseColor: Color { isDark ? Color(red: 0x83/255, green: 0xC9/255, blue: 0xFF/255)
+                                            : Color(red: 0x4E/255, green: 0x67/255, blue: 0xA0/255) }
     private let descentColor = Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255) // #FFB300
     private let groundColor  = Color(red: 0xE8/255, green: 0xA1/255, blue: 0x3C/255) // ground amber
     private let heldColor    = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255) // #ff5c5c — held

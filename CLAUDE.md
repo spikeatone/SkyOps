@@ -1305,8 +1305,14 @@ where numbers are involved.
   strokes get a `strokeBoost` (×1.7 in light, ×1.0 in dark) because a light
   colour at low opacity vanishes on white; region FILL opacities are also
   bumped in light. Airport dots stay green (climb-green) in both. Verified both
-  themes (dark pixel-unchanged). Note: the player's own cruise-phase colour
-  (#83C9FF light blue) is a touch faint on white — left as-is unless flagged.
+  themes (dark pixel-unchanged). Follow-up (done): the player's own CRUISE-phase
+  colour is now theme-aware — `#83C9FF` on dark, **`#4E67A0` on light** (the
+  section-header blue) since the light blue washed out on white; `cruiseColor` is
+  a computed var in MapView. Also: NetworkView's header/eye/bell + the
+  Competitive-Traffic/Pro(DEV) labels were switched from the bright `#0EA5E9` to
+  the shared `titleColor` (dark `#BDE0FF` / light `#4E67A0`, Figma 2:1594) so the
+  Network tab matches every other tab's section-header colour (the bottom tab-bar
+  active tint stays bright blue — that's its own Figma spec).
 - **Per-region geography COLOURS — DONE (designer request).** The basemap used
   to be all one green; now each region has its own hue at a shared brightness
   (the old US-outline treatment: faint fill + `0.35×strokeBoost` outline, one

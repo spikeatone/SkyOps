@@ -41,6 +41,9 @@ struct NetworkView: View {
     var onUpgrade: (String?) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
+    /// Section-header / icon blue — matches the other tabs (Figma "Dark Blue"
+    /// #4E67A0 in light, light-blue in dark). Was the brighter #0EA5E9.
+    private var titleColor: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x4E67A0) }
 
     // Gesture accumulators.
     @State private var dragLast: CGSize = .zero
@@ -95,13 +98,13 @@ struct NetworkView: View {
             HStack {
                 Text("NETWORK")
                     .font(.karla(22, .bold))
-                    .foregroundStyle(Sky.brightBlue)
+                    .foregroundStyle(titleColor)
                 Spacer()
                 Button { showOverlays.toggle() } label: {
                     Image(systemName: showOverlays ? "eye" : "eye.slash")
-                        .font(.system(size: 18)).foregroundStyle(Sky.brightBlue)
+                        .font(.system(size: 18)).foregroundStyle(titleColor)
                 }.buttonStyle(.plain)
-                AlertBell(count: sim.decisionQueue.count, tint: Sky.brightBlue, action: onBell)
+                AlertBell(count: sim.decisionQueue.count, tint: titleColor, action: onBell)
             }
         }
     }
@@ -253,7 +256,7 @@ struct NetworkView: View {
     private var devProToggle: some View {
         HStack(spacing: 10) {
             Text("Pro (DEV)").font(.karla(12, .semibold))
-                .foregroundStyle(Sky.lightBlue.opacity(0.85)).fixedSize()
+                .foregroundStyle(titleColor).fixedSize()
             Spacer()
             Button { store.isPro.toggle() } label: {
                 Text(store.isPro ? "ON" : "OFF")
@@ -272,7 +275,7 @@ struct NetworkView: View {
     private var trafficBar: some View {
         HStack(spacing: 10) {
             Text("Competitive Traffic").font(.karla(12, .semibold))
-                .foregroundStyle(Sky.lightBlue.opacity(0.85))
+                .foregroundStyle(titleColor)
                 .fixedSize()
             trafficSlider
             Text("\(sim.stressTestCount)").font(.karla(12, .bold))
