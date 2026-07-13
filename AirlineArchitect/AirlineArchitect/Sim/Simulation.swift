@@ -542,7 +542,11 @@ final class Simulation {
     private func makeAircraft() -> Aircraft {
         let type = AircraftType.pickWeighted()
         let (origin, dest) = Airport.randomPair()
-        let airline = Airline.pick(forType: type.id)   // a real competitor carrier
+        // Region-aware carrier: LatAm airports draw LatAm carriers, US airports
+        // draw US carriers, an international leg either.
+        let airline = Airline.pick(forType: type.id,
+                                   originLatam: Airline.latamAirportCodes.contains(origin.code),
+                                   destLatam: Airline.latamAirportCodes.contains(dest.code))
         // Tail carries the carrier's real IATA code (Delta → "N123DL"); the
         // generic fallback gets a random non-real code so they aren't uniform.
         let code = airline.code.isEmpty ? Airline.randomTailCode() : airline.code

@@ -1277,12 +1277,26 @@ where numbers are involved.
     fill + 0.20 stroke). Verified in the Simulator: all 45 airports sit on their
     countries (BOG/Colombia, LIM/Peru coast, GRU-CGH/São Paulo, EZE-AEP/Buenos
     Aires, SCL/Chile, REC-SSA/Brazil east coast), US map pixel-identical.
-  - **Scope note (unchanged, deliberate)**: the airline roster is still
-    US-weighted — background traffic CAN fly to/from LatAm airports (US carriers
-    do), but there are no LatAm carriers yet, and no region-selection. The
-    equirectangular projection stretches the far south modestly (pinned cosine)
-    — accepted, consistent with the documented "not a true global projection"
-    limitation.
+  - **LatAm competitor airlines — DONE (follow-up).** `Airline.latamRoster` (11
+    real carriers: LATAM, Avianca, Aeroméxico, GOL, Azul, Copa, Volaris, Viva
+    Aerobus, Aerolíneas Argentinas, SKY, JetSMART) with researched per-type
+    eligibility (limited to in-game types) + real IATA codes (incl. digit codes
+    G3/Y4/H2). `pick(forType:originLatam:destLatam:)` is now **region-aware**:
+    an intra-US leg draws the US `roster`, an intra-LatAm leg the `latamRoster`,
+    a mixed/international leg either (`roster + latamRoster`); the old
+    `pick(forType:)` delegates to the US case (callers/tests unchanged).
+    `makeAircraft` classifies each leg via `Airline.latamAirportCodes` (the 45
+    codes). New alpha codes AD/VB/JA added to `realCodes` (majors AM/CM/LA/AV/AR
+    were already there). Verified 11/11 headless (region isolation both ways,
+    every type resolves in every region, spawned traffic carries LatAm carriers
+    with correct tail codes — Copa→CM). At the default CONUS view the player
+    still mostly sees US carriers (US airports on-screen); LatAm carriers appear
+    on southern routes when panning down.
+  - **Remaining scope note (deliberate)**: still no region-SELECTION and the
+    US↔international weighting is simple (US-major weights dominate the mixed
+    pool). The equirectangular projection stretches the far south modestly
+    (pinned cosine) — accepted, consistent with the "not a true global
+    projection" limitation.
 - **Pan/zoom camera + airport labels — ALSO PULLED FORWARD from Phase 4**
   (same session, designer focused on the map). The projection is now
   camera-based: everything lives in unit space and `Simulation` maps

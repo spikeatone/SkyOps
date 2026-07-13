@@ -52,11 +52,45 @@ struct Airline {
         .init(name: "Independent Operator", code: "", weight: 1, types: ["A319NEO","E190","E195","ERJ135","ERJ140"]),
     ]
 
-    /// Weighted pick among airlines that actually fly `typeId`. Every type in
-    /// AIRCRAFT_TYPES resolves to at least one eligible entry (the fallback
-    /// covers the orphans), so this never returns nil.
-    static func pick(forType typeId: String) -> Airline {
-        let eligible = roster.filter { $0.types.contains(typeId) }
+    /// Real Latin American carriers, painted on background traffic to/within
+    /// Mexico, Central America, and South America (added with the LatAm airport
+    /// expansion). Per-type eligibility is researched per carrier, limited to
+    /// the aircraft types in this game. Weights are relative within this pool
+    /// (roughly by fleet size); digit-bearing IATA codes (G3/Y4/H2) are real.
+    static let latamRoster: [Airline] = [
+        .init(name: "LATAM Airlines",        code: "LA", weight: 20, types: ["A319","A320","A321","A321NEO","B788","B789","B773"]),
+        .init(name: "Avianca",               code: "AV", weight: 9,  types: ["A319","A320","A321","A320NEO","A321NEO","B788"]),
+        .init(name: "Aeroméxico",            code: "AM", weight: 9,  types: ["B737800","MAX8","MAX9","B788","B789","E190"]),
+        .init(name: "GOL Linhas Aéreas",     code: "G3", weight: 9,  types: ["B737700","B737800","MAX8"]),
+        .init(name: "Azul",                  code: "AD", weight: 8,  types: ["A320NEO","A321NEO","E195","A339"]),
+        .init(name: "Copa Airlines",         code: "CM", weight: 7,  types: ["B737700","B737800","MAX8","MAX9"]),
+        .init(name: "Volaris",               code: "Y4", weight: 8,  types: ["A319","A320","A321","A320NEO","A321NEO"]),
+        .init(name: "Viva Aerobus",          code: "VB", weight: 5,  types: ["A320","A321","A320NEO","A321NEO"]),
+        .init(name: "Aerolíneas Argentinas", code: "AR", weight: 5,  types: ["B737700","B737800","MAX8","A339"]),
+        .init(name: "SKY Airline",           code: "H2", weight: 3,  types: ["A320NEO","A321NEO"]),
+        .init(name: "JetSMART",              code: "JA", weight: 3,  types: ["A320","A320NEO","A321NEO"]),
+    ]
+
+    /// The game's 45 Latin American airport codes — used to decide which roster
+    /// a background flight draws from (see the region-aware `pick`).
+    static let latamAirportCodes: Set<String> = [
+        "MEX","CUN","GDL","TIJ","MTY","SJD","PVR","NLU","MID","BJX","CUL","VER","HMO","OAX","MZT",
+        "PTY","SJO","SAL","GUA","LIR","SAP","MGA","BZE","XPL","RTB",
+        "BOG","GRU","SCL","LIM","CGH","AEP","GIG","VCP","MDE","BSB","EZE","UIO","SDU","CLO","CNF","CTG","POA","REC","SSA","GYE",
+    ]
+
+    /// Region-aware weighted pick among carriers that actually fly `typeId`. An
+    /// intra-US leg draws the US roster; an intra-LatAm leg the LatAm roster; a
+    /// mixed (international) leg either. Every type resolves (Independent
+    /// Operator fallback), so this never returns nil.
+    static func pick(forType typeId: String, originLatam: Bool, destLatam: Bool) -> Airline {
+        let pool: [Airline]
+        switch (originLatam, destLatam) {
+        case (false, false): pool = roster
+        case (true, true):   pool = latamRoster
+        default:             pool = roster + latamRoster
+        }
+        let eligible = pool.filter { $0.types.contains(typeId) }
         guard !eligible.isEmpty else { return fallback }
         var r = Int.random(in: 0..<max(1, eligible.reduce(0) { $0 + $1.weight }))
         for a in eligible {
@@ -64,6 +98,11 @@ struct Airline {
             if r < 0 { return a }
         }
         return eligible.last!
+    }
+
+    /// US-region convenience (unchanged behaviour for existing callers/tests).
+    static func pick(forType typeId: String) -> Airline {
+        pick(forType: typeId, originLatam: false, destLatam: false)
     }
 
     static let fallback = roster.last!   // Independent Operator
@@ -99,6 +138,9 @@ struct Airline {
         "DY": "Norwegian", "FI": "Icelandair", "LO": "LOT Polish Airlines", "OK": "Czech Airlines",
         "MS": "EgyptAir", "RJ": "Royal Jordanian", "GF": "Gulf Air", "WY": "Oman Air",
         "SV": "Saudia", "UL": "SriLankan Airlines", "PK": "Pakistan International", "UK": "Vistara",
+        // Latin American carriers (added with the LatAm airport expansion; the
+        // majors AM/CM/LA/AV/AR are already listed above)
+        "AD": "Azul", "VB": "Viva Aerobus", "JA": "JetSMART",
     ]
 
     /// A random 2-uppercase-letter code that isn't a real airline code — used
