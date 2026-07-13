@@ -925,6 +925,7 @@ final class Simulation {
         ac.currentLoadFactor = load
         ac.currentPax = pax
         ac.projectedRevenue = Int((Double(pax) * farePerSeat).rounded())
+        ac.holdBurn = 0   // fresh leg — no hold cost accrued yet
     }
 
     /// Real economics for a leg (projected while flying, settled at arrival).
@@ -933,8 +934,13 @@ final class Simulation {
     func legEconomics(for ac: Aircraft) -> LegEconomics {
         let landingFee = Int((ac.dest.landingFeePerKlb * (Double(ac.type.mlwLbs) / 1000)).rounded())
         let gateFee = Int(ac.type.bodyType.usesWidebodyGateFee ? ac.dest.gateFeeWidebody : ac.dest.gateFeeNarrowbody)
+        // Base stage-length operating cost + any accrued hold burn (a held
+        // flight keeps burning money at the gate — booked as cost, so revenue
+        // stays = pax × fare and never goes negative). Net is identical to the
+        // old "erode revenue" model, just correctly attributed.
         let opCost = Int((Double(ac.type.bodyType.operatingCostBlockMinutes)
                           * Double(ac.type.holdCostPerTick) * effectiveCostMultiplier).rounded())
+                     + ac.holdBurn
         // DISPLAY-ONLY: a smoothed lease-per-leg figure for the tooltip. Does
         // not affect net/settlement — real lease is billed monthly. Ported
         // from computeLegEconomics: blockMinutes × (monthlyLeaseCost / month).
@@ -1026,11 +1032,12 @@ final class Simulation {
             case nil:                  break
             }
             // A booked aircraft still burns money while stuck at the gate
-            // (AOG/crew) — erode the leg's revenue at its per-tick cost, scaled
-            // by the effective (hedge-aware) cost multiplier. One held number
-            // crosses profit → loss.
+            // (AOG/crew) — accrue that burn as OPERATING COST (not negative
+            // revenue), scaled by the effective (hedge-aware) cost multiplier.
+            // Net still crosses profit → loss the longer it's held, so the
+            // incentive to expedite is unchanged.
             if ac.holdReason == .aog || ac.holdReason == .crew {
-                ac.projectedRevenue -= Int((Double(ac.type.holdCostPerTick) * effectiveCostMultiplier).rounded())
+                ac.holdBurn += Int((Double(ac.type.holdCostPerTick) * effectiveCostMultiplier).rounded())
             }
         }
     }

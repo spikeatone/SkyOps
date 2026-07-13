@@ -88,8 +88,11 @@ final class Aircraft: Identifiable {
     var crewId: Int?
 
     // Economics (Phase 5). Revenue is rolled at SCHEDULING (leg start) and
-    // stored, so a hold can erode `projectedRevenue` before it settles.
+    // stored. A hold (AOG/crew) accrues `holdBurn` — the cost of sitting held —
+    // which is booked as OPERATING COST at settlement, NOT subtracted from
+    // revenue (ticket revenue is never negative). Reset each new leg.
     var projectedRevenue: Int = 0
+    var holdBurn: Int = 0
     var currentLoadFactor: Double = 0
     var currentPax: Int = 0
 
