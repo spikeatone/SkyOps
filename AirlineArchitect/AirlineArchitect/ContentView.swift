@@ -38,7 +38,7 @@ struct ContentView: View {
         .overlay {
             // First-launch: name the airline before anything else.
             if sim.playerAirlineName == nil {
-                AirlineNamingView { name in sim.nameAirline(name) }
+                AirlineNamingView { name, tailCode in sim.nameAirline(name, tailCode: tailCode) }
                     .transition(.opacity)
             }
         }

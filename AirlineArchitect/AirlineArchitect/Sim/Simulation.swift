@@ -232,9 +232,16 @@ final class Simulation {
     /// The player's airline name. nil until the first-launch naming screen is
     /// completed (which blocks the game until then). Defaults to "New Airline".
     private(set) var playerAirlineName: String?
-    func nameAirline(_ name: String) {
+    /// The 2-letter code stamped into every owned aircraft's tail (e.g. "ZQ" →
+    /// "N1ZQ"). Chosen on the naming screen; can't match a real airline code
+    /// (validated there). Defaults to a safe fictional code if left blank.
+    private(set) var playerTailCode = "ZQ"
+    func nameAirline(_ name: String, tailCode: String = "") {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         playerAirlineName = trimmed.isEmpty ? "New Airline" : trimmed
+        let code = tailCode.uppercased().filter { $0.isLetter }
+        // Ignore an invalid/blank/colliding code and keep the safe default.
+        if code.count == 2 && Airline.realCodes[code] == nil { playerTailCode = code }
     }
 
     private(set) var playerBalance = startingCapital
@@ -302,7 +309,7 @@ final class Simulation {
     /// route (a spare). Separate from makeAircraft (stress-test) by design.
     private func makePurchasedAircraft(_ type: AircraftType, startingCycles: Int = 0) -> Aircraft {
         let base = conusAirports.randomElement()!
-        let tail = "N\(nextTailNum)SK"
+        let tail = "N\(nextTailNum)\(playerTailCode)"
         nextTailNum += 1
         let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
                           stateIndex: FlightState.parked.rawValue,
@@ -521,7 +528,11 @@ final class Simulation {
     private func makeAircraft() -> Aircraft {
         let type = AircraftType.pickWeighted()
         let (origin, dest) = Airport.randomPair()
-        let tail = "N\(nextTailNum)SK"
+        let airline = Airline.pick(forType: type.id)   // a real competitor carrier
+        // Tail carries the carrier's real IATA code (Delta → "N123DL"); the
+        // generic fallback gets a random non-real code so they aren't uniform.
+        let code = airline.code.isEmpty ? Airline.randomTailCode() : airline.code
+        let tail = "N\(nextTailNum)\(code)"
         nextTailNum += 1
         let ac = Aircraft(tail: tail,
                           type: type,
@@ -529,7 +540,7 @@ final class Simulation {
                           dest: dest,
                           stateIndex: Int.random(in: 0..<FlightState.allCases.count),
                           cyclesAccrued: Int.random(in: 0..<Int(Double(type.expectedLifespanCycles) * 0.9)))
-        ac.airlineName = Airline.pick(forType: type.id)   // a real competitor carrier
+        ac.airlineName = airline.name
         rollRevenue(for: ac)   // seed this leg's revenue before its first arrival
         return ac
     }

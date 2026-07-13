@@ -11,16 +11,36 @@
 import SwiftUI
 
 struct AirlineNamingView: View {
-    /// Called with the entered name when the player launches their airline.
-    let onLaunch: (String) -> Void
+    /// Called with the entered airline name and 2-letter fleet tail code when
+    /// the player launches their airline.
+    let onLaunch: (String, String) -> Void
 
     @Environment(\.colorScheme) private var scheme
     @State private var name = ""
+    @State private var tailCode = ""
     @FocusState private var fieldFocused: Bool
+    @FocusState private var tailFocused: Bool
     /// Drives the blinking prompt cursor shown in the empty, unfocused field.
     @State private var cursorOn = true
 
     private var isDark: Bool { scheme == .dark }
+
+    // MARK: Tail-code validation
+    /// The typed code is invalid to launch with when it's a partial entry or
+    /// collides with a real airline. Blank is allowed (a safe default is used).
+    private var tailInvalid: Bool {
+        let c = tailCode.uppercased()
+        if c.isEmpty { return false }
+        if c.count != 2 { return true }
+        return Airline.realCodes[c] != nil
+    }
+    private var tailHint: String {
+        let c = tailCode.uppercased()
+        if let owner = Airline.realCodes[c] { return "\(c) belongs to \(owner) — choose another." }
+        if c.count == 1 { return "Enter two letters." }
+        return "Two letters, painted on every aircraft in your fleet. Can't match a real airline (UA, DL…)."
+    }
+    private var errorRed: Color { isDark ? hex(0xFF9292) : hex(0xD70000) }
 
     // Figma tokens
     private func hex(_ h: UInt) -> Color {
@@ -100,6 +120,43 @@ struct AirlineNamingView: View {
                 }
                 .frame(width: 360)
 
+                // Fleet tail code — 2 letters, uppercased, letters only. Live
+                // validation blocks real airline codes.
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("FLEET TAIL CODE")
+                        .font(.karla(12, .semibold))
+                        .foregroundStyle(labelColor)
+                    ZStack(alignment: .leading) {
+                        TextField("", text: $tailCode)
+                            .font(.karla(16))
+                            .foregroundStyle(hex(0x1E293B))
+                            .tint(hex(0x0EA5E9))
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .focused($tailFocused)
+                            .submitLabel(.go)
+                            .onSubmit(launch)
+                            .onChange(of: tailCode) { _, v in
+                                let cleaned = String(v.uppercased().filter { $0.isLetter }.prefix(2))
+                                if cleaned != tailCode { tailCode = cleaned }
+                            }
+                        if tailCode.isEmpty && !tailFocused {
+                            Text("e.g. ZQ").font(.karla(16)).foregroundStyle(hex(0x94A3B8))
+                        }
+                    }
+                    .frame(height: 56)
+                    .padding(.horizontal, 16)
+                    .background(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 4)
+                        .stroke(tailInvalid ? errorRed : hex(0xE2E8F0), lineWidth: 1))
+                    Text(tailHint)
+                        .font(.karla(12))
+                        .foregroundStyle(tailInvalid ? errorRed : subtitleColor.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(width: 360)
+
                 // Launch button.
                 Button(action: launch) {
                     Text("Launch Your Airline")
@@ -109,8 +166,10 @@ struct AirlineNamingView: View {
                         .padding(.horizontal, 24)
                         .background(buttonBG)
                         .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .opacity(tailInvalid ? 0.4 : 1)
                 }
                 .buttonStyle(.plain)
+                .disabled(tailInvalid)
 
                 Spacer()
             }
@@ -125,5 +184,8 @@ struct AirlineNamingView: View {
         }
     }
 
-    private func launch() { onLaunch(name) }
+    private func launch() {
+        guard !tailInvalid else { return }
+        onLaunch(name, tailCode)
+    }
 }

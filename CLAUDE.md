@@ -1516,6 +1516,31 @@ where numbers are involved.
   colours/sizes/spacing ported from the Figma tokens. The player's airline
   name renders (green) as the header of their OWN aircraft's tooltip
   (competitors already showed theirs).
+- **Player fleet TAIL CODE — DONE (native app), a second field on the naming
+  screen (designer request).** The player picks a 2-letter code stamped into
+  every owned aircraft's tail (e.g. code `ZQ` → tails `N1ZQ`, `N2ZQ`…),
+  replacing the old hardcoded `SK` suffix (note: `SK` was itself a real code
+  — SAS — so the old default would have failed today's validation). Stored in
+  `Simulation.playerTailCode` (default `"ZQ"` when blank), set by
+  `nameAirline(_:tailCode:)`. **Validation: the code can't collide with a real
+  airline's IATA designator** — `Airline.realCodes` (in Airline.swift) is a
+  `[code: name]` map of the roster's own carriers plus ~50 major world
+  airlines; the naming field live-validates (2 letters, uppercased, letters
+  only), shows the exact owner on a hit ("UA belongs to United Airlines —
+  choose another." in the readable `#FF9292`/`#D70000` red), red-borders the
+  field, and disables Launch. `nameAirline` also ignores an invalid code
+  server-side (keeps the default), so the sim can't be handed a colliding
+  code. As a bonus, **competitor (background) traffic now carries its real
+  IATA code in the tail too** — `Airline` gained a `code` field (AA/DL/WN/UA…),
+  `Airline.pick(forType:)` now returns the `Airline` struct (was a bare name
+  String — update this one caller signature if porting), and `makeAircraft`
+  builds the tail from `airline.code` (Delta → `N123DL`); the generic
+  "Independent Operator" fallback (empty code) gets `Airline.randomTailCode()`,
+  a random non-real 2-letter code, so background tails are varied rather than
+  all-`SK`. Verified: 12/12 headless (valid accept + uppercase, real-code
+  reject, blank default, player tail carries the code, background shows real
+  carrier codes) + Simulator screenshots of the new field and the UA error
+  state.
 - **Figma-to-code workflow that worked (for the next Figma screen):**
   `get_design_context` (official Figma MCP, loaded via ToolSearch) returned
   STRUCTURED React+Tailwind + a screenshot + a token list — NOT the
