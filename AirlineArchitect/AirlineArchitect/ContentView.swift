@@ -24,7 +24,7 @@ struct ContentView: View {
         Group {
             switch tab {
             case 0:  NetworkView(sim: sim)
-            case 1:  placeholder("Fleet", "airplane")
+            case 1:  FleetView(sim: sim)
             case 2:  placeholder("Crews", "person.2.fill")
             case 3:  placeholder("Ops", "list.clipboard.fill")
             default: placeholder("Finance", "chart.bar.fill")
