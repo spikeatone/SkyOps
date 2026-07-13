@@ -14,6 +14,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var sim = Simulation()
     @State private var tab = 0
+    @State private var showAlerts = false
 
     var body: some View {
         // Custom bottom nav (SkyTabBar) — the Figma tab bar (yellow-on-dark /
@@ -23,8 +24,8 @@ struct ContentView: View {
         // so the content lays out above it.
         Group {
             switch tab {
-            case 0:  NetworkView(sim: sim)
-            case 1:  FleetView(sim: sim, tab: $tab)
+            case 0:  NetworkView(sim: sim, onBell: { showAlerts = true })
+            case 1:  FleetView(sim: sim, tab: $tab, onBell: { showAlerts = true })
             case 2:  placeholder("Crews", "person.2.fill")
             case 3:  placeholder("Ops", "list.clipboard.fill")
             default: placeholder("Finance", "chart.bar.fill")
@@ -41,7 +42,24 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
+        // Alerts modal — the bell's target, over everything, on any tab.
+        .overlay {
+            if showAlerts {
+                ZStack(alignment: .top) {
+                    Color.black.opacity(0.4).ignoresSafeArea()
+                        .onTapGesture { showAlerts = false }
+                    ScrollView {
+                        AlertsModal(sim: sim, onClose: { showAlerts = false })
+                            .frame(maxWidth: 440)
+                            .padding(16)
+                    }
+                    .padding(.top, 44)
+                }
+                .transition(.opacity)
+            }
+        }
         .animation(.easeOut(duration: 0.25), value: sim.playerAirlineName)
+        .animation(.easeOut(duration: 0.2), value: showAlerts)
     }
 
     /// Fleet / Crews / Ops / Finance — the other four tabs are designed later.

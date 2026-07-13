@@ -36,6 +36,7 @@ enum Sky {
 
 struct NetworkView: View {
     let sim: Simulation
+    var onBell: () -> Void = {}
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
 
@@ -100,15 +101,7 @@ struct NetworkView: View {
                     Image(systemName: showOverlays ? "eye" : "eye.slash")
                         .font(.system(size: 18)).foregroundStyle(Sky.brightBlue)
                 }.buttonStyle(.plain)
-                Button { /* events feed — not built yet */ } label: {
-                    Image(systemName: "bell")
-                        .font(.system(size: 18)).foregroundStyle(Sky.brightBlue)
-                        .overlay(alignment: .topTrailing) {
-                            if !sim.decisionQueue.isEmpty {
-                                Circle().fill(Sky.red).frame(width: 8, height: 8).offset(x: 3, y: -2)
-                            }
-                        }
-                }.buttonStyle(.plain)
+                AlertBell(count: sim.decisionQueue.count, tint: Sky.brightBlue, action: onBell)
             }
         }
     }
@@ -165,13 +158,8 @@ struct NetworkView: View {
             if let ac = selected {
                 AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { selectedID = nil }
             }
-            ForEach(sim.decisionQueue) { decision in
-                switch decision.kind {
-                case .aog:  AOGCard(decision: decision, sim: sim)
-                case .crew: CrewCard(decision: decision, sim: sim)
-                case .sell: SellCard(decision: decision, sim: sim)
-                }
-            }
+            // Alerts (AOG / crew / sell) now live in the bell's Alerts modal
+            // (any tab), not as always-on map cards — see AlertsModal.
         }
     }
 

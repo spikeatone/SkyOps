@@ -17,6 +17,7 @@ struct FleetDetailView: View {
     let onBack: () -> Void
     let onAssignRoute: () -> Void
     let onSold: () -> Void
+    var onBell: () -> Void = {}
 
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
@@ -77,7 +78,7 @@ struct FleetDetailView: View {
                 }.buttonStyle(.plain)
                 Text("AIRCRAFT DETAIL").font(.karla(22, .bold)).foregroundStyle(titleColor)
                 Spacer()
-                Image(systemName: "bell").font(.system(size: 18)).foregroundStyle(titleColor)
+                AlertBell(count: sim.decisionQueue.count, tint: titleColor, action: onBell)
             }
         }
     }

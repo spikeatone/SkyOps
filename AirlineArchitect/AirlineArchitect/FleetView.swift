@@ -17,6 +17,7 @@ import SwiftUI
 struct FleetView: View {
     let sim: Simulation
     @Binding var tab: Int
+    var onBell: () -> Void = {}
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
 
@@ -60,7 +61,8 @@ struct FleetView: View {
                 FleetDetailView(sim: sim, aircraft: ac,
                                 onBack: { detailID = nil },
                                 onAssignRoute: { detailID = nil; tab = 0 },
-                                onSold: { detailID = nil })
+                                onSold: { detailID = nil },
+                                onBell: onBell)
             } else {
                 VStack(spacing: 16) {
                     header
@@ -93,13 +95,7 @@ struct FleetView: View {
                 Text(segment == .myFleet ? "FLEET HOME" : "MARKETPLACE")
                     .font(.karla(22, .bold)).foregroundStyle(titleColor)
                 Spacer()
-                Image(systemName: "bell")
-                    .font(.system(size: 18)).foregroundStyle(titleColor)
-                    .overlay(alignment: .topTrailing) {
-                        if !sim.decisionQueue.isEmpty {
-                            Circle().fill(Sky.red).frame(width: 8, height: 8).offset(x: 3, y: -2)
-                        }
-                    }
+                AlertBell(count: sim.decisionQueue.count, tint: titleColor, action: onBell)
             }
         }
     }
