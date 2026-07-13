@@ -1849,6 +1849,43 @@ where numbers are involved.
     the route-log strings use `↔\u{FE0E}` (text variation selector) to force
     text presentation. Watch for this with any bare arrow/symbol char in a
     string (elsewhere the app uses `Image(systemName: "arrow.right")` instead).
+- **FINANCE tab — DONE, and the FIRST screen with NO Figma mockup (designer
+  said to build critical info from the app's own design language).**
+  `FinanceView.swift`, wired into the Finance tab. Four cards + a conditional
+  market banner, all theme-aware (Sky tokens / light, same card+header pattern
+  as Crews/Ops), reds per the app rule (`#FF9292` dark / `#D70000` light):
+  - **NET WORTH hero** = cash on hand + fleet market value, with a "$X since
+    launch" delta vs `startingCapital`.
+  - **FLIGHT OPERATIONS** stacked ledger (revenue − fees − op-cost = operating
+    profit/loss) + flights-flown and avg net/flight.
+  - **OVERHEAD & CAPITAL** itemized: lease / insurance / maintenance+crew, then
+    acquisition / route openings / fuel hedges (out), then sales / slot
+    buybacks (in).
+  - **CASH FLOW** reconciliation: starting capital → +operating → −overhead →
+    −capital-out → +capital-in = **cash on hand**, and it ties EXACTLY (verified
+    on-screen: $20.0M − $1,082,607 − $208,904 − $17,285,840 = $1,422,649 = header).
+  - **Market banner** when an economic event is active — shows the event and its
+    fare/cost/demand % deltas (amber if harmful, green if favourable).
+  - **New reconciling accumulators on Simulation** (so the Cash Flow card can't
+    quietly disagree with cash): `totalAcquisitionSpend` (buy+used+lease-upfront),
+    `totalRouteSpend`, `totalHedgeSpend`, `totalSaleProceeds`, `totalOfferIncome`
+    — added at every cash-move site. INVARIANT (keep it if you add a new cash
+    flow): startingCapital + totalRevenue − totalFees − totalOperatingCost −
+    totalLeaseCost − totalInsuranceSpent − maintenanceSpend − totalAcquisitionSpend
+    − totalRouteSpend − totalHedgeSpend + totalSaleProceeds + totalOfferIncome ==
+    playerBalance. Verified 9/9 headless across buy/lease/used/route/hedge/sell +
+    40k ticks.
+  - **A real modeling fix caught in the first screenshot: leased aircraft were
+    inflating net worth.** `fleetMarketValue` originally summed sellValue over
+    ALL `purchased` aircraft — but a LEASED aircraft isn't a sellable asset (15%
+    down + ongoing monthly obligation, you don't own it). Fixed to
+    `purchased && !isLeased`; added `ownedOutrightCount`/`leasedCount`, and the
+    hero footnote now reads "resale value of N aircraft owned outright (M leased,
+    not counted)". A $34M fleet-value for 2 aircraft that cost $17M total (one
+    leased) was the tell.
+  - Verified live in the Simulator (dark + light) with a seeded fleet; a random
+    run rolled an Oil Price Spike, correctly showing the market banner + an
+    operating LOSS + net worth down — the real emergent economy, not a happy path.
 - **External-events system — the designer specced 16 events; being built in
   PHASES.** The full list (designer, verbatim intent): Market/economic (mutually
   exclusive) — Oil Spike, Fuel Drop, Boom, Recession, **FFR Redemption Surge**

@@ -28,7 +28,7 @@ struct ContentView: View {
             case 1:  FleetView(sim: sim, tab: $tab, onBell: { showAlerts = true })
             case 2:  CrewsView(sim: sim, onBell: { showAlerts = true })
             case 3:  OpsView(sim: sim, onBell: { showAlerts = true })
-            default: placeholder("Finance", "chart.bar.fill")
+            default: FinanceView(sim: sim, onBell: { showAlerts = true })
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

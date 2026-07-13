@@ -262,6 +262,15 @@ final class Simulation {
     }
 
     var ownedCount: Int { aircraft.lazy.filter { $0.purchased }.count }
+    /// Aircraft owned OUTRIGHT (bought, not leased) — the ones that are real,
+    /// sellable assets. A leased aircraft isn't yours to sell, so it isn't a
+    /// balance-sheet asset (its lease is an ongoing expense, not equity).
+    var ownedOutrightCount: Int { aircraft.lazy.filter { $0.purchased && !$0.isLeased }.count }
+    var leasedCount: Int { aircraft.lazy.filter { $0.purchased && $0.isLeased }.count }
+    /// Current resale value of owned-outright aircraft (each at its depreciated
+    /// sell value) — the "assets" side of the Finance net-worth view. Leased
+    /// aircraft are deliberately excluded (see ownedOutrightCount).
+    var fleetMarketValue: Int { aircraft.lazy.filter { $0.purchased && !$0.isLeased }.reduce(0) { $0 + sellValue(of: $1) } }
     var stressTestCount: Int { aircraft.lazy.filter { !$0.purchased }.count }
     /// Purchased aircraft with no route yet — available to assign to a new one.
     var idleSpares: [Aircraft] { aircraft.filter { $0.isIdleSpare } }
@@ -324,6 +333,7 @@ final class Simulation {
     func buyAircraft(_ type: AircraftType) -> Aircraft? {
         guard playerBalance >= type.purchasePrice else { return nil }
         playerBalance -= type.purchasePrice
+        totalAcquisitionSpend += type.purchasePrice
         let ac = makePurchasedAircraft(type)
         aircraft.append(ac)
         grantBundledCrew(type.family)   // 1 crew bundled; the player hires more
@@ -354,6 +364,7 @@ final class Simulation {
         let upfront = leaseUpfront(type)
         guard playerBalance >= upfront else { return nil }
         playerBalance -= upfront
+        totalAcquisitionSpend += upfront
         let ac = makePurchasedAircraft(type)
         ac.isLeased = true
         ac.nextLeaseBillTick = tick + Simulation.ticksPerMonth  // first bill in one sim-month
@@ -416,6 +427,7 @@ final class Simulation {
         guard playerBalance >= cost else { return .insufficientFunds(cost) }
 
         playerBalance -= cost
+        totalRouteSpend += cost
         if origin.slotsAvailable > 0 { origin.slotsAvailable -= 1 }
         if dest.slotsAvailable > 0 { dest.slotsAvailable -= 1 }
 
@@ -513,6 +525,7 @@ final class Simulation {
               let idx = listings.firstIndex(where: { $0.id == listing.id }),
               playerBalance >= listing.price else { return nil }
         playerBalance -= listing.price
+        totalAcquisitionSpend += listing.price
         let ac = makePurchasedAircraft(type, startingCycles: listing.cyclesAccrued)
         aircraft.append(ac)
         grantBundledCrew(type.family)   // 1 crew bundled; the player hires more
@@ -1035,6 +1048,7 @@ final class Simulation {
         guard let offer = decision.offer,
               let idx = playerRoutes.firstIndex(where: { $0.id == offer.routeId }) else { return }
         playerBalance += offer.amount
+        totalOfferIncome += offer.amount
         let r = playerRoutes.remove(at: idx)
         r.closedTick = tick
         closedPlayerRoutes.append(r)
@@ -1139,6 +1153,7 @@ final class Simulation {
         let premium = fuelHedgePremium(days: days)
         guard playerBalance >= premium else { return .insufficientFunds(premium) }
         playerBalance -= premium
+        totalHedgeSpend += premium
         fuelHedgeExpiryTick = tick + days * 1440
         return .success
     }
@@ -1150,6 +1165,17 @@ final class Simulation {
     private(set) var totalFees = 0
     private(set) var totalOperatingCost = 0
     var netRevenue: Int { totalRevenue - totalFees - totalOperatingCost }
+
+    // Capital-account totals (for the Finance tab). Together with the operating
+    // totals above, the recurring totals (lease/insurance/maintenance), and
+    // startingCapital, these RECONCILE exactly to playerBalance — every place
+    // that moves cash also books into one of these. Keep that invariant if you
+    // add a new cash flow.
+    private(set) var totalAcquisitionSpend = 0   // buy + used-buy + lease upfront
+    private(set) var totalRouteSpend = 0         // route opening costs
+    private(set) var totalHedgeSpend = 0         // fuel-hedge premiums
+    private(set) var totalSaleProceeds = 0       // aircraft sales
+    private(set) var totalOfferIncome = 0        // slot-buyback offers accepted
 
     /// Roll a leg's revenue at scheduling time — pax-first so displayed pax and
     /// revenue always agree. Ported from rollRevenue(). Stored on the aircraft.
@@ -1225,7 +1251,9 @@ final class Simulation {
     /// its depreciated value, release its crew, archive its route, remove it,
     /// and clear any pending decision cards for it.
     func sellAircraft(_ ac: Aircraft) {
-        playerBalance += sellValue(of: ac)
+        let proceeds = sellValue(of: ac)
+        playerBalance += proceeds
+        totalSaleProceeds += proceeds
         // Release the sold aircraft's crew back to the pool (it isn't sold with
         // the aircraft) before the cleanup pass.
         if let cid = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == cid }) {
