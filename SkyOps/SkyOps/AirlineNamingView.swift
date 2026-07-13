@@ -18,6 +18,8 @@ struct AirlineNamingView: View {
     @Environment(\.colorScheme) private var scheme
     @State private var name = ""
     @FocusState private var fieldFocused: Bool
+    /// Drives the blinking prompt cursor shown in the empty, unfocused field.
+    @State private var cursorOn = true
 
     private var isDark: Bool { scheme == .dark }
 
@@ -55,33 +57,41 @@ struct AirlineNamingView: View {
                 // Welcome copy.
                 VStack(spacing: 4) {
                     Text("Welcome, COO!")
-                        .font(.system(size: 24, weight: .bold))
+                        .font(.system(size: 28, weight: .bold))
                         .foregroundStyle(welcomeColor)
                     Text("The sky is the limit.\nWhat shall we call your global airline empire?")
-                        .font(.system(size: 16))
+                        .font(.system(size: 18))
                         .foregroundStyle(subtitleColor)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
-                        .frame(width: 360)
+                        .frame(width: 386)
                 }
 
-                // Airline name field.
+                // Airline name field — no placeholder (self-explanatory); a
+                // blinking cyan cursor prompts typing before the field is tapped.
                 VStack(alignment: .leading, spacing: 8) {
                     Text("AIRLINE NAME")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(labelColor)
-                    TextField("", text: $name, prompt: Text("SkyOps Air").foregroundColor(hex(0x64748B)))
-                        .font(.system(size: 16))
-                        .foregroundStyle(hex(0x1E293B))
-                        .tint(hex(0x0EA5E9))          // cyan caret, matching the design
-                        .focused($fieldFocused)
-                        .submitLabel(.go)
-                        .onSubmit(launch)
-                        .frame(height: 56)
-                        .padding(.horizontal, 16)
-                        .background(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(hex(0xE2E8F0), lineWidth: 1))
+                    ZStack(alignment: .leading) {
+                        TextField("", text: $name)
+                            .font(.system(size: 16))
+                            .foregroundStyle(hex(0x1E293B))
+                            .tint(hex(0x0EA5E9))          // cyan caret once focused
+                            .focused($fieldFocused)
+                            .submitLabel(.go)
+                            .onSubmit(launch)
+                        if name.isEmpty && !fieldFocused {
+                            Rectangle().fill(hex(0x0EA5E9))
+                                .frame(width: 2, height: 24)
+                                .opacity(cursorOn ? 1 : 0)
+                        }
+                    }
+                    .frame(height: 56)
+                    .padding(.horizontal, 16)
+                    .background(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(hex(0xE2E8F0), lineWidth: 1))
                 }
                 .frame(width: 360)
 
@@ -101,7 +111,13 @@ struct AirlineNamingView: View {
             }
             .padding(.top, 8)
         }
-        .onAppear { fieldFocused = true }
+        .onAppear {
+            // Blink the prompt cursor; don't auto-focus (keeps the keyboard
+            // down until the player taps, matching the design).
+            withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) {
+                cursorOn = false
+            }
+        }
     }
 
     private func launch() { onLaunch(name) }
