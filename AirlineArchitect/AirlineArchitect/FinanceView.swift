@@ -37,7 +37,11 @@ struct FinanceView: View {
     private var secondary: Color  { isDark ? Sky.lightBlue.opacity(0.75) : Color(skyHex: 0x64748B) }
     private let green = Sky.coreGreen
     private var red: Color        { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
-    private var trackBG: Color    { isDark ? Sky.darkBG : Color(skyHex: 0xEDEFF2) }
+    // Period selector (Figma Bar Nav — dark 5:6947 / light 5:6932).
+    private var segTrack: Color        { isDark ? Color(skyHex: 0x1F232D) : Color(skyHex: 0xE6E6E6) }
+    private var segActivePill: Color   { isDark ? Color(skyHex: 0x2B303D) : .white }
+    private var segActiveText: Color   { isDark ? Color(skyHex: 0xBDE0FF) : Color(skyHex: 0x64748B) }
+    private var segInactiveText: Color { isDark ? Color(skyHex: 0xC9C9C9) : Color(skyHex: 0x64748B) }
 
     // MARK: Point-in-time figures (always current, independent of period)
     private var cash: Int { sim.playerBalance }
@@ -98,26 +102,26 @@ struct FinanceView: View {
         }
     }
 
-    // MARK: Period selector (segmented pill)
+    // MARK: Period selector (segmented pill — Figma Bar Nav 5:6947 / 5:6932)
     private var periodSelector: some View {
         HStack(spacing: 4) {
             ForEach(Period.allCases, id: \.self) { p in
                 let on = period == p
                 Button { period = p } label: {
                     Text(p.rawValue)
-                        .font(.karla(13, on ? .bold : .regular))
-                        .foregroundStyle(on ? (isDark ? Sky.navBarDark : .white) : primary)
+                        .font(.karla(14, .semibold))
+                        .foregroundStyle(on ? segActiveText : segInactiveText)
+                        .lineLimit(1).minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 32)
-                        .background(on ? titleColor : .clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .frame(height: 28)
+                        .background(on ? segActivePill : .clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
                 }.buttonStyle(.plain)
             }
         }
-        .padding(3)
-        .background(trackBG)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(cardBorder, lineWidth: 1))
+        .padding(4)
+        .background(segTrack)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
     // MARK: Plan card (free-tier usage vs caps + upgrade, or Pro confirmation)
