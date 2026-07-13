@@ -196,7 +196,17 @@ as the work, not "later."
       · 777-300" tooltip). NOTE: Southwest under-represented overall (~6%
       vs 18%) because airline is picked AFTER type and Southwest is
       737-only — a faithful artifact of the prototype's type-first model.
-- [ ] Player airline NAMING (the other identity half — first-launch modal).
+- [x] Player airline NAMING — first Figma-built screen. First-launch modal
+      (blocks the game until named; blank → "SkyOps Air"), built to the
+      designer's Figma (SkyOps-Production 1:2 light / 1:456 dark),
+      theme-aware, colours/spacing ported from the Figma tokens. The
+      SkyOps winged logo renders NATIVELY from the Figma SVG (7 paths, via
+      the existing SVGPath parser) — no bundled raster. playerAirlineName
+      shows (green) as the header of the player's own aircraft tooltip.
+      Verified in-sim (light + dark match Figma; launch → game, blank
+      defaults). FONT NOTE: design uses Karla + Geist (not on iOS),
+      approximated with the system font at matching weights — bundle the
+      real families for pixel-exact type if wanted.
 - [ ] ROUTES panel (list/detail P&L view) — data model is ready
       (Route.cumulativeNet / flights / openingCost).
 

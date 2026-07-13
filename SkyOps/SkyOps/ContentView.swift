@@ -91,6 +91,15 @@ struct ContentView: View {
             .padding(.bottom, 24)
         }
         .task { await sim.run() }
+        .overlay {
+            // First-launch: name the airline before anything else. Blocks the
+            // game (which idles behind it — no owned aircraft exist yet).
+            if sim.playerAirlineName == nil {
+                AirlineNamingView { name in sim.nameAirline(name) }
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.25), value: sim.playerAirlineName)
     }
 
     // MARK: - Route-opening flow
@@ -554,12 +563,16 @@ struct AircraftTooltip: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            // Competitor traffic shows the operating airline; the player's own
-            // fleet doesn't need a name here.
+            // Header airline name: the competitor's for background traffic,
+            // the player's own airline (green) for owned aircraft.
             if let airline = aircraft.airlineName {
                 Text(airline.uppercased())
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .foregroundStyle(othersColor)
+            } else if let mine = sim.playerAirlineName {
+                Text(mine.uppercased())
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(climbColor)
             }
             HStack {
                 Text(aircraft.isIdleSpare ? "SPARE · at \(aircraft.origin.code)"

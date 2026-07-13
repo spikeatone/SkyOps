@@ -198,6 +198,14 @@ final class Simulation {
 
     static let startingCapital = 20_000_000
 
+    /// The player's airline name. nil until the first-launch naming screen is
+    /// completed (which blocks the game until then). Defaults to "SkyOps Air".
+    private(set) var playerAirlineName: String?
+    func nameAirline(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        playerAirlineName = trimmed.isEmpty ? "SkyOps Air" : trimmed
+    }
+
     private(set) var playerBalance = startingCapital
     private(set) var playerRoutes: [Route] = []
     private var nextRouteId = 1

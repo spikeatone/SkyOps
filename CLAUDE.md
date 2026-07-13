@@ -1395,10 +1395,34 @@ where numbers are involved.
   (weighted by fleet size) and Southwest flies only 737-700/800/MAX8 — the
   prototype's type-first model has the same characteristic; the Big Four
   ordering (AA/DL/UA on top) and per-type correctness are right.
+- **Player airline naming — DONE, and the FIRST Figma-built screen.**
+  First-launch modal (`AirlineNamingView`, overlaid in ContentView while
+  `sim.playerAirlineName == nil`; blank submits as "SkyOps Air"). Built to
+  the designer's real Figma (file `wRMkEaLt6bJdZoHsOz9JWH`, node 1:2 light
+  / 1:456 dark), theme-aware via `@Environment(\.colorScheme)`, all
+  colours/sizes/spacing ported from the Figma tokens. The player's airline
+  name renders (green) as the header of their OWN aircraft's tooltip
+  (competitors already showed theirs).
+- **Figma-to-code workflow that worked (for the next Figma screen):**
+  `get_design_context` (official Figma MCP, loaded via ToolSearch) returned
+  STRUCTURED React+Tailwind + a screenshot + a token list — NOT the
+  raster the old CLAUDE.md note feared for full-screen mockups. So the
+  caveat did NOT bite here; design-to-code gave real structure. Adapt the
+  React/Tailwind to SwiftUI by hand (colours as hex, Tailwind sizes →
+  points 1:1). The SkyOps LOGO came back as an SVG asset (7 solid-fill
+  paths) — rendered NATIVELY via the existing `SVGPath.parse` into a
+  `Canvas` (`SkyOpsLogo.swift`), no bundled raster and it scales crisply.
+  Downloaded from the `figma.com/api/mcp/asset/...` URLs (valid ~7 days).
+- **Font substitution debt (Figma type fidelity):** the designs use
+  **Karla** (Light/Regular/Medium/SemiBold/Bold) and **Geist Regular** —
+  neither ships on iOS. Currently approximated with the system font at the
+  same weights/sizes. For pixel-exact type, download the OFL families and
+  bundle them (add to the app folder + register in Info.plist `UIAppFonts`).
+  This will apply to EVERY future Figma screen — decide the bundling
+  approach once, early.
 - **Still additive in Phase 5** (core loop doesn't need them): leasing +
-  used-aircraft market, player airline NAMING (first-launch modal — the
-  other half of identity), and the ROUTES list/detail P&L panel (the
-  `Route` model already carries cumulativeNet / flights / openingCost).
+  used-aircraft market, and the ROUTES list/detail P&L panel (the `Route`
+  model already carries cumulativeNet / flights / openingCost).
 
 ## Open / not yet decided
 
