@@ -362,12 +362,16 @@ struct FleetView: View {
             }
             Spacer(minLength: 8)
             Button(action: action) {
+                // Affordable → the Figma colours (BUY #10B981 / LEASE #4B4B4B);
+                // unaffordable → a neutral grey so it reads as disabled rather
+                // than a washed-out faded green.
+                let bg: Color = !afford ? Color(skyHex: 0xC9C9C9)
+                    : (kind == .buy ? Sky.coreGreen : Color(skyHex: 0x4B4B4B))
                 Text(kind == .buy ? "BUY" : "LEASE")
                     .font(.karla(12, .bold)).foregroundStyle(.white)
                     .frame(height: 24).padding(.horizontal, 8)
-                    .background(kind == .buy ? Sky.coreGreen : Color(skyHex: 0x4B4B4B))
+                    .background(bg)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .opacity(afford ? 1 : 0.4)
             }.buttonStyle(.plain).disabled(!afford)
         }
     }
