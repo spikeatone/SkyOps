@@ -123,8 +123,8 @@ one contradicts the design thesis.)
   not a count change: the `B747` entry was re-modelled from Boeing 747-8 →
   **Boeing 747-400** (the -8 passenger variant was essentially freighter-only;
   the -400 is the passenger 747 airlines actually flew) — seats 416, MLW
-  652,700 lb, range 7,260 NM updated; its cost/price/lifespan still carry the
-  -8 figures pending a realism pass. Family
+  652,700 lb, range 7,260 NM updated; its cost/price/lifespan now carry real -400-profile values (lifespan 20k =
+  Boeing DSG; cheaper price, higher op cost for an aging jumbo). Family
   count grew from 13 to 15 with the two new widebody families (`A330`,
   `A350`). `CRJ_FAMILY` stays real (CRJ900/1000 remain). See the "stale
   comment" note near the end of this section for a real gotcha this kind

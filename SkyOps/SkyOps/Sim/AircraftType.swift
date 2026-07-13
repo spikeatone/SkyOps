@@ -120,9 +120,12 @@ struct AircraftType: Identifiable {
         .init(id: "A359",    name: "Airbus A350-900",      seats: 306, family: "A350", bodyType: .widebody2Engine, weight: 8,  mlwLbs: 456357, costPerHour: 13500, purchasePrice: 300_000_000, expectedLifespanCycles: 44000),
         // Four-engine widebodies — each its own crew family
         // 747-400 (not the -8: the -8 passenger variant never really sold — it
-        // was essentially freighter-only). Seats/MLW/range are real 747-400
-        // figures; cost/price/lifespan kept from the -8 for now (see note).
-        .init(id: "B747",    name: "Boeing 747-400",  seats: 416, family: "B747", bodyType: .widebody4Engine, weight: 6, mlwLbs: 652700,  costPerHour: 25000, purchasePrice: 322_000_000, expectedLifespanCycles: 35000),
+        // was essentially freighter-only). Real 747-400 profile: an aging,
+        // out-of-production jumbo — CHEAP to buy but expensive to run and
+        // aging out. lifespan 20,000 = real Boeing 747-400 Design Service Goal;
+        // costPerHour/purchasePrice are representative for a retiring jumbo
+        // (higher op cost than the more-efficient -8; much lower price).
+        .init(id: "B747",    name: "Boeing 747-400",  seats: 416, family: "B747", bodyType: .widebody4Engine, weight: 6, mlwLbs: 652700,  costPerHour: 26000, purchasePrice: 130_000_000, expectedLifespanCycles: 20000),
         .init(id: "A380",    name: "Airbus A380",   seats: 555, family: "A380", bodyType: .widebody4Engine, weight: 2, mlwLbs: 1133000, costPerHour: 28000, purchasePrice: 342_000_000, expectedLifespanCycles: 19000),
         .init(id: "A340",    name: "Airbus A340-300", seats: 295, family: "A340", bodyType: .widebody4Engine, weight: 1, mlwLbs: 380000, costPerHour: 18000, purchasePrice: 183_000_000, expectedLifespanCycles: 20000),
         // Regional jets — real type-rating splits (E170/E175 vs E190/E195)
