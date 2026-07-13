@@ -766,17 +766,18 @@ final class Simulation {
         maintenanceSpend += amount
     }
 
-    /// AOG card option 1: pay to have the aircraft ready now.
+    /// AOG card option 1: pay to have the aircraft ready now. Cost is scaled by
+    /// any active #12 maintenance-cost inflation (repair costs only).
     func resolveAOGExpedite(_ decision: Decision) {
-        chargeDecisionCost(15_000)
+        chargeDecisionCost(Int((15_000 * maintCostMultiplier).rounded()))
         decision.aircraft?.maint = false
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
     /// AOG card option 2: cheaper repair on a ~3 sim-hour timer; the aircraft
-    /// stays held until it completes.
+    /// stays held until it completes. Cost scaled by #12 maintenance inflation.
     func resolveAOGStandard(_ decision: Decision) {
-        chargeDecisionCost(3_000)
+        chargeDecisionCost(Int((3_000 * maintCostMultiplier).rounded()))
         decision.aircraft?.aogAutoClearTick = tick + 180
         decisionQueue.removeAll { $0.id == decision.id }
     }
@@ -876,8 +877,37 @@ final class Simulation {
     /// boundaries only, so it's safe to expire inside the daily tickWorldEvents.
     private(set) var laborActionExpiryByFamily: [String: Int] = [:]
 
+    // MARK: Phase-4 cost/revenue events (all passive multipliers/bills).
+    // #11 Insurance — a recurring MONTHLY bill vs current fleet value, with an
+    // occasional "hard market" period that raises the premium.
+    static let insuranceRateMonthly = 0.0008    // 0.08%/mo of fleet value (designed)
+    static let insuranceHardMarketMultiplier = 1.8
+    private var nextInsuranceBillTick = Simulation.ticksPerMonth
+    private var insuranceHardMarketExpiryTick = 0
+    private(set) var totalInsuranceSpent = 0
+    var insuranceHardMarketActive: Bool { tick < insuranceHardMarketExpiryTick }
+    // #12 Maintenance cost inflation — spikes AOG REPAIR cost only (not fuel).
+    static let maintInflationMultiplier = 1.6
+    private var maintInflationExpiryTick = 0
+    var maintCostMultiplier: Double { tick < maintInflationExpiryTick ? Simulation.maintInflationMultiplier : 1 }
+    // #13 FX shock — widebody fare only (honest adaptation: no real intl routes).
+    static let fxFareMultiplier = 0.85
+    private var fxShockExpiryTick = 0
+    var fxShockActive: Bool { tick < fxShockExpiryTick }
+    // #14 Competitor fare war — depresses ONE existing player route's fare.
+    static let fareWarMultiplier = 0.75
+    private(set) var fareWarRouteId: Int?
+    private var fareWarExpiryTick = 0
+    private static let insuranceHardMarketDailyProbability = 0.02
+    private static let maintInflationDailyProbability = 0.025
+    private static let fxShockDailyProbability = 0.02
+    private static let fareWarDailyProbability = 0.03
+
     private func tickWorldEvents() {
         guard tick % 1440 == 0 else { return }   // once per sim-day
+
+        // Clear an expired fare war so a new one can start.
+        if fareWarRouteId != nil, tick >= fareWarExpiryTick { fareWarRouteId = nil }
 
         // Expire any finished labor action FIRST (return the sidelined crew).
         for (fam, expiry) in laborActionExpiryByFamily where tick >= expiry {
@@ -943,6 +973,47 @@ final class Simulation {
             decisionQueue.append(Decision(id: "offer_\(r.id)_\(tick)", kind: .offer, aircraft: nil,
                 offer: SlotOffer(routeId: r.id, originCode: r.originCode, destCode: r.destCode, amount: amount)))
         }
+
+        // #11 Insurance hard market — a temporary spike in the recurring premium.
+        if !insuranceHardMarketActive, Double.random(in: 0..<1) < Simulation.insuranceHardMarketDailyProbability {
+            insuranceHardMarketExpiryTick = tick + (15 + Int.random(in: 0...20)) * 1440
+            logOps(.market, "Insurance hard market", "Premiums up \(Int((Simulation.insuranceHardMarketMultiplier - 1) * 100))%")
+        }
+        // #12 Maintenance cost inflation — parts/MRO spike (AOG repair cost only).
+        if tick >= maintInflationExpiryTick, Double.random(in: 0..<1) < Simulation.maintInflationDailyProbability {
+            maintInflationExpiryTick = tick + (5 + Int.random(in: 0...8)) * 1440
+            logOps(.market, "Maintenance cost inflation", "Repair costs +\(Int((Simulation.maintInflationMultiplier - 1) * 100))%")
+        }
+        // #13 FX shock — widebody fares only (needs at least one owned widebody).
+        if !fxShockActive, Double.random(in: 0..<1) < Simulation.fxShockDailyProbability,
+           aircraft.contains(where: { $0.purchased && $0.type.bodyType.usesWidebodyGateFee }) {
+            fxShockExpiryTick = tick + (5 + Int.random(in: 0...10)) * 1440
+            logOps(.market, "FX shock", "Widebody fares −\(Int((1 - Simulation.fxFareMultiplier) * 100))%")
+        }
+        // #14 Competitor fare war — depresses ONE existing player route's fare.
+        if fareWarRouteId == nil, Double.random(in: 0..<1) < Simulation.fareWarDailyProbability,
+           let r = playerRoutes.randomElement() {
+            fareWarRouteId = r.id
+            fareWarExpiryTick = tick + (4 + Int.random(in: 0...8)) * 1440
+            let comp = ["American Airlines", "Delta Air Lines", "Southwest Airlines", "United Airlines"].randomElement()!
+            logOps(.market, "Fare war", "\(comp) dumps capacity \(r.originCode)-\(r.destCode)")
+        }
+    }
+
+    /// #11 Insurance — bill the recurring MONTHLY premium (current fleet value ×
+    /// rate, × the hard-market multiplier when active). Silent routine cost
+    /// (tracked in totalInsuranceSpent for the Finance tab); the hard-market
+    /// ONSET is what surfaces in the Ops feed.
+    private func tickInsuranceBilling() {
+        guard tick >= nextInsuranceBillTick else { return }
+        nextInsuranceBillTick += Simulation.ticksPerMonth
+        let owned = aircraft.filter { $0.purchased }
+        guard !owned.isEmpty else { return }
+        let fleetValue = owned.reduce(0) { $0 + sellValue(of: $1) }
+        let mult = insuranceHardMarketActive ? Simulation.insuranceHardMarketMultiplier : 1
+        let bill = Int((Double(fleetValue) * Simulation.insuranceRateMonthly * mult).rounded())
+        playerBalance -= bill
+        totalInsuranceSpent += bill
     }
 
     /// OFFER card: accept the slot buyback — credit the cash and close the route
@@ -1073,7 +1144,12 @@ final class Simulation {
     /// revenue always agree. Ported from rollRevenue(). Stored on the aircraft.
     private func rollRevenue(for ac: Aircraft) {
         let avgFare = ac.type.bodyType.avgFarePerSeat
-        let farePerSeat = avgFare * currentEvent.fareMultiplier * (0.9 + Double.random(in: 0..<0.2))  // ±10%
+        // Event fare modifiers: #13 FX shock (widebody only) and #14 fare war
+        // (this specific route only) stack on top of the economic condition.
+        var fareMult = currentEvent.fareMultiplier
+        if fxShockActive, ac.type.bodyType.usesWidebodyGateFee { fareMult *= Simulation.fxFareMultiplier }
+        if let fw = fareWarRouteId, ac.assignedRouteId == fw, tick < fareWarExpiryTick { fareMult *= Simulation.fareWarMultiplier }
+        let farePerSeat = avgFare * fareMult * (0.9 + Double.random(in: 0..<0.2))  // ±10%
         let load = min(1, baseLoadFactor * currentEvent.loadMultiplier * (0.95 + Double.random(in: 0..<0.1)))  // ±5%, capped
         let pax = Int((Double(ac.type.seats) * load).rounded())
         ac.currentLoadFactor = load
@@ -1177,6 +1253,7 @@ final class Simulation {
         tickWorldEvents()
         tickSlotAvailability()
         tickLeaseBilling()
+        tickInsuranceBilling()
         tickUsedMarketReplenishment()
         for ac in aircraft {
             switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {
