@@ -1824,6 +1824,32 @@ where numbers are involved.
     the route-log strings use `↔\u{FE0E}` (text variation selector) to force
     text presentation. Watch for this with any bare arrow/symbol char in a
     string (elsewhere the app uses `Image(systemName: "arrow.right")` instead).
+- **External-events system — the designer specced 16 events; being built in
+  PHASES.** The full list (designer, verbatim intent): Market/economic (mutually
+  exclusive) — Oil Spike, Fuel Drop, Boom, Recession, **FFR Redemption Surge**
+  (fare/load opposite); Ground-stops (shared mechanism) — **Weather**, **ATC
+  Staffing Shortage** (regional 2–4 airports), **Security Incident** (single,
+  sharp/short); Crew/fleet — **Labor Action** (sidelines a fraction of one crew
+  family), **Aircraft Recall/AD** (grounds every owned aircraft of one type at
+  once — a real AOG escalation); Cost — **Insurance Premium** (recurring monthly
+  bill vs fleet value, occasional hard-market ×), **Maintenance Cost Inflation**
+  (spikes AOG REPAIR cost only, separate from fuel); Revenue — **FX Shock**
+  (widebody fare only — the honest adaptation given no real intl routes),
+  **Competitor Fare War** (depresses fare on ONE existing player route, names a
+  plausible competitor); Structural — **Airport Expansion** (permanent slot
+  increase — the only durable event); Decision — **Slot-Value Buyback** (an
+  airport offers to buy a route's slot back — the ONE item that's a real choice
+  with buttons, i.e. the blue "Offer" decision card).
+  - **Phase 1 — DONE** (`25e625b`): FFR Surge (economic #5), ATC Shortage,
+    Security Incident (ground-stop causes reusing the weather mechanism), and
+    Airport Expansion (structural). New `tickWorldEvents()` = once-per-sim-day
+    check (designed daily probs 4%/3%/2.5%). Headless-verified over 120 sim-days.
+  - **Remaining phases** (not yet built): Slot-Value Buyback (#16 — needs a
+    Decision refactor: `Decision` is currently AIRCRAFT-based; the offer is
+    ROUTE/amount-based; this also lights up the blue "Offer" card in the Alerts
+    modal + Ops Needs Attention). Crew/fleet (#9 Labor Action, #10 Recall/AD).
+    Cost/revenue (#11 Insurance, #12 Maint inflation, #13 FX shock, #14 Fare
+    war). Magnitudes for the built ones are DESIGNED pacing, not sourced.
 
 ## Open / not yet decided
 
