@@ -32,6 +32,7 @@ struct MapView: View {
     private let descentColor = Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255) // #FFB300
     private let groundColor  = Color(red: 0xE8/255, green: 0xA1/255, blue: 0x3C/255) // ground amber
     private let heldColor    = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255) // #ff5c5c — held
+    private let othersColor  = Color(red: 0xD7/255, green: 0x67/255, blue: 0xFF/255) // #D767FF — competitor traffic
     private let borderColor  = Color(red: 108/255, green: 127/255, blue: 143/255)    // basemap gray
 
     var body: some View {
@@ -201,7 +202,12 @@ struct MapView: View {
         let es = sim.elementScale
         for ac in sim.aircraft {
             let pos = ac.position(tick: tick)
-            let color = ac.isHeld ? heldColor : color(for: ac.state)
+            // Competitor traffic is one constant colour (instantly "not mine");
+            // the player's own fleet is phase-coloured. Held (red) is shared.
+            let color: Color
+            if ac.isHeld { color = heldColor }
+            else if ac.airlineName != nil { color = othersColor }
+            else { color = self.color(for: ac.state) }
 
             // Selection ring (under the icon) so the tooltip's subject is
             // unambiguous on a busy map.

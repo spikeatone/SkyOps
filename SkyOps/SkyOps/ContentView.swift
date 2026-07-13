@@ -248,9 +248,10 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
             }
-            // Dev stress-test control (background traffic, not owned).
+            // Competitor background traffic — real other airlines, to make the
+            // airspace feel alive. Tap to set how busy the skies are.
             HStack {
-                Text("TEST")
+                Text("TRAFFIC")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(.secondary)
                 controlRow(fleetSizes, isActive: { sim.stressTestCount == $0 }, label: { "\($0)" }) {
@@ -549,8 +550,17 @@ struct AircraftTooltip: View {
 
     private let heldColor = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
 
+    private let othersColor = Color(red: 0xD7/255, green: 0x67/255, blue: 0xFF/255)
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
+            // Competitor traffic shows the operating airline; the player's own
+            // fleet doesn't need a name here.
+            if let airline = aircraft.airlineName {
+                Text(airline.uppercased())
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(othersColor)
+            }
             HStack {
                 Text(aircraft.isIdleSpare ? "SPARE · at \(aircraft.origin.code)"
                                           : "\(aircraft.origin.code) → \(aircraft.dest.code)")
@@ -567,18 +577,24 @@ struct AircraftTooltip: View {
             row("TAIL", aircraft.tail)
             row("TYPE", aircraft.type.name)
             row("STATUS", statusText, valueColor: aircraft.isHeld ? heldColor : .white)
-            row("CREW", crewText, valueColor: crewValueColor)
-            row("LOAD", loadText)
-            row("CYCLES", cyclesText)
 
-            Divider().overlay(Color.white.opacity(0.15)).padding(.vertical, 2)
+            // Crew / load / cycles / economics are the PLAYER's operational
+            // detail only — a rival's books aren't visible. Ported from the
+            // prototype's deliberately-reduced background-traffic tooltip.
+            if aircraft.airlineName == nil {
+                row("CREW", crewText, valueColor: crewValueColor)
+                row("LOAD", loadText)
+                row("CYCLES", cyclesText)
 
-            let econ = sim.legEconomics(for: aircraft)
-            row("REVENUE", money(econ.revenue))
-            row("FEES", "−" + money(econ.fees))
-            row("OP COST", "−" + money(econ.operatingCost))
-            row("NET / LEG", (econ.net < 0 ? "−" : "") + money(abs(econ.net)),
-                valueColor: econ.net < 0 ? heldColor : climbColor)
+                Divider().overlay(Color.white.opacity(0.15)).padding(.vertical, 2)
+
+                let econ = sim.legEconomics(for: aircraft)
+                row("REVENUE", money(econ.revenue))
+                row("FEES", "−" + money(econ.fees))
+                row("OP COST", "−" + money(econ.operatingCost))
+                row("NET / LEG", (econ.net < 0 ? "−" : "") + money(abs(econ.net)),
+                    valueColor: econ.net < 0 ? heldColor : climbColor)
+            }
         }
         .foregroundStyle(.white)
         .padding(12)

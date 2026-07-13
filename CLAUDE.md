@@ -1381,10 +1381,24 @@ where numbers are involved.
   — a fingertip, and nearest-wins keeps dense clusters unambiguous. 26pt
   (the first value) was too tight for real touch AND for driving via
   computer-use on the small simulator; don't shrink it.
+- **Competitor airline identity — DONE.** Background (non-owned) traffic
+  now carries a real competitor airline (`Airline.roster`, ported verbatim
+  incl. the researched per-type eligibility — Southwest 737-only, Delta no
+  Boeing widebodies, A340→100% Lufthansa, orphan types→Independent
+  Operator). Assigned in `makeAircraft` via `Airline.pick(forType:)`.
+  Competitor aircraft render in the constant `#D767FF` (owned = phase
+  colours; held = red, shared) and get a REDUCED tooltip (airline +
+  route/tail/type/status only — no crew/economics, a rival's books aren't
+  visible). The old dev FLEET/"TEST" slider is now the player-facing
+  "TRAFFIC" control. KNOWN, faithful artifact: Southwest is ~6% of traffic
+  vs its real 18% share, because the airline is picked AFTER the type
+  (weighted by fleet size) and Southwest flies only 737-700/800/MAX8 — the
+  prototype's type-first model has the same characteristic; the Big Four
+  ordering (AA/DL/UA on top) and per-type correctness are right.
 - **Still additive in Phase 5** (core loop doesn't need them): leasing +
-  used-aircraft market, player/competitor airline identity, and the
-  ROUTES list/detail P&L panel (the `Route` model already carries
-  cumulativeNet / flights / openingCost for it).
+  used-aircraft market, player airline NAMING (first-launch modal — the
+  other half of identity), and the ROUTES list/detail P&L panel (the
+  `Route` model already carries cumulativeNet / flights / openingCost).
 
 ## Open / not yet decided
 

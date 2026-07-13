@@ -42,6 +42,8 @@ final class Aircraft: Identifiable {
     let type: AircraftType
     /// Stable per-tail value used to desync holding-pattern orbits.
     let tailHash: Int
+    /// Competitor airline flying this background aircraft (nil = the player's own).
+    var airlineName: String?
 
     var origin: Airport
     var dest: Airport

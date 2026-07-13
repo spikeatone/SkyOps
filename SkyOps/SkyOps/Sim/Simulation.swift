@@ -329,6 +329,7 @@ final class Simulation {
                           dest: dest,
                           stateIndex: Int.random(in: 0..<FlightState.allCases.count),
                           cyclesAccrued: Int.random(in: 0..<Int(Double(type.expectedLifespanCycles) * 0.9)))
+        ac.airlineName = Airline.pick(forType: type.id)   // a real competitor carrier
         rollRevenue(for: ac)   // seed this leg's revenue before its first arrival
         return ac
     }

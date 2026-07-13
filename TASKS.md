@@ -183,7 +183,20 @@ as the work, not "later."
       full in-sim loop ($20M → buy → open SLC↔RDU → balance grows as it
       flies). Airport tap tolerance set to 44pt (fingertip-sized).
 - [ ] Leasing + used-aircraft market (slice 4) — additive.
-- [ ] Player + competitor airline identity (slice 6) — additive.
+- [x] Competitor airline identity (slice 6, competitor half). Background
+      (non-owned) traffic now carries a real US-market-share-weighted
+      airline (Airline.roster — 21 carriers + Independent Operator fallback)
+      with SPECIFIC per-type eligibility (Southwest 737-only, Delta no
+      Boeing widebodies, A340→Lufthansa, etc.). Competitor aircraft render
+      in constant #D767FF (instantly "not mine"); their tooltip shows the
+      airline + reduced fields (route/tail/type/status only — no rival
+      books). The old dev "TEST" toggle is now a player-facing "TRAFFIC"
+      control. Verified: 6/6 headless (every type resolves, eligibility
+      respected, Big Four ~68%) + in-sim (purple fleet, "American Airlines
+      · 777-300" tooltip). NOTE: Southwest under-represented overall (~6%
+      vs 18%) because airline is picked AFTER type and Southwest is
+      737-only — a faithful artifact of the prototype's type-first model.
+- [ ] Player airline NAMING (the other identity half — first-launch modal).
 - [ ] ROUTES panel (list/detail P&L view) — data model is ready
       (Route.cumulativeNet / flights / openingCost).
 
