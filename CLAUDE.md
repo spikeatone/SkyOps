@@ -1422,7 +1422,8 @@ where numbers are involved.
   (`quarterSpeedUsesRemaining`, resets when `tick/1440` changes, NOT a rolling
   window); the 4th request snaps to 1× (not the previous speed). Verified 8/8
   headless. NetworkView reads/greys the ¼× control by the remaining count.
-- **Two NEW control-bar panels (functional; Figma restyle is the next pass):**
+- **Two NEW control-bar panels (functional; FuelHedge now Figma-restyled — see
+  the "Figma panel-restyle batch — DONE" note; AddCrew still dev-chromed):**
   `AddCrewPanel` (Hire Crew — lists owned families with crew count + real hire
   cost, verified showing "ERJ · 1 crew · 1 aircraft · Hire $28k" live after a
   purchase) and `FuelHedgePanel` (Fuel Hedge — empty-fleet / active-countdown /
@@ -1433,8 +1434,9 @@ where numbers are involved.
   hiding/showing the bars, the bounded-card map tap (route picker), the speed
   bar, and the 5-tab nav. Existing panels (BuyPanel/RoutesPanel/tooltip/
   decision cards) carried over unchanged into the new view — their Figma
-  restyle (Acquire, Routes, Open Route flow, tooltip, Fuel Hedge) is the
-  designer's NEXT batch of frames.
+  restyle (Acquire, Routes, Open Route flow, tooltip, Fuel Hedge) was the
+  designer's next batch of frames, now DONE (see the "Figma panel-restyle
+  batch — DONE" note near the end of this Phase-5 section).
 - **The headless harness now has a third proven catch** (after nothing,
   then the AOG lifecycle): it caught the crew cascade as a design/balance
   bug a unit test wouldn't frame. Two harness kinds now live in the session
@@ -1660,6 +1662,42 @@ where numbers are involved.
   fights manual scroll position — expected, not a bug; scrolling is fine at
   low speed. If a chart view is built later, snapshot the history for display
   rather than binding a live-growing slice if scroll stability matters.
+- **Figma panel-restyle batch — DONE** (the "designer's NEXT batch of frames"
+  flagged above at the FuelHedge/AddCrew note). All to real Figma nodes, Sky
+  tokens + `.karla(...)`, verified together live via a temp seed (buy an
+  ERJ135, open SLC↔RDU, select it) + screenshot, then reverted:
+  - **Aircraft tooltip** (3:1662): `Label:`-style rows (white Karla-Bold 14 +
+    light-blue Karla-Regular 14 value), airport-code Route row
+    (Karla-ExtraBold 12 + arrow), lease folded into the Tail value (no
+    separate badge), `Cycles` before `Crew legal hours` ("N.N hrs remaining"),
+    and a new `Route P&L` line. Airline row keeps the ownership colour signal
+    (own = On-Dark green, competitor = purple) layered on the Figma layout.
+    NO close button (tap the map to dismiss) — matches the Figma. Route P&L
+    uses `Route.isProfitable`/`netVsOpeningCost` ("$X short of $Y opening
+    cost" until recouped), NOT a raw `cumulativeNet>=0` test — a real bug
+    caught in the screenshot ("recouped +$0" on a brand-new route).
+  - **Open Route steps 1-2** (alert box 5:8040 / 19:6705): `routeHint` is now a
+    solid `#1F232D` bar with the exact "Step One: Tap one of the airports you
+    want in the city pair" / "Step Two: Now tap the other airport pair" lines
+    (Karla-Bold 14, light blue). No cancel button — the highlighted "Open
+    Route" control-bar button toggles the flow off.
+  - **Open Route step 3** (New Route Confirm 19:6758): `RouteConfirmPanel`
+    rebuilt — ORIG → DEST header (Karla-ExtraBold 20), Distance (great-circle
+    nm, computed in-panel) / Slots (green "Avail both ends" vs red "Buyout
+    needed") / Range check (vs the spare that'd be assigned = `idleSpares.first`;
+    "a/c not assigned" red when none) / Opening cost (green/red by
+    affordability), then outlined "Open route" / "Abandon" buttons. Dropped the
+    separate `onBuy`/ACQUIRE button that the older prototype had — the Figma
+    step-3 has only two buttons, and "Open route" with no spare still opens the
+    Acquire panel via `openConfirmedRoute`'s existing no-spare branch (buy
+    mid-flow auto-assigns, preserved).
+  - **Fuel Hedge** (Fuel Hedge Card 19:6920): `FuelHedgePanel` rebuilt as a
+    titled card (Karla-ExtraBold 20) + the real explainer paragraph (with live
+    owned-aircraft count) + 30/60/90-day premium rows (light-blue label, white
+    "$X premium", green BUY), plus empty-fleet and active-hedge states. Dropped
+    `NetPanelBox`/`onClose` — the toggle-off is the highlighted control-bar
+    button, matching the Figma (no X). `AddCrewPanel` still uses the dev
+    `NetPanelBox` chrome (no Figma frame for Hire Crew in this batch).
 
 ## Open / not yet decided
 
