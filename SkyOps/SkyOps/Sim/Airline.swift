@@ -22,11 +22,11 @@ struct Airline {
     let types: Set<String>
 
     static let roster: [Airline] = [
-        .init(name: "American Airlines", weight: 21, types: ["A319","A320","A321","A321NEO","B737800","MAX8","B773","B788"]),
+        .init(name: "American Airlines", weight: 21, types: ["A319","A320","A321","A321NEO","B737800","MAX8","B773","B788","B789"]),
         .init(name: "Delta Air Lines",   weight: 19, types: ["A319","A320","A321","A321NEO","B737800","B739","A220300","A220100","A339","A359"]),
         .init(name: "Southwest Airlines", weight: 18, types: ["B737700","B737800","MAX8"]),
-        .init(name: "United Airlines",   weight: 17, types: ["A319","A320","A321NEO","B737700","B737800","B739","MAX8","MAX9","B773","B788","B78J"]),
-        .init(name: "Alaska Airlines",   weight: 6,  types: ["B737700","B737800","B739","MAX8","MAX9","B788","E175"]),
+        .init(name: "United Airlines",   weight: 17, types: ["A319","A320","A321NEO","B737700","B737800","B739","MAX8","MAX9","B773","B788","B789","B78J"]),
+        .init(name: "Alaska Airlines",   weight: 6,  types: ["B737700","B737800","B739","MAX8","MAX9","B789","E175"]),
         .init(name: "JetBlue Airways",   weight: 5,  types: ["A320","A321","A321NEO","A220300"]),
         .init(name: "Spirit Airlines",   weight: 3,  types: ["A319","A320","A320NEO","A321","A321NEO"]),
         .init(name: "Frontier Airlines", weight: 3,  types: ["A319","A320","A320NEO","A321","A321NEO"]),
@@ -39,14 +39,14 @@ struct Airline {
         .init(name: "Horizon Air",       weight: 2, types: ["E175"]),
         .init(name: "PSA Airlines",      weight: 2, types: ["CRJ900","CRJ1000","E175"]),
         // International — widebody only, deliberately rare
-        .init(name: "Air France",        weight: 1, types: ["B773","B788","A339","A359"]),
-        .init(name: "Lufthansa",         weight: 1, types: ["B788","B747","A380","A340","A359"]),
-        .init(name: "British Airways",   weight: 1, types: ["B773","B788","B78J","A380","A359"]),
+        .init(name: "Air France",        weight: 1, types: ["B773","B789","A339","A359"]),
+        .init(name: "Lufthansa",         weight: 1, types: ["B789","B747","A380","A340","A359"]),
+        .init(name: "British Airways",   weight: 1, types: ["B773","B788","B789","B78J","A380","A359"]),
         .init(name: "Emirates",          weight: 1, types: ["B773","A380"]),
-        .init(name: "Air Canada",        weight: 1, types: ["B773","B788","A339"]),
-        .init(name: "Japan Airlines",    weight: 1, types: ["B773","B788","A359"]),
+        .init(name: "Air Canada",        weight: 1, types: ["B773","B788","B789","A339"]),
+        .init(name: "Japan Airlines",    weight: 1, types: ["B773","B788","B789","A359"]),
         // Fallback for real-world orphaned types (rare variants / China-only / retired-from-US-feed)
-        .init(name: "Independent Operator", weight: 1, types: ["A319NEO","E190","E195","ERJ135","ERJ140","ARJ21"]),
+        .init(name: "Independent Operator", weight: 1, types: ["A319NEO","E190","E195","ERJ135","ERJ140"]),
     ]
 
     /// Weighted pick among airlines that actually fly `typeId`. Every type in

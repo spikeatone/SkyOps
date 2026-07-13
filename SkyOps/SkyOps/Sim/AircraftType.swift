@@ -81,11 +81,11 @@ struct AircraftType: Identifiable {
         "A319": 3700, "A320": 3300, "A321": 3200, "A319NEO": 3750, "A320NEO": 3400, "A321NEO": 4000,
         "B737700": 3010, "B737800": 2935, "B739": 2950, "MAX8": 3550, "MAX9": 3300,
         "A220300": 3350, "A220100": 3400,
-        "B773": 6014, "B788": 7565, "B78J": 6330, "A339": 7200, "A359": 8100,
+        "B773": 6014, "B788": 7355, "B789": 7565, "B78J": 6330, "A339": 7200, "A359": 8100,
         "B747": 7260, "A380": 8000, "A340": 7400,
         "E170": 2150, "E175": 2200, "E190": 2450, "E195": 2300,
         "CRJ900": 1550, "CRJ1000": 1650,
-        "ERJ135": 1750, "ERJ140": 1630, "ERJ145": 1550, "ARJ21": 1200,
+        "ERJ135": 1750, "ERJ140": 1630, "ERJ145": 1550,
     ]
 
     /// Fixed MONTHLY lease payment: 0.8% of purchase price (LEASE_MONTHLY_RATE
@@ -114,8 +114,9 @@ struct AircraftType: Identifiable {
         .init(id: "A220100", name: "Airbus A220-100",   seats: 115, family: "A220_FAMILY", bodyType: .regionalJet, weight: 3, mlwLbs: 122300, costPerHour: 3800, purchasePrice: 59_000_000, expectedLifespanCycles: 60000),
         // Twin-engine widebodies — each its own crew family
         .init(id: "B773",    name: "Boeing 777-300",       seats: 380, family: "B777", bodyType: .widebody2Engine, weight: 23, mlwLbs: 460000, costPerHour: 20000, purchasePrice: 289_000_000, expectedLifespanCycles: 44000),
-        .init(id: "B788",    name: "Boeing 787 Dreamliner", seats: 280, family: "B787", bodyType: .widebody2Engine, weight: 14, mlwLbs: 380000, costPerHour: 12000, purchasePrice: 225_000_000, expectedLifespanCycles: 44000),
-        .init(id: "B78J",    name: "Boeing 787-10 Dreamliner", seats: 330, family: "B787", bodyType: .widebody2Engine, weight: 7, mlwLbs: 445000, costPerHour: 12500, purchasePrice: 250_000_000, expectedLifespanCycles: 44000),
+        .init(id: "B788",    name: "Boeing 787-8 Dreamliner",  seats: 242, family: "B787", bodyType: .widebody2Engine, weight: 10, mlwLbs: 380000, costPerHour: 11500, purchasePrice: 200_000_000, expectedLifespanCycles: 44000),
+        .init(id: "B789",    name: "Boeing 787-9 Dreamliner",  seats: 280, family: "B787", bodyType: .widebody2Engine, weight: 14, mlwLbs: 425000, costPerHour: 12000, purchasePrice: 225_000_000, expectedLifespanCycles: 44000),
+        .init(id: "B78J",    name: "Boeing 787-10 Dreamliner", seats: 330, family: "B787", bodyType: .widebody2Engine, weight: 7,  mlwLbs: 445000, costPerHour: 12500, purchasePrice: 250_000_000, expectedLifespanCycles: 44000),
         .init(id: "A339",    name: "Airbus A330-900",      seats: 300, family: "A330", bodyType: .widebody2Engine, weight: 10, mlwLbs: 421082, costPerHour: 11500, purchasePrice: 230_000_000, expectedLifespanCycles: 44000),
         .init(id: "A359",    name: "Airbus A350-900",      seats: 306, family: "A350", bodyType: .widebody2Engine, weight: 8,  mlwLbs: 456357, costPerHour: 13500, purchasePrice: 300_000_000, expectedLifespanCycles: 44000),
         // Four-engine widebodies — each its own crew family
@@ -138,7 +139,8 @@ struct AircraftType: Identifiable {
         .init(id: "ERJ135",  name: "Embraer ERJ135", seats: 37, family: "ERJ_FAMILY", bodyType: .regionalJet, weight: 1, mlwLbs: 39900, costPerHour: 2000, purchasePrice: 14_000_000, expectedLifespanCycles: 50000),
         .init(id: "ERJ140",  name: "Embraer ERJ140", seats: 44, family: "ERJ_FAMILY", bodyType: .regionalJet, weight: 1, mlwLbs: 42550, costPerHour: 2100, purchasePrice: 15_000_000, expectedLifespanCycles: 50000),
         .init(id: "ERJ145",  name: "Embraer ERJ145", seats: 50, family: "ERJ_FAMILY", bodyType: .regionalJet, weight: 2, mlwLbs: 43430, costPerHour: 2200, purchasePrice: 20_000_000, expectedLifespanCycles: 50000),
-        .init(id: "ARJ21",   name: "COMAC ARJ21",    seats: 90, family: "ARJ21_FAMILY", bodyType: .regionalJet, weight: 2, mlwLbs: 88000, costPerHour: 3000, purchasePrice: 34_000_000, expectedLifespanCycles: 60000),
+        // COMAC ARJ21 removed per designer direction (illustration unavailable;
+        // few carriers fly it, none in the US-market roster).
     ]
 
     static let weightTotal: Int = all.reduce(0) { $0 + $1.weight }

@@ -41,5 +41,5 @@ let FAMILY_LABELS: [String: String] = [
     "B777": "B777", "B787": "B787", "A330": "A330", "A350": "A350",
     "B747": "B747", "A380": "A380", "A340": "A340",
     "E170_FAMILY": "E170/175", "E190_FAMILY": "E190/195",
-    "CRJ_FAMILY": "CRJ", "ERJ_FAMILY": "ERJ", "ARJ21_FAMILY": "ARJ21",
+    "CRJ_FAMILY": "CRJ", "ERJ_FAMILY": "ERJ",
 ]
