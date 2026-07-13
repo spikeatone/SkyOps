@@ -1508,6 +1508,32 @@ where numbers are involved.
   fights manual scroll position — expected, not a bug; scrolling is fine at
   low speed. (The chart above does NOT have this issue — it redraws in one
   Canvas pass rather than a ForEach of moving rows.)
+- **Fuel hedging (sim mechanic) — DONE (native app); panel UI lands with the
+  NETWORK view.** Ported faithfully from the prototype spec (which had been
+  dropped from CLAUDE.md and was re-supplied by the designer). A fuel hedge is
+  a real CALL OPTION, and the ASYMMETRY is the whole point:
+  `Simulation.effectiveMultiplier(raw:hedged:)` (a pure, testable helper) caps
+  the player's cost multiplier at `fuelHedgeCeiling` (1.0) ONLY when a spike
+  would push above it — a genuine price DROP (fuel glut 0.85×) passes through
+  UNCHANGED, since a call option doesn't erase the benefit of prices falling.
+  A native port that applied a flat discount instead of this conditional cap
+  would be the wrong mechanic. `effectiveCostMultiplier` (instance) feeds every
+  player-facing cost calc — `legEconomics` op cost AND the AOG/crew
+  hold-erosion in `advanceTick` were both re-routed through it; the GLOBAL
+  economic banner deliberately still reads the RAW `currentEvent.costMultiplier`
+  (the market's true state, not the hedged view). Premium
+  (`fuelHedgePremium(days:)`) is priced against the player's ACTUAL owned fleet
+  (Σ holdCostPerTick × durationTicks × 0.35 utilization × 10% rate), scales
+  LINEARLY with duration (30/60/90-day tiers), and is $0 for an empty fleet.
+  `buyFuelHedge(days:)` guards fleet>0 / not-already-active / affordable, and
+  the hedge expires naturally (`fuelHedgeExpiryTick`, computed
+  `fuelHedgeActive`/`fuelHedgeDaysRemaining`). The prototype's warning about an
+  UNGATED turnaround-settlement corrupting the balance does NOT apply here —
+  native `settleLeg` is already `guard ac.purchased`. Verified: 18/18 headless
+  (asymmetry both directions, linear premium, formula match, buy/deduct/expire/
+  block-re-buy/insufficient-funds). Premium magnitude is fleet-dependent (4×
+  ERJ135 ≈ $200k/30d; the spec's "$1.1M/4-aircraft" anchor was a larger
+  representative fleet — the FORMULA matches exactly, only the fleet differs).
 - **A real SwiftUI note from the ROUTES detail scroll:** at high sim speed the
   recent-flights `ForEach(history.suffix(15).reversed())` churns its element
   identity every completed flight (a new flight shifts the 15-window), which

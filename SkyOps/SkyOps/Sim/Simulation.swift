@@ -762,6 +762,69 @@ final class Simulation {
         }
     }
 
+    // MARK: - Fuel hedging (a real call option on fuel cost)
+
+    // A fuel hedge is a CALL OPTION: pay a premium now for the right to buy at
+    // a locked price if the market spikes. The ASYMMETRY is the whole point —
+    // it caps the player's cost multiplier at the ceiling ONLY when a spike
+    // would push above it, and does NOT force costs up during a genuine price
+    // drop (a real call option doesn't erase the benefit of prices falling).
+    // If no spike ever happens, the premium is a genuine sunk cost — the same
+    // "real downside risk" as leasing's fixed obligation, not free insurance.
+    static let fuelHedgePremiumRate = 0.10     // real: Carter/Rogers/Simkins 2006 (≤10%)
+    static let fuelHedgeCeiling = 1.0          // caps a spike's cost multiplier here
+    static let fuelHedgeUtilization = 0.35     // designed: share of ticks an owned aircraft accrues op cost
+    static let fuelHedgeDurations = [30, 60, 90]
+
+    /// Tick the active hedge expires (nil = no hedge).
+    private(set) var fuelHedgeExpiryTick: Int?
+    var fuelHedgeActive: Bool { if let e = fuelHedgeExpiryTick { return tick < e } else { return false } }
+    var fuelHedgeDaysRemaining: Int {
+        guard let e = fuelHedgeExpiryTick, tick < e else { return 0 }
+        return Int((Double(e - tick) / 1440).rounded(.up))
+    }
+
+    /// The asymmetric call-option cap, as a pure function (so it's testable
+    /// without forcing an economic event): a spike is capped at the ceiling
+    /// ONLY when hedged; a price drop (raw ≤ ceiling) always passes through.
+    static func effectiveMultiplier(raw: Double, hedged: Bool) -> Double {
+        (hedged && raw > fuelHedgeCeiling) ? fuelHedgeCeiling : raw
+    }
+
+    /// The multiplier the PLAYER actually pays. With an active hedge a spike is
+    /// capped at the ceiling; a price drop passes through unchanged. The global
+    /// economic banner deliberately shows the RAW `currentEvent.costMultiplier`
+    /// (the market's true state), NOT this hedged view.
+    var effectiveCostMultiplier: Double {
+        Simulation.effectiveMultiplier(raw: currentEvent.costMultiplier, hedged: fuelHedgeActive)
+    }
+
+    /// Premium for a `days`-length hedge, priced against the player's ACTUAL
+    /// owned fleet's expected operating cost over that window (not a flat fee) —
+    /// real hedges are priced against expected consumption the same way. Scales
+    /// linearly with duration. Empty fleet → $0 (there's nothing to hedge).
+    func fuelHedgePremium(days: Int) -> Int {
+        let durationTicks = Double(days * 1440)
+        let expectedOpCost = aircraft.lazy.filter { $0.purchased }.reduce(0.0) {
+            $0 + Double($1.type.holdCostPerTick) * durationTicks * Simulation.fuelHedgeUtilization
+        }
+        return Int((expectedOpCost * Simulation.fuelHedgePremiumRate).rounded())
+    }
+
+    enum FuelHedgeResult { case success, noFleet, alreadyActive, insufficientFunds(Int) }
+
+    /// Buy a hedge (only when none is active and the player owns aircraft).
+    @discardableResult
+    func buyFuelHedge(days: Int) -> FuelHedgeResult {
+        guard ownedCount > 0 else { return .noFleet }
+        guard !fuelHedgeActive else { return .alreadyActive }
+        let premium = fuelHedgePremium(days: days)
+        guard playerBalance >= premium else { return .insufficientFunds(premium) }
+        playerBalance -= premium
+        fuelHedgeExpiryTick = tick + days * 1440
+        return .success
+    }
+
     // Running financial totals (a fresh session's ledger). playerBalance and
     // the ownership economy arrive in a later slice; for now this is the sim's
     // net result.
@@ -789,7 +852,7 @@ final class Simulation {
         let landingFee = Int((ac.dest.landingFeePerKlb * (Double(ac.type.mlwLbs) / 1000)).rounded())
         let gateFee = Int(ac.type.bodyType.usesWidebodyGateFee ? ac.dest.gateFeeWidebody : ac.dest.gateFeeNarrowbody)
         let opCost = Int((Double(ac.type.bodyType.operatingCostBlockMinutes)
-                          * Double(ac.type.holdCostPerTick) * currentEvent.costMultiplier).rounded())
+                          * Double(ac.type.holdCostPerTick) * effectiveCostMultiplier).rounded())
         // DISPLAY-ONLY: a smoothed lease-per-leg figure for the tooltip. Does
         // not affect net/settlement — real lease is billed monthly. Ported
         // from computeLegEconomics: blockMinutes × (monthlyLeaseCost / month).
@@ -876,9 +939,10 @@ final class Simulation {
             }
             // A booked aircraft still burns money while stuck at the gate
             // (AOG/crew) — erode the leg's revenue at its per-tick cost, scaled
-            // by any economic event. One held number crosses profit → loss.
+            // by the effective (hedge-aware) cost multiplier. One held number
+            // crosses profit → loss.
             if ac.holdReason == .aog || ac.holdReason == .crew {
-                ac.projectedRevenue -= Int((Double(ac.type.holdCostPerTick) * currentEvent.costMultiplier).rounded())
+                ac.projectedRevenue -= Int((Double(ac.type.holdCostPerTick) * effectiveCostMultiplier).rounded())
             }
         }
     }
