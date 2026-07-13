@@ -200,7 +200,7 @@ struct BuyPanel: View {
         ScrollView {
             VStack(spacing: 8) {
                 // Priciest/biggest first, matching the Figma card order.
-                ForEach(AircraftType.all.sorted { $0.purchasePrice > $1.purchasePrice }) { t in
+                ForEach(AircraftType.all.sorted { $0.purchasePrice < $1.purchasePrice }) { t in
                     AircraftProfileCard(sim: sim, type: t, onBought: onBought)
                 }
             }
