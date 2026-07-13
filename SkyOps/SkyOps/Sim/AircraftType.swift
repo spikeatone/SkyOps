@@ -82,7 +82,7 @@ struct AircraftType: Identifiable {
         "B737700": 3010, "B737800": 2935, "B739": 2950, "MAX8": 3550, "MAX9": 3300,
         "A220300": 3350, "A220100": 3400,
         "B773": 6014, "B788": 7565, "A339": 7200, "A359": 8100,
-        "B747": 7730, "A380": 8000, "A340": 7400,
+        "B747": 7260, "A380": 8000, "A340": 7400,
         "E170": 2150, "E175": 2200, "E190": 2450, "E195": 2300,
         "CRJ900": 1550, "CRJ1000": 1650,
         "ERJ135": 1750, "ERJ140": 1630, "ERJ145": 1550, "ARJ21": 1200,
@@ -118,7 +118,10 @@ struct AircraftType: Identifiable {
         .init(id: "A339",    name: "Airbus A330-900",      seats: 300, family: "A330", bodyType: .widebody2Engine, weight: 10, mlwLbs: 421082, costPerHour: 11500, purchasePrice: 230_000_000, expectedLifespanCycles: 44000),
         .init(id: "A359",    name: "Airbus A350-900",      seats: 306, family: "A350", bodyType: .widebody2Engine, weight: 8,  mlwLbs: 456357, costPerHour: 13500, purchasePrice: 300_000_000, expectedLifespanCycles: 44000),
         // Four-engine widebodies — each its own crew family
-        .init(id: "B747",    name: "Boeing 747-8",  seats: 467, family: "B747", bodyType: .widebody4Engine, weight: 6, mlwLbs: 745700,  costPerHour: 25000, purchasePrice: 322_000_000, expectedLifespanCycles: 35000),
+        // 747-400 (not the -8: the -8 passenger variant never really sold — it
+        // was essentially freighter-only). Seats/MLW/range are real 747-400
+        // figures; cost/price/lifespan kept from the -8 for now (see note).
+        .init(id: "B747",    name: "Boeing 747-400",  seats: 416, family: "B747", bodyType: .widebody4Engine, weight: 6, mlwLbs: 652700,  costPerHour: 25000, purchasePrice: 322_000_000, expectedLifespanCycles: 35000),
         .init(id: "A380",    name: "Airbus A380",   seats: 555, family: "A380", bodyType: .widebody4Engine, weight: 2, mlwLbs: 1133000, costPerHour: 28000, purchasePrice: 342_000_000, expectedLifespanCycles: 19000),
         .init(id: "A340",    name: "Airbus A340-300", seats: 295, family: "A340", bodyType: .widebody4Engine, weight: 1, mlwLbs: 380000, costPerHour: 18000, purchasePrice: 183_000_000, expectedLifespanCycles: 20000),
         // Regional jets — real type-rating splits (E170/E175 vs E190/E195)
