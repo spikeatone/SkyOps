@@ -1855,11 +1855,21 @@ where numbers are involved.
     Ops Needs Attention. Also removed the now-dead AOGCard/CrewCard/SellCard/
     DecisionCardChrome/CardButton structs from ContentView (they blocked the
     optional-aircraft change). Headless + visually verified.
-  - **Remaining phases** (not yet built): Crew/fleet (#9 Labor Action, #10
-    Recall/AD). Cost/revenue (#11 Insurance, #12 Maint inflation, #13 FX shock,
-    #14 Fare war). Magnitudes for the built ones are DESIGNED pacing, not sourced.
-    The "labor action" event (#9) is what would light up the red crew-alert box
-    the Crews tab currently omits.
+  - **Phase 3 — DONE** (`1bca200`): Labor Action (#9) + Aircraft Recall/AD (#10).
+    #9 added a `.sidelined` CrewStatus; a daily 2% check sidelines ~40% of ONE
+    owned crew family's pool (from ready/resting crew, NOT mid-flight) for 3–8
+    days, returning them at expiry — and lit up the red "N sidelined; labor
+    action — D days left" box on the Crews card (previously omitted).
+    `laborActionExpiryByFamily` is the per-family state. #10 grounds EVERY owned
+    aircraft of one type at once (daily 1.5%) by setting `maint = true`, so each
+    AOGs at its next gate via the existing mechanism (an AOG card per tail).
+    Both log DISRUPTIONS. Headless + visually verified.
+  - **Remaining (Phase 4, not built): cost/revenue passive events** — #11
+    Insurance Premium (recurring monthly bill vs fleet value + occasional
+    hard-market ×), #12 Maintenance Cost Inflation (spikes AOG REPAIR cost only,
+    separate from fuel), #13 FX Shock (widebody fare only), #14 Competitor Fare
+    War (depresses one existing player route's fare, names a competitor).
+    Magnitudes for the built events are DESIGNED pacing, not sourced.
 
 ## Open / not yet decided
 
