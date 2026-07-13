@@ -38,6 +38,16 @@ struct FleetView: View {
     private let yellow = Color(skyHex: 0xFFB700)
     private let red = Color(skyHex: 0xD70000)
 
+    // Status-bar palette (Figma 1:1060 dark / 1:955 light). Its BOXES sit at the
+    // page-bg shade (#2B303D) inside a DARKER container (#1F232D) in dark, and
+    // white inside #E6E6E6 in light — a deliberate subtle contrast. Values use
+    // the On-Dark variants in dark; white labels in dark.
+    private var statusBoxBG: Color   { isDark ? Sky.darkBG : .white }
+    private var statusLabel: Color   { isDark ? .white : Color(skyHex: 0x64748B) }
+    private var totalColor: Color    { isDark ? Sky.lightBlue : .black }
+    private var flyingColor: Color   { isDark ? Color(skyHex: 0x87ED7A) : Color(skyHex: 0x10B981) }
+    private var groundedColor: Color { isDark ? Color(skyHex: 0xFF9292) : red }
+
     var body: some View {
         // Reading `tick` subscribes this view to per-tick updates (Observation),
         // so live statuses/counts refresh as aircraft fly. The owned fleet is
@@ -131,10 +141,10 @@ struct FleetView: View {
         let idle = owned.filter { status($0) == .idle }.count
         let grounded = owned.filter { status($0) == .grounded }.count
         return HStack(spacing: 4) {
-            statusBox("Total", owned.count, primary)
-            statusBox("Flying", flying, Sky.coreGreen)
+            statusBox("Total", owned.count, totalColor)
+            statusBox("Flying", flying, flyingColor)
             statusBox("Idle", idle, yellow)
-            statusBox("Grounded", grounded, red)
+            statusBox("Grounded", grounded, groundedColor)
         }
         .padding(4)
         .background(segBG)
@@ -143,12 +153,12 @@ struct FleetView: View {
 
     private func statusBox(_ label: String, _ value: Int, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.karla(14)).foregroundStyle(secondary)
+            Text(label).font(.karla(14)).foregroundStyle(statusLabel)
             Text("\(value)").font(.karla(20, .heavy)).foregroundStyle(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(cardBG)
+        .background(statusBoxBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
