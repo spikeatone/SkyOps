@@ -132,6 +132,10 @@ struct CrewsView: View {
                     dataBox("Reserve", reserveN, reserve, .white)
                 }
             }
+            // Labor-action alert (a #9 event has sidelined crew in this family)
+            if let expiry = sim.laborActionExpiryByFamily[fam], expiry > sim.tick {
+                laborAlertBox(pool.filter { $0.status == .sidelined }.count, expiry)
+            }
             // Action box
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -154,6 +158,23 @@ struct CrewsView: View {
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    /// Red "N sidelined; labor action — D days left" box (Figma crew alert box).
+    private func laborAlertBox(_ sidelined: Int, _ expiry: Int) -> some View {
+        let daysLeft = max(1, (expiry - sim.tick + 1439) / 1440)
+        let red = Color(skyHex: 0xD70000)
+        return HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 14)).foregroundStyle(red)
+            Text("\(sidelined) sidelined; labor action — \(daysLeft) day\(daysLeft == 1 ? "" : "s") left")
+                .font(.karla(14, .bold)).foregroundStyle(red)
+            Spacer(minLength: 0)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(isDark ? Sky.darkBG : Color(skyHex: 0xF9F9F9))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(red, lineWidth: 1))
     }
 
     private func dataBox(_ label: String, _ value: Int, _ boxBG: Color, _ textColor: Color) -> some View {

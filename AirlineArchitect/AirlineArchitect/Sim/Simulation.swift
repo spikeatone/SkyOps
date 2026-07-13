@@ -683,8 +683,8 @@ final class Simulation {
                 case .resting:
                     c.restTicksLeft -= 1
                     if c.restTicksLeft <= 0 { c.status = .available; c.dutyTicks = 0 }
-                case .available:
-                    break
+                case .available, .sidelined:
+                    break   // sidelined crew return via the labor-action expiry
                 }
             }
         }
@@ -869,9 +869,51 @@ final class Simulation {
     private static let securityDailyProbability = 0.03
     private static let expansionDailyProbability = 0.025
     private static let slotOfferDailyProbability = 0.06
+    private static let laborActionDailyProbability = 0.02
+    private static let recallDailyProbability = 0.015
+
+    /// Tick a family's labor action ends (its sidelined crew return). Days
+    /// boundaries only, so it's safe to expire inside the daily tickWorldEvents.
+    private(set) var laborActionExpiryByFamily: [String: Int] = [:]
 
     private func tickWorldEvents() {
         guard tick % 1440 == 0 else { return }   // once per sim-day
+
+        // Expire any finished labor action FIRST (return the sidelined crew).
+        for (fam, expiry) in laborActionExpiryByFamily where tick >= expiry {
+            for c in crewPoolsByFamily[fam] ?? [] where c.status == .sidelined { c.status = .available }
+            laborActionExpiryByFamily[fam] = nil
+            logOps(.disruption, "Labor action resolved", CREW_FAMILY_INFO[fam]?.name ?? fam)
+        }
+
+        // #9 Labor Action — sideline a real fraction (~40%) of ONE crew family's
+        // pool (from the ready/resting crew, not mid-flight), for 3–8 sim-days.
+        if Double.random(in: 0..<1) < Simulation.laborActionDailyProbability,
+           let fam = ownedFamilies.filter({ (laborActionExpiryByFamily[$0] ?? 0) <= tick }).randomElement() {
+            let pool = crewPoolsByFamily[fam] ?? []
+            let candidates = pool.filter { $0.status == .available || $0.status == .resting }
+            let n = min(candidates.count, max(1, Int((Double(pool.count) * 0.4).rounded())))
+            let sidelined = Array(candidates.shuffled().prefix(n))
+            for c in sidelined { c.status = .sidelined }
+            if !sidelined.isEmpty {
+                laborActionExpiryByFamily[fam] = tick + (3 + Int.random(in: 0...5)) * 1440
+                logOps(.disruption, "Labor action", "\(CREW_FAMILY_INFO[fam]?.name ?? fam): \(sidelined.count) crew sidelined")
+            }
+        }
+
+        // #10 Aircraft Recall / Airworthiness Directive — ground EVERY owned
+        // aircraft of one type at once (reuses the AOG mechanism: maint = true →
+        // each aircraft AOGs at its next gate, pushing an AOG card per tail).
+        if Double.random(in: 0..<1) < Simulation.recallDailyProbability {
+            let ownedTypes = Set(aircraft.filter { $0.purchased && !$0.maint }.map { $0.type.id })
+            if let typeId = ownedTypes.randomElement() {
+                let affected = aircraft.filter { $0.purchased && $0.type.id == typeId && !$0.maint }
+                for ac in affected { ac.maint = true }
+                if let name = affected.first?.type.name {
+                    logOps(.disruption, "Airworthiness Directive", "\(name): \(affected.count) grounded")
+                }
+            }
+        }
         // ATC staffing shortage — regional, 2–4 airports grounded at once,
         // moderate duration (2.5–5 sim-hours).
         if Double.random(in: 0..<1) < Simulation.atcDailyProbability {

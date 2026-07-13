@@ -17,6 +17,7 @@ enum CrewStatus {
     case available   // in the pool, ready to be assigned
     case onDuty      // assigned to an aircraft, accruing duty time
     case resting     // completing a mandatory rest period
+    case sidelined   // pulled out by a labor action (unavailable until it ends)
 }
 
 final class Crew {
