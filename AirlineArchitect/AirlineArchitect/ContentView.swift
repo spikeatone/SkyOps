@@ -223,7 +223,7 @@ struct BuyPanel: View {
                 }
             }
         }
-        .frame(maxHeight: 460)
+        .frame(maxHeight: 510)   // sits higher — covers the ~50px gap under the control bar
         .padding(8)
         .background(Sky.navBarDark)
         .clipShape(RoundedRectangle(cornerRadius: 8))
