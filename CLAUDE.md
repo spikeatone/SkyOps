@@ -174,13 +174,17 @@ one contradicts the design thesis.)
     see the A350-900 sourcing note in Airline Identity — but this game
     keeps them as separate crew families anyway, consistent with how
     every other widebody pair here is modeled as non-interchangeable.)
-  - ARJ21 is its own standalone family — no other type shares its rating.
-    (Sukhoi Superjet 100 / `SSJ100_FAMILY` was in this category too, before
-    removal — see stale-comment note below.)
-  - **Net result: 15 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
+  - ARJ21 was its own standalone family — but the COMAC ARJ21 has since been
+    REMOVED entirely (native app; designer direction — no illustration, few
+    carriers, none in the US roster), so `ARJ21_FAMILY` is gone too.
+    (Sukhoi Superjet 100 / `SSJ100_FAMILY` was in this standalone category too,
+    before its earlier removal — see stale-comment note below.)
+  - **Net result: 14 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
     `A220_FAMILY`, `B777`, `B787`, `A330`, `A350`, `B747`, `A380`, `A340`,
-    `E170_FAMILY`, `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY`, `ARJ21_FAMILY`),
-    covering 30 aircraft types — verified via script, not hand-counted,
+    `E170_FAMILY`, `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY` — `ARJ21_FAMILY`
+    removed with the ARJ21). The `B787` family now covers THREE variants
+    (787-8 `B788`, 787-9 `B789`, 787-10 `B78J`) on one type rating.
+    Covering 31 aircraft types — verified via script, not hand-counted,
     after this count went stale at least once before (see the
     `TYPE_WEIGHT_TOTAL` note). `CREW_FAMILIES` is auto-derived from
     `AIRCRAFT_TYPES.map(t => t.family)` — adding or removing an aircraft
