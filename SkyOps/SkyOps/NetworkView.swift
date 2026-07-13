@@ -200,6 +200,7 @@ struct NetworkView: View {
 
     private func toggle(_ p: NetPanel) {
         routeMode = .off
+        selectedID = nil            // never stack a control-bar panel over a tooltip
         panel = (panel == p) ? .none : p
     }
 
