@@ -1751,6 +1751,30 @@ where numbers are involved.
     illustrations with the fixed transparent backgrounds, and the buy/lease/used
     rows. `FleetView` takes a `@Binding var tab` (from ContentView) so the
     detail's Assign action can switch tabs.
+- **Alerts modal + bell badge — DONE, and it REPLACED the always-on map
+  decision cards.** `AlertsView.swift`: a badged bell (`AlertBell` — a red
+  count bubble, "9+" cap) and the Alerts modal (Figma 5:4488 light / 5:4552
+  dark). "Alerts" = the sim's `decisionQueue` (the events that need player
+  attention: AOG / crew / end-of-service sell). Each is an accent-bordered
+  "Needs Attention" sub-card — AOG red (live $/min erosion), crew red
+  (Reserve/Hire/Wait), sell amber (Sell/Keep) — wired to the SAME resolvers
+  the old cards used, so acting here is identical. Empty state ("all caught
+  up") when the queue clears.
+  - **App-wide wiring**: `ContentView` owns the modal overlay (dimmed bg,
+    tap-to-close, `@State showAlerts`) and passes an `onBell` closure to
+    `NetworkView` / `FleetView` / `FleetDetailView`; their bells are now
+    `AlertBell(count: sim.decisionQueue.count, …, action: onBell)`. So the bell
+    works from any tab, and the badge count is live.
+  - **Removed the always-on AOG/Crew/Sell cards from the Network map bottom
+    stack** — alerts now live SOLELY in the bell/modal, so the same alert no
+    longer appears in two places (it did briefly — see the light screenshot in
+    that session). The `AOGCard`/`CrewCard`/`SellCard`/`DecisionCardChrome`/
+    `CardButton` structs in ContentView.swift are now UNUSED (kept, not deleted
+    — harmless, and they document the resolver wiring; delete if desired).
+  - The Figma also shows an "Offer" alert type (blue — e.g. an airport offering
+    to buy a slot back). That event type doesn't exist in the sim yet, so the
+    modal renders only the three real decision kinds; the card layout is generic
+    (`AlertModel`) so adding Offer later is a one-case addition.
 
 ## Open / not yet decided
 
