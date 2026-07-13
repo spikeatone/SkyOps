@@ -353,186 +353,146 @@ struct RouteConfirmPanel: View {
 /// ROUTES panel: list of every route (open + closed, newest first); tap one
 /// for full P&L detail. All figures read from @Observable sim state, so an
 /// open route's numbers tick up live as its aircraft completes flights.
+/// ROUTES — Figma list (5:5908): ACTIVE / CLOSED sections of route cards, each
+/// "ORIG → DEST" + a Profitable/Recouping status chip, assigned type, Net
+/// Revenue (vs opening cost, green/red), and a disclosure triangle that expands
+/// the card inline to the full P&L + profitability chart + recent flights.
 struct RoutesPanel: View {
     let sim: Simulation
-    @Binding var detailId: Int?
-    let onClose: () -> Void
+    @State private var expandedId: Int?
 
-    private let mint = Color(red: 0x37/255, green: 1, blue: 0xB0/255)
-    private let red = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
+    private let netGreen = Color(skyHex: 0x87ED7A)
+    private let netRed   = Color(skyHex: 0xFF9292)
+    private let chipGreenBG = Color(skyHex: 0xDCFCE7)
+    private let chipAmberBG = Color(skyHex: 0xFEF3C7)
+    private let chipAmberFG = Color(skyHex: 0xF59E0B)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let id = detailId, let route = sim.allRoutes.first(where: { $0.id == id }) {
-                detail(route)
-            } else {
-                list
-            }
-        }
-        .padding(12)
-        .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.97))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.18), lineWidth: 1))
-    }
-
-    // MARK: List
-
-    private var list: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("ROUTES").font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                closeButton
-            }
-            let routes = sim.allRoutes
-            if routes.isEmpty {
-                Text("No routes opened yet.")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.secondary).padding(.vertical, 10)
-            } else {
-                ScrollView {
-                    VStack(spacing: 3) {
-                        ForEach(routes) { r in
-                            Button { detailId = r.id } label: { listRow(r) }
-                                .buttonStyle(.plain)
-                        }
-                    }
+        let active = sim.playerRoutes.sorted { $0.openedTick > $1.openedTick }
+        let closed = sim.closedPlayerRoutes.sorted { ($0.closedTick ?? 0) > ($1.closedTick ?? 0) }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if active.isEmpty && closed.isEmpty {
+                    Text("No routes opened yet.")
+                        .font(.karla(14)).foregroundStyle(Sky.lightBlue).padding(.vertical, 14)
                 }
-                .frame(maxHeight: 240)
+                if !active.isEmpty { section("ACTIVE ROUTES", active) }
+                if !closed.isEmpty { section("CLOSED ROUTES", closed) }
             }
+            .padding(8)
+        }
+        .frame(maxHeight: 480)
+        .background(Sky.navBarDark.opacity(0.92))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Sky.onDarkStroke, lineWidth: 1))
+    }
+
+    private func section(_ title: String, _ routes: [Route]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(title).font(.karla(14)).foregroundStyle(Sky.lightBlue)
+                Rectangle().fill(Sky.onDarkStroke).frame(height: 1)
+            }
+            ForEach(routes) { card($0) }
         }
     }
 
-    private func listRow(_ r: Route) -> some View {
-        let remaining = r.openingCost - r.cumulativeNet
-        let good = remaining <= 0
-        return HStack {
-            HStack(spacing: 6) {
-                Text("\(r.originCode) ↔ \(r.destCode)")
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                Text(r.isOpen ? "OPEN" : "CLOSED")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(r.isOpen ? mint : .secondary)
-            }
-            Spacer()
-            Text(good ? "profitable · \(r.flights) flts"
-                      : "\(money(remaining)) short · \(r.flights) flts")
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(good ? mint : .white.opacity(0.7))
-        }
-        .foregroundStyle(.white)
-        .padding(.vertical, 5).padding(.horizontal, 6)
-        .background(Color.white.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-    }
-
-    // MARK: Detail
-
-    private func detail(_ r: Route) -> some View {
-        let remaining = r.openingCost - r.cumulativeNet
-        let profitable = remaining <= 0
+    private func card(_ r: Route) -> some View {
+        let expanded = expandedId == r.id
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Button { detailId = nil } label: {
-                    Text("← Back").font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .padding(.vertical, 4).padding(.horizontal, 8)
-                        .background(Color.white.opacity(0.08)).clipShape(RoundedRectangle(cornerRadius: 5))
-                }.buttonStyle(.plain)
-                Text("\(r.originCode) ↔ \(r.destCode) · \(r.isOpen ? "OPEN" : "CLOSED")")
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                Spacer()
-                closeButton
-            }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    // `flights` is a CHANGING VALUE input — without it SwiftUI
-                    // diffs this Canvas view as identical (its only other input,
-                    // `route`, is a stable reference) and never redraws it, the
-                    // same freeze family as the Phase 1 MapView bug.
-                    RouteProfitChart(route: r, flights: r.history.count)
-                    section {
-                        line("Start", Simulation.simDate(fromTick: r.openedTick))
-                        if let c = r.closedTick { line("Closed", Simulation.simDate(fromTick: c)) }
-                        line("Flights", "\(r.flights)")
-                        line("Opening cost", money(r.openingCost))
-                        line("Cumulative net", money(r.cumulativeNet),
-                             color: r.cumulativeNet < 0 ? red : .white)
-                        line("Status",
-                             profitable ? "profitable (+\(money(abs(remaining))))"
-                                        : "\(money(remaining)) short",
-                             color: profitable ? mint : red)
-                    }
-                    section {
-                        line("Revenue", money(r.totalRevenue))
-                        line("Fees", "−" + money(r.totalFees))
-                        line("Operating cost", "−" + money(r.totalOperatingCost))
-                        line("Lease cost", "−" + money(r.totalLeaseCost))
-                        line("Avg load", "\(r.averageLoadPct)%")
-                    }
-                    section {
-                        Text("ASSIGNED AIRCRAFT")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                        ForEach(r.assignmentHistory) { a in
-                            Text("\(a.tail) (\(a.typeName)) — \(Simulation.simDate(fromTick: a.assignedTick))")
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundStyle(.white.opacity(0.85))
-                        }
-                    }
-                    section {
-                        Text(r.history.count > 15 ? "RECENT FLIGHTS (last 15 of \(r.history.count))"
-                                                  : "RECENT FLIGHTS")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                        if r.history.isEmpty {
-                            Text("No completed flights yet.")
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundStyle(.white.opacity(0.6))
-                        } else {
-                            ForEach(r.history.suffix(15).reversed()) { h in
-                                Text("\(Simulation.simDate(fromTick: h.tick)): \(h.pax)/\(h.seats) (\(Int((h.loadFactor*100).rounded()))%) · rev \(money(h.revenue)) · net \(h.net < 0 ? "−" : "")\(money(abs(h.net)))")
-                                    .font(.system(size: 10, design: .monospaced))
-                                    .foregroundStyle(h.net < 0 ? red : .white.opacity(0.85))
-                            }
-                        }
-                    }
+                HStack(spacing: 12) {
+                    Text(r.originCode).font(.karla(20, .heavy)).foregroundStyle(.white)
+                    Image(systemName: "arrow.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                    Text(r.destCode).font(.karla(20, .heavy)).foregroundStyle(.white)
                 }
+                Spacer()
+                if r.isOpen { statusChip(profitable: r.isProfitable) }
             }
-            .frame(maxHeight: 280)
+            if r.isOpen {
+                HStack(alignment: .top) {
+                    labeled("Aircraft Types Assigned", r.assignmentHistory.last?.typeName ?? "—", .leading)
+                    Spacer()
+                    let n = r.netVsOpeningCost
+                    labeledValue("Net Revenue",
+                                 (n >= 0 ? "+" : "") + compactMoney(n),
+                                 n >= 0 ? netGreen : netRed, .trailing)
+                }
+            } else {
+                Text("Closed · \(Simulation.simDate(fromTick: r.closedTick ?? 0))")
+                    .font(.karla(14)).foregroundStyle(Sky.lightBlue)
+            }
+            if expanded { detail(r) }
+            Image(systemName: expanded ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+                .font(.system(size: 11)).foregroundStyle(Sky.lightBlue)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Sky.navBarDark)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+        .contentShape(Rectangle())
+        .onTapGesture { withAnimation(.easeInOut(duration: 0.15)) { expandedId = expanded ? nil : r.id } }
+    }
+
+    private func statusChip(profitable: Bool) -> some View {
+        Text(profitable ? "PROFITABLE" : "RECOUPING")
+            .font(.karla(10, .bold))
+            .foregroundStyle(profitable ? Sky.coreGreen : chipAmberFG)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(profitable ? chipGreenBG : chipAmberBG)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(profitable ? Sky.coreGreen : Sky.lightYellow, lineWidth: 1))
+    }
+
+    private func labeled(_ label: String, _ value: String, _ align: HorizontalAlignment) -> some View {
+        VStack(alignment: align, spacing: 0) {
+            Text(label).font(.karla(14)).foregroundStyle(Sky.lightBlue)
+            Text(value).font(.karla(16, .semibold)).foregroundStyle(.white)
+        }
+    }
+    private func labeledValue(_ label: String, _ value: String, _ color: Color, _ align: HorizontalAlignment) -> some View {
+        VStack(alignment: align, spacing: 0) {
+            Text(label).font(.karla(14)).foregroundStyle(Sky.lightBlue)
+            Text(value).font(.karla(16, .semibold)).foregroundStyle(color)
         }
     }
 
-    // MARK: Bits
-
-    private func section<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 3) { content() }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(8)
-            .background(Color.white.opacity(0.04))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+    @ViewBuilder private func detail(_ r: Route) -> some View {
+        Rectangle().fill(Sky.onDarkStroke).frame(height: 1).padding(.top, 2)
+        RouteProfitChart(route: r, flights: r.history.count)
+        VStack(alignment: .leading, spacing: 3) {
+            line("Start", Simulation.simDate(fromTick: r.openedTick))
+            line("Flights", "\(r.flights)")
+            line("Opening cost", money(r.openingCost))
+            line("Cumulative net", money(r.cumulativeNet))
+            line("Revenue", money(r.totalRevenue))
+            line("Fees", "−" + money(r.totalFees))
+            line("Operating cost", "−" + money(r.totalOperatingCost))
+            line("Lease cost", "−" + money(r.totalLeaseCost))
+            line("Avg load", "\(r.averageLoadPct)%")
+        }
+        if !r.history.isEmpty {
+            Text(r.history.count > 8 ? "RECENT FLIGHTS (last 8 of \(r.history.count))" : "RECENT FLIGHTS")
+                .font(.karla(10, .bold)).foregroundStyle(Sky.lightBlue).padding(.top, 2)
+            ForEach(r.history.suffix(8).reversed()) { h in
+                Text("\(Simulation.simDate(fromTick: h.tick)): \(h.pax)/\(h.seats) (\(Int((h.loadFactor*100).rounded()))%) · net \(h.net < 0 ? "−" : "")\(compactMoney(abs(h.net)))")
+                    .font(.karla(11)).foregroundStyle(h.net < 0 ? netRed : .white.opacity(0.85))
+            }
+        }
     }
 
-    private func line(_ label: String, _ value: String, color: Color = .white) -> some View {
-        HStack(alignment: .top) {
-            Text(label).font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.secondary).frame(width: 110, alignment: .leading)
-            Text(value).font(.system(size: 11, design: .monospaced)).foregroundStyle(color)
+    private func line(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label).font(.karla(12)).foregroundStyle(Sky.lightBlue).frame(width: 112, alignment: .leading)
+            Text(value).font(.karla(12, .semibold)).foregroundStyle(.white)
             Spacer(minLength: 0)
         }
     }
 
-    private var closeButton: some View {
-        Button(action: onClose) {
-            Image(systemName: "xmark").font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.white.opacity(0.6)).padding(6)
-        }.buttonStyle(.plain)
-    }
-
-    private func money(_ v: Int) -> String {
-        (v < 0 ? "−$" : "$") + abs(v).formatted(.number.grouping(.automatic))
-    }
+    private func money(_ v: Int) -> String { (v < 0 ? "−$" : "$") + abs(v).formatted(.number.grouping(.automatic)) }
 }
+
 
 /// Profitability-over-time chart for a route: cumulative net measured AGAINST
 /// its opening cost, so the dashed break-even (zero) line shows exactly when —

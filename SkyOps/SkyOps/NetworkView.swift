@@ -48,7 +48,6 @@ struct NetworkView: View {
     @State private var selectedID: UUID?
     @State private var routeMode: RouteMode = .off
     @State private var flash: String?
-    @State private var routesDetailId: Int?
     /// Which control-bar panel is open (mutually exclusive). Route-opening is
     /// its own flow (`routeMode`), not a panel.
     @State private var panel: NetPanel = .none
@@ -157,7 +156,7 @@ struct NetworkView: View {
             }
             switch panel {
             case .acquire: BuyPanel(sim: sim, onBought: handleBought)
-            case .routes:  RoutesPanel(sim: sim, detailId: $routesDetailId) { panel = .none }
+            case .routes:  RoutesPanel(sim: sim)
             case .hire:    AddCrewPanel(sim: sim) { panel = .none }
             case .hedge:   FuelHedgePanel(sim: sim) { panel = .none }
             case .none:    EmptyView()
@@ -202,7 +201,6 @@ struct NetworkView: View {
     private func toggle(_ p: NetPanel) {
         routeMode = .off
         panel = (panel == p) ? .none : p
-        if panel == .routes { routesDetailId = nil }
     }
 
     private func barButton(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
