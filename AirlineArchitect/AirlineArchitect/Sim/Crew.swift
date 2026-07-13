@@ -43,3 +43,23 @@ let FAMILY_LABELS: [String: String] = [
     "E170_FAMILY": "E170/175", "E190_FAMILY": "E190/195",
     "CRJ_FAMILY": "CRJ", "ERJ_FAMILY": "ERJ",
 ]
+
+/// Crew-card display: a full family name + the type-rating coverage line (Crews
+/// home, Figma 5:2439). Hand-maintained like FAMILY_LABELS — keep the coverage
+/// in sync with the AircraftType variants in each family if the fleet changes.
+let CREW_FAMILY_INFO: [String: (name: String, coverage: String)] = [
+    "A320_FAMILY": ("Airbus A320 family", "Covers A319/320/321 (ceo + neo)"),
+    "B737_FAMILY": ("Boeing 737 family", "Covers 737-700/800/900/MAX 8/9"),
+    "A220_FAMILY": ("Airbus A220 family", "Covers A220-100/300"),
+    "B777":        ("Boeing 777 family", "Covers 777-300"),
+    "B787":        ("Boeing 787 family", "Covers 787-8/9/10"),
+    "A330":        ("Airbus A330 family", "Covers A330-900"),
+    "A350":        ("Airbus A350 family", "Covers A350-900"),
+    "B747":        ("Boeing 747 family", "Covers 747-400"),
+    "A380":        ("Airbus A380 family", "Covers A380"),
+    "A340":        ("Airbus A340 family", "Covers A340-300"),
+    "E170_FAMILY": ("Embraer E170 family", "Covers E170/175"),
+    "E190_FAMILY": ("Embraer E190 family", "Covers E190/195"),
+    "CRJ_FAMILY":  ("Bombardier CRJ family", "Covers CRJ900/1000"),
+    "ERJ_FAMILY":  ("Embraer ERJ family", "Covers ERJ135/140/145"),
+]

@@ -26,7 +26,7 @@ struct ContentView: View {
             switch tab {
             case 0:  NetworkView(sim: sim, onBell: { showAlerts = true })
             case 1:  FleetView(sim: sim, tab: $tab, onBell: { showAlerts = true })
-            case 2:  placeholder("Crews", "person.2.fill")
+            case 2:  CrewsView(sim: sim, onBell: { showAlerts = true })
             case 3:  placeholder("Ops", "list.clipboard.fill")
             default: placeholder("Finance", "chart.bar.fill")
             }
