@@ -10,10 +10,12 @@
 //  RevenueCat wiring: the real SDK drives `isPro` from the "Airline Architect
 //  Pro" entitlement, with real offerings/prices and real purchase/restore. All
 //  RevenueCat code is behind `#if canImport(RevenueCat)` with a local stub
-//  fallback, so the app still compiles if the package is ever removed. To fully
-//  go live you still need the App Store Connect subscription products
-//  (ids `yearly` / `monthly`) + a RevenueCat Offering + the entitlement — until
-//  then offerings() returns nothing and the paywall shows the fallback prices.
+//  fallback, so the app still compiles if the package is ever removed. The
+//  RevenueCat dashboard is fully configured: App Store app connected, `yearly`/
+//  `monthly` products imported, `Airline Architect Pro` entitlement, and a
+//  `default` offering with Annual/Monthly packages → so offerings() returns the
+//  real localized prices. Remaining before public launch: submit the two
+//  subscriptions with the first app-version App Review (sandbox already works).
 //
 
 #if canImport(RevenueCat)
@@ -23,10 +25,12 @@ import Foundation
 
 @MainActor @Observable
 final class Store {
-    /// RevenueCat public SDK key (safe to embed — it's a client key). Supplied
-    /// by the designer. NB: iOS public keys are usually `appl_…`; double-check
-    /// this is the iOS SDK key if entitlements don't resolve.
-    static let apiKey = "test_HezjILZFKVEdSqzUSMYrXohcnjp"
+    /// RevenueCat App Store public SDK key (safe to embed — it's a client key
+    /// shipped inside the app). Production key for the "Airline Architect" App
+    /// Store app; drives the real `default` offering (yearly/monthly packages)
+    /// + the `Airline Architect Pro` entitlement. (The old `test_…` Test Store
+    /// key is retained in git history if you ever need simulated purchases.)
+    static let apiKey = "appl_VrQXFZPLdMiMOFAQVErmwOeVdup"
     /// The entitlement identifier configured in the RevenueCat dashboard.
     static let entitlementID = "Airline Architect Pro"
 
