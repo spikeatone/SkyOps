@@ -55,6 +55,10 @@ struct ContentView: View {
                     cameraCenter: sim.cameraCenter,
                     selectedID: selected?.id,
                     highlightCodes: routeHighlights)
+                // Full-screen so the whole map (incl. the safe-area margins) is
+                // tappable; the tap location itself is read in .global space to
+                // match the Canvas — see dragOrTapGesture.
+                .ignoresSafeArea()
                 .gesture(dragOrTapGesture.simultaneously(with: zoomGesture))
 
             hud
@@ -188,7 +192,11 @@ struct ContentView: View {
     /// that moves past the threshold pans; a touch that ends without moving is
     /// a tap → select the aircraft under it (or clear on empty map).
     private var dragOrTapGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
+        // Read in .global space: its origin is the physical screen top-left,
+        // which is exactly where the Canvas draws (the Canvas ignoresSafeArea,
+        // so airport/aircraft screen positions are in full-screen coords). The
+        // default .local space is inset by the layout and lands taps ~80pt off.
+        DragGesture(minimumDistance: 0, coordinateSpace: .global)
             .onChanged { v in
                 if !isDragging, hypot(v.translation.width, v.translation.height) > 8 {
                     isDragging = true
