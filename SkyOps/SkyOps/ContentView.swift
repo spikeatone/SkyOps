@@ -745,6 +745,11 @@ struct RoutesPanel: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
+                    // `flights` is a CHANGING VALUE input — without it SwiftUI
+                    // diffs this Canvas view as identical (its only other input,
+                    // `route`, is a stable reference) and never redraws it, the
+                    // same freeze family as the Phase 1 MapView bug.
+                    RouteProfitChart(route: r, flights: r.history.count)
                     section {
                         line("Start", Simulation.simDate(fromTick: r.openedTick))
                         if let c = r.closedTick { line("Closed", Simulation.simDate(fromTick: c)) }
@@ -825,6 +830,131 @@ struct RoutesPanel: View {
 
     private func money(_ v: Int) -> String {
         (v < 0 ? "−$" : "$") + abs(v).formatted(.number.grouping(.automatic))
+    }
+}
+
+/// Profitability-over-time chart for a route: cumulative net measured AGAINST
+/// its opening cost, so the dashed break-even (zero) line shows exactly when —
+/// and whether — the route recouped what it cost to open. The line is red
+/// below break-even, mint above, split precisely at the crossing; a dot marks
+/// the recoup point. Data comes straight from route.history (verified
+/// sufficient to reconstruct the whole curve). Hand-drawn in a Canvas to match
+/// the map's rendering + the current dev aesthetic (Figma restyle repaints it
+/// later); re-renders live via ContentView's per-tick refresh.
+struct RouteProfitChart: View {
+    let route: Route
+    /// Completed-flight count — a CHANGING VALUE input so SwiftUI re-invokes
+    /// this view's body (and redraws the Canvas) when new flight data lands.
+    /// Without it, `route` alone is a stable reference and the chart freezes.
+    let flights: Int
+    private let mint = Color(red: 0x37/255, green: 1, blue: 0xB0/255)
+    private let red = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255)
+
+    /// netVsOpeningCost at flight 0 (route opened — the full hole), then one
+    /// value per completed flight.
+    private var series: [Double] {
+        [Double(-route.openingCost)] + route.history.map { Double($0.cumulativeNet - route.openingCost) }
+    }
+    /// First 1-based flight index that reached break-even, if any.
+    private var recoupFlight: Int? {
+        let s = series
+        return s.indices.first { $0 >= 1 && s[$0] >= 0 }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("PROFITABILITY")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundStyle(.secondary)
+            if route.history.isEmpty {
+                Text("No flight data yet.")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(.vertical, 22)
+            } else {
+                Canvas { ctx, size in draw(ctx, size) }
+                    .frame(height: 116)
+                caption
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(8)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    @ViewBuilder private var caption: some View {
+        if let k = recoupFlight, k - 1 < route.history.count {
+            Text("Recouped at flight \(k) · \(Simulation.simDate(fromTick: route.history[k - 1].tick))")
+                .font(.system(size: 9, design: .monospaced)).foregroundStyle(mint)
+        } else {
+            Text("Not yet recouped · \(money(abs(route.netVsOpeningCost))) to break-even")
+                .font(.system(size: 9, design: .monospaced)).foregroundStyle(red)
+        }
+    }
+
+    private func draw(_ ctx: GraphicsContext, _ size: CGSize) {
+        let s = series
+        let leftPad: CGFloat = 48, rightPad: CGFloat = 8, topPad: CGFloat = 8, bottomPad: CGFloat = 6
+        let plotW = size.width - leftPad - rightPad
+        let plotH = size.height - topPad - bottomPad
+        let n = s.count
+        let maxY = max(s.max() ?? 0, 0)
+        let minY = min(s.min() ?? 0, 0)
+        let range = max(1, maxY - minY)
+        func sx(_ i: Int) -> CGFloat { leftPad + (n <= 1 ? 0 : plotW * CGFloat(i) / CGFloat(n - 1)) }
+        func sy(_ v: Double) -> CGFloat { topPad + plotH * CGFloat(1 - (v - minY) / range) }
+
+        ctx.stroke(Path(CGRect(x: leftPad, y: topPad, width: plotW, height: plotH)),
+                   with: .color(.white.opacity(0.10)), lineWidth: 1)
+
+        // Break-even (zero) line — dashed, prominent.
+        let zy = sy(0)
+        var z = Path(); z.move(to: CGPoint(x: leftPad, y: zy)); z.addLine(to: CGPoint(x: leftPad + plotW, y: zy))
+        ctx.stroke(z, with: .color(.white.opacity(0.35)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+
+        // Y labels: max (top), $0 (break-even), min (bottom).
+        yLabel(ctx, money(Int(maxY)), CGPoint(x: leftPad - 5, y: sy(maxY)))
+        yLabel(ctx, "$0", CGPoint(x: leftPad - 5, y: zy))
+        yLabel(ctx, money(Int(minY)), CGPoint(x: leftPad - 5, y: sy(minY)))
+
+        // P&L line, split at each zero crossing and coloured by sign.
+        for i in 0..<(n - 1) {
+            let x0 = sx(i), x1 = sx(i + 1), v0 = s[i], v1 = s[i + 1]
+            if (v0 < 0) != (v1 < 0), v1 != v0 {
+                let xc = x0 + (x1 - x0) * CGFloat(-v0 / (v1 - v0))
+                seg(ctx, CGPoint(x: x0, y: sy(v0)), CGPoint(x: xc, y: zy), green: v0 >= 0)
+                seg(ctx, CGPoint(x: xc, y: zy), CGPoint(x: x1, y: sy(v1)), green: v1 >= 0)
+            } else {
+                seg(ctx, CGPoint(x: x0, y: sy(v0)), CGPoint(x: x1, y: sy(v1)), green: (v0 + v1) >= 0)
+            }
+        }
+
+        // Recoup marker at the break-even crossing.
+        if let k = recoupFlight, k < n {
+            let v0 = s[k - 1], v1 = s[k]
+            let xc = (v0 < 0) != (v1 < 0) && v1 != v0
+                ? sx(k - 1) + (sx(k) - sx(k - 1)) * CGFloat(-v0 / (v1 - v0))
+                : sx(k)
+            ctx.fill(Path(ellipseIn: CGRect(x: xc - 3, y: zy - 3, width: 6, height: 6)), with: .color(mint))
+        }
+    }
+
+    private func seg(_ ctx: GraphicsContext, _ a: CGPoint, _ b: CGPoint, green: Bool) {
+        var p = Path(); p.move(to: a); p.addLine(to: b)
+        ctx.stroke(p, with: .color(green ? mint : red), lineWidth: 1.5)
+    }
+
+    private func yLabel(_ ctx: GraphicsContext, _ s: String, _ at: CGPoint) {
+        ctx.draw(Text(s).font(.system(size: 8, design: .monospaced)).foregroundColor(.white.opacity(0.5)),
+                 at: at, anchor: .trailing)
+    }
+
+    private func money(_ v: Int) -> String {
+        let a = abs(v), sign = v < 0 ? "−" : ""
+        if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
+        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
+        return sign + "$\(a)"
     }
 }
 

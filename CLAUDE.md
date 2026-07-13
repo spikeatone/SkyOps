@@ -1474,13 +1474,40 @@ where numbers are involved.
   `settleLeg` appends a FlightRecord; `resolveSell` now ARCHIVES the route to
   `closedPlayerRoutes` (closedTick set, history intact) instead of deleting it
   — so a route that never recouped stays reviewable. All @Observable, so an
-  open route's numbers tick up LIVE. The actual profitability CHART is still
-  not built (the data model is verified sufficient for it). Verified: 18/18
-  headless (`scratchpad` RoutesMain: history accumulation, field sanity,
-  cumulativeNet consistency, archival-preserves-history) + live in the
-  Simulator (watched a SLC↔DEN route recoup from $50,951 short → $7,112 short
-  over ~30 flights, correct P&L math rev−fees−opcost=cumulativeNet, the
-  "last 15 of N" cap, and the recent-flights log).
+  open route's numbers tick up LIVE. Verified: 18/18 headless (`scratchpad`
+  RoutesMain: history accumulation, field sanity, cumulativeNet consistency,
+  archival-preserves-history) + live in the Simulator (watched a SLC↔DEN route
+  recoup from $50,951 short → $7,112 short over ~30 flights, correct P&L math
+  rev−fees−opcost=cumulativeNet, the "last 15 of N" cap, and the flight log).
+- **Profitability CHART — DONE (native app).** `RouteProfitChart` (top of the
+  ROUTES detail view) plots per-flight net measured AGAINST opening cost, so a
+  dashed break-even (zero) line shows exactly when — and whether — a route
+  recouped. Series is `[−openingCost]` (flight 0, the full hole) + one point
+  per flight (`cumulativeNet − openingCost`); the line is RED below break-even
+  and MINT above, split PRECISELY at each zero crossing, with a mint dot at the
+  recoup point and a caption naming the exact flight ("Recouped at flight 40 ·
+  Day 13 · 11:02"). Hand-drawn in a `Canvas` (matches the map + dev aesthetic;
+  the Figma restyle repaints it later). Verified live: watched a route's line
+  climb red from −$84k, cross the $0 line at flight 40 with the mint dot, then
+  continue green to +$19k — chart, caption, and summary all agreeing.
+- **The Canvas-freeze bug RECURRED — its SECOND native occurrence (first was
+  the Phase 1 MapView).** `RouteProfitChart`'s only input was `route` (a stable
+  reference), so SwiftUI diffed it identical and NEVER redrew the Canvas — the
+  chart froze at its first render (red line, "$33k short") while the sibling
+  summary Texts, being inline in the parent's body, updated live. A clean
+  build hid it (compiles fine); only watching it run at 25× exposed the frozen
+  chart vs. a "profitable" summary. Fix is the documented one: pass a CHANGING
+  VALUE input — `RouteProfitChart(route: r, flights: r.history.count)`. CLAUDE.md
+  warned "if a second view freezes this way, build the shared pattern": noted —
+  every future tick-driven Canvas/child view in this app MUST take a changing
+  value input (tick, or a count that moves with its data), or it silently
+  freezes. This is now a firm rule, not a per-view surprise.
+- **A real SwiftUI note from the ROUTES detail scroll:** at high sim speed the
+  recent-flights `ForEach(history.suffix(15).reversed())` churns its element
+  identity every completed flight (a new flight shifts the 15-window), which
+  fights manual scroll position — expected, not a bug; scrolling is fine at
+  low speed. (The chart above does NOT have this issue — it redraws in one
+  Canvas pass rather than a ForEach of moving rows.)
 - **A real SwiftUI note from the ROUTES detail scroll:** at high sim speed the
   recent-flights `ForEach(history.suffix(15).reversed())` churns its element
   identity every completed flight (a new flight shifts the 15-window), which
@@ -1566,11 +1593,10 @@ where numbers are involved.
   airports, waived fees, real clawback penalty for abandoning early) were
   both explicitly scoped as later phases (C/D) and are still not built —
   only the foundational route-opening mechanic (A/B) shipped.
-- **The Routes panel has real per-flight history data but no chart.** The
-  designer's stated goal — an app view charting profitability over time,
-  seeing exactly when a route became profitable — is only half done. The
-  data model is verified sufficient to build it; the actual visualization
-  doesn't exist yet.
+- **Routes profitability chart — RESOLVED (native app).** The designer's goal
+  (an app view charting profitability over time, seeing exactly when a route
+  became profitable) is built — see `RouteProfitChart` in the Native iOS Port
+  section. The browser prototype still lacks it; this is native-app only.
 - **Full 30-type fleet, 48 airports, the economic event system, the
   pan/zoom camera, the sell/buy/lease economy, the real player route
   network, AND the rebuilt crew-hiring/duty-rest system have never all
