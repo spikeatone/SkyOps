@@ -25,7 +25,7 @@ struct Airline {
         .init(name: "American Airlines", weight: 21, types: ["A319","A320","A321","A321NEO","B737800","MAX8","B773","B788"]),
         .init(name: "Delta Air Lines",   weight: 19, types: ["A319","A320","A321","A321NEO","B737800","B739","A220300","A220100","A339","A359"]),
         .init(name: "Southwest Airlines", weight: 18, types: ["B737700","B737800","MAX8"]),
-        .init(name: "United Airlines",   weight: 17, types: ["A319","A320","A321NEO","B737700","B737800","B739","MAX8","MAX9","B773","B788"]),
+        .init(name: "United Airlines",   weight: 17, types: ["A319","A320","A321NEO","B737700","B737800","B739","MAX8","MAX9","B773","B788","B78J"]),
         .init(name: "Alaska Airlines",   weight: 6,  types: ["B737700","B737800","B739","MAX8","MAX9","B788","E175"]),
         .init(name: "JetBlue Airways",   weight: 5,  types: ["A320","A321","A321NEO","A220300"]),
         .init(name: "Spirit Airlines",   weight: 3,  types: ["A319","A320","A320NEO","A321","A321NEO"]),
@@ -41,7 +41,7 @@ struct Airline {
         // International — widebody only, deliberately rare
         .init(name: "Air France",        weight: 1, types: ["B773","B788","A339","A359"]),
         .init(name: "Lufthansa",         weight: 1, types: ["B788","B747","A380","A340","A359"]),
-        .init(name: "British Airways",   weight: 1, types: ["B773","B788","A380","A359"]),
+        .init(name: "British Airways",   weight: 1, types: ["B773","B788","B78J","A380","A359"]),
         .init(name: "Emirates",          weight: 1, types: ["B773","A380"]),
         .init(name: "Air Canada",        weight: 1, types: ["B773","B788","A339"]),
         .init(name: "Japan Airlines",    weight: 1, types: ["B773","B788","A359"]),

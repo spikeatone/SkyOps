@@ -81,7 +81,7 @@ struct AircraftType: Identifiable {
         "A319": 3700, "A320": 3300, "A321": 3200, "A319NEO": 3750, "A320NEO": 3400, "A321NEO": 4000,
         "B737700": 3010, "B737800": 2935, "B739": 2950, "MAX8": 3550, "MAX9": 3300,
         "A220300": 3350, "A220100": 3400,
-        "B773": 6014, "B788": 7565, "A339": 7200, "A359": 8100,
+        "B773": 6014, "B788": 7565, "B78J": 6330, "A339": 7200, "A359": 8100,
         "B747": 7260, "A380": 8000, "A340": 7400,
         "E170": 2150, "E175": 2200, "E190": 2450, "E195": 2300,
         "CRJ900": 1550, "CRJ1000": 1650,
@@ -115,6 +115,7 @@ struct AircraftType: Identifiable {
         // Twin-engine widebodies — each its own crew family
         .init(id: "B773",    name: "Boeing 777-300",       seats: 380, family: "B777", bodyType: .widebody2Engine, weight: 23, mlwLbs: 460000, costPerHour: 20000, purchasePrice: 289_000_000, expectedLifespanCycles: 44000),
         .init(id: "B788",    name: "Boeing 787 Dreamliner", seats: 280, family: "B787", bodyType: .widebody2Engine, weight: 14, mlwLbs: 380000, costPerHour: 12000, purchasePrice: 225_000_000, expectedLifespanCycles: 44000),
+        .init(id: "B78J",    name: "Boeing 787-10 Dreamliner", seats: 330, family: "B787", bodyType: .widebody2Engine, weight: 7, mlwLbs: 445000, costPerHour: 12500, purchasePrice: 250_000_000, expectedLifespanCycles: 44000),
         .init(id: "A339",    name: "Airbus A330-900",      seats: 300, family: "A330", bodyType: .widebody2Engine, weight: 10, mlwLbs: 421082, costPerHour: 11500, purchasePrice: 230_000_000, expectedLifespanCycles: 44000),
         .init(id: "A359",    name: "Airbus A350-900",      seats: 306, family: "A350", bodyType: .widebody2Engine, weight: 8,  mlwLbs: 456357, costPerHour: 13500, purchasePrice: 300_000_000, expectedLifespanCycles: 44000),
         // Four-engine widebodies — each its own crew family
