@@ -328,6 +328,36 @@ final class Airport: Identifiable {
         .init(code: "MHD", lat: 36.2352, lon: 59.6410,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 320, gateFeeWidebody: 680,  groundStopsPerMonth: 2.0),
         .init(code: "IKA", lat: 35.4161, lon: 51.1522,  landingFeePerKlb: 4.00, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 2.0),
         .init(code: "THR", lat: 35.6892, lon: 51.3134,  landingFeePerKlb: 4.00, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 2.0),
+
+        // ── Oceania & South Pacific. Real lat/lon; tier-based fee/ground-stop
+        // ESTIMATES (cyclone/tropical airports lean high). Australia/NZ sit on the
+        // teal Oceania outline; the small islands (Fiji/Tahiti/New Caledonia/PNG)
+        // are lone dots — NE 110m drops islands that small, same as Mauritius.
+        // PPT (Tahiti) is stored at +210.4 (real −149.6 + 360) to cross the
+        // antimeridian and render near Fiji rather than wrapping west. GUM (Guam)
+        // is a US territory / United hub, so it's left in the US carrier region
+        // (not oceaniaCodes) — its Asia/Pacific legs correctly draw United.
+        .init(code: "SYD", lat: -33.9461, lon: 151.1772, landingFeePerKlb: 7.50, gateFeeNarrowbody: 500, gateFeeWidebody: 1300, groundStopsPerMonth: 2.0),
+        .init(code: "MEL", lat: -37.6690, lon: 144.8410, landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 2.0),
+        .init(code: "BNE", lat: -27.3842, lon: 153.1175, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 2.5),
+        .init(code: "AKL", lat: -37.0082, lon: 174.7850, landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 2.5),
+        .init(code: "PER", lat: -31.9403, lon: 115.9669, landingFeePerKlb: 5.50, gateFeeNarrowbody: 420, gateFeeWidebody: 1000, groundStopsPerMonth: 1.8),
+        .init(code: "ADL", lat: -34.9450, lon: 138.5306, landingFeePerKlb: 4.60, gateFeeNarrowbody: 370, gateFeeWidebody: 820,  groundStopsPerMonth: 2.0),
+        .init(code: "CHC", lat: -43.4894, lon: 172.5322, landingFeePerKlb: 4.40, gateFeeNarrowbody: 360, gateFeeWidebody: 800,  groundStopsPerMonth: 2.5),
+        .init(code: "OOL", lat: -28.1644, lon: 153.5047, landingFeePerKlb: 4.00, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 2.5),
+        .init(code: "WLG", lat: -41.3272, lon: 174.8053, landingFeePerKlb: 4.20, gateFeeNarrowbody: 350, gateFeeWidebody: 760,  groundStopsPerMonth: 3.5),
+        .init(code: "CNS", lat: -16.8858, lon: 145.7553, landingFeePerKlb: 3.80, gateFeeNarrowbody: 330, gateFeeWidebody: 700,  groundStopsPerMonth: 3.5),
+        .init(code: "NAN", lat: -17.7554, lon: 177.4434, landingFeePerKlb: 3.60, gateFeeNarrowbody: 320, gateFeeWidebody: 680,  groundStopsPerMonth: 3.5),
+        .init(code: "HBA", lat: -42.8361, lon: 147.5103, landingFeePerKlb: 3.60, gateFeeNarrowbody: 320, gateFeeWidebody: 680,  groundStopsPerMonth: 2.5),
+        .init(code: "DRW", lat: -12.4147, lon: 130.8767, landingFeePerKlb: 3.80, gateFeeNarrowbody: 330, gateFeeWidebody: 700,  groundStopsPerMonth: 3.5),
+        .init(code: "ZQN", lat: -45.0211, lon: 168.7392, landingFeePerKlb: 3.40, gateFeeNarrowbody: 310, gateFeeWidebody: 660,  groundStopsPerMonth: 3.5),
+        .init(code: "PPT", lat: -17.5537, lon: 210.4340, landingFeePerKlb: 3.40, gateFeeNarrowbody: 310, gateFeeWidebody: 660,  groundStopsPerMonth: 2.5),
+        .init(code: "TSV", lat: -19.2526, lon: 146.7651, landingFeePerKlb: 3.40, gateFeeNarrowbody: 310, gateFeeWidebody: 660,  groundStopsPerMonth: 3.0),
+        .init(code: "LST", lat: -41.5453, lon: 147.2140, landingFeePerKlb: 3.20, gateFeeNarrowbody: 300, gateFeeWidebody: 640,  groundStopsPerMonth: 2.5),
+        .init(code: "NOU", lat: -22.0146, lon: 166.2130, landingFeePerKlb: 3.40, gateFeeNarrowbody: 310, gateFeeWidebody: 660,  groundStopsPerMonth: 2.5),
+        .init(code: "CBR", lat: -35.3069, lon: 149.1950, landingFeePerKlb: 4.20, gateFeeNarrowbody: 350, gateFeeWidebody: 760,  groundStopsPerMonth: 2.5),
+        .init(code: "POM", lat: -9.4433,  lon: 147.2200, landingFeePerKlb: 3.40, gateFeeNarrowbody: 310, gateFeeWidebody: 660,  groundStopsPerMonth: 3.0),
+        .init(code: "GUM", lat: 13.4834,  lon: 144.7960, landingFeePerKlb: 4.50, gateFeeNarrowbody: 380, gateFeeWidebody: 850,  groundStopsPerMonth: 3.0),
     ]
 
     /// Two distinct random airports — ported from randomRoutePair().

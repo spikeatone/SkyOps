@@ -65,7 +65,7 @@ struct Airline {
     /// The five geographic regions a flight can touch. A leg draws carriers from
     /// its endpoints' regions, so a Mexican domestic leg shows Mexican carriers,
     /// a Brazilian one South American carriers, etc. — not a lumped LatAm pool.
-    enum Region { case us, canada, mexico, centralAmerica, southAmerica, europe, africa, asia, middleEast }
+    enum Region { case us, canada, mexico, centralAmerica, southAmerica, europe, africa, asia, middleEast, oceania }
 
     /// Real Canadian carriers. Per-type eligibility researched per carrier,
     /// limited to the game's types. Air Canada also appears in the US roster
@@ -216,6 +216,21 @@ struct Airline {
         .init(name: "Mahan Air",           code: "W5", weight: 3,  types: ["A319","A320","A321","A340"]),
     ]
 
+    // Oceania & South Pacific — Australia / New Zealand / Fiji / Tahiti / New
+    // Caledonia / PNG. Per-type researched. (GUM is US-region, not here — see the
+    // note in Airport.all — so United carries Guam's Pacific traffic.)
+    static let oceaniaRoster: [Airline] = [
+        .init(name: "Qantas",             code: "QF", weight: 14, types: ["B737800","A339","B789","A380"]),
+        .init(name: "Air New Zealand",    code: "NZ", weight: 10, types: ["A320","A321NEO","B789","B773"]),
+        .init(name: "Virgin Australia",   code: "VA", weight: 10, types: ["B737800","MAX8"]),
+        .init(name: "Jetstar",            code: "JQ", weight: 9,  types: ["A320","A321","A321NEO","B788"]),
+        .init(name: "Fiji Airways",       code: "FJ", weight: 5,  types: ["B737800","MAX8","A339","A359"]),
+        .init(name: "Rex Airlines",       code: "ZL", weight: 4,  types: ["B737800"]),
+        .init(name: "Air Tahiti Nui",     code: "TN", weight: 3,  types: ["B789"]),
+        .init(name: "Aircalin",           code: "SB", weight: 3,  types: ["A320NEO","A339"]),
+        .init(name: "Air Niugini",        code: "PX", weight: 3,  types: ["B737800","A320"]),
+    ]
+
     // Airport-code → region membership (US is the default / everything else).
     static let canadaCodes: Set<String> = [
         "YYZ","YVR","YUL","YYC","YEG","YOW","YWG","YHZ","YTZ","YLW","YYJ","YYT","YXE","YQR","YQM","YSJ","YQG","YFC","YQT","YMM",
@@ -247,6 +262,11 @@ struct Airline {
     static let middleEastCodes: Set<String> = [
         "DXB","DOH","JED","RUH","AUH","MCT","KWI","BAH","DMM","SHJ","TLV","MED","AMM","BEY","MHD","IKA","THR",
     ]
+    // Oceania & South Pacific. GUM (Guam) is deliberately NOT here — it's a US
+    // territory / United hub, so it stays in the US carrier region.
+    static let oceaniaCodes: Set<String> = [
+        "SYD","MEL","BNE","AKL","PER","ADL","CHC","OOL","WLG","CNS","NAN","HBA","DRW","ZQN","PPT","TSV","LST","NOU","CBR","POM",
+    ]
 
     static func region(_ code: String) -> Region {
         if canadaCodes.contains(code) { return .canada }
@@ -257,6 +277,7 @@ struct Airline {
         if africaCodes.contains(code) { return .africa }
         if asiaCodes.contains(code) { return .asia }
         if middleEastCodes.contains(code) { return .middleEast }
+        if oceaniaCodes.contains(code) { return .oceania }
         return .us
     }
     static func roster(for r: Region) -> [Airline] {
@@ -270,6 +291,7 @@ struct Airline {
         case .africa:         return africaRoster
         case .asia:           return asiaRoster
         case .middleEast:     return middleEastRoster
+        case .oceania:        return oceaniaRoster
         }
     }
 
@@ -358,6 +380,9 @@ struct Airline {
         "JT": "Lion Air", "QP": "Akasa Air",
         // Middle East carriers (EK/QR/SV/EY/WY/GF/RJ already above)
         "FZ": "flydubai", "KU": "Kuwait Airways", "LY": "El Al", "IR": "Iran Air",
+        // Oceania / South Pacific carriers (QF/NZ/VA/JQ already above)
+        "FJ": "Fiji Airways", "ZL": "Rex Airlines", "TN": "Air Tahiti Nui",
+        "SB": "Aircalin", "PX": "Air Niugini",
     ]
 
     /// A random 2-uppercase-letter code that isn't a real airline code — used

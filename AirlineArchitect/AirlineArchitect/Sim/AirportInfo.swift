@@ -288,5 +288,28 @@ extension Airport {
         "MHD": .init(name: "Mashhad Shahid Hasheminejad International", city: "Mashhad, Iran", operationsPerYear: 80_000, runways: 2, longestRunwayFt: 12_795, metroPopulation: 3_400_000, annualPassengers: 10_000_000),
         "IKA": .init(name: "Imam Khomeini International Airport", city: "Tehran, Iran", operationsPerYear: 90_000, runways: 2, longestRunwayFt: 13_911, metroPopulation: 15_000_000, annualPassengers: 9_000_000),
         "THR": .init(name: "Mehrabad International Airport", city: "Tehran, Iran", operationsPerYear: 120_000, runways: 2, longestRunwayFt: 13_100, metroPopulation: 15_000_000, annualPassengers: 13_000_000),
+
+        // ── Oceania & South Pacific (best-effort ~2023–24) ─────────────────
+        "SYD": .init(name: "Sydney Kingsford Smith Airport", city: "Sydney, Australia", operationsPerYear: 340_000, runways: 3, longestRunwayFt: 12_999, metroPopulation: 5_300_000, annualPassengers: 44_000_000),
+        "MEL": .init(name: "Melbourne Airport", city: "Melbourne, Australia", operationsPerYear: 240_000, runways: 2, longestRunwayFt: 11_998, metroPopulation: 5_000_000, annualPassengers: 37_000_000),
+        "BNE": .init(name: "Brisbane Airport", city: "Brisbane, Australia", operationsPerYear: 220_000, runways: 2, longestRunwayFt: 11_483, metroPopulation: 2_600_000, annualPassengers: 23_000_000),
+        "AKL": .init(name: "Auckland Airport", city: "Auckland, New Zealand", operationsPerYear: 160_000, runways: 1, longestRunwayFt: 11_926, metroPopulation: 1_700_000, annualPassengers: 18_000_000),
+        "PER": .init(name: "Perth Airport", city: "Perth, Australia", operationsPerYear: 140_000, runways: 2, longestRunwayFt: 11_299, metroPopulation: 2_100_000, annualPassengers: 14_000_000),
+        "ADL": .init(name: "Adelaide Airport", city: "Adelaide, Australia", operationsPerYear: 90_000, runways: 1, longestRunwayFt: 10_171, metroPopulation: 1_400_000, annualPassengers: 8_000_000),
+        "CHC": .init(name: "Christchurch International Airport", city: "Christchurch, New Zealand", operationsPerYear: 90_000, runways: 2, longestRunwayFt: 10_787, metroPopulation: 400_000, annualPassengers: 6_000_000),
+        "OOL": .init(name: "Gold Coast Airport", city: "Gold Coast, Australia", operationsPerYear: 55_000, runways: 1, longestRunwayFt: 7_674, metroPopulation: 700_000, annualPassengers: 6_000_000),
+        "WLG": .init(name: "Wellington International Airport", city: "Wellington, New Zealand", operationsPerYear: 90_000, runways: 1, longestRunwayFt: 6_847, metroPopulation: 420_000, annualPassengers: 6_000_000),
+        "CNS": .init(name: "Cairns Airport", city: "Cairns, Australia", operationsPerYear: 60_000, runways: 1, longestRunwayFt: 10_700, metroPopulation: 250_000, annualPassengers: 5_000_000),
+        "NAN": .init(name: "Nadi International Airport", city: "Nadi, Fiji", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 10_738, metroPopulation: 200_000, annualPassengers: 2_500_000),
+        "HBA": .init(name: "Hobart International Airport", city: "Hobart, Australia", operationsPerYear: 40_000, runways: 1, longestRunwayFt: 7_382, metroPopulation: 250_000, annualPassengers: 2_700_000),
+        "DRW": .init(name: "Darwin International Airport", city: "Darwin, Australia", operationsPerYear: 40_000, runways: 2, longestRunwayFt: 11_004, metroPopulation: 150_000, annualPassengers: 2_000_000),
+        "ZQN": .init(name: "Queenstown Airport", city: "Queenstown, New Zealand", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 6_204, metroPopulation: 50_000, annualPassengers: 2_400_000),
+        "PPT": .init(name: "Fa'a'ā International Airport", city: "Papeete, Tahiti", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 11_214, metroPopulation: 140_000, annualPassengers: 1_500_000),
+        "TSV": .init(name: "Townsville Airport", city: "Townsville, Australia", operationsPerYear: 40_000, runways: 1, longestRunwayFt: 7_999, metroPopulation: 180_000, annualPassengers: 1_700_000),
+        "LST": .init(name: "Launceston Airport", city: "Launceston, Australia", operationsPerYear: 25_000, runways: 1, longestRunwayFt: 6_499, metroPopulation: 90_000, annualPassengers: 1_300_000),
+        "NOU": .init(name: "La Tontouta International Airport", city: "Nouméa, New Caledonia", operationsPerYear: 15_000, runways: 1, longestRunwayFt: 10_663, metroPopulation: 180_000, annualPassengers: 1_400_000),
+        "CBR": .init(name: "Canberra Airport", city: "Canberra, Australia", operationsPerYear: 60_000, runways: 1, longestRunwayFt: 10_807, metroPopulation: 460_000, annualPassengers: 3_200_000),
+        "POM": .init(name: "Jacksons International Airport", city: "Port Moresby, Papua New Guinea", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 8_858, metroPopulation: 380_000, annualPassengers: 1_500_000),
+        "GUM": .init(name: "Antonio B. Won Pat International Airport", city: "Hagåtña, Guam", operationsPerYear: 40_000, runways: 2, longestRunwayFt: 12_015, metroPopulation: 170_000, annualPassengers: 3_000_000),
     ]
 }
