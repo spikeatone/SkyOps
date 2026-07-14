@@ -144,14 +144,22 @@ struct NetworkView: View {
         .coordinateSpace(.named("mapCanvas"))
         .gesture(dragOrTapGesture.simultaneously(with: zoomGesture))
         .overlay(alignment: .top) {
-            if showOverlays { controlBar.padding(8) }
+            VStack(spacing: 8) {
+                // Reserve the control bar's space even when hidden so a dropped
+                // panel doesn't shift when the overlays toggle.
+                controlBar.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
+                // Control-bar panels (Acquire / Routes / Hire) drop DOWN directly
+                // beneath the control bar — attached to it, instead of floating
+                // ~100px lower, bottom-docked in the middle of the map.
+                panelDropdown(selected: selected)
+            }
+            .padding(8)
         }
         .overlay(alignment: .bottom) {
             VStack(spacing: 8) {
-                bottomStack(selected: selected)
+                bottomDocked(selected: selected)
                 // Keep the speed/dev bars' vertical space reserved even when the
-                // overlays are hidden, so an open panel (e.g. Routes) stays put
-                // instead of dropping down into the freed space.
+                // overlays are hidden, so a bottom-docked tooltip stays put.
                 speedBar.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
                 devControls.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
             }
@@ -159,26 +167,30 @@ struct NetworkView: View {
         }
     }
 
-    /// Panels / tooltip / decision cards, stacked above the speed bar.
-    @ViewBuilder private func bottomStack(selected: Aircraft?) -> some View {
+    /// Control-bar panels, dropping down directly beneath the control bar.
+    @ViewBuilder private func panelDropdown(selected: Aircraft?) -> some View {
+        switch panel {
+        case .acquire: BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
+        case .routes:  RoutesPanel(sim: sim)
+        case .hire:    AddCrewPanel(sim: sim) { panel = .none }
+        case .none:    EmptyView()
+        }
+    }
+
+    /// Bottom-docked overlays: flash toast, the route-open flow, and the aircraft
+    /// tooltip (all mutually exclusive with an open control-bar panel).
+    @ViewBuilder private func bottomDocked(selected: Aircraft?) -> some View {
         VStack(spacing: 8) {
             if let flash {
                 Text(flash).font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(.white).padding(8)
                     .background(Color.black.opacity(0.75)).clipShape(Capsule())
             }
-            switch panel {
-            case .acquire: BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
-            case .routes:  RoutesPanel(sim: sim)
-            case .hire:    AddCrewPanel(sim: sim) { panel = .none }
-            case .none:    EmptyView()
-            }
             routeFlowPanel
             if let ac = selected {
                 AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { selectedID = nil }
             }
-            // Alerts (AOG / crew / sell) now live in the bell's Alerts modal
-            // (any tab), not as always-on map cards — see AlertsModal.
+            // Alerts (AOG / crew / sell) live in the bell's Alerts modal, not here.
         }
     }
 
