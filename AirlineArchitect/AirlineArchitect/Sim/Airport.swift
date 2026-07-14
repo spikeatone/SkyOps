@@ -115,6 +115,13 @@ final class Airport: Identifiable {
         .init(code: "HSV", lat: 34.6372, lon: -86.7751,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 3.0),
         .init(code: "BHM", lat: 33.5629, lon: -86.7535,  landingFeePerKlb: 3.80,  gateFeeNarrowbody: 330,  gateFeeWidebody: 700,  groundStopsPerMonth: 3.5),
         .init(code: "JAN", lat: 32.3112, lon: -90.0759,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 3.5),
+        .init(code: "MSN", lat: 43.1399, lon: -89.3375,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 3.5),
+        .init(code: "GRR", lat: 42.8808, lon: -85.5228,  landingFeePerKlb: 3.60,  gateFeeNarrowbody: 320,  gateFeeWidebody: 680,  groundStopsPerMonth: 3.5),
+        .init(code: "BNA", lat: 36.1245, lon: -86.6782,  landingFeePerKlb: 4.40,  gateFeeNarrowbody: 360,  gateFeeWidebody: 800,  groundStopsPerMonth: 3.0),
+        .init(code: "SDF", lat: 38.1744, lon: -85.7360,  landingFeePerKlb: 4.00,  gateFeeNarrowbody: 340,  gateFeeWidebody: 720,  groundStopsPerMonth: 3.0),
+        .init(code: "LEX", lat: 38.0365, lon: -84.6059,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 3.0),
+        .init(code: "PWM", lat: 43.6462, lon: -70.3093,  landingFeePerKlb: 3.60,  gateFeeNarrowbody: 320,  gateFeeWidebody: 680,  groundStopsPerMonth: 3.5),
+        .init(code: "BGR", lat: 44.8074, lon: -68.8281,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 4.0),
 
         // ── Latin America (added this session). Real lat/lon; fee/ground-stop
         // figures are TIER-BASED ESTIMATES calibrated to the existing US ranges

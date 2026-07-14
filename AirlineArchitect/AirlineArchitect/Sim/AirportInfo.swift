@@ -95,6 +95,13 @@ extension Airport {
         "HSV": .init(name: "Huntsville International Airport", city: "Huntsville, AL", operationsPerYear: 60_000, runways: 2, longestRunwayFt: 12_600, metroPopulation: 500_000, annualPassengers: 1_400_000),
         "BHM": .init(name: "Birmingham-Shuttlesworth International", city: "Birmingham, AL", operationsPerYear: 90_000, runways: 2, longestRunwayFt: 12_000, metroPopulation: 1_100_000, annualPassengers: 3_000_000),
         "JAN": .init(name: "Jackson-Medgar Wiley Evers International", city: "Jackson, MS", operationsPerYear: 50_000, runways: 2, longestRunwayFt: 8_500, metroPopulation: 600_000, annualPassengers: 1_200_000),
+        "MSN": .init(name: "Dane County Regional Airport", city: "Madison, WI", operationsPerYear: 100_000, runways: 3, longestRunwayFt: 9_006, metroPopulation: 680_000, annualPassengers: 2_500_000),
+        "GRR": .init(name: "Gerald R. Ford International Airport", city: "Grand Rapids, MI", operationsPerYear: 90_000, runways: 3, longestRunwayFt: 10_000, metroPopulation: 1_100_000, annualPassengers: 3_600_000),
+        "BNA": .init(name: "Nashville International Airport", city: "Nashville, TN", operationsPerYear: 240_000, runways: 4, longestRunwayFt: 11_030, metroPopulation: 2_000_000, annualPassengers: 22_000_000),
+        "SDF": .init(name: "Louisville Muhammad Ali International", city: "Louisville, KY", operationsPerYear: 160_000, runways: 3, longestRunwayFt: 11_890, metroPopulation: 1_300_000, annualPassengers: 4_300_000),
+        "LEX": .init(name: "Blue Grass Airport", city: "Lexington, KY", operationsPerYear: 70_000, runways: 2, longestRunwayFt: 7_003, metroPopulation: 520_000, annualPassengers: 1_500_000),
+        "PWM": .init(name: "Portland International Jetport", city: "Portland, ME", operationsPerYear: 70_000, runways: 2, longestRunwayFt: 7_200, metroPopulation: 550_000, annualPassengers: 2_200_000),
+        "BGR": .init(name: "Bangor International Airport", city: "Bangor, ME", operationsPerYear: 40_000, runways: 1, longestRunwayFt: 11_440, metroPopulation: 150_000, annualPassengers: 550_000),
 
         // ── Canada (best-effort ~2023–24) ──────────────────────────────────
         "YYZ": .init(name: "Toronto Pearson International", city: "Toronto, ON", operationsPerYear: 450_000, runways: 5, longestRunwayFt: 11_120, metroPopulation: 6_600_000, annualPassengers: 47_000_000),
