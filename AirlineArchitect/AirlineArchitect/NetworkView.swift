@@ -137,8 +137,8 @@ struct NetworkView: View {
                     cameraZoom: sim.cameraZoom, cameraCenter: sim.cameraCenter,
                     selectedID: selected?.id, highlightCodes: routeHighlights)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Sky.onDarkStroke.opacity(0.5), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke.opacity(0.5), lineWidth: 1))
         // The Canvas fills this card, so the card's local space IS the Canvas
         // draw space — read taps in the named map space to match exactly.
         .coordinateSpace(.named("mapCanvas"))
@@ -232,7 +232,7 @@ struct NetworkView: View {
                 .foregroundStyle(active ? Sky.brightBlue : barText)
                 .padding(.vertical, 7).padding(.horizontal, 6)
                 .background(active ? Sky.brightBlue.opacity(0.18) : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
         }
         .buttonStyle(.plain)
     }
@@ -251,7 +251,7 @@ struct NetworkView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .background(active ? Sky.brightBlue : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
                 .buttonStyle(.plain)
             }
@@ -486,8 +486,8 @@ struct NetPanelBox<Content: View>: View {
         .foregroundStyle(.white)
         .padding(12)
         .background(Color(red: 0.07, green: 0.09, blue: 0.11).opacity(0.97))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.18), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.18), lineWidth: 1))
     }
 }
 

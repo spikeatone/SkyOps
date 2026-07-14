@@ -120,7 +120,7 @@ struct PaywallView: View {
                     }
                     .frame(maxWidth: .infinity).frame(height: 52)
                     .background(Sky.coreGreen)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
                 }.buttonStyle(.plain).disabled(store.purchasing)
 
                 Button {
@@ -142,8 +142,8 @@ struct PaywallView: View {
             .padding(20)
         }
         .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(border, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(border, lineWidth: 1))
         .overlay(alignment: .topTrailing) {
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
@@ -176,8 +176,8 @@ struct PaywallView: View {
             }
             .padding(14)
             .background(panelBG)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4)
                 .stroke(on ? Sky.coreGreen : border, lineWidth: on ? 2 : 1))
         }.buttonStyle(.plain)
     }

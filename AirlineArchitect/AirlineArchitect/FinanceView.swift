@@ -153,7 +153,7 @@ struct FinanceView: View {
                     Button(action: onUpgrade) {
                         Text("Upgrade").font(.karla(13, .bold)).foregroundStyle(.white)
                             .padding(.horizontal, 16).frame(height: 38)
-                            .background(green).clipShape(RoundedRectangle(cornerRadius: 8))
+                            .background(green).clipShape(RoundedRectangle(cornerRadius: 4))
                     }.buttonStyle(.plain)
                 }
             }
@@ -179,8 +179,8 @@ struct FinanceView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(accent.opacity(0.6), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(accent.opacity(0.6), lineWidth: 1))
     }
 
     // MARK: Net worth hero (delta reflects the selected period)
@@ -396,8 +396,8 @@ struct FinanceView: View {
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(cardBG)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(cardBorder, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     // MARK: Money formatting (full grouped figures — a finance screen wants

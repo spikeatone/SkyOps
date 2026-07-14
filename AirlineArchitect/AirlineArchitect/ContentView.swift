@@ -582,7 +582,7 @@ struct RouteProfitChart: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(8)
         .background(Color.white.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
     @ViewBuilder private var caption: some View {
