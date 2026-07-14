@@ -52,30 +52,20 @@ struct Airline {
     /// it has a real in-network home (canadaRoster) and is placed by the region
     /// rule like every other regional carrier.
     ///
-    /// Air France / Lufthansa / British Airways USED to live here (their homes
-    /// weren't on the map). Now that the European airports are in-network, they
-    /// moved to `europeRoster` with real EU homes — so transatlantic traffic is
-    /// handled by the real US↔Europe cross-region pick, not this gateway hack.
-    /// What remains are the overseas carriers whose homes still aren't on the map
-    /// (Asia/Middle East); remove them here when those regions' airports land.
-    static let internationalRoster: [Airline] = [
-        .init(name: "Emirates",        code: "EK", weight: 1, types: ["B773","A380"]),
-        .init(name: "Japan Airlines",  code: "JL", weight: 1, types: ["B773","B788","B789","A359"]),
-    ]
-
-    /// Major US international gateways — where overseas widebodies concentrate.
-    /// A carrier from `internationalRoster` is only eligible for a leg whose
-    /// BOTH endpoints are in this set.
-    static let usGateways: Set<String> = [
-        "JFK","EWR","LAX","SFO","ORD","MIA","IAD","BOS","SEA","ATL","DFW","IAH",
-    ]
+    // The old US-gateway `internationalRoster` hack is GONE. Every major overseas
+    // carrier now has a real home on the map: Emirates/Qatar/etc. live in
+    // `middleEastRoster`, Japan Airlines/ANA/etc. in `asiaRoster`, the European
+    // carriers in `europeRoster`. Transatlantic/transpacific traffic is handled
+    // by the real cross-region pick in `pick(forType:originCode:destCode:)`, so a
+    // US↔DXB leg naturally mixes US + Middle East carriers with no special-casing.
+    // (Oceania is the only populated continent still without on-map airports.)
 
     // MARK: - Regional rosters (background traffic by geography)
 
     /// The five geographic regions a flight can touch. A leg draws carriers from
     /// its endpoints' regions, so a Mexican domestic leg shows Mexican carriers,
     /// a Brazilian one South American carriers, etc. — not a lumped LatAm pool.
-    enum Region { case us, canada, mexico, centralAmerica, southAmerica, europe, africa }
+    enum Region { case us, canada, mexico, centralAmerica, southAmerica, europe, africa, asia, middleEast }
 
     /// Real Canadian carriers. Per-type eligibility researched per carrier,
     /// limited to the game's types. Air Canada also appears in the US roster
@@ -172,6 +162,60 @@ struct Airline {
         .init(name: "Air Tanzania",        code: "TC", weight: 3,  types: ["A220300","B788"]),
     ]
 
+    // Asia = East + Southeast + South Asia. The Middle East is a SEPARATE region
+    // (see middleEastRoster) even though NE draws it on the same outline — so an
+    // intra-China or intra-Japan leg won't paint Emirates, and an Asia↔Gulf leg
+    // correctly mixes both. Per-type eligibility researched per carrier.
+    static let asiaRoster: [Airline] = [
+        .init(name: "Air China",           code: "CA", weight: 12, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","B773","B789","A359","A339"]),
+        .init(name: "China Eastern",       code: "MU", weight: 12, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","B773","B789","A359","A339"]),
+        .init(name: "China Southern",      code: "CZ", weight: 12, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","B773","B788","B789","A359","A339"]),
+        .init(name: "IndiGo",              code: "6E", weight: 12, types: ["A320","A320NEO","A321","A321NEO"]),
+        .init(name: "Air India",           code: "AI", weight: 9,  types: ["A319","A320","A320NEO","A321","A321NEO","B773","B788","B789","A359"]),
+        .init(name: "All Nippon Airways",  code: "NH", weight: 9,  types: ["B737800","B773","B788","B789","B78J","A320NEO","A321NEO","A380"]),
+        .init(name: "Japan Airlines",      code: "JL", weight: 8,  types: ["B737800","B773","B788","B789","A359","A321NEO"]),
+        .init(name: "AirAsia",             code: "AK", weight: 8,  types: ["A320","A320NEO","A321NEO"]),
+        .init(name: "Cathay Pacific",      code: "CX", weight: 7,  types: ["B773","A339","A359","A321NEO"]),
+        .init(name: "Hainan Airlines",     code: "HU", weight: 7,  types: ["B737800","MAX8","B788","B789","A339","A359"]),
+        .init(name: "Korean Air",          code: "KE", weight: 7,  types: ["B737800","MAX8","B773","B789","B78J","A339","A380"]),
+        .init(name: "Singapore Airlines",  code: "SQ", weight: 7,  types: ["B773","B78J","A359","A380","A339"]),
+        .init(name: "Xiamen Airlines",     code: "MF", weight: 6,  types: ["B737700","B737800","MAX8","B788","B789"]),
+        .init(name: "Lion Air",            code: "JT", weight: 6,  types: ["B737800","B739","MAX8","A339"]),
+        .init(name: "Thai Airways",        code: "TG", weight: 6,  types: ["B773","B788","B789","A359","A320"]),
+        .init(name: "VietJet Air",         code: "VJ", weight: 6,  types: ["A320","A320NEO","A321NEO"]),
+        .init(name: "Vietnam Airlines",    code: "VN", weight: 5,  types: ["A320","A321","A321NEO","B789","B78J","A359"]),
+        .init(name: "Cebu Pacific",        code: "5J", weight: 5,  types: ["A320","A320NEO","A321NEO","A339"]),
+        .init(name: "Philippine Airlines", code: "PR", weight: 5,  types: ["A320","A321","A321NEO","A339","A359","B773"]),
+        .init(name: "Garuda Indonesia",    code: "GA", weight: 5,  types: ["B737800","MAX8","B773","A339","A320"]),
+        .init(name: "Malaysia Airlines",   code: "MH", weight: 5,  types: ["B737800","MAX8","A339","A359","A380"]),
+        .init(name: "Sichuan Airlines",    code: "3U", weight: 5,  types: ["A319","A320","A321","A339","A359"]),
+        .init(name: "Shenzhen Airlines",   code: "ZH", weight: 5,  types: ["A319","A320","A321","B737800"]),
+        .init(name: "Spring Airlines",     code: "9C", weight: 5,  types: ["A320","A320NEO","A321NEO"]),
+        .init(name: "Asiana Airlines",     code: "OZ", weight: 5,  types: ["A320","A321","B773","A339","A359","A380"]),
+        .init(name: "China Airlines",      code: "CI", weight: 5,  types: ["B737800","B773","A339","A359"]),
+        .init(name: "EVA Air",             code: "BR", weight: 5,  types: ["B773","B789","B78J","A339","A321NEO"]),
+        .init(name: "SpiceJet",            code: "SG", weight: 5,  types: ["B737800","MAX8"]),
+        .init(name: "Vistara",             code: "UK", weight: 5,  types: ["A320","A320NEO","A321NEO","B789"]),
+        .init(name: "Scoot",               code: "TR", weight: 4,  types: ["A320","A320NEO","A321NEO","B788","B789"]),
+        .init(name: "Akasa Air",           code: "QP", weight: 4,  types: ["MAX8"]),
+    ]
+
+    static let middleEastRoster: [Airline] = [
+        .init(name: "Emirates",            code: "EK", weight: 12, types: ["B773","A380"]),
+        .init(name: "Qatar Airways",       code: "QR", weight: 11, types: ["A320","A321","B773","B788","B789","A359","A339"]),
+        .init(name: "Saudia",              code: "SV", weight: 8,  types: ["A320","A321","A321NEO","B773","B789","B78J","A339"]),
+        .init(name: "Etihad Airways",      code: "EY", weight: 7,  types: ["A320","A321","A321NEO","B773","B789","B78J","A359","A380"]),
+        .init(name: "flydubai",            code: "FZ", weight: 6,  types: ["B737800","MAX8","MAX9"]),
+        .init(name: "Air Arabia",          code: "G9", weight: 5,  types: ["A320","A320NEO","A321NEO"]),
+        .init(name: "Oman Air",            code: "WY", weight: 4,  types: ["B737800","MAX8","B788","B789","A339"]),
+        .init(name: "Kuwait Airways",      code: "KU", weight: 4,  types: ["A320","A321","A321NEO","B773","A339"]),
+        .init(name: "Gulf Air",            code: "GF", weight: 4,  types: ["A320","A321","A321NEO","B789"]),
+        .init(name: "Royal Jordanian",     code: "RJ", weight: 4,  types: ["A319","A320","A321","B788","B789"]),
+        .init(name: "El Al",               code: "LY", weight: 4,  types: ["B737800","B739","B788","B789","B773"]),
+        .init(name: "Iran Air",            code: "IR", weight: 4,  types: ["A319","A320","A321","A339"]),
+        .init(name: "Mahan Air",           code: "W5", weight: 3,  types: ["A319","A320","A321","A340"]),
+    ]
+
     // Airport-code → region membership (US is the default / everything else).
     static let canadaCodes: Set<String> = [
         "YYZ","YVR","YUL","YYC","YEG","YOW","YWG","YHZ","YTZ","YLW","YYJ","YYT","YXE","YQR","YQM","YSJ","YQG","YFC","YQT","YMM",
@@ -194,6 +238,15 @@ struct Airline {
         "CAI","JNB","ADD","CMN","CPT","HRG","NBO","RAK","LOS","ALG","TUN","DUR","ABJ","ACC","ABV","DSS","SSH","MRU","RBA","KGL",
         "EBB","LAD","DAR","AGA","TNG",
     ]
+    // Asia = East + Southeast + South Asia (Middle East is separate, below).
+    static let asiaCodes: Set<String> = [
+        "PEK","HND","PVG","CAN","SIN","ICN","BKK","HKG","KUL","SZX","CTU","TPE","MNL","KIX","CGK","KMG","XIY","HGH","NRT","CKG",
+        "WUH","SGN","SUB",
+        "DEL","BOM","BLR","HYD","MAA","CCU","AMD","COK","PNQ","GOI",
+    ]
+    static let middleEastCodes: Set<String> = [
+        "DXB","DOH","JED","RUH","AUH","MCT","KWI","BAH","DMM","SHJ","TLV","MED","AMM","BEY","MHD","IKA","THR",
+    ]
 
     static func region(_ code: String) -> Region {
         if canadaCodes.contains(code) { return .canada }
@@ -202,6 +255,8 @@ struct Airline {
         if southAmericaCodes.contains(code) { return .southAmerica }
         if europeCodes.contains(code) { return .europe }
         if africaCodes.contains(code) { return .africa }
+        if asiaCodes.contains(code) { return .asia }
+        if middleEastCodes.contains(code) { return .middleEast }
         return .us
     }
     static func roster(for r: Region) -> [Airline] {
@@ -213,6 +268,8 @@ struct Airline {
         case .southAmerica:   return southAmericaRoster
         case .europe:         return europeRoster
         case .africa:         return africaRoster
+        case .asia:           return asiaRoster
+        case .middleEast:     return middleEastRoster
         }
     }
 
@@ -224,10 +281,7 @@ struct Airline {
     /// Operator fallback). This is the code path background traffic uses.
     static func pick(forType typeId: String, originCode: String, destCode: String) -> Airline {
         let oR = region(originCode), dR = region(destCode)
-        var pool = oR == dR ? roster(for: oR) : roster(for: oR) + roster(for: dR)
-        if usGateways.contains(originCode) && usGateways.contains(destCode) {
-            pool += internationalRoster   // gateway↔gateway: overseas widebodies eligible
-        }
+        let pool = oR == dR ? roster(for: oR) : roster(for: oR) + roster(for: dR)
         return weightedPick(pool.filter { $0.types.contains(typeId) })
     }
 
@@ -298,6 +352,12 @@ struct Airline {
         "AT": "Royal Air Maroc", "KQ": "Kenya Airways", "AH": "Air Algérie",
         "TU": "Tunisair", "FA": "FlySafair", "WB": "RwandAir", "HF": "Air Côte d'Ivoire",
         "HC": "Air Senegal", "DT": "TAAG Angola Airlines", "KP": "ASKY Airlines", "TC": "Air Tanzania",
+        // Asian carriers (CA/MU/CZ/NH/JL/CX/KE/SQ/AI/TG/VN/PR/GA/MH/OZ/CI/BR/UK already above)
+        "HU": "Hainan Airlines", "MF": "Xiamen Airlines", "ZH": "Shenzhen Airlines",
+        "SG": "SpiceJet", "TR": "Scoot", "AK": "AirAsia", "VJ": "VietJet Air",
+        "JT": "Lion Air", "QP": "Akasa Air",
+        // Middle East carriers (EK/QR/SV/EY/WY/GF/RJ already above)
+        "FZ": "flydubai", "KU": "Kuwait Airways", "LY": "El Al", "IR": "Iran Air",
     ]
 
     /// A random 2-uppercase-letter code that isn't a real airline code — used

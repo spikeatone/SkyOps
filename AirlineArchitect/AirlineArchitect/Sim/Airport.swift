@@ -269,6 +269,65 @@ final class Airport: Identifiable {
         .init(code: "DAR", lat: -6.8781, lon: 39.2026,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 2.8),
         .init(code: "AGA", lat: 30.3250, lon: -9.4131,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 580, groundStopsPerMonth: 1.8),
         .init(code: "TNG", lat: 35.7269, lon: -5.9169,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 580, groundStopsPerMonth: 2.0),
+
+        // ── Asia + Middle East (top 50). Real lat/lon; fee/ground-stop figures
+        // are the same TIER-BASED ESTIMATES as the other overseas sets. Ground-
+        // stops lean high for China (ATC flow control) and typhoon/monsoon
+        // airports, low for the Gulf. NE classifies the Middle East as Asia, so
+        // these all sit on the taupe Asia outline. See asiaRoster.
+        // East Asia & Southeast Asia
+        .init(code: "PEK", lat: 40.0801, lon: 116.5846, landingFeePerKlb: 7.50, gateFeeNarrowbody: 500, gateFeeWidebody: 1300, groundStopsPerMonth: 6.5),
+        .init(code: "HND", lat: 35.5494, lon: 139.7798, landingFeePerKlb: 8.50, gateFeeNarrowbody: 540, gateFeeWidebody: 1400, groundStopsPerMonth: 3.5),
+        .init(code: "PVG", lat: 31.1443, lon: 121.8083, landingFeePerKlb: 7.50, gateFeeNarrowbody: 500, gateFeeWidebody: 1300, groundStopsPerMonth: 6.5),
+        .init(code: "CAN", lat: 23.3924, lon: 113.2988, landingFeePerKlb: 7.00, gateFeeNarrowbody: 480, gateFeeWidebody: 1200, groundStopsPerMonth: 6.0),
+        .init(code: "SIN", lat: 1.3644,  lon: 103.9915, landingFeePerKlb: 8.00, gateFeeNarrowbody: 520, gateFeeWidebody: 1350, groundStopsPerMonth: 2.5),
+        .init(code: "ICN", lat: 37.4602, lon: 126.4407, landingFeePerKlb: 7.50, gateFeeNarrowbody: 500, gateFeeWidebody: 1300, groundStopsPerMonth: 3.5),
+        .init(code: "BKK", lat: 13.6900, lon: 100.7501, landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 4.0),
+        .init(code: "HKG", lat: 22.3080, lon: 113.9185, landingFeePerKlb: 8.50, gateFeeNarrowbody: 540, gateFeeWidebody: 1400, groundStopsPerMonth: 4.5),
+        .init(code: "KUL", lat: 2.7456,  lon: 101.7099, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 3.5),
+        .init(code: "SZX", lat: 22.6393, lon: 113.8107, landingFeePerKlb: 7.00, gateFeeNarrowbody: 480, gateFeeWidebody: 1200, groundStopsPerMonth: 6.0),
+        .init(code: "CTU", lat: 30.5785, lon: 103.9471, landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 6.0),
+        .init(code: "TPE", lat: 25.0777, lon: 121.2328, landingFeePerKlb: 6.80, gateFeeNarrowbody: 470, gateFeeWidebody: 1150, groundStopsPerMonth: 4.0),
+        .init(code: "MNL", lat: 14.5086, lon: 121.0197, landingFeePerKlb: 5.50, gateFeeNarrowbody: 420, gateFeeWidebody: 960,  groundStopsPerMonth: 4.5),
+        .init(code: "KIX", lat: 34.4273, lon: 135.2440, landingFeePerKlb: 7.00, gateFeeNarrowbody: 480, gateFeeWidebody: 1200, groundStopsPerMonth: 3.0),
+        .init(code: "CGK", lat: -6.1256, lon: 106.6559, landingFeePerKlb: 5.80, gateFeeNarrowbody: 430, gateFeeWidebody: 1000, groundStopsPerMonth: 4.0),
+        .init(code: "KMG", lat: 25.1019, lon: 102.9291, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 5.5),
+        .init(code: "XIY", lat: 34.4471, lon: 108.7516, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 5.5),
+        .init(code: "HGH", lat: 30.2295, lon: 120.4344, landingFeePerKlb: 6.20, gateFeeNarrowbody: 450, gateFeeWidebody: 1080, groundStopsPerMonth: 5.5),
+        .init(code: "NRT", lat: 35.7720, lon: 140.3929, landingFeePerKlb: 7.50, gateFeeNarrowbody: 500, gateFeeWidebody: 1300, groundStopsPerMonth: 3.5),
+        .init(code: "CKG", lat: 29.7192, lon: 106.6417, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 5.5),
+        .init(code: "WUH", lat: 30.7838, lon: 114.2081, landingFeePerKlb: 5.60, gateFeeNarrowbody: 420, gateFeeWidebody: 960,  groundStopsPerMonth: 5.5),
+        .init(code: "SGN", lat: 10.8188, lon: 106.6520, landingFeePerKlb: 5.40, gateFeeNarrowbody: 410, gateFeeWidebody: 940,  groundStopsPerMonth: 3.5),
+        .init(code: "SUB", lat: -7.3798, lon: 112.7869, landingFeePerKlb: 4.20, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 3.0),
+        // South Asia
+        .init(code: "DEL", lat: 28.5562, lon: 77.1000,  landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 4.0),
+        .init(code: "BOM", lat: 19.0887, lon: 72.8679,  landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 4.5),
+        .init(code: "BLR", lat: 13.1986, lon: 77.7066,  landingFeePerKlb: 5.20, gateFeeNarrowbody: 400, gateFeeWidebody: 900,  groundStopsPerMonth: 2.5),
+        .init(code: "HYD", lat: 17.2403, lon: 78.4294,  landingFeePerKlb: 4.80, gateFeeNarrowbody: 380, gateFeeWidebody: 840,  groundStopsPerMonth: 2.5),
+        .init(code: "MAA", lat: 12.9941, lon: 80.1709,  landingFeePerKlb: 4.60, gateFeeNarrowbody: 370, gateFeeWidebody: 820,  groundStopsPerMonth: 3.0),
+        .init(code: "CCU", lat: 22.6547, lon: 88.4467,  landingFeePerKlb: 4.40, gateFeeNarrowbody: 360, gateFeeWidebody: 800,  groundStopsPerMonth: 3.5),
+        .init(code: "AMD", lat: 23.0772, lon: 72.6347,  landingFeePerKlb: 4.00, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 2.5),
+        .init(code: "COK", lat: 10.1520, lon: 76.4019,  landingFeePerKlb: 3.80, gateFeeNarrowbody: 330, gateFeeWidebody: 700,  groundStopsPerMonth: 3.0),
+        .init(code: "PNQ", lat: 18.5793, lon: 73.9089,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 320, gateFeeWidebody: 680,  groundStopsPerMonth: 2.5),
+        .init(code: "GOI", lat: 15.3808, lon: 73.8314,  landingFeePerKlb: 3.40, gateFeeNarrowbody: 310, gateFeeWidebody: 660,  groundStopsPerMonth: 2.5),
+        // Middle East
+        .init(code: "DXB", lat: 25.2532, lon: 55.3657,  landingFeePerKlb: 8.00, gateFeeNarrowbody: 520, gateFeeWidebody: 1400, groundStopsPerMonth: 1.5),
+        .init(code: "DOH", lat: 25.2731, lon: 51.6081,  landingFeePerKlb: 7.50, gateFeeNarrowbody: 500, gateFeeWidebody: 1350, groundStopsPerMonth: 1.5),
+        .init(code: "JED", lat: 21.6796, lon: 39.1565,  landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 1.5),
+        .init(code: "RUH", lat: 24.9576, lon: 46.6988,  landingFeePerKlb: 5.80, gateFeeNarrowbody: 430, gateFeeWidebody: 1000, groundStopsPerMonth: 1.5),
+        .init(code: "AUH", lat: 24.4330, lon: 54.6511,  landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1150, groundStopsPerMonth: 1.5),
+        .init(code: "MCT", lat: 23.5933, lon: 58.2844,  landingFeePerKlb: 4.80, gateFeeNarrowbody: 380, gateFeeWidebody: 840,  groundStopsPerMonth: 1.5),
+        .init(code: "KWI", lat: 29.2266, lon: 47.9689,  landingFeePerKlb: 4.60, gateFeeNarrowbody: 370, gateFeeWidebody: 820,  groundStopsPerMonth: 1.8),
+        .init(code: "BAH", lat: 26.2708, lon: 50.6336,  landingFeePerKlb: 4.60, gateFeeNarrowbody: 370, gateFeeWidebody: 820,  groundStopsPerMonth: 1.8),
+        .init(code: "DMM", lat: 26.4712, lon: 49.7979,  landingFeePerKlb: 4.60, gateFeeNarrowbody: 370, gateFeeWidebody: 820,  groundStopsPerMonth: 1.8),
+        .init(code: "SHJ", lat: 25.3286, lon: 55.5172,  landingFeePerKlb: 4.20, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 1.5),
+        .init(code: "TLV", lat: 32.0114, lon: 34.8867,  landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 2.0),
+        .init(code: "MED", lat: 24.5534, lon: 39.7051,  landingFeePerKlb: 4.40, gateFeeNarrowbody: 360, gateFeeWidebody: 800,  groundStopsPerMonth: 1.5),
+        .init(code: "AMM", lat: 31.7226, lon: 35.9932,  landingFeePerKlb: 4.40, gateFeeNarrowbody: 360, gateFeeWidebody: 800,  groundStopsPerMonth: 2.0),
+        .init(code: "BEY", lat: 33.8209, lon: 35.4884,  landingFeePerKlb: 4.20, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 2.2),
+        .init(code: "MHD", lat: 36.2352, lon: 59.6410,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 320, gateFeeWidebody: 680,  groundStopsPerMonth: 2.0),
+        .init(code: "IKA", lat: 35.4161, lon: 51.1522,  landingFeePerKlb: 4.00, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 2.0),
+        .init(code: "THR", lat: 35.6892, lon: 51.3134,  landingFeePerKlb: 4.00, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 2.0),
     ]
 
     /// Two distinct random airports — ported from randomRoutePair().
