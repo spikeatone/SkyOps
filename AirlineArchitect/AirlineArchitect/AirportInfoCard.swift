@@ -36,7 +36,9 @@ struct AirportInfoCard: View {
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
 
             if let i = airport.info {
-                row("Operations/yr", i.operationsPerYear.formatted(.number.grouping(.automatic)))
+                // Daily flights = annual operations (arrivals + departures) / 365
+                // — a more intuitive, human-scale number than annual movements.
+                row("Daily flights", (i.operationsPerYear / 365).formatted(.number.grouping(.automatic)))
                 row("Runways", "\(i.runways)")
                 row("Longest runway", "\(i.longestRunwayFt.formatted(.number.grouping(.automatic))) ft")
                 row("Ground stops/mo", String(format: "%.1f", airport.groundStopsPerMonth))
