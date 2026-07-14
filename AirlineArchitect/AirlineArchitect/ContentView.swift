@@ -371,31 +371,48 @@ struct RoutesPanel: View {
     private let chipAmberBG = Color(skyHex: 0xFEF3C7)
     private let chipAmberFG = Color(skyHex: 0xF59E0B)
 
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color      { isDark ? Sky.navBarDark.opacity(0.92) : Color.white.opacity(0.96) }
+    private var innerCardBG: Color { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color  { isDark ? Sky.onDarkStroke : Color(skyHex: 0xC9C9C9) }
+    private var labelColor: Color  { isDark ? Sky.lightBlue : Color(skyHex: 0x64748B) }
+    private var primaryC: Color    { isDark ? .white : .black }
+    private var green: Color       { isDark ? netGreen : Color(skyHex: 0x10B981) }
+    private var red: Color         { isDark ? netRed : Color(skyHex: 0xD70000) }
+
     var body: some View {
         let active = sim.playerRoutes.sorted { $0.openedTick > $1.openedTick }
         let closed = sim.closedPlayerRoutes.sorted { ($0.closedTick ?? 0) > ($1.closedTick ?? 0) }
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if active.isEmpty && closed.isEmpty {
-                    Text("No routes opened yet.")
-                        .font(.karla(14)).foregroundStyle(Sky.lightBlue).padding(.vertical, 14)
+        Group {
+            if active.isEmpty && closed.isEmpty {
+                Text("No routes opened yet.")
+                    .font(.karla(14)).foregroundStyle(labelColor)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 24).padding(.horizontal, 8)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if !active.isEmpty { section("ACTIVE ROUTES", active) }
+                        if !closed.isEmpty { section("CLOSED ROUTES", closed) }
+                    }
+                    .padding(8)
                 }
-                if !active.isEmpty { section("ACTIVE ROUTES", active) }
-                if !closed.isEmpty { section("CLOSED ROUTES", closed) }
+                .frame(maxHeight: 480)
             }
-            .padding(8)
         }
-        .frame(maxHeight: 480)
-        .background(Sky.navBarDark.opacity(0.92))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Sky.onDarkStroke, lineWidth: 1))
+        .frame(maxWidth: .infinity)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 
     private func section(_ title: String, _ routes: [Route]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Text(title).font(.karla(14)).foregroundStyle(Sky.lightBlue)
-                Rectangle().fill(Sky.onDarkStroke).frame(height: 1)
+                Text(title).font(.karla(14)).foregroundStyle(labelColor)
+                Rectangle().fill(cardBorder).frame(height: 1)
             }
             ForEach(routes) { card($0) }
         }
@@ -406,9 +423,9 @@ struct RoutesPanel: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 HStack(spacing: 12) {
-                    Text(r.originCode).font(.karla(20, .heavy)).foregroundStyle(.white)
-                    Image(systemName: "arrow.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                    Text(r.destCode).font(.karla(20, .heavy)).foregroundStyle(.white)
+                    Text(r.originCode).font(.karla(20, .heavy)).foregroundStyle(primaryC)
+                    Image(systemName: "arrow.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(primaryC)
+                    Text(r.destCode).font(.karla(20, .heavy)).foregroundStyle(primaryC)
                 }
                 Spacer()
                 if r.isOpen { statusChip(profitable: r.isProfitable) }
@@ -420,21 +437,21 @@ struct RoutesPanel: View {
                     let n = r.netVsOpeningCost
                     labeledValue("Net Revenue",
                                  (n >= 0 ? "+" : "") + compactMoney(n),
-                                 n >= 0 ? netGreen : netRed, .trailing)
+                                 n >= 0 ? green : red, .trailing)
                 }
             } else {
                 Text("Closed · \(Simulation.simDate(fromTick: r.closedTick ?? 0))")
-                    .font(.karla(14)).foregroundStyle(Sky.lightBlue)
+                    .font(.karla(14)).foregroundStyle(labelColor)
             }
             if expanded { detail(r) }
             Image(systemName: expanded ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-                .font(.system(size: 11)).foregroundStyle(Sky.lightBlue)
+                .font(.system(size: 11)).foregroundStyle(labelColor)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Sky.navBarDark)
+        .background(innerCardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
         .contentShape(Rectangle())
         .onTapGesture { withAnimation(.easeInOut(duration: 0.15)) { expandedId = expanded ? nil : r.id } }
     }
@@ -451,19 +468,19 @@ struct RoutesPanel: View {
 
     private func labeled(_ label: String, _ value: String, _ align: HorizontalAlignment) -> some View {
         VStack(alignment: align, spacing: 0) {
-            Text(label).font(.karla(14)).foregroundStyle(Sky.lightBlue)
-            Text(value).font(.karla(16, .semibold)).foregroundStyle(.white)
+            Text(label).font(.karla(14)).foregroundStyle(labelColor)
+            Text(value).font(.karla(16, .semibold)).foregroundStyle(primaryC)
         }
     }
     private func labeledValue(_ label: String, _ value: String, _ color: Color, _ align: HorizontalAlignment) -> some View {
         VStack(alignment: align, spacing: 0) {
-            Text(label).font(.karla(14)).foregroundStyle(Sky.lightBlue)
+            Text(label).font(.karla(14)).foregroundStyle(labelColor)
             Text(value).font(.karla(16, .semibold)).foregroundStyle(color)
         }
     }
 
     @ViewBuilder private func detail(_ r: Route) -> some View {
-        Rectangle().fill(Sky.onDarkStroke).frame(height: 1).padding(.top, 2)
+        Rectangle().fill(cardBorder).frame(height: 1).padding(.top, 2)
         RouteProfitChart(route: r, flights: r.history.count)
         VStack(alignment: .leading, spacing: 3) {
             line("Start", Simulation.simDate(fromTick: r.openedTick))
@@ -478,18 +495,18 @@ struct RoutesPanel: View {
         }
         if !r.history.isEmpty {
             Text(r.history.count > 8 ? "RECENT FLIGHTS (last 8 of \(r.history.count))" : "RECENT FLIGHTS")
-                .font(.karla(10, .bold)).foregroundStyle(Sky.lightBlue).padding(.top, 2)
+                .font(.karla(10, .bold)).foregroundStyle(labelColor).padding(.top, 2)
             ForEach(r.history.suffix(8).reversed()) { h in
                 Text("\(Simulation.simDate(fromTick: h.tick)): \(h.pax)/\(h.seats) (\(Int((h.loadFactor*100).rounded()))%) · net \(h.net < 0 ? "−" : "")\(compactMoney(abs(h.net)))")
-                    .font(.karla(11)).foregroundStyle(h.net < 0 ? netRed : .white.opacity(0.85))
+                    .font(.karla(11)).foregroundStyle(h.net < 0 ? red : primaryC.opacity(0.85))
             }
         }
     }
 
     private func line(_ label: String, _ value: String) -> some View {
         HStack {
-            Text(label).font(.karla(12)).foregroundStyle(Sky.lightBlue).frame(width: 112, alignment: .leading)
-            Text(value).font(.karla(12, .semibold)).foregroundStyle(.white)
+            Text(label).font(.karla(12)).foregroundStyle(labelColor).frame(width: 112, alignment: .leading)
+            Text(value).font(.karla(12, .semibold)).foregroundStyle(primaryC)
             Spacer(minLength: 0)
         }
     }
