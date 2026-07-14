@@ -227,6 +227,8 @@ extension Airport {
         "ZAG": .init(name: "Franjo Tuđman Airport", city: "Zagreb, Croatia", operationsPerYear: 50_000, runways: 1, longestRunwayFt: 10_663, metroPopulation: 1_100_000, annualPassengers: 3_400_000),
         "SOF": .init(name: "Sofia Airport", city: "Sofia, Bulgaria", operationsPerYear: 70_000, runways: 1, longestRunwayFt: 11_811, metroPopulation: 1_300_000, annualPassengers: 7_000_000),
         "SJJ": .init(name: "Sarajevo International Airport", city: "Sarajevo, Bosnia and Herzegovina", operationsPerYear: 15_000, runways: 1, longestRunwayFt: 8_809, metroPopulation: 550_000, annualPassengers: 1_700_000),
+        "LPA": .init(name: "Gran Canaria Airport", city: "Las Palmas, Canary Islands", operationsPerYear: 130_000, runways: 2, longestRunwayFt: 10_171, metroPopulation: 850_000, annualPassengers: 13_000_000),
+        "PDL": .init(name: "João Paulo II Airport", city: "Ponta Delgada, Azores", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 8_268, metroPopulation: 140_000, annualPassengers: 2_000_000),
         "MXP": .init(name: "Milan Malpensa Airport", city: "Milan, Italy", operationsPerYear: 180_000, runways: 2, longestRunwayFt: 12_844, metroPopulation: 5_000_000, annualPassengers: 26_000_000),
         "ATH": .init(name: "Athens Eleftherios Venizelos International", city: "Athens, Greece", operationsPerYear: 220_000, runways: 2, longestRunwayFt: 13_123, metroPopulation: 3_700_000, annualPassengers: 28_000_000),
         "AYT": .init(name: "Antalya Airport", city: "Antalya, Turkey", operationsPerYear: 200_000, runways: 3, longestRunwayFt: 11_155, metroPopulation: 2_600_000, annualPassengers: 35_000_000),
