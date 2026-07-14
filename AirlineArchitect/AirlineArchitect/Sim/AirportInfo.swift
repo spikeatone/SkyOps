@@ -11,8 +11,9 @@
 //  rounded, ~2023–24 (FAA ATADS operations, airport-reported passengers, AirNav
 //  runway data, Census MSA population). They're game-grade "real, rounded", not
 //  survey-grade — spot-check a specific value before treating it as exact. The
-//  Latin American + Canadian airports are NOT populated yet (the card degrades
-//  gracefully to name/ground-stops for those) — a follow-up pass adds them.
+//  46 Latin American + 20 Canadian airports are also populated, but their
+//  operations/passenger figures are lower-confidence best-effort values (fewer
+//  authoritative English sources) — treat those as approximate, not exact.
 //
 
 import Foundation
@@ -82,5 +83,79 @@ extension Airport {
         "SAT": .init(name: "San Antonio International", city: "San Antonio, TX", operationsPerYear: 180_000, runways: 3, longestRunwayFt: 8_505, metroPopulation: 2_660_000, annualPassengers: 10_400_000),
         "ANC": .init(name: "Ted Stevens Anchorage International", city: "Anchorage, AK", operationsPerYear: 280_000, runways: 3, longestRunwayFt: 12_400, metroPopulation: 400_000, annualPassengers: 5_000_000),
         "HNL": .init(name: "Daniel K. Inouye International", city: "Honolulu, HI", operationsPerYear: 300_000, runways: 4, longestRunwayFt: 12_300, metroPopulation: 1_000_000, annualPassengers: 21_200_000),
+
+        // ── Canada (best-effort ~2023–24) ──────────────────────────────────
+        "YYZ": .init(name: "Toronto Pearson International", city: "Toronto, ON", operationsPerYear: 450_000, runways: 5, longestRunwayFt: 11_120, metroPopulation: 6_600_000, annualPassengers: 47_000_000),
+        "YVR": .init(name: "Vancouver International", city: "Vancouver, BC", operationsPerYear: 310_000, runways: 3, longestRunwayFt: 11_500, metroPopulation: 2_600_000, annualPassengers: 26_000_000),
+        "YUL": .init(name: "Montréal–Trudeau International", city: "Montreal, QC", operationsPerYear: 230_000, runways: 3, longestRunwayFt: 11_000, metroPopulation: 4_300_000, annualPassengers: 21_200_000),
+        "YYC": .init(name: "Calgary International", city: "Calgary, AB", operationsPerYear: 230_000, runways: 4, longestRunwayFt: 14_000, metroPopulation: 1_600_000, annualPassengers: 18_000_000),
+        "YEG": .init(name: "Edmonton International", city: "Edmonton, AB", operationsPerYear: 150_000, runways: 2, longestRunwayFt: 11_000, metroPopulation: 1_540_000, annualPassengers: 8_000_000),
+        "YOW": .init(name: "Ottawa Macdonald–Cartier International", city: "Ottawa, ON", operationsPerYear: 110_000, runways: 3, longestRunwayFt: 10_000, metroPopulation: 1_490_000, annualPassengers: 5_000_000),
+        "YWG": .init(name: "Winnipeg James Armstrong Richardson International", city: "Winnipeg, MB", operationsPerYear: 110_000, runways: 3, longestRunwayFt: 11_000, metroPopulation: 850_000, annualPassengers: 4_300_000),
+        "YHZ": .init(name: "Halifax Stanfield International", city: "Halifax, NS", operationsPerYear: 80_000, runways: 2, longestRunwayFt: 10_500, metroPopulation: 480_000, annualPassengers: 4_100_000),
+        "YTZ": .init(name: "Billy Bishop Toronto City", city: "Toronto, ON", operationsPerYear: 120_000, runways: 2, longestRunwayFt: 3_988, metroPopulation: 6_600_000, annualPassengers: 2_800_000),
+        "YLW": .init(name: "Kelowna International", city: "Kelowna, BC", operationsPerYear: 65_000, runways: 1, longestRunwayFt: 8_900, metroPopulation: 220_000, annualPassengers: 2_000_000),
+        "YYJ": .init(name: "Victoria International", city: "Victoria, BC", operationsPerYear: 120_000, runways: 2, longestRunwayFt: 7_000, metroPopulation: 400_000, annualPassengers: 1_900_000),
+        "YYT": .init(name: "St. John's International", city: "St. John's, NL", operationsPerYear: 40_000, runways: 2, longestRunwayFt: 8_500, metroPopulation: 210_000, annualPassengers: 1_500_000),
+        "YXE": .init(name: "Saskatoon John G. Diefenbaker International", city: "Saskatoon, SK", operationsPerYear: 50_000, runways: 2, longestRunwayFt: 8_300, metroPopulation: 320_000, annualPassengers: 1_500_000),
+        "YQR": .init(name: "Regina International", city: "Regina, SK", operationsPerYear: 40_000, runways: 2, longestRunwayFt: 7_900, metroPopulation: 260_000, annualPassengers: 1_200_000),
+        "YQM": .init(name: "Greater Moncton Roméo LeBlanc International", city: "Moncton, NB", operationsPerYear: 35_000, runways: 2, longestRunwayFt: 8_000, metroPopulation: 160_000, annualPassengers: 700_000),
+        "YSJ": .init(name: "Saint John Airport", city: "Saint John, NB", operationsPerYear: 15_000, runways: 1, longestRunwayFt: 7_000, metroPopulation: 130_000, annualPassengers: 250_000),
+        "YQG": .init(name: "Windsor International", city: "Windsor, ON", operationsPerYear: 25_000, runways: 2, longestRunwayFt: 9_000, metroPopulation: 340_000, annualPassengers: 400_000),
+        "YFC": .init(name: "Fredericton International", city: "Fredericton, NB", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 8_000, metroPopulation: 110_000, annualPassengers: 400_000),
+        "YQT": .init(name: "Thunder Bay International", city: "Thunder Bay, ON", operationsPerYear: 40_000, runways: 2, longestRunwayFt: 7_300, metroPopulation: 120_000, annualPassengers: 700_000),
+        "YMM": .init(name: "Fort McMurray International", city: "Fort McMurray, AB", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 7_500, metroPopulation: 70_000, annualPassengers: 700_000),
+
+        // ── Mexico (best-effort ~2023–24) ──────────────────────────────────
+        "MEX": .init(name: "Mexico City International (Benito Juárez)", city: "Mexico City, Mexico", operationsPerYear: 450_000, runways: 2, longestRunwayFt: 12_966, metroPopulation: 21_800_000, annualPassengers: 45_000_000),
+        "CUN": .init(name: "Cancún International", city: "Cancún, Mexico", operationsPerYear: 220_000, runways: 2, longestRunwayFt: 11_483, metroPopulation: 900_000, annualPassengers: 30_000_000),
+        "GDL": .init(name: "Guadalajara International (Miguel Hidalgo)", city: "Guadalajara, Mexico", operationsPerYear: 160_000, runways: 1, longestRunwayFt: 13_120, metroPopulation: 5_200_000, annualPassengers: 16_000_000),
+        "TIJ": .init(name: "Tijuana International (General Abelardo L. Rodríguez)", city: "Tijuana, Mexico", operationsPerYear: 90_000, runways: 1, longestRunwayFt: 9_678, metroPopulation: 2_200_000, annualPassengers: 12_000_000),
+        "MTY": .init(name: "Monterrey International (General Mariano Escobedo)", city: "Monterrey, Mexico", operationsPerYear: 120_000, runways: 2, longestRunwayFt: 9_843, metroPopulation: 5_300_000, annualPassengers: 13_000_000),
+        "SJD": .init(name: "Los Cabos International", city: "San José del Cabo, Mexico", operationsPerYear: 60_000, runways: 2, longestRunwayFt: 9_843, metroPopulation: 350_000, annualPassengers: 8_000_000),
+        "PVR": .init(name: "Puerto Vallarta International (Gustavo Díaz Ordaz)", city: "Puerto Vallarta, Mexico", operationsPerYear: 55_000, runways: 1, longestRunwayFt: 10_171, metroPopulation: 380_000, annualPassengers: 6_000_000),
+        "NLU": .init(name: "Felipe Ángeles International", city: "Mexico City, Mexico", operationsPerYear: 30_000, runways: 2, longestRunwayFt: 13_780, metroPopulation: 21_800_000, annualPassengers: 4_000_000),
+        "MID": .init(name: "Mérida International (Manuel Crescencio Rejón)", city: "Mérida, Mexico", operationsPerYear: 40_000, runways: 1, longestRunwayFt: 10_663, metroPopulation: 1_200_000, annualPassengers: 3_000_000),
+        "BJX": .init(name: "Del Bajío International (Guanajuato)", city: "León, Mexico", operationsPerYear: 40_000, runways: 1, longestRunwayFt: 11_483, metroPopulation: 1_600_000, annualPassengers: 2_500_000),
+        "CUL": .init(name: "Culiacán International (Bachigualato)", city: "Culiacán, Mexico", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 8_530, metroPopulation: 900_000, annualPassengers: 2_000_000),
+        "VER": .init(name: "Veracruz International (General Heriberto Jara)", city: "Veracruz, Mexico", operationsPerYear: 25_000, runways: 1, longestRunwayFt: 7_874, metroPopulation: 800_000, annualPassengers: 1_500_000),
+        "HMO": .init(name: "Hermosillo International (General Ignacio Pesqueira)", city: "Hermosillo, Mexico", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 7_382, metroPopulation: 900_000, annualPassengers: 1_800_000),
+        "OAX": .init(name: "Oaxaca International (Xoxocotlán)", city: "Oaxaca, Mexico", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 8_858, metroPopulation: 700_000, annualPassengers: 1_200_000),
+        "MZT": .init(name: "Mazatlán International (General Rafael Buelna)", city: "Mazatlán, Mexico", operationsPerYear: 25_000, runways: 1, longestRunwayFt: 8_858, metroPopulation: 500_000, annualPassengers: 2_000_000),
+        "CZM": .init(name: "Cozumel International", city: "Cozumel, Mexico", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 10_165, metroPopulation: 90_000, annualPassengers: 1_000_000),
+
+        // ── Central America (best-effort ~2023–24) ─────────────────────────
+        "PTY": .init(name: "Tocumen International", city: "Panama City, Panama", operationsPerYear: 120_000, runways: 2, longestRunwayFt: 10_006, metroPopulation: 1_900_000, annualPassengers: 16_000_000),
+        "SJO": .init(name: "Juan Santamaría International", city: "San José, Costa Rica", operationsPerYear: 80_000, runways: 1, longestRunwayFt: 9_882, metroPopulation: 2_200_000, annualPassengers: 5_500_000),
+        "SAL": .init(name: "El Salvador International (Óscar Romero)", city: "San Salvador, El Salvador", operationsPerYear: 40_000, runways: 1, longestRunwayFt: 10_500, metroPopulation: 1_800_000, annualPassengers: 3_500_000),
+        "GUA": .init(name: "La Aurora International", city: "Guatemala City, Guatemala", operationsPerYear: 50_000, runways: 1, longestRunwayFt: 9_800, metroPopulation: 3_000_000, annualPassengers: 3_000_000),
+        "LIR": .init(name: "Daniel Oduber Quirós International", city: "Liberia, Costa Rica", operationsPerYear: 15_000, runways: 1, longestRunwayFt: 9_200, metroPopulation: 60_000, annualPassengers: 1_200_000),
+        "SAP": .init(name: "Ramón Villeda Morales International", city: "San Pedro Sula, Honduras", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 9_100, metroPopulation: 800_000, annualPassengers: 1_200_000),
+        "MGA": .init(name: "Augusto C. Sandino International", city: "Managua, Nicaragua", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 8_000, metroPopulation: 1_000_000, annualPassengers: 1_400_000),
+        "BZE": .init(name: "Philip S. W. Goldson International", city: "Belize City, Belize", operationsPerYear: 15_000, runways: 1, longestRunwayFt: 9_600, metroPopulation: 60_000, annualPassengers: 1_000_000),
+        "XPL": .init(name: "Comayagua International (Palmerola)", city: "Comayagua, Honduras", operationsPerYear: 10_000, runways: 1, longestRunwayFt: 8_000, metroPopulation: 300_000, annualPassengers: 500_000),
+        "RTB": .init(name: "Juan Manuel Gálvez International", city: "Roatán, Honduras", operationsPerYear: 10_000, runways: 1, longestRunwayFt: 7_300, metroPopulation: 100_000, annualPassengers: 500_000),
+
+        // ── South America (best-effort ~2023–24) ───────────────────────────
+        "BOG": .init(name: "El Dorado International", city: "Bogotá, Colombia", operationsPerYear: 350_000, runways: 2, longestRunwayFt: 12_467, metroPopulation: 11_000_000, annualPassengers: 35_000_000),
+        "GRU": .init(name: "São Paulo/Guarulhos International", city: "São Paulo, Brazil", operationsPerYear: 250_000, runways: 2, longestRunwayFt: 12_140, metroPopulation: 22_000_000, annualPassengers: 38_000_000),
+        "SCL": .init(name: "Arturo Merino Benítez International", city: "Santiago, Chile", operationsPerYear: 180_000, runways: 2, longestRunwayFt: 12_795, metroPopulation: 7_100_000, annualPassengers: 24_000_000),
+        "LIM": .init(name: "Jorge Chávez International", city: "Lima, Peru", operationsPerYear: 180_000, runways: 2, longestRunwayFt: 11_506, metroPopulation: 10_000_000, annualPassengers: 22_000_000),
+        "CGH": .init(name: "São Paulo/Congonhas", city: "São Paulo, Brazil", operationsPerYear: 180_000, runways: 2, longestRunwayFt: 6_365, metroPopulation: 22_000_000, annualPassengers: 21_000_000),
+        "AEP": .init(name: "Aeroparque Jorge Newbery", city: "Buenos Aires, Argentina", operationsPerYear: 100_000, runways: 1, longestRunwayFt: 6_900, metroPopulation: 15_000_000, annualPassengers: 11_000_000),
+        "GIG": .init(name: "Rio de Janeiro/Galeão International", city: "Rio de Janeiro, Brazil", operationsPerYear: 100_000, runways: 2, longestRunwayFt: 13_123, metroPopulation: 12_000_000, annualPassengers: 9_000_000),
+        "VCP": .init(name: "Viracopos International", city: "Campinas, Brazil", operationsPerYear: 90_000, runways: 1, longestRunwayFt: 10_630, metroPopulation: 3_300_000, annualPassengers: 10_000_000),
+        "MDE": .init(name: "José María Córdova International", city: "Medellín, Colombia", operationsPerYear: 80_000, runways: 1, longestRunwayFt: 11_483, metroPopulation: 4_000_000, annualPassengers: 9_000_000),
+        "BSB": .init(name: "Brasília International (Juscelino Kubitschek)", city: "Brasília, Brazil", operationsPerYear: 120_000, runways: 2, longestRunwayFt: 10_499, metroPopulation: 4_800_000, annualPassengers: 15_000_000),
+        "EZE": .init(name: "Ministro Pistarini International (Ezeiza)", city: "Buenos Aires, Argentina", operationsPerYear: 100_000, runways: 2, longestRunwayFt: 10_827, metroPopulation: 15_000_000, annualPassengers: 11_000_000),
+        "UIO": .init(name: "Mariscal Sucre International", city: "Quito, Ecuador", operationsPerYear: 70_000, runways: 1, longestRunwayFt: 13_451, metroPopulation: 2_000_000, annualPassengers: 5_500_000),
+        "SDU": .init(name: "Santos Dumont", city: "Rio de Janeiro, Brazil", operationsPerYear: 90_000, runways: 2, longestRunwayFt: 4_341, metroPopulation: 12_000_000, annualPassengers: 9_000_000),
+        "CLO": .init(name: "Alfonso Bonilla Aragón International", city: "Cali, Colombia", operationsPerYear: 60_000, runways: 1, longestRunwayFt: 9_842, metroPopulation: 2_800_000, annualPassengers: 6_000_000),
+        "CNF": .init(name: "Tancredo Neves International (Confins)", city: "Belo Horizonte, Brazil", operationsPerYear: 80_000, runways: 1, longestRunwayFt: 10_006, metroPopulation: 6_000_000, annualPassengers: 10_000_000),
+        "CTG": .init(name: "Rafael Núñez International", city: "Cartagena, Colombia", operationsPerYear: 50_000, runways: 1, longestRunwayFt: 8_530, metroPopulation: 1_000_000, annualPassengers: 5_500_000),
+        "POA": .init(name: "Salgado Filho International", city: "Porto Alegre, Brazil", operationsPerYear: 70_000, runways: 1, longestRunwayFt: 9_190, metroPopulation: 4_300_000, annualPassengers: 8_000_000),
+        "REC": .init(name: "Recife/Guararapes International", city: "Recife, Brazil", operationsPerYear: 70_000, runways: 1, longestRunwayFt: 10_000, metroPopulation: 4_000_000, annualPassengers: 8_000_000),
+        "SSA": .init(name: "Salvador International (Luís Eduardo Magalhães)", city: "Salvador, Brazil", operationsPerYear: 70_000, runways: 2, longestRunwayFt: 10_007, metroPopulation: 3_900_000, annualPassengers: 7_000_000),
+        "GYE": .init(name: "José Joaquín de Olmedo International", city: "Guayaquil, Ecuador", operationsPerYear: 60_000, runways: 1, longestRunwayFt: 8_858, metroPopulation: 3_100_000, annualPassengers: 5_000_000),
     ]
 }
