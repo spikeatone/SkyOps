@@ -324,6 +324,32 @@ struct Airline {
         return weightedPick(pool.filter { $0.types.contains(typeId) })
     }
 
+    /// Weighted pick over an arbitrary airline pool (used by the background-traffic
+    /// airline-first model: pick the carrier, THEN a type it flies + a route in
+    /// its sphere — so each aircraft is one coherent airline).
+    static func weighted(_ pool: [Airline]) -> Airline { weightedPick(pool) }
+
+    /// Plausible international corridors between regions — a cross-region
+    /// (international) background leg only connects regions listed here, and only
+    /// between GATEWAY airports (see Simulation). Captures real intercontinental
+    /// flows and excludes ones nobody flies nonstop (e.g. Oceania↔Africa,
+    /// South America↔Asia). Keeps a carrier's routes inside its real reach.
+    static let corridors: [Region: [Region]] = [
+        .us:             [.canada, .mexico, .centralAmerica, .southAmerica, .europe, .asia, .oceania, .middleEast, .africa],
+        .canada:         [.us, .europe, .asia, .mexico, .centralAmerica, .southAmerica],
+        .mexico:         [.us, .canada, .centralAmerica, .southAmerica, .europe],
+        .centralAmerica: [.us, .mexico, .southAmerica, .canada],
+        .southAmerica:   [.us, .europe, .centralAmerica, .mexico, .canada, .africa, .middleEast],
+        .europe:         [.us, .canada, .africa, .middleEast, .asia, .southAmerica, .mexico],
+        .africa:         [.europe, .middleEast, .us, .asia, .southAmerica],
+        .middleEast:     [.europe, .africa, .asia, .us, .canada, .oceania, .southAmerica],
+        .asia:           [.middleEast, .europe, .us, .canada, .oceania, .africa],
+        .oceania:        [.asia, .us, .middleEast],
+    ]
+
+    /// Every region that carries background traffic (has a roster).
+    static let allRegions: [Region] = [.us, .canada, .mexico, .centralAmerica, .southAmerica, .europe, .africa, .asia, .middleEast, .oceania]
+
     /// Region-based overload kept for callers/tests that reason in regions.
     /// No gateway logic — overseas carriers never enter through this path.
     static func pick(forType typeId: String, origin: Region, dest: Region) -> Airline {

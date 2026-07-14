@@ -145,6 +145,9 @@ struct AircraftType: Identifiable {
 
     static let weightTotal: Int = all.reduce(0) { $0 + $1.weight }
 
+    /// Lookup by id (for resolving an airline's `types` strings to real types).
+    static let byId: [String: AircraftType] = Dictionary(uniqueKeysWithValues: all.map { ($0.id, $0) })
+
     static let crewFamilies: [String] = {
         var seen = Set<String>()
         return all.compactMap { seen.insert($0.family).inserted ? $0.family : nil }

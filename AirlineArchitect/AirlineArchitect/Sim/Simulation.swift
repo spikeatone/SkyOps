@@ -590,15 +590,89 @@ final class Simulation {
 
     /// Spawn one stress-test aircraft — weighted type, random route, staggered
     /// start. Ported from makeAircraft().
+    // MARK: Background-traffic geography (airline-first, region-constrained)
+
+    /// Airports grouped by carrier region (computed once from Airport.all).
+    @ObservationIgnored private lazy var airportsByRegion: [Airline.Region: [Airport]] = {
+        var m: [Airline.Region: [Airport]] = [:]
+        for ap in airports { m[Airline.region(ap.code), default: []].append(ap) }
+        return m
+    }()
+
+    /// Per-region international GATEWAYS = the busiest ~35% of that region's
+    /// airports (min 2) by annual passengers. Only a gateway can be the endpoint
+    /// of a cross-region international leg, so a small airport (Oklahoma City,
+    /// Bozeman) stays domestic-only and never gets a foreign carrier flying in.
+    @ObservationIgnored private lazy var gatewaysByRegion: [Airline.Region: Set<String>] = {
+        var m: [Airline.Region: Set<String>] = [:]
+        for (region, aps) in airportsByRegion {
+            let sorted = aps.sorted { ($0.info?.annualPassengers ?? 0) > ($1.info?.annualPassengers ?? 0) }
+            let n = max(2, Int((Double(sorted.count) * 0.35).rounded()))
+            m[region] = Set(sorted.prefix(n).map { $0.code })
+        }
+        return m
+    }()
+
+    /// Region spawn weights ∝ each region's airport count (a simple, self-adjusting
+    /// proxy for its share of air traffic — the US, with the most airports, spawns
+    /// the most traffic).
+    @ObservationIgnored private lazy var backgroundRegionPool: [(Airline.Region, Int)] = {
+        Airline.allRegions.compactMap { r in
+            let c = airportsByRegion[r]?.count ?? 0
+            return c > 0 ? (r, c) : nil
+        }
+    }()
+
+    private func pickBackgroundRegion() -> Airline.Region {
+        let total = backgroundRegionPool.reduce(0) { $0 + $1.1 }
+        var r = Int.random(in: 0..<max(1, total))
+        for (region, w) in backgroundRegionPool { r -= w; if r < 0 { return region } }
+        return .us
+    }
+
+    /// A plausible leg for a carrier whose home region is `region`: mostly a
+    /// domestic leg within the region; occasionally (from a gateway only) an
+    /// international leg to a plausible neighbour region's gateway. This is what
+    /// keeps a carrier inside its real sphere — no more "EgyptAir to OKC".
+    func backgroundLeg(for region: Airline.Region) -> (Airport, Airport) {
+        let pool = airportsByRegion[region] ?? airports
+        guard let origin = pool.randomElement() else { return Airport.randomPair() }
+        // International: from a gateway only, ~25% of the time, to a neighbour gateway.
+        if (gatewaysByRegion[region]?.contains(origin.code) ?? false), Int.random(in: 0..<100) < 25,
+           let neighbours = Airline.corridors[region] {
+            let viable = neighbours.filter { !(gatewaysByRegion[$0]?.isEmpty ?? true) }
+            if let nr = viable.randomElement(), let gws = gatewaysByRegion[nr],
+               let dest = (airportsByRegion[nr] ?? []).filter({ gws.contains($0.code) }).randomElement() {
+                return (origin, dest)
+            }
+        }
+        // Domestic: another airport in the same region.
+        guard pool.count > 1 else { return (origin, origin) }
+        var dest = pool.randomElement()!
+        while dest === origin { dest = pool.randomElement()! }
+        return (origin, dest)
+    }
+
+    /// A type the carrier actually flies, weighted by that type's global commonness.
+    private func pickBackgroundType(for airline: Airline) -> AircraftType {
+        let types = airline.types.compactMap { AircraftType.byId[$0] }
+        guard !types.isEmpty else { return AircraftType.pickWeighted() }
+        let total = types.reduce(0) { $0 + $1.weight }
+        var r = Int.random(in: 0..<max(1, total))
+        for t in types { r -= t.weight; if r < 0 { return t } }
+        return types.last!
+    }
+
     private func makeAircraft() -> Aircraft {
-        let type = AircraftType.pickWeighted()
-        let (origin, dest) = Airport.randomPair()
-        // Region-aware carrier: each leg draws carriers from its endpoints'
-        // regions (US / Canada / Mexico / Central America / South America /
-        // Europe); a transatlantic leg mixes US + European carriers.
-        let airline = Airline.pick(forType: type.id,
-                                   originCode: origin.code,
-                                   destCode: dest.code)
+        // Airline-FIRST: pick a region (weighted by traffic) → a carrier in it →
+        // a type it flies → a route in its geographic sphere. Each background
+        // aircraft is thus ONE coherent airline that never flies outside its real
+        // reach. (The old model picked a random GLOBAL airport pair every leg while
+        // keeping the spawn carrier — that's how "EgyptAir to Oklahoma City" happened.)
+        let region = pickBackgroundRegion()
+        let airline = Airline.weighted(Airline.roster(for: region))
+        let type = pickBackgroundType(for: airline)
+        let (origin, dest) = backgroundLeg(for: region)
         // Tail carries the carrier's real IATA code (Delta → "N123DL"); the
         // generic fallback gets a random non-real code so they aren't uniform.
         let code = airline.code.isEmpty ? Airline.randomTailCode() : airline.code
@@ -611,6 +685,7 @@ final class Simulation {
                           stateIndex: Int.random(in: 0..<FlightState.allCases.count),
                           cyclesAccrued: Int.random(in: 0..<Int(Double(type.expectedLifespanCycles) * 0.9)))
         ac.airlineName = airline.name
+        ac.homeRegion = region
         rollRevenue(for: ac)   // seed this leg's revenue before its first arrival
         return ac
     }
@@ -1400,9 +1475,12 @@ final class Simulation {
             case .crewHoldStarted:     pushDecision(.crew, for: ac)
             case .crewHoldResolved:    clearDecision(.crew, for: ac)  // crew freed up outside the card's own buttons
             case .legScheduled:
-                // Stress-test traffic wanders (random new pair); owned aircraft
-                // keep flying their assigned route (advance already swapped).
-                if !ac.purchased { (ac.origin, ac.dest) = Airport.randomPair() }
+                // Background traffic picks a NEW route each cycle, but within its
+                // carrier's own geographic sphere (home region ± plausible
+                // international corridors) — NOT a random global pair, which used to
+                // let a carrier wander anywhere. Owned aircraft keep their assigned
+                // route (advance already swapped origin/dest).
+                if !ac.purchased { (ac.origin, ac.dest) = backgroundLeg(for: ac.homeRegion ?? .us) }
                 rollRevenue(for: ac)
             case .legCompleted:        settleLeg(ac)
             case nil:                  break

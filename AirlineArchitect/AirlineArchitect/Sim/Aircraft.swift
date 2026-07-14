@@ -44,6 +44,11 @@ final class Aircraft: Identifiable {
     let tailHash: Int
     /// Competitor airline flying this background aircraft (nil = the player's own).
     var airlineName: String?
+    /// The competitor airline's home region — background aircraft only fly routes
+    /// within this region (domestic) or to a plausible neighbour region's gateway
+    /// (international), so a carrier never wanders outside its real geographic
+    /// sphere. nil for the player's own fleet.
+    var homeRegion: Airline.Region?
 
     var origin: Airport
     var dest: Airport

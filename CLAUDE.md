@@ -1630,11 +1630,37 @@ where numbers are involved.
   colours; held = red, shared) and get a REDUCED tooltip (airline +
   route/tail/type/status only — no crew/economics, a rival's books aren't
   visible). The old dev FLEET/"TEST" slider is now the player-facing
-  "TRAFFIC" control. KNOWN, faithful artifact: Southwest is ~6% of traffic
-  vs its real 18% share, because the airline is picked AFTER the type
-  (weighted by fleet size) and Southwest flies only 737-700/800/MAX8 — the
-  prototype's type-first model has the same characteristic; the Big Four
-  ordering (AA/DL/UA on top) and per-type correctness are right.
+  "TRAFFIC" control.
+- **Background traffic rebuilt to an AIRLINE-FIRST, region-constrained model
+  (native app) — replacing the old type-first / random-global-route model.**
+  The trigger was a real playtest report: an EgyptAir flight going South
+  America → Oklahoma City. Root cause (two compounding bugs): (1) `makeAircraft`
+  picked a random GLOBAL airport pair (`Airport.randomPair()`), and (2) a
+  background aircraft RE-RANDOMISED to another random global pair every leg
+  (`advanceTick`'s `.legScheduled`) while KEEPING its spawn carrier — so a
+  carrier assigned on an African leg would later wander anywhere still wearing
+  its livery. The new model: pick a REGION (weighted by that region's airport
+  count ≈ its traffic share) → a CARRIER in it (`Airline.weighted(roster(for:))`)
+  → a TYPE it actually flies (`pickBackgroundType`, weighted by global type
+  commonness) → a ROUTE in its sphere (`backgroundLeg(for:)`). Each aircraft
+  stores `homeRegion` and stays that ONE coherent airline for life; its re-route
+  draws from the SAME `backgroundLeg(for: homeRegion)`. `backgroundLeg` is
+  mostly a DOMESTIC leg within the region; ~25% of the time, and ONLY from a
+  GATEWAY airport, an INTERNATIONAL leg to a plausible-neighbour region's
+  gateway. Gateways = the busiest ~35% of each region's airports by
+  `AirportInfo.annualPassengers` (min 2) — so a small airport (OKC, Bozeman)
+  is domestic-only and never gets a foreign carrier flying in. Plausible
+  corridors are `Airline.corridors` (real intercontinental flows; excludes ones
+  nobody flies nonstop like Oceania↔Africa or South America↔Asia). Verified
+  headlessly over 3,000 spawns + 3,000 ticks: 0 legs where the carrier's home
+  isn't an endpoint, 0 international legs off-corridor or at a non-gateway, every
+  EgyptAir leg touches Africa, and 0 foreign carriers at any small US airport.
+  SIDE EFFECT (an improvement): the old "type-first" model's Southwest-under-
+  representation artifact is GONE — carriers are now picked directly by roster
+  weight, so Southwest ≈ its roster share. `Airline.pick(forType:origin:dest:)`
+  still exists (region-combining) but is no longer used by background spawns.
+  Helpers are `@ObservationIgnored lazy` (the `@Observable` macro rejects plain
+  `lazy` stored props — needed that attribute to cache the region grouping).
 - **Player airline naming — DONE, and the FIRST Figma-built screen.**
   First-launch modal (`AirlineNamingView`, overlaid in ContentView while
   `sim.playerAirlineName == nil`; blank submits as "New Airline"). Built to
