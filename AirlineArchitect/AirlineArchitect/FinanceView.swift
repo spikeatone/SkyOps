@@ -171,7 +171,7 @@ struct FinanceView: View {
                 .font(.system(size: 15)).foregroundStyle(accent)
             VStack(alignment: .leading, spacing: 3) {
                 Text("Market: \(ev.label)").font(.karla(14, .bold)).foregroundStyle(primary)
-                Text("Fares \(pct(ev.fareMultiplier)) · Costs \(pct(ev.costMultiplier)) · Demand \(pct(ev.loadMultiplier))")
+                Text("Fares \(pct(ev.fareMultiplier)) · Fuel \(pct(ev.costMultiplier)) · Demand \(pct(ev.loadMultiplier))")
                     .font(.karla(12)).foregroundStyle(secondary)
             }
             Spacer(minLength: 0)

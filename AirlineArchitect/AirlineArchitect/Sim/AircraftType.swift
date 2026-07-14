@@ -96,6 +96,24 @@ struct AircraftType: Identifiable {
     /// Operating cost per sim-minute (1 tick). Ported: round(costPerHour / 60).
     var holdCostPerTick: Int { Int((Double(costPerHour) / 60).rounded()) }
 
+    /// Relative FUEL burn intensity — how exposed this type is to fuel-price
+    /// swings (an Oil Spike / Fuel Drop event). 1.0 = baseline; the modern
+    /// new-generation types burn ~28% less (0.72), 4-engine widebodies ~60% more
+    /// (1.6). This is what makes fuel efficiency a real per-aircraft axis: a
+    /// neo/MAX/787/A350/A330neo/A220 fleet weathers a fuel spike far better than
+    /// old thirsty metal, so it's worth its price premium as a hedge. (Normal-
+    /// condition efficiency is ALSO already in each type's real `costPerHour`;
+    /// this is the extra, differential fuel-PRICE sensitivity on top.)
+    var fuelIntensity: Double {
+        switch id {
+        case "A319NEO", "A320NEO", "A321NEO", "MAX8", "MAX9",
+             "B788", "B789", "B78J", "A339", "A359", "A220100", "A220300":
+            return 0.72
+        default:
+            return bodyType == .widebody4Engine ? 1.6 : 1.0
+        }
+    }
+
     /// Practical range in nautical miles — representative published figures per
     /// type (shown in the Acquire card). Display-only; not sim-critical.
     var rangeNM: Int { AircraftType.rangeByID[id] ?? 3000 }

@@ -111,8 +111,12 @@ struct EconomicEvent {
     /// frequent-flyer redemption surge fills more seats (load up) but with award
     /// tickets that book far less real cash per seat (fare down).
     static let all: [EconomicEvent] = [
-        .init(id: "OIL_SPIKE", label: "Oil Price Spike", costMultiplier: 1.30, fareMultiplier: 1.15, loadMultiplier: 0.95),
-        .init(id: "FUEL_GLUT", label: "Fuel Price Drop", costMultiplier: 0.85, fareMultiplier: 0.95, loadMultiplier: 1.03),
+        // costMultiplier is a FUEL-PRICE multiplier — it scales only the fuel
+        // share (~35%) of operating cost, and by each aircraft's fuelIntensity
+        // (thirsty types hit harder, modern ones protected). Bigger swings here
+        // than the old flat-cost model because only the fuel share is affected.
+        .init(id: "OIL_SPIKE", label: "Oil Price Spike", costMultiplier: 1.50, fareMultiplier: 1.15, loadMultiplier: 0.95),
+        .init(id: "FUEL_GLUT", label: "Fuel Price Drop", costMultiplier: 0.70, fareMultiplier: 0.95, loadMultiplier: 1.03),
         .init(id: "ECON_BOOM", label: "Economic Boom",   costMultiplier: 1.00, fareMultiplier: 1.10, loadMultiplier: 1.05),
         .init(id: "RECESSION", label: "Recession",       costMultiplier: 1.00, fareMultiplier: 0.85, loadMultiplier: 0.90),
         .init(id: "FFR_SURGE", label: "Frequent-Flyer Redemption Surge", costMultiplier: 1.00, fareMultiplier: 0.85, loadMultiplier: 1.12),

@@ -395,6 +395,33 @@ one contradicts the design thesis.)
   (Airport) is the shared distance source. NOTE the interaction with the demand
   model: profitability = fare(distance) × load(demand vs seats) − opcost(distance)
   — so a long route needs BOTH range AND demand to pay; that's the strategic core.
+- **AGING & ESCALATING MAINTENANCE (native app).** An old airframe now costs
+  progressively more and breaks more as it nears retirement — so buy-new vs
+  buy-used vs lease is a real trade-off (a cheap high-cycle used jet is no longer
+  a free win). `Aircraft.ageFraction = cyclesAccrued / expectedLifespanCycles`.
+  Two QUADRATIC escalators (climb accelerates near/past design life):
+  `aogAgeMultiplier = 1 + 3.0·age²` scales AOG onset probability AND repair costs
+  (new 1×, 80% life 2.9×, design life 4×, past it 5×+); `maintenanceAgeMultiplier
+  = 1 + 0.4·age²` scales per-leg operating cost (design life +40%). Surfaced in
+  the Fleet detail Maintenance card ("Upkeep (age)" row). Leased/newly-bought
+  aircraft start at 0 cycles (fresh); used-market aircraft carry their real
+  cycles — so leasing = a fresh low-maintenance jet with an ongoing bill, buying
+  used = cheap upfront but higher AOG + upkeep. Verified headlessly.
+- **FUEL EFFICIENCY as a real per-aircraft axis (native app).** Fuel used to be
+  invisible except as an event that hit every aircraft equally. Now the economic
+  event's `costMultiplier` is explicitly a FUEL-PRICE multiplier that scales ONLY
+  the fuel share (~35%, `fuelShareBase`) of operating cost, and by each type's
+  `AircraftType.fuelIntensity` (modern neo/MAX/787/A350/A330neo/A220 = 0.72,
+  4-engine widebodies = 1.6, everything else 1.0). `effectiveCostMultiplier` is
+  now a PER-AIRCRAFT function `effectiveCostMultiplier(for:)`: normal conditions →
+  1.0 for everyone (so real `costPerHour` stays the truth when fuel is normal),
+  but an Oil Spike (raised 1.30→1.50, i.e. fuel +50%) hits a thirsty 4-engine jet
+  +28% vs a modern neo/787 only +12.6% — a 15-pt differential that makes a modern
+  fleet a real hedge against fuel volatility (and the fuel hedge still caps a
+  spike to 1.0 = full protection). Fuel Drop raised 0.85→0.70. Finance market
+  banner relabeled "Costs"→"Fuel". `avgFarePerSeat`/`operatingCostBlockMinutes`
+  stay superseded refs; costPerHour already carries each type's NORMAL-condition
+  fuel efficiency — this is the extra differential fuel-PRICE sensitivity on top.
 - **Economic events**: randomly triggered (checked once per sim-day, 15%
   daily chance when conditions are normal, designed pacing not sourced),
   lasting 3-10 sim-days, one active at a time. Four types (Oil Price

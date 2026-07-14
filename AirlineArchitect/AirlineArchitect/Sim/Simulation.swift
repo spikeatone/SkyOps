@@ -1297,8 +1297,20 @@ final class Simulation {
     /// capped at the ceiling; a price drop passes through unchanged. The global
     /// economic banner deliberately shows the RAW `currentEvent.costMultiplier`
     /// (the market's true state), NOT this hedged view.
-    var effectiveCostMultiplier: Double {
-        Simulation.effectiveMultiplier(raw: currentEvent.costMultiplier, hedged: fuelHedgeActive)
+    /// Fuel is ~this share of direct operating cost at baseline; a fuel-price
+    /// event scales only this portion (the rest — crew, capital, maintenance —
+    /// doesn't move with fuel).
+    static let fuelShareBase = 0.35
+
+    /// The operating-cost multiplier for a SPECIFIC aircraft under the current
+    /// fuel-price event. The event moves fuel price; only the fuel share of cost
+    /// responds, and by the aircraft's `fuelIntensity` (a thirsty 4-engine jet is
+    /// hammered by an oil spike; a modern neo/787 barely feels it — and a fuel
+    /// hedge caps the spike entirely). Normal conditions → 1.0 for everyone, so
+    /// the real `costPerHour` stays the truth when fuel price is normal.
+    func effectiveCostMultiplier(for ac: Aircraft) -> Double {
+        let hedgedFuel = Simulation.effectiveMultiplier(raw: currentEvent.costMultiplier, hedged: fuelHedgeActive)
+        return 1 + (hedgedFuel - 1) * Simulation.fuelShareBase * ac.type.fuelIntensity
     }
 
     /// Premium for a `days`-length hedge, priced against the player's ACTUAL
@@ -1418,7 +1430,7 @@ final class Simulation {
         // jet costs more to keep flying, `maintenanceAgeMultiplier`). + hold burn.
         let blockMin = ac.type.bodyType.blockMinutes(forNM: ac.origin.greatCircleNM(to: ac.dest))
         let opCost = Int((blockMin * Double(ac.type.holdCostPerTick)
-                          * effectiveCostMultiplier * ac.maintenanceAgeMultiplier).rounded())
+                          * effectiveCostMultiplier(for: ac) * ac.maintenanceAgeMultiplier).rounded())
                      + ac.holdBurn
         // DISPLAY-ONLY: a smoothed lease-per-leg figure for the tooltip. Does
         // not affect net/settlement — real lease is billed monthly. Ported
@@ -1535,7 +1547,7 @@ final class Simulation {
             // loss the longer it's held (plus the lost flights), so the pressure
             // to resolve a hold / hire crew remains.
             if ac.holdReason == .aog || ac.holdReason == .crew {
-                ac.holdBurn += Int((Double(ac.type.holdCostPerTick) * Simulation.holdBurnRate * effectiveCostMultiplier).rounded())
+                ac.holdBurn += Int((Double(ac.type.holdCostPerTick) * Simulation.holdBurnRate * effectiveCostMultiplier(for: ac)).rounded())
             }
         }
     }

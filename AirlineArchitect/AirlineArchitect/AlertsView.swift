@@ -167,7 +167,7 @@ struct NeedsAttentionCard: View {
         let ac = d.aircraft!   // aog / crew / sell always carry an aircraft
         switch d.kind {
         case .aog:
-            let rate = Int((Double(ac.type.holdCostPerTick) * sim.effectiveCostMultiplier).rounded())
+            let rate = Int((Double(ac.type.holdCostPerTick) * Simulation.holdBurnRate * sim.effectiveCostMultiplier(for: ac)).rounded())
             return AlertModel(
                 accent: accentRed, icon: "exclamationmark.triangle.fill", category: "AOG",
                 title: "\(ac.tail) grounded at \(ac.origin.code)",
