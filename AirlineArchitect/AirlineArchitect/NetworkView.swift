@@ -143,49 +143,53 @@ struct NetworkView: View {
         // draw space — read taps in the named map space to match exactly.
         .coordinateSpace(.named("mapCanvas"))
         .gesture(dragOrTapGesture.simultaneously(with: zoomGesture))
-        .overlay(alignment: .top) {
+        // One overlay spanning the whole map: control bar pinned to the top,
+        // speed/dev bars pinned to the bottom, and the panel region filling the
+        // space between them. The Acquire browser fills that whole gap; the
+        // shorter panels sit at the top with a Spacer holding the bars down.
+        .overlay {
             VStack(spacing: 8) {
-                // Reserve the control bar's space even when hidden so a dropped
-                // panel doesn't shift when the overlays toggle.
                 controlBar.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
-                // Control-bar panels (Acquire / Routes / Hire) drop DOWN directly
-                // beneath the control bar — attached to it, instead of floating
-                // ~100px lower, bottom-docked in the middle of the map.
-                panelDropdown(selected: selected)
-            }
-            .padding(8)
-        }
-        .overlay(alignment: .bottom) {
-            VStack(spacing: 8) {
-                bottomDocked(selected: selected)
-                // Keep the speed/dev bars' vertical space reserved even when the
-                // overlays are hidden, so a bottom-docked tooltip stays put.
+                panelMiddle(selected: selected)
+                if let flash {
+                    Text(flash).font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(.white).padding(8)
+                        .background(Color.black.opacity(0.75)).clipShape(Capsule())
+                }
+                // Reserve the speed/dev bars' space even when hidden so the layout
+                // doesn't shift when the overlays toggle.
                 speedBar.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
                 devControls.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(8)
         }
     }
 
-    /// Control-bar panels, dropping down directly beneath the control bar.
-    @ViewBuilder private func panelDropdown(selected: Aircraft?) -> some View {
+    /// The panel region between the control bar and the speed bar. Acquire fills
+    /// all of it; the others sit at the top with a Spacer pushing the bars down;
+    /// with no panel open, the route-flow / tooltip dock just above the bars.
+    @ViewBuilder private func panelMiddle(selected: Aircraft?) -> some View {
         switch panel {
-        case .acquire: BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
-        case .routes:  RoutesPanel(sim: sim)
-        case .hire:    AddCrewPanel(sim: sim) { panel = .none }
-        case .none:    EmptyView()
+        case .acquire:
+            BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
+                .frame(maxHeight: .infinity, alignment: .top)
+        case .routes:
+            RoutesPanel(sim: sim)
+            Spacer(minLength: 0)
+        case .hire:
+            AddCrewPanel(sim: sim) { panel = .none }
+            Spacer(minLength: 0)
+        case .none:
+            Spacer(minLength: 0)
+            bottomDocked(selected: selected)
         }
     }
 
-    /// Bottom-docked overlays: flash toast, the route-open flow, and the aircraft
-    /// tooltip (all mutually exclusive with an open control-bar panel).
+    /// The route-open flow and the aircraft tooltip, docked just above the bars
+    /// when no control-bar panel is open.
     @ViewBuilder private func bottomDocked(selected: Aircraft?) -> some View {
         VStack(spacing: 8) {
-            if let flash {
-                Text(flash).font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(.white).padding(8)
-                    .background(Color.black.opacity(0.75)).clipShape(Capsule())
-            }
             routeFlowPanel
             if let ac = selected {
                 AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { selectedID = nil }

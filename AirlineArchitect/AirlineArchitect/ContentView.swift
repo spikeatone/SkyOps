@@ -150,7 +150,8 @@ struct BuyPanel: View {
                 }
             }
         }
-        .frame(maxHeight: 360)   // capped so it doesn't overflow up over the top control bar
+        // No height cap — the Acquire browser fills the space its container gives
+        // it (control bar → speed bar), per the parent's frame(maxHeight:.infinity).
         .padding(8)
         .background(panelBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
