@@ -1,34 +1,25 @@
 {
   "fill" : {
     "linear-gradient" : [
-      "display-p3:0.28977,0.32151,0.42938,1.00000",
-      "display-p3:0.09411,0.12364,0.23723,1.00000"
-    ],
-    "orientation" : {
-      "start" : {
-        "x" : 0.5,
-        "y" : 0
-      },
-      "stop" : {
-        "x" : 0.5,
-        "y" : 0.7
-      }
-    }
+      "srgb:0.18000,0.22700,0.33700,1.00000",
+      "srgb:0.03500,0.07400,0.19600,1.00000"
+    ]
   },
   "groups" : [
     {
+      "blur-material" : 0.5,
       "layers" : [
         {
           "glass" : false,
-          "image-name" : "Image.png",
-          "name" : "Image",
+          "image-name" : "logo.svg",
+          "name" : "logo",
           "position-specializations" : [
             {
-              "idiom" : "iOS",
+              "idiom" : "square",
               "value" : {
-                "scale" : 0.5,
+                "scale" : 2,
                 "translation-in-points" : [
-                  0.25,
+                  0,
                   0
                 ]
               }
@@ -36,19 +27,19 @@
           ]
         }
       ],
+      "lighting" : "individual",
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.5
+        "opacity" : 0.6
       },
+      "specular" : true,
       "translucency" : {
         "enabled" : true,
-        "value" : 0.5
+        "value" : 0.2
       }
     }
   ],
   "supported-platforms" : {
-    "squares" : [
-      "iOS"
-    ]
+    "squares" : "shared"
   }
 }
