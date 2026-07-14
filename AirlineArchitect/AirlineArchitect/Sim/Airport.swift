@@ -239,6 +239,36 @@ final class Airport: Identifiable {
         .init(code: "OPO", lat: 41.2481, lon: -8.6814,  landingFeePerKlb: 4.40,  gateFeeNarrowbody: 350, gateFeeWidebody: 760,  groundStopsPerMonth: 2.5),
         .init(code: "BGY", lat: 45.6739, lon: 9.7042,   landingFeePerKlb: 4.20,  gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 3.5),
         .init(code: "ALC", lat: 38.2822, lon: -0.5582,  landingFeePerKlb: 4.00,  gateFeeNarrowbody: 330, gateFeeWidebody: 700,  groundStopsPerMonth: 1.5),
+
+        // ── Africa (top 25). Real lat/lon; fee/ground-stop figures are the same
+        // TIER-BASED ESTIMATES as the LatAm/Canada/Europe sets. Ground-stops lean
+        // low (less weather disruption; occasional sand/haze). No African carriers
+        // in the roster yet — see africaRoster (added alongside this).
+        .init(code: "CAI", lat: 30.1219, lon: 31.4056,  landingFeePerKlb: 5.00, gateFeeNarrowbody: 400, gateFeeWidebody: 950, groundStopsPerMonth: 2.5),
+        .init(code: "JNB", lat: -26.1392, lon: 28.2460, landingFeePerKlb: 5.20, gateFeeNarrowbody: 410, gateFeeWidebody: 1000, groundStopsPerMonth: 3.0),
+        .init(code: "ADD", lat: 8.9779,  lon: 38.7993,  landingFeePerKlb: 4.20, gateFeeNarrowbody: 360, gateFeeWidebody: 820, groundStopsPerMonth: 2.5),
+        .init(code: "CMN", lat: 33.3675, lon: -7.5900,  landingFeePerKlb: 4.00, gateFeeNarrowbody: 350, gateFeeWidebody: 780, groundStopsPerMonth: 2.0),
+        .init(code: "CPT", lat: -33.9715, lon: 18.6021, landingFeePerKlb: 4.40, gateFeeNarrowbody: 370, gateFeeWidebody: 820, groundStopsPerMonth: 3.0),
+        .init(code: "HRG", lat: 27.1783, lon: 33.7994,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 1.5),
+        .init(code: "NBO", lat: -1.3192, lon: 36.9278,  landingFeePerKlb: 4.20, gateFeeNarrowbody: 360, gateFeeWidebody: 820, groundStopsPerMonth: 2.5),
+        .init(code: "RAK", lat: 31.6069, lon: -8.0363,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 1.8),
+        .init(code: "LOS", lat: 6.5774,  lon: 3.3212,   landingFeePerKlb: 4.00, gateFeeNarrowbody: 350, gateFeeWidebody: 780, groundStopsPerMonth: 2.8),
+        .init(code: "ALG", lat: 36.6910, lon: 3.2154,   landingFeePerKlb: 3.60, gateFeeNarrowbody: 330, gateFeeWidebody: 720, groundStopsPerMonth: 2.2),
+        .init(code: "TUN", lat: 36.8510, lon: 10.2272,  landingFeePerKlb: 3.40, gateFeeNarrowbody: 320, gateFeeWidebody: 680, groundStopsPerMonth: 2.0),
+        .init(code: "DUR", lat: -29.6144, lon: 31.1197, landingFeePerKlb: 3.40, gateFeeNarrowbody: 320, gateFeeWidebody: 680, groundStopsPerMonth: 2.8),
+        .init(code: "ABJ", lat: 5.2614,  lon: -3.9263,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 2.5),
+        .init(code: "ACC", lat: 5.6052,  lon: -0.1668,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 2.5),
+        .init(code: "ABV", lat: 9.0068,  lon: 7.2632,   landingFeePerKlb: 3.30, gateFeeNarrowbody: 315, gateFeeWidebody: 670, groundStopsPerMonth: 2.5),
+        .init(code: "DSS", lat: 14.6710, lon: -17.0733, landingFeePerKlb: 3.10, gateFeeNarrowbody: 305, gateFeeWidebody: 650, groundStopsPerMonth: 2.2),
+        .init(code: "SSH", lat: 27.9773, lon: 34.3950,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 1.5),
+        .init(code: "MRU", lat: -20.4302, lon: 57.6836, landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 2.5),
+        .init(code: "RBA", lat: 34.0515, lon: -6.7515,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 580, groundStopsPerMonth: 1.8),
+        .init(code: "KGL", lat: -1.9686, lon: 30.1395,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 2.5),
+        .init(code: "EBB", lat: 0.0424,  lon: 32.4435,  landingFeePerKlb: 3.10, gateFeeNarrowbody: 305, gateFeeWidebody: 650, groundStopsPerMonth: 2.8),
+        .init(code: "LAD", lat: -8.8584, lon: 13.2312,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 330, gateFeeWidebody: 720, groundStopsPerMonth: 2.5),
+        .init(code: "DAR", lat: -6.8781, lon: 39.2026,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 2.8),
+        .init(code: "AGA", lat: 30.3250, lon: -9.4131,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 580, groundStopsPerMonth: 1.8),
+        .init(code: "TNG", lat: 35.7269, lon: -5.9169,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 580, groundStopsPerMonth: 2.0),
     ]
 
     /// Two distinct random airports — ported from randomRoutePair().

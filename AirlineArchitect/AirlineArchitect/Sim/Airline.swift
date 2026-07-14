@@ -75,7 +75,7 @@ struct Airline {
     /// The five geographic regions a flight can touch. A leg draws carriers from
     /// its endpoints' regions, so a Mexican domestic leg shows Mexican carriers,
     /// a Brazilian one South American carriers, etc. — not a lumped LatAm pool.
-    enum Region { case us, canada, mexico, centralAmerica, southAmerica, europe }
+    enum Region { case us, canada, mexico, centralAmerica, southAmerica, europe, africa }
 
     /// Real Canadian carriers. Per-type eligibility researched per carrier,
     /// limited to the game's types. Air Canada also appears in the US roster
@@ -149,6 +149,29 @@ struct Airline {
         .init(name: "Air Nostrum",        code: "YW", weight: 3, types: ["CRJ900","CRJ1000","ERJ145","ERJ140"]),
     ]
 
+    /// Real African carriers, per-type eligibility researched per carrier. Ethiopian
+    /// (Africa's largest), EgyptAir, Royal Air Maroc, South African, Kenya Airways
+    /// on top. Some intercontinental legs also draw the big European/US carriers via
+    /// the cross-region pick. No African 747/A380 passenger operators, so those types
+    /// fall to Independent Operator on African legs — realistic.
+    static let africaRoster: [Airline] = [
+        .init(name: "Ethiopian Airlines",  code: "ET", weight: 14, types: ["B737700","B737800","MAX8","B773","B788","B789","A359"]),
+        .init(name: "EgyptAir",            code: "MS", weight: 11, types: ["B737800","A220300","A320","A320NEO","A321NEO","B773","B789","A339"]),
+        .init(name: "Royal Air Maroc",     code: "AT", weight: 10, types: ["B737700","B737800","MAX8","B788","B789","A320"]),
+        .init(name: "South African Airways", code: "SA", weight: 8, types: ["A319","A320","A339","A340"]),
+        .init(name: "Kenya Airways",       code: "KQ", weight: 7,  types: ["B737800","B788","E190"]),
+        .init(name: "Air Algérie",         code: "AH", weight: 6,  types: ["B737700","B737800","MAX8","A339","A359"]),
+        .init(name: "Air Peace",           code: "P4", weight: 6,  types: ["B737800","E195","B773"]),
+        .init(name: "FlySafair",           code: "FA", weight: 6,  types: ["B737700","B737800"]),
+        .init(name: "Tunisair",            code: "TU", weight: 5,  types: ["A319","A320","A321","A339"]),
+        .init(name: "RwandAir",            code: "WB", weight: 4,  types: ["B737800","A339","CRJ900"]),
+        .init(name: "Air Côte d'Ivoire",   code: "HF", weight: 4,  types: ["A319","A320","A339"]),
+        .init(name: "Air Senegal",         code: "HC", weight: 3,  types: ["A319","A320","A339"]),
+        .init(name: "TAAG Angola Airlines", code: "DT", weight: 3, types: ["B737700","B773"]),
+        .init(name: "ASKY Airlines",       code: "KP", weight: 3,  types: ["B737700","B737800"]),
+        .init(name: "Air Tanzania",        code: "TC", weight: 3,  types: ["A220300","B788"]),
+    ]
+
     // Airport-code → region membership (US is the default / everything else).
     static let canadaCodes: Set<String> = [
         "YYZ","YVR","YUL","YYC","YEG","YOW","YWG","YHZ","YTZ","YLW","YYJ","YYT","YXE","YQR","YQM","YSJ","YQG","YFC","YQT","YMM",
@@ -167,6 +190,10 @@ struct Airline {
         "MXP","ATH","AYT","VIE","OSL","BRU","ARN","LED","BER","ZRH","DUS","AGP","VCE","OTP","GVA","HAM","NCE","NAP","EDI","PRG",
         "KEF","VKO","BRS","OPO","BGY","ALC",
     ]
+    static let africaCodes: Set<String> = [
+        "CAI","JNB","ADD","CMN","CPT","HRG","NBO","RAK","LOS","ALG","TUN","DUR","ABJ","ACC","ABV","DSS","SSH","MRU","RBA","KGL",
+        "EBB","LAD","DAR","AGA","TNG",
+    ]
 
     static func region(_ code: String) -> Region {
         if canadaCodes.contains(code) { return .canada }
@@ -174,6 +201,7 @@ struct Airline {
         if centralAmericaCodes.contains(code) { return .centralAmerica }
         if southAmericaCodes.contains(code) { return .southAmerica }
         if europeCodes.contains(code) { return .europe }
+        if africaCodes.contains(code) { return .africa }
         return .us
     }
     static func roster(for r: Region) -> [Airline] {
@@ -184,6 +212,7 @@ struct Airline {
         case .centralAmerica: return centralAmericaRoster
         case .southAmerica:   return southAmericaRoster
         case .europe:         return europeRoster
+        case .africa:         return africaRoster
         }
     }
 
@@ -265,6 +294,10 @@ struct Airline {
         // European carriers (LH/BA/AF/TK/KL/IB/LX/EI/AY/TP/SU/OS/DY/SK already above)
         "FR": "Ryanair", "VY": "Vueling", "AZ": "ITA Airways", "BT": "airBaltic",
         "CL": "Lufthansa CityLine", "WA": "KLM Cityhopper", "YW": "Air Nostrum",
+        // African carriers (ET/MS/SA already above)
+        "AT": "Royal Air Maroc", "KQ": "Kenya Airways", "AH": "Air Algérie",
+        "TU": "Tunisair", "FA": "FlySafair", "WB": "RwandAir", "HF": "Air Côte d'Ivoire",
+        "HC": "Air Senegal", "DT": "TAAG Angola Airlines", "KP": "ASKY Airlines", "TC": "Air Tanzania",
     ]
 
     /// A random 2-uppercase-letter code that isn't a real airline code — used
