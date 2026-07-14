@@ -418,7 +418,11 @@ struct RoutesPanel: View {
                     }
                     .padding(8)
                 }
-                .frame(maxHeight: 480)
+                // Match BuyPanel's total card height (its 360 scroll + 8pt
+                // padding on each side = 376) so the two list panels dock at the
+                // same position — switching Acquire<->Routes no longer makes the
+                // panel top jump.
+                .frame(maxHeight: 376)
             }
         }
         .frame(maxWidth: .infinity)
