@@ -140,6 +140,8 @@ struct Airline {
         .init(name: "Air Serbia",        code: "JU", weight: 3,  types: ["A319","A320","A321","A339"]),
         .init(name: "Ukraine Int'l",     code: "PS", weight: 3,  types: ["B737800","B739"]),
         .init(name: "Belavia",           code: "B2", weight: 3,  types: ["B737800","E195"]),
+        .init(name: "Croatia Airlines",  code: "OU", weight: 3,  types: ["A319","A320","A320NEO"]),
+        .init(name: "Bulgaria Air",      code: "FB", weight: 3,  types: ["A319","A320","A320NEO","E190"]),
         // Regional-brand liveries (E-Jet / CRJ feed)
         .init(name: "Lufthansa CityLine", code: "CL", weight: 4, types: ["E190","E195","CRJ900"]),
         .init(name: "KLM Cityhopper",     code: "WA", weight: 3, types: ["E175","E190","E195"]),
@@ -255,7 +257,7 @@ struct Airline {
         "LHR","IST","CDG","AMS","MAD","FRA","BCN","FCO","SVO","LGW","MUC","SAW","LIS","DUB","PMI","ORY","MAN","STN","DME","CPH",
         "MXP","ATH","AYT","VIE","OSL","BRU","ARN","LED","BER","ZRH","DUS","AGP","VCE","OTP","GVA","HAM","NCE","NAP","EDI","PRG",
         "KEF","VKO","BRS","OPO","BGY","ALC","HEL",
-        "WAW","BUD","BTS","BEG","KBP","RIX","VNO","TLL","MSQ",
+        "WAW","BUD","BTS","BEG","KBP","RIX","VNO","TLL","MSQ","ZAG","SOF","SJJ",
     ]
     static let africaCodes: Set<String> = [
         "CAI","JNB","ADD","CMN","CPT","HRG","NBO","RAK","LOS","ALG","TUN","DUR","ABJ","ACC","ABV","DSS","SSH","MRU","RBA","KGL",
@@ -380,6 +382,7 @@ struct Airline {
         "CL": "Lufthansa CityLine", "WA": "KLM Cityhopper", "YW": "Air Nostrum",
         "W6": "Wizz Air", "RO": "TAROM", "JU": "Air Serbia", "PS": "Ukraine Int'l",
         "B2": "Belavia", "U2": "easyJet", "PC": "Pegasus Airlines", "A3": "Aegean Airlines",
+        "OU": "Croatia Airlines", "FB": "Bulgaria Air",
         // African carriers (ET/MS/SA already above)
         "AT": "Royal Air Maroc", "KQ": "Kenya Airways", "AH": "Air Algérie",
         "TU": "Tunisair", "FA": "FlySafair", "WB": "RwandAir", "HF": "Air Côte d'Ivoire",
