@@ -2332,11 +2332,23 @@ where numbers are involved.
   remaining regional-jet family totals: real but lower-confidence data,
   flagged in the Fleet section above. Revisit with dedicated sourcing if
   the designer wants higher precision here.
-- **No bankruptcy mechanic.** `playerBalance` can go negative (confirmed
-  real via lease billing, which doesn't check affordability before
-  charging) with no consequence beyond red text and being blocked from
-  further Buy/Lease/Open Route/Add Crew actions. Whether that's the
-  intended long-term design or a placeholder hasn't been decided.
+- **Bankruptcy / failure state — BUILT (native app).** Negative
+  `playerBalance` now starts a 14-sim-day grace countdown (`insolventSinceTick`,
+  `bankruptcyGraceTicks`, an Ops warning logged; actions are still blocked as
+  before). `tickSolvency()` (in the tick loop) runs the countdown; when it
+  expires, `forcedLiquidation()` sells owned-outright aircraft most-valuable-first
+  until solvent, then hands back leased jets (no proceeds, but stops the bills),
+  and if the fleet empties while still negative → `isBankrupt = true` (GAME OVER).
+  `sellAircraft` was refactored to share a `liquidate(_,proceeds:)` teardown so a
+  leased return is a $0-proceeds liquidation. `GameOverView` is a modal recap
+  (days operated / routes flown / flights) with "Start a New Airline", which
+  resets by `sim = Simulation()` + bumping `gameID`; ContentView's run loop is now
+  `.task(id: gameID)` so the old sim's loop cancels (run() checks
+  `Task.isCancelled`) and the new instance starts fresh (naming screen returns).
+  Verified headlessly: a healthy 2-aircraft operator never false-bankrupts; a
+  player who leases a $200M widebody with no revenue goes negative day 0 and
+  bankrupts exactly at day 14 (grace) after the leased jet is returned with
+  nothing left to sell. The browser prototype has no failure state.
 - **Route-opening cost and starting capital are now REAL** — this item
   used to be open, resolved this session (see Fleet Lifecycle and Route
   Network sections). Real remaining gap in the same area: player-funded

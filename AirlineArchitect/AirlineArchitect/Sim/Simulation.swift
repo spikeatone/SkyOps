@@ -1477,8 +1477,15 @@ final class Simulation {
     /// and clear any pending decision cards for it.
     func sellAircraft(_ ac: Aircraft) {
         let proceeds = sellValue(of: ac)
-        playerBalance += proceeds
         totalSaleProceeds += proceeds
+        liquidate(ac, proceeds: proceeds)
+    }
+
+    /// Remove an aircraft from the fleet — crediting `proceeds` (a real sale) or
+    /// $0 (a leased jet handed back in a forced liquidation). Releases crew,
+    /// archives the route, frees slots, clears pending cards. The shared teardown.
+    private func liquidate(_ ac: Aircraft, proceeds: Int) {
+        playerBalance += proceeds
         // Release the sold aircraft's crew back to the pool (it isn't sold with
         // the aircraft) before the cleanup pass.
         if let cid = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == cid }) {
@@ -1499,6 +1506,61 @@ final class Simulation {
         aircraft.removeAll { $0 === ac }
         decisionQueue.removeAll { $0.aircraft === ac }
         resizeCrewPools()   // clears the family's pool only if this was its last aircraft
+    }
+
+    // MARK: - Solvency / bankruptcy (the failure state)
+
+    private(set) var isBankrupt = false
+    /// Tick the balance first went negative (nil = solvent) — drives the grace
+    /// countdown before a forced liquidation.
+    private(set) var insolventSinceTick: Int?
+    static let bankruptcyGraceTicks = 14 * 1440   // 14 sim-days to recover
+
+    /// Sim-days left before forced liquidation (for the UI warning); nil = solvent.
+    var insolvencyDaysLeft: Int? {
+        guard let since = insolventSinceTick else { return nil }
+        return max(0, (Simulation.bankruptcyGraceTicks - (tick - since)) / 1440)
+    }
+
+    /// Once per tick: negative cash starts a 14-day grace countdown; when it
+    /// expires, force-liquidate to recover — and if that can't, it's game over.
+    private func tickSolvency() {
+        guard playerAirlineName != nil, !isBankrupt else { return }
+        if playerBalance < 0 {
+            if insolventSinceTick == nil {
+                insolventSinceTick = tick
+                logOps(.structural, "Cash on hand is negative",
+                       "Recover within 14 days or assets will be liquidated")
+            } else if tick - insolventSinceTick! >= Simulation.bankruptcyGraceTicks {
+                forcedLiquidation()
+            }
+        } else {
+            insolventSinceTick = nil
+        }
+    }
+
+    /// Grace expired: sell owned aircraft (most valuable first) until solvent; if
+    /// that isn't enough, hand back leased jets (no proceeds, but stops the
+    /// bills); if the fleet empties and cash is still negative → bankruptcy.
+    private func forcedLiquidation() {
+        for ac in aircraft.filter({ $0.purchased && !$0.isLeased })
+                          .sorted(by: { sellValue(of: $0) > sellValue(of: $1) }) where playerBalance < 0 {
+            logOps(.structural, "Forced sale", "\(ac.tail) liquidated to cover debt")
+            sellAircraft(ac)
+        }
+        if playerBalance < 0 {
+            for ac in aircraft.filter({ $0.purchased && $0.isLeased }) {
+                logOps(.structural, "Lease returned", "\(ac.tail) handed back to the lessor")
+                liquidate(ac, proceeds: 0)
+            }
+        }
+        if playerBalance < 0 && !aircraft.contains(where: { $0.purchased }) {
+            isBankrupt = true
+            insolventSinceTick = nil
+            logOps(.structural, "BANKRUPTCY", "The airline is insolvent — game over")
+        } else {
+            insolventSinceTick = nil   // recovered; reset the clock
+        }
     }
 
     /// SELL card option: keep flying (don't re-prompt this aircraft).
@@ -1522,6 +1584,7 @@ final class Simulation {
         tickLeaseBilling()
         tickInsuranceBilling()
         tickUsedMarketReplenishment()
+        tickSolvency()
         for ac in aircraft {
             switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {
             case .aogHoldStarted:      pushDecision(.aog, for: ac)

@@ -14,6 +14,9 @@ import SwiftUI
 struct ContentView: View {
     @State private var sim = Simulation()
     @State private var store = Store()
+    /// Bumped on a fresh start (after bankruptcy) so the `.task(id:)` cancels the
+    /// old sim's run loop and starts a new one on the replacement instance.
+    @State private var gameID = UUID()
     @State private var tab = 0
     @State private var showAlerts = false
     @State private var paywallReason: String?
@@ -39,7 +42,9 @@ struct ContentView: View {
             SkyTabBar(selection: $tab, opsBadge: sim.unseenOpsEventCount)
         }
         // Run the sim for the whole session, independent of the selected tab.
-        .task { await sim.run() }
+        // Keyed on gameID so a fresh start (post-bankruptcy) cancels the old
+        // loop and runs the new instance.
+        .task(id: gameID) { await sim.run() }
         // Load + observe the Pro entitlement from RevenueCat.
         .task { await store.start() }
         .overlay {
@@ -81,9 +86,21 @@ struct ContentView: View {
                 .transition(.opacity)
             }
         }
+        // Game over — bankruptcy. Modal recap + fresh start (new sim instance).
+        .overlay {
+            if sim.isBankrupt {
+                GameOverView(sim: sim) {
+                    sim = Simulation()
+                    gameID = UUID()
+                    tab = 0
+                }
+                .transition(.opacity)
+            }
+        }
         .animation(.easeOut(duration: 0.25), value: sim.playerAirlineName)
         .animation(.easeOut(duration: 0.2), value: showAlerts)
         .animation(.easeOut(duration: 0.2), value: showPaywall)
+        .animation(.easeOut(duration: 0.3), value: sim.isBankrupt)
     }
 
     /// Show the paywall with an optional context line (which cap was hit).
