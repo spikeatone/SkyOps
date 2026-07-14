@@ -35,7 +35,9 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .safeAreaInset(edge: .bottom, spacing: 0) { SkyTabBar(selection: $tab) }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            SkyTabBar(selection: $tab, opsBadge: sim.unseenOpsEventCount)
+        }
         // Run the sim for the whole session, independent of the selected tab.
         .task { await sim.run() }
         // Load + observe the Pro entitlement from RevenueCat.

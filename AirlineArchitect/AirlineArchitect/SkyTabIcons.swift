@@ -53,8 +53,13 @@ struct SkyTabIconView: View {
 /// labels, #1F232D / white background with a soft top shadow.
 struct SkyTabBar: View {
     @Binding var selection: Int
+    /// Count of new Ops activity — shows an orange badge on the Ops tab so
+    /// players notice things happening there. 0 = no badge.
+    var opsBadge: Int = 0
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
+    /// Figma "Orange" (#FF8C00).
+    private let badgeColor = Color(skyHex: 0xFF8C00)
 
     private static let items: [(title: String, paths: [String])] = [
         ("Network", SkyTabIcon.network), ("Fleet", SkyTabIcon.plane),
@@ -71,6 +76,18 @@ struct SkyTabBar: View {
                 Button { selection = i } label: {
                     VStack(spacing: 4) {
                         SkyTabIconView(paths: item.paths, color: c).frame(width: 24, height: 24)
+                            .overlay(alignment: .topTrailing) {
+                                if i == 3, opsBadge > 0 {
+                                    Text(opsBadge > 9 ? "9+" : "\(opsBadge)")
+                                        .font(.karla(9, .bold)).foregroundStyle(.white)
+                                        .padding(.horizontal, opsBadge > 9 ? 3 : 0)
+                                        .frame(minWidth: 15, minHeight: 15)
+                                        .background(badgeColor)
+                                        .clipShape(Capsule())
+                                        .overlay(Capsule().stroke(bg, lineWidth: 1.5))
+                                        .offset(x: 9, y: -6)
+                                }
+                            }
                         Text(item.title).font(.karla(12, .semibold)).foregroundStyle(c)
                     }
                     .frame(maxWidth: .infinity)

@@ -866,6 +866,19 @@ final class Simulation {
     private(set) var opsEventLog: [OpsEvent] = []
     private var nextOpsEventId = 1
 
+    /// Highest ops-event id the player has already seen (Ops tab viewed). Drives
+    /// the Ops tab-bar activity badge.
+    private(set) var lastSeenOpsEventId = 0
+    /// New ops events since the player last looked at the Ops feed.
+    var unseenOpsEventCount: Int {
+        opsEventLog.reduce(0) { $0 + ($1.id > lastSeenOpsEventId ? 1 : 0) }
+    }
+    /// Mark the Ops feed as seen — called when the Ops tab is on screen. The
+    /// newest event is always at index 0 (highest id), so that's the high-water mark.
+    func markOpsEventsSeen() {
+        lastSeenOpsEventId = max(lastSeenOpsEventId, opsEventLog.first?.id ?? lastSeenOpsEventId)
+    }
+
     /// Record an event to the (capped, newest-first) Ops feed.
     private func logOps(_ category: OpsEvent.Category, _ title: String, _ subtitle: String) {
         opsEventLog.insert(OpsEvent(id: nextOpsEventId, category: category,

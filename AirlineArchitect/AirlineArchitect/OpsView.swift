@@ -52,6 +52,10 @@ struct OpsView: View {
             .padding(.horizontal, 16)
             .padding(.top, 6)
         }
+        // While the Ops tab is on screen, everything here is "seen" — clear the
+        // tab badge on entry and as new events arrive live.
+        .onAppear { sim.markOpsEventsSeen() }
+        .onChange(of: sim.opsEventLog.first?.id) { _, _ in sim.markOpsEventsSeen() }
     }
 
     // MARK: Header
