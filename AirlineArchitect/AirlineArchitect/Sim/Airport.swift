@@ -220,6 +220,7 @@ final class Airport: Identifiable {
         .init(code: "OSL", lat: 60.1939, lon: 11.1004,  landingFeePerKlb: 6.00,  gateFeeNarrowbody: 440, gateFeeWidebody: 1020, groundStopsPerMonth: 6.5),
         .init(code: "BRU", lat: 50.9014, lon: 4.4844,   landingFeePerKlb: 6.40,  gateFeeNarrowbody: 450, gateFeeWidebody: 1080, groundStopsPerMonth: 4.5),
         .init(code: "ARN", lat: 59.6519, lon: 17.9186,  landingFeePerKlb: 5.80,  gateFeeNarrowbody: 430, gateFeeWidebody: 1000, groundStopsPerMonth: 6.5),
+        .init(code: "HEL", lat: 60.3172, lon: 24.9633,  landingFeePerKlb: 5.60,  gateFeeNarrowbody: 430, gateFeeWidebody: 1000, groundStopsPerMonth: 6.5),
         .init(code: "LED", lat: 59.8003, lon: 30.2625,  landingFeePerKlb: 4.80,  gateFeeNarrowbody: 380, gateFeeWidebody: 840,  groundStopsPerMonth: 6.5),
         .init(code: "BER", lat: 52.3667, lon: 13.5033,  landingFeePerKlb: 6.20,  gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 4.5),
         .init(code: "ZRH", lat: 47.4647, lon: 8.5492,   landingFeePerKlb: 7.50,  gateFeeNarrowbody: 490, gateFeeWidebody: 1250, groundStopsPerMonth: 4.0),

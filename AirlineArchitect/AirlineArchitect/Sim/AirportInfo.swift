@@ -179,6 +179,7 @@ extension Airport {
         "STN": .init(name: "London Stansted Airport", city: "London, United Kingdom", operationsPerYear: 200_000, runways: 1, longestRunwayFt: 10_003, metroPopulation: 14_000_000, annualPassengers: 28_000_000),
         "DME": .init(name: "Domodedovo International Airport", city: "Moscow, Russia", operationsPerYear: 180_000, runways: 2, longestRunwayFt: 12_320, metroPopulation: 21_000_000, annualPassengers: 16_000_000),
         "CPH": .init(name: "Copenhagen Airport", city: "Copenhagen, Denmark", operationsPerYear: 250_000, runways: 3, longestRunwayFt: 11_811, metroPopulation: 2_100_000, annualPassengers: 27_000_000),
+        "HEL": .init(name: "Helsinki-Vantaa Airport", city: "Helsinki, Finland", operationsPerYear: 180_000, runways: 3, longestRunwayFt: 11_286, metroPopulation: 1_500_000, annualPassengers: 15_000_000),
         "MXP": .init(name: "Milan Malpensa Airport", city: "Milan, Italy", operationsPerYear: 180_000, runways: 2, longestRunwayFt: 12_844, metroPopulation: 5_000_000, annualPassengers: 26_000_000),
         "ATH": .init(name: "Athens Eleftherios Venizelos International", city: "Athens, Greece", operationsPerYear: 220_000, runways: 2, longestRunwayFt: 13_123, metroPopulation: 3_700_000, annualPassengers: 28_000_000),
         "AYT": .init(name: "Antalya Airport", city: "Antalya, Turkey", operationsPerYear: 200_000, runways: 3, longestRunwayFt: 11_155, metroPopulation: 2_600_000, annualPassengers: 35_000_000),
