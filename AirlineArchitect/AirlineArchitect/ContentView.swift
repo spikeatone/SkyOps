@@ -316,6 +316,17 @@ struct RouteConfirmPanel: View {
                 Spacer(minLength: 0)
             }
             infoRow("Distance", "\(distanceNM.formatted()) nm", primaryC)
+            // Demand model (prototype): show this city pair's estimated daily
+            // demand and the load factor the spare that'd be assigned would fly
+            // it at — so the player can size the aircraft to the route.
+            if sim.useDemandModel {
+                infoRow("Est. demand", "\(sim.routeDailyDemand(origin, dest).formatted()) pax/day", primaryC)
+                if let spare {
+                    let lf = sim.projectedLoadFactor(seats: spare.type.seats, from: origin, to: dest)
+                    let c = lf >= 0.7 ? green : (lf >= 0.45 ? Color(skyHex: 0xFFB300) : red)
+                    infoRow("Projected load", "\(Int((lf * 100).rounded()))% · \(spare.type.name)", c)
+                }
+            }
             infoRow("Slots", slotsOK ? "Avail both ends" : "Buyout needed",
                     slotsOK ? green : red)
             infoRow("Range check", rangeCheck(spare).text, rangeCheck(spare).ok ? green : red)

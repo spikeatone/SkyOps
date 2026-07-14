@@ -12,7 +12,60 @@
 import Foundation
 
 /// Industry load factor baseline (IATA 2026 record high, supply-constrained).
+/// Used only when the demand model is OFF (dev A/B toggle) — otherwise load
+/// factor is an OUTCOME of route demand vs. aircraft capacity (see Demand).
 let baseLoadFactor = 0.838
+
+/// Passenger-demand gravity model (prototype). Each city pair has a real daily
+/// passenger pool ∝ the two airports' throughput and shaped by distance, so a
+/// route's load factor becomes an OUTCOME (how full you fly vs. how many want to
+/// go) rather than a flat constant. This makes route selection and aircraft
+/// SIZE-vs-route matching a real decision: a widebody on a thin route flies
+/// half-empty and loses money; a regional jet fills it.
+///
+/// Calibration: `k` is set so a route between two ~5M-annual-passenger airports
+/// at medium haul yields ~135 passengers per one-way leg — a narrowbody at ~75%
+/// load across the sim's ~2 daily frequencies each way. Trunk routes (big×big,
+/// short) overflow any aircraft (capped fill → reward big jets); thin routes
+/// (small×small) only pay on small aircraft. All values are tunable.
+enum Demand {
+    static let k = 3.0e-5
+    static let maxLoadFactor = 0.92          // timing/no-shows cap fill even with excess demand
+    static let dailyFrequenciesEachWay = 2.0 // sim: ~369-tick legs → ~2/day/direction
+
+    /// Effective air-travel throughput of an airport (annual passengers; falls
+    /// back to a metro-population proxy, then a small default) — the "mass" in
+    /// the gravity model.
+    static func throughput(_ ap: Airport) -> Double {
+        if let p = ap.info?.annualPassengers, p > 0 { return Double(p) }
+        if let m = ap.info?.metroPopulation, m > 0 { return Double(m) * 3 }  // ~3 air trips/capita/yr
+        return 800_000
+    }
+
+    /// Distance shaping: gentle. Very short hops lose a little (people drive);
+    /// medium haul is the 1.0 sweet spot; very long haul decays slowly (a niche,
+    /// not zero). Distance's bigger economic effect is via fare/cost, not demand.
+    static func distanceFactor(_ nm: Double) -> Double {
+        if nm < 200 { return 0.8 }
+        if nm < 2000 { return 1.0 }
+        return max(0.5, 1.0 - (nm - 2000) / 8000)   // → 0.5 at ~6000 nm
+    }
+
+    /// Daily one-way passenger demand for a city pair. Geometric mean of the two
+    /// throughputs (so demand tracks the SMALLER endpoint — realistic — and the
+    /// big×small spread stays sane, unlike the raw product).
+    static func dailyOneWay(_ a: Airport, _ b: Airport) -> Double {
+        let size = (throughput(a) * throughput(b)).squareRoot()
+        return k * size * distanceFactor(a.greatCircleNM(to: b))
+    }
+
+    /// The load factor `seats` capacity would achieve on a route with this daily
+    /// demand (demand-per-leg ÷ seats, capped), before event/random modifiers.
+    static func loadFactor(seats: Int, dailyOneWay: Double) -> Double {
+        guard seats > 0 else { return 0 }
+        return min(maxLoadFactor, (dailyOneWay / dailyFrequenciesEachWay) / Double(seats))
+    }
+}
 
 /// An economic condition that scales cost / fare / demand together.
 struct EconomicEvent {

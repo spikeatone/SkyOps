@@ -305,6 +305,7 @@ struct NetworkView: View {
         VStack(spacing: 8) {
             trafficBar
             devProToggle
+            devDemandToggle
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .background(barBG)
@@ -325,6 +326,25 @@ struct NetworkView: View {
                     .font(.karla(12, .bold)).foregroundStyle(.white)
                     .frame(width: 44, height: 22)
                     .background(store.isPro ? Sky.coreGreen : Sky.onDarkStroke)
+                    .clipShape(Capsule())
+            }.buttonStyle(.plain)
+        }
+        .padding(.horizontal, 6)
+    }
+
+    /// DEV: flip the passenger-demand model (prototype) on/off to A/B it against
+    /// the old flat 83.8% load factor. ON = load factor is an outcome of route
+    /// demand vs. aircraft capacity.
+    private var devDemandToggle: some View {
+        HStack(spacing: 10) {
+            Text("Demand (DEV)").font(.karla(12, .semibold))
+                .foregroundStyle(titleColor).fixedSize()
+            Spacer()
+            Button { sim.useDemandModel.toggle() } label: {
+                Text(sim.useDemandModel ? "ON" : "OFF")
+                    .font(.karla(12, .bold)).foregroundStyle(.white)
+                    .frame(width: 44, height: 22)
+                    .background(sim.useDemandModel ? Sky.coreGreen : Sky.onDarkStroke)
                     .clipShape(Capsule())
             }.buttonStyle(.plain)
         }

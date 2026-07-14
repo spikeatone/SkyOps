@@ -319,6 +319,34 @@ one contradicts the design thesis.)
   meaningfully lower confidence than the other two tiers. Both fare and
   load factor carry a small per-flight random spread so identical
   aircraft/conditions don't produce identical revenue every time.
+- **PASSENGER-DEMAND MODEL — prototype, native app, behind a DEV toggle
+  (`Simulation.useDemandModel`, default ON; "Demand (DEV)" switch under the
+  Network eye-overlay dev row).** The flat 83.8% load factor made route
+  SELECTION meaningless — every city pair earned the same per seat. The demand
+  model makes load factor an OUTCOME of a route's real passenger demand vs. the
+  aircraft's capacity, so matching aircraft SIZE to route is now the core
+  decision. `Demand` (Economics.swift) is a gravity model: `dailyOneWay =
+  k × geomean(throughputA, throughputB) × distanceFactor(nm)`, where throughput
+  = `AirportInfo.annualPassengers` (geomean, NOT the raw product, so the big×small
+  spread stays sane and demand tracks the SMALLER endpoint). `k = 3.0e-5`
+  calibrated so two ~5M-pax airports at medium haul fill a narrowbody at ~75%.
+  `loadFactor(seats:dailyOneWay:) = min(0.92, (dailyOneWay / 2) / seats)` — the
+  `/2` is the sim's ~2 daily frequencies each way (a ~369-tick leg). `rollRevenue`
+  uses it (event/random modifiers still stack on top); the route-confirm panel
+  shows "Est. demand N/day" + "Projected load X% · <a/c>" so the choice is
+  informed. `Airport.greatCircleNM(to:)` (haversine, antimeridian-normalized for
+  PPT's stored +210° lon) is the shared distance helper. Verified headlessly: the
+  gradient is right (trunk/long-haul overflow → reward big jets; mid = narrowbody
+  sweet spot; thin routes only pay on regional jets; Cheyenne-tier ≈ dead), and
+  the settled load factor matches the predicted value exactly (ERJ135 BZN-FAR →
+  59% predicted, 59% settled). NOT YET: real distance-based fare, and COMPETITION
+  splitting a route's demand (the natural next layer — background traffic is still
+  cosmetic). **Balance finding this surfaced (independent of demand, verified via
+  the OFF/ON A/B — demand is NOT the cause): a $20M starting player can only
+  afford the ERJ135/145, which LOSE money even at full load because regional
+  fares ($165) don't cover their per-leg cost. Early-game economy (starting
+  capital / cheaper viable aircraft / regional fares) needs a tuning pass — a real
+  "more balanced" lever, separate from demand.**
 - **Real per-flight operating cost, charged on EVERY flight at
   turnaround — not just held ones.** This was NOT the original design:
   the first version only charged `costPerHour`-derived cost during

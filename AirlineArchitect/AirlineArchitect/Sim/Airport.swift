@@ -432,4 +432,19 @@ final class Airport: Identifiable {
         while b === a { b = all.randomElement()! }
         return (a, b)
     }
+
+    /// Great-circle distance to another airport, in nautical miles. Longitude
+    /// delta is normalized to [-180,180] so it's correct even for PPT (Tahiti),
+    /// which is stored at +210° across the antimeridian.
+    func greatCircleNM(to other: Airport) -> Double {
+        let r = 3440.065
+        let lat1 = lat * .pi / 180, lat2 = other.lat * .pi / 180
+        var dLonDeg = other.lon - lon
+        while dLonDeg > 180 { dLonDeg -= 360 }
+        while dLonDeg < -180 { dLonDeg += 360 }
+        let dLat = (other.lat - lat) * .pi / 180
+        let dLon = dLonDeg * .pi / 180
+        let a = sin(dLat/2) * sin(dLat/2) + cos(lat1) * cos(lat2) * sin(dLon/2) * sin(dLon/2)
+        return r * 2 * atan2(sqrt(a), sqrt(1 - a))
+    }
 }

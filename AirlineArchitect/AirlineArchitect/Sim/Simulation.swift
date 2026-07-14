@@ -25,6 +25,18 @@ final class Simulation {
     private(set) var airports: [Airport] = []
     private(set) var aircraft: [Aircraft] = []
 
+    /// Prototype: passenger-demand model (load factor = route demand vs. aircraft
+    /// capacity). ON by default; a DEV toggle can flip it OFF to A/B against the
+    /// old flat-load-factor economy. See `Demand` in Economics.swift.
+    var useDemandModel = true
+
+    /// Convenience for the UI: this route's estimated daily one-way demand, and
+    /// the load factor a given aircraft would fly it at (for the route-open panel).
+    func routeDailyDemand(_ a: Airport, _ b: Airport) -> Int { Int(Demand.dailyOneWay(a, b).rounded()) }
+    func projectedLoadFactor(seats: Int, from a: Airport, to b: Airport) -> Double {
+        Demand.loadFactor(seats: seats, dailyOneWay: Demand.dailyOneWay(a, b))
+    }
+
     /// Speed multiplier. Prototype default is 5× (feels smooth; at 1× the
     /// aircraft visibly steps every 250 ms, which is expected, not a bug).
     private(set) var speed: Double = 5
@@ -1357,7 +1369,18 @@ final class Simulation {
         if fxShockActive, ac.type.bodyType.usesWidebodyGateFee { fareMult *= Simulation.fxFareMultiplier }
         if let fw = fareWarRouteId, ac.assignedRouteId == fw, tick < fareWarExpiryTick { fareMult *= Simulation.fareWarMultiplier }
         let farePerSeat = avgFare * fareMult * (0.9 + Double.random(in: 0..<0.2))  // ±10%
-        let load = min(1, baseLoadFactor * currentEvent.loadMultiplier * (0.95 + Double.random(in: 0..<0.1)))  // ±5%, capped
+        // Load factor: with the demand model ON (prototype), it's an OUTCOME of
+        // this route's passenger demand vs. this aircraft's seats — so a widebody
+        // on a thin route flies half-empty. With it OFF (dev A/B toggle), the old
+        // flat industry baseline. Event/random modifiers apply on top of both.
+        let load: Double
+        if useDemandModel {
+            let base = Demand.loadFactor(seats: ac.type.seats,
+                                         dailyOneWay: Demand.dailyOneWay(ac.origin, ac.dest))
+            load = min(Demand.maxLoadFactor, base * currentEvent.loadMultiplier * (0.9 + Double.random(in: 0..<0.2)))
+        } else {
+            load = min(1, baseLoadFactor * currentEvent.loadMultiplier * (0.95 + Double.random(in: 0..<0.1)))  // ±5%, capped
+        }
         let pax = Int((Double(ac.type.seats) * load).rounded())
         ac.currentLoadFactor = load
         ac.currentPax = pax
