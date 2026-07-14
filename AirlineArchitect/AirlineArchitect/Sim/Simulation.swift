@@ -69,6 +69,15 @@ final class Simulation {
     static let cameraMaxZoom: CGFloat = 28     // in close enough to inspect a single airport (was 14)
     private static let elementZoomGrowthMax: CGFloat = 0.15  // icon growth cap
 
+    /// Horizontal wrap period in unit space = one full 360° of longitude. The map
+    /// wraps around the world: panning east past the last airport rolls seamlessly
+    /// back into the Americas (and vice versa). The rendered content actually spans
+    /// ~390° (Alaska → Tahiti, because Tahiti is stored across the antimeridian), so
+    /// there's a ~30° overlap of (near-empty) mid-Pacific at the seam — Anchorage
+    /// and Tahiti are at the same real longitude and coincide there, which is why
+    /// this tiling is correct rather than an error.
+    static let wrapWidthUnits: CGFloat = 360 * GeoProjection.lonCorrection
+
     /// Zoom multiplier (× the whole-world fit). Observable → drives redraw.
     var cameraZoom: CGFloat = 1
     /// Unit-space point shown at screen centre. Observable → drives redraw.
@@ -117,6 +126,44 @@ final class Simulation {
 
     private var pixelsPerUnit: CGFloat { worldScale * cameraZoom }
     private var viewportCentre: CGPoint { CGPoint(x: viewport.width / 2, y: viewport.height / 2) }
+
+    /// One wrap period in screen pixels at the current zoom.
+    var wrapWidthPx: CGFloat { Simulation.wrapWidthUnits * pixelsPerUnit }
+
+    /// Pixel x-offsets at which the whole world should be redrawn so it tiles
+    /// across the viewport for the wrap-around effect. Always includes 0; adds
+    /// the ±copies whose content actually intersects the viewport. Falls back to
+    /// [0] if anything's degenerate.
+    func wrapDrawOffsetsPx() -> [CGFloat] {
+        let wpx = wrapWidthPx
+        guard wpx > 1, viewport.width > 0 else { return [0] }
+        let minX = project(.zero).x                                        // world left edge
+        let maxX = project(CGPoint(x: Simulation.worldUnitSize.width, y: 0)).x  // world right edge
+        let kMin = Int((-maxX / wpx).rounded(.up))
+        let kMax = Int(((viewport.width - minX) / wpx).rounded(.down))
+        guard kMin <= kMax, (kMax - kMin) <= 12 else { return [0] }        // sanity cap
+        return (kMin...kMax).map { CGFloat($0) * wpx }
+    }
+
+    /// Minimal horizontal screen delta between two x's, accounting for the wrap
+    /// (so a tap on any tiled copy of an airport still registers as that airport).
+    private func wrappedDX(_ ax: CGFloat, _ px: CGFloat) -> CGFloat {
+        let w = wrapWidthPx
+        guard w > 1 else { return ax - px }
+        var d = (ax - px).truncatingRemainder(dividingBy: w)
+        if d > w / 2 { d -= w } else if d < -w / 2 { d += w }
+        return d
+    }
+
+    /// Keep cameraCenter.x in [0, wrapWidthUnits) so it never drifts unbounded
+    /// over a long session. A shift of exactly one period is visually invisible
+    /// (the scene is periodic — the tiled copies fill in), so this can't jump.
+    private func wrapCameraX() {
+        let w = Simulation.wrapWidthUnits
+        guard w > 0 else { return }
+        cameraCenter.x = cameraCenter.x.truncatingRemainder(dividingBy: w)
+        if cameraCenter.x < 0 { cameraCenter.x += w }
+    }
 
     /// Unit → screen for the current camera. Airports and basemap both use this.
     func project(_ u: CGPoint) -> CGPoint {
@@ -168,7 +215,7 @@ final class Simulation {
     func airport(atScreenPoint p: CGPoint, tolerance: CGFloat = 44) -> Airport? {
         var best: (ap: Airport, d: CGFloat)?
         for ap in airports {
-            let d = hypot(ap.screen.x - p.x, ap.screen.y - p.y)
+            let d = hypot(wrappedDX(ap.screen.x, p.x), ap.screen.y - p.y)
             if d <= tolerance && d < (best?.d ?? .infinity) { best = (ap, d) }
         }
         return best?.ap
@@ -178,7 +225,7 @@ final class Simulation {
         var best: (ac: Aircraft, d: CGFloat)?
         for ac in aircraft {
             let pos = ac.position(tick: tick).point
-            let d = hypot(pos.x - p.x, pos.y - p.y)
+            let d = hypot(wrappedDX(pos.x, p.x), pos.y - p.y)
             if d <= tolerance && d < (best?.d ?? .infinity) { best = (ac, d) }
         }
         return best?.ac
@@ -191,6 +238,7 @@ final class Simulation {
         let ppu = pixelsPerUnit
         cameraCenter.x -= delta.width / ppu
         cameraCenter.y -= delta.height / ppu
+        wrapCameraX()   // keep x bounded; the map wraps around the world
     }
 
     /// Multiply zoom by `factor`, keeping the unit point under `anchor` fixed.

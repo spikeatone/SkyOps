@@ -77,11 +77,19 @@ struct MapView: View {
         Canvas { ctx, size in
             sim.configure(viewport: size)
             sim.projectAirports()
-            drawGrid(ctx, size)
-            drawBasemap(ctx)
-            drawRoutes(ctx)
-            drawAirports(ctx)
-            drawAircraft(ctx)
+            drawGrid(ctx, size)   // screen-space — drawn once, not tiled
+            // Wrap-around: redraw the whole world at each visible horizontal
+            // tile offset so panning east/west circles the globe seamlessly.
+            // (project() gives base positions; a translated context copy shifts
+            // each tile — same trick drawAircraft already uses per-icon.)
+            for dx in sim.wrapDrawOffsetsPx() {
+                var w = ctx
+                w.translateBy(x: dx, y: 0)
+                drawBasemap(w)
+                drawRoutes(w)
+                drawAirports(w)
+                drawAircraft(w)
+            }
         }
         .background(mapBackground)
     }

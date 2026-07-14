@@ -1395,6 +1395,31 @@ where numbers are involved.
   Ground-stopped airports' labels render red. The old Open item is
   resolved for the native app (the browser prototype still has the
   static version).
+- **Wrap-around map — DONE (native app; designer request).** The map now
+  tiles horizontally so panning east/west circles the globe seamlessly
+  instead of hitting a hard edge (Tahiti/far-east rolls into the
+  Americas/far-west and back). Mechanism: `Simulation.wrapWidthUnits =
+  360° × lonCorrection` is the wrap PERIOD; `wrapDrawOffsetsPx()` returns
+  the pixel x-offsets of every world tile that intersects the viewport,
+  and `MapView` redraws the whole world (basemap/routes/airports/aircraft)
+  once per offset into a translated `GraphicsContext` copy (same trick
+  `drawAircraft` already used per-icon; the grid stays screen-space, drawn
+  once). `pan()` normalizes `cameraCenter.x` mod the period via
+  `wrapCameraX()` (a shift of exactly one period is invisible on a periodic
+  scene, so it never jumps); the incremental-delta drag gesture is
+  unaffected. Hit-testing (`airport(atScreenPoint:)`/`aircraft(...)`) uses a
+  `wrappedDX()` minimal-horizontal-distance so a tap on ANY tile registers.
+  **Key subtlety, don't "fix" it:** the rendered content spans ~390° of
+  longitude (Alaska −170° → Tahiti stored at +210°), but the wrap period is
+  360°, NOT the 390° content width — because Anchorage and Tahiti are at the
+  SAME real longitude (~150°W) and must coincide at the seam. This leaves a
+  ~30° overlap of near-empty mid-Pacific where far-north (Alaska) and
+  far-south (Tahiti/NZ) content co-draw at the same x but different
+  latitudes — correct, not a bug. Verified: seam renders Asia→Americas
+  across the Pacific like a globe; default CONUS view pixel-unchanged (tiles
+  off-screen at that zoom). NOT fixed by this: a single flight leg whose
+  endpoints straddle the seam still draws the long way around (rare;
+  acceptable). The browser prototype does NOT have wrap.
 - **Phase 3 slice 2 — AOG + decision cards, DONE.** Faithful port:
   calibrated onset (2/100/month as continuous per-tick probability),
   family clustering (3×, 3-sim-day linear decay, families never
@@ -2158,12 +2183,16 @@ where numbers are involved.
   recomputing clusters against CURRENT on-screen distance each frame
   (or on zoom-change), which is more scope than this pass covered.
 - **The map is not a true global projection.** WORLD_BOUNDS now spans
-  Alaska-to-Hawaii-to-East-Coast, but it's still one fixed rectangular
-  lon/lat box with a cosine-corrected equirectangular projection — that
-  breaks down badly near the poles and doesn't wrap at the antimeridian.
-  A genuine global map (which the designer has stated as the eventual
-  direction — players opening routes worldwide) needs a real projection
-  decision, not just wider bounds on the current one.
+  Alaska-to-the-Americas-to-Asia-to-Oceania (every populated continent has
+  airports), but it's still one fixed rectangular lon/lat box with a
+  cosine-corrected equirectangular projection — that breaks down badly near
+  the poles. **UPDATE: the native app DOES wrap horizontally now** (see the
+  "Wrap-around map — DONE" note in the Native iOS Port section — tiled
+  redraw, `wrapWidthUnits`, wrapped hit-testing), so panning east/west
+  circles the globe; the antimeridian is no longer a hard edge. What's still
+  NOT a true global projection: the pole distortion, and the ~30° mid-Pacific
+  overlap from the 390°-content/360°-period mismatch (documented in that note,
+  benign). The browser prototype still has neither wrap nor this.
 - **BWI/FLL ground-stop data conflict** — two different source batches
   gave different numbers for the same two airports; kept the
   original/first-sourced values (see Economy section above for the exact
