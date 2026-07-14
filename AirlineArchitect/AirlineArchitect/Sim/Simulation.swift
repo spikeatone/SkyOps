@@ -368,31 +368,34 @@ final class Simulation {
         totalAcquisitionSpend += upfront
         let ac = makePurchasedAircraft(type)
         ac.isLeased = true
-        ac.nextLeaseBillTick = tick + Simulation.ticksPerMonth  // first bill in one sim-month
         aircraft.append(ac)
         grantBundledCrew(type.family)   // 1 crew bundled; the player hires more
         return ac
     }
 
-    /// Bill every leased aircraft its fixed monthly obligation the moment it
-    /// comes due — checked every tick (cheap; a handful of leased aircraft) so
-    /// billing lands exactly one sim-month after the lease started/was last
-    /// billed, regardless of whether the aircraft is flying, held, or an idle
-    /// spare. This fixed-obligation-regardless-of-use model is what keeps
-    /// leasing a real tradeoff (an earlier prototype version prorated per-leg,
-    /// so an idle leased aircraft cost nothing — nearly strictly dominant).
-    /// playerBalance is allowed to go negative (no bankruptcy mechanic yet).
+    /// Charge every leased aircraft its fixed monthly obligation, ACCRUED
+    /// CONTINUOUSLY per tick (monthlyLeaseCost / ticksPerMonth) rather than as a
+    /// monthly lump. This means a leased aircraft's cost shows up immediately in
+    /// its route P&L and the running lease total (a lump-sum model left a leased
+    /// route reading $0 lease for its whole first sim-month, then a big jump).
+    /// The charge lands regardless of whether the aircraft is flying, held, or
+    /// an idle spare, so leasing stays a real fixed obligation (NOT the earlier
+    /// per-leg proration bug, which made idle leases free). Sub-dollar remainders
+    /// carry in ac.leaseAccrued so nothing is lost to rounding. playerBalance is
+    /// allowed to go negative (no bankruptcy mechanic yet).
     private func tickLeaseBilling() {
-        for ac in aircraft {
-            guard ac.isLeased, let due = ac.nextLeaseBillTick, tick >= due else { continue }
-            let bill = ac.type.monthlyLeaseCost
+        let perTick: (AircraftType) -> Double = { Double($0.monthlyLeaseCost) / Double(Simulation.ticksPerMonth) }
+        for ac in aircraft where ac.isLeased {
+            ac.leaseAccrued += perTick(ac.type)
+            let bill = Int(ac.leaseAccrued)   // whole dollars due this tick
+            guard bill > 0 else { continue }
+            ac.leaseAccrued -= Double(bill)
             playerBalance -= bill
             totalLeaseCost += bill
             if let id = ac.assignedRouteId, let r = playerRoutes.first(where: { $0.id == id }) {
                 r.totalLeaseCost += bill
                 r.cumulativeNet -= bill   // a real cost against this route's P&L
             }
-            ac.nextLeaseBillTick = due + Simulation.ticksPerMonth
         }
     }
 

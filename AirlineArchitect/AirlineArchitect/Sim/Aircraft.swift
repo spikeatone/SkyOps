@@ -67,8 +67,11 @@ final class Aircraft: Identifiable {
     // fixed MONTHLY lease obligation instead of a full upfront purchase. The
     // bill is charged regardless of utilization — see tickLeaseBilling.
     var isLeased = false
-    /// Tick the next monthly lease bill is due (nil = not leased).
-    var nextLeaseBillTick: Int?
+    /// Sub-dollar lease cost carried between ticks. The fixed monthly obligation
+    /// is accrued continuously (per tick) rather than as a monthly lump, so a
+    /// leased aircraft's cost is reflected immediately in its route P&L and the
+    /// running lease total — see tickLeaseBilling.
+    var leaseAccrued: Double = 0
 
     // Hold state (Phase 3).
     var holdReason: HoldReason?
