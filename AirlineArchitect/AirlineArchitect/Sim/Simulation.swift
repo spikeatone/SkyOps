@@ -513,7 +513,20 @@ final class Simulation {
         return Int(cost.rounded())
     }
 
-    enum OpenRouteResult { case success, sameAirport, alreadyOpen, noSpare, insufficientFunds(Int) }
+    enum OpenRouteResult { case success, sameAirport, alreadyOpen, noSpare, insufficientFunds(Int), outOfRange, runwayTooShort(String) }
+
+    /// A physical reason `ac` can't fly `origin`→`dest`: the leg exceeds its
+    /// range, or an endpoint's longest runway is too short for the type. nil = OK.
+    /// (Airports with no runway data don't block — data-gap tolerant.)
+    enum RouteBlock { case range(Int), runway(String) }
+    func routeBlock(for ac: Aircraft, from origin: Airport, to dest: Airport) -> RouteBlock? {
+        let nm = Int(origin.greatCircleNM(to: dest).rounded())
+        if nm > ac.type.rangeNM { return .range(nm) }
+        let minRw = ac.type.bodyType.minRunwayFt
+        if let rw = origin.info?.longestRunwayFt, rw < minRw { return .runway(origin.code) }
+        if let rw = dest.info?.longestRunwayFt, rw < minRw { return .runway(dest.code) }
+        return nil
+    }
 
     /// Open a route and assign a spare to fly it. Ported from openRoute().
     @discardableResult
@@ -521,6 +534,13 @@ final class Simulation {
         if origin === dest { return .sameAirport }
         if route(between: origin.code, dest.code) != nil { return .alreadyOpen }
         guard ac.purchased, ac.assignedRouteId == nil else { return .noSpare }
+        // Physical constraints: the assigned aircraft must actually be able to fly
+        // it (range + runway at both ends).
+        switch routeBlock(for: ac, from: origin, to: dest) {
+        case .range:  return .outOfRange
+        case .runway(let code): return .runwayTooShort(code)
+        case nil: break
+        }
         let cost = routeOpeningCost(origin, dest)
         guard playerBalance >= cost else { return .insufficientFunds(cost) }
 

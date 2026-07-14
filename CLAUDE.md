@@ -1986,6 +1986,20 @@ where numbers are involved.
     step-3 has only two buttons, and "Open route" with no spare still opens the
     Acquire panel via `openConfirmedRoute`'s existing no-spare branch (buy
     mid-flow auto-assigns, preserved).
+    - **ENFORCED PHYSICAL CONSTRAINTS (native app) — the range check is now REAL,
+      plus a runway check.** `openRoute` rejects a route the assigned aircraft
+      can't physically fly, via `Simulation.routeBlock(for:from:to:)` →
+      `.range(nm)` if the great-circle distance exceeds `rangeNM`, or
+      `.runway(code)` if either endpoint's `AirportInfo.longestRunwayFt` is below
+      the type's `BodyType.minRunwayFt` (RJ 5000 / NB 6800 / WB2 8000 / WB4 9500
+      ft). New `OpenRouteResult` cases `.outOfRange` / `.runwayTooShort(code)`
+      (NetworkView flashes a reason); the confirm panel's old display-only "Range
+      check" row became an "Aircraft check" (range + runway) that also DISABLES
+      Open Route when blocked. This is a real fleet-vs-network puzzle: a regional
+      jet can't fly transcon (ERJ135 JFK-LAX blocked, 2146 > 1750nm), and a
+      short-runway field is RJ-only (Queenstown 6,204ft takes an ERJ135 but blocks
+      a narrowbody/widebody — matching reality). Airports with no runway data
+      don't block (data-gap tolerant). Background traffic is NOT gated (cosmetic).
   - **Fuel Hedge** (Fuel Hedge Card 19:6920): `FuelHedgePanel` rebuilt as a
     titled card (Karla-ExtraBold 20) + the real explainer paragraph (with live
     owned-aircraft count) + 30/60/90-day premium rows (light-blue label, white

@@ -469,6 +469,8 @@ struct NetworkView: View {
         case .alreadyOpen:  showFlash("That route is already open")
         case .sameAirport:  showFlash("Pick two different airports")
         case .noSpare:      showFlash("No spare aircraft available")
+        case .outOfRange:   showFlash("\(spare.type.name) can't fly this far — too far for its range")
+        case .runwayTooShort(let code): showFlash("\(code)'s runway is too short for the \(spare.type.name)")
         }
     }
 

@@ -55,6 +55,19 @@ enum BodyType: String {
         }
     }
 
+    /// Minimum runway length (ft) this body-type needs to operate — bigger/
+    /// heavier jets need more. Gates which airports it can serve: a widebody
+    /// can't use a short regional field, so route planning matches fleet to
+    /// network.
+    var minRunwayFt: Int {
+        switch self {
+        case .regionalJet:     return 5000
+        case .narrowbody:      return 6800
+        case .widebody2Engine: return 8000
+        case .widebody4Engine: return 9500
+        }
+    }
+
     /// Cruise speed in nautical miles per block-minute (for distance-based
     /// operating cost). Bigger jets cruise a touch faster.
     var cruiseNMPerMin: Double {

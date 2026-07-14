@@ -352,13 +352,14 @@ struct RouteConfirmPanel: View {
             }
             infoRow("Slots", slotsOK ? "Avail both ends" : "Buyout needed",
                     slotsOK ? green : red)
-            infoRow("Range check", rangeCheck(spare).text, rangeCheck(spare).ok ? green : red)
+            let cap = capability(spare)
+            infoRow("Aircraft check", cap.text, cap.ok ? green : red)
             infoRow("Opening cost", "$\(cost.formatted())", affordable ? green : red)
 
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
 
             HStack(spacing: 8) {
-                confirmButton("Open route", disabled: spare != nil && !affordable, action: onOpen)
+                confirmButton("Open route", disabled: spare != nil && (!affordable || !cap.ok), action: onOpen)
                 confirmButton("Abandon", disabled: false, action: onCancel)
             }
             .frame(height: 32)
@@ -402,12 +403,18 @@ struct RouteConfirmPanel: View {
         return Int((r * 2 * atan2(sqrt(a), sqrt(1 - a))).rounded())
     }
 
-    /// Range check reflects the spare that would be assigned (idleSpares.first).
-    private func rangeCheck(_ spare: Aircraft?) -> (text: String, ok: Bool) {
+    /// Whether the spare that would be assigned can PHYSICALLY fly this route —
+    /// range + runway at both ends. Blocks Open Route when it can't.
+    private func capability(_ spare: Aircraft?) -> (text: String, ok: Bool) {
         guard let spare else { return ("a/c not assigned", false) }
-        return spare.type.rangeNM >= distanceNM
-            ? ("in range (\(spare.type.rangeNM.formatted()) nm)", true)
-            : ("out of range", false)
+        switch sim.routeBlock(for: spare, from: origin, to: dest) {
+        case .range:
+            return ("out of range (\(spare.type.rangeNM.formatted()) nm max)", false)
+        case .runway(let code):
+            return ("\(code) runway too short for \(spare.type.name)", false)
+        case nil:
+            return ("in range · runway OK", true)
+        }
     }
 }
 
