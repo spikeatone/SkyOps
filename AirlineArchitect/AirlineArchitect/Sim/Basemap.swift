@@ -25,6 +25,11 @@ struct Basemap {
     let mexico: [[CGPoint]]
     let centralAmerica: [[CGPoint]]
     let southAmerica: [[CGPoint]]
+    // Eastern-hemisphere continents (Natural Earth 110m country outlines).
+    let europe: [[CGPoint]]
+    let asia: [[CGPoint]]
+    let africa: [[CGPoint]]
+    let australia: [[CGPoint]]
 
     /// Decoded + projected once at first use.
     static let shared: Basemap = load()
@@ -36,6 +41,10 @@ struct Basemap {
         let mexico: [[[Double]]]?
         let centralAmerica: [[[Double]]]?
         let southAmerica: [[[Double]]]?
+        let europe: [[[Double]]]?
+        let asia: [[[Double]]]?
+        let africa: [[[Double]]]?
+        let australia: [[[Double]]]?
     }
 
     /// Project one [lon, lat] pair to unit space.
@@ -49,7 +58,8 @@ struct Basemap {
               let data = try? Data(contentsOf: url),
               let raw = try? JSONDecoder().decode(Raw.self, from: data) else {
             // No basemap available — render airports/aircraft without it.
-            return Basemap(nation: [], states: [], canada: [], mexico: [], centralAmerica: [], southAmerica: [])
+            return Basemap(nation: [], states: [], canada: [], mexico: [], centralAmerica: [], southAmerica: [],
+                           europe: [], asia: [], africa: [], australia: [])
         }
         let nation = raw.nation.map { $0.map(project) }
         let states = raw.states.map { $0.map { $0.map(project) } }
@@ -57,7 +67,12 @@ struct Basemap {
         let mexico = (raw.mexico ?? []).map { $0.map(project) }
         let central = (raw.centralAmerica ?? []).map { $0.map(project) }
         let south = (raw.southAmerica ?? []).map { $0.map(project) }
+        let europe = (raw.europe ?? []).map { $0.map(project) }
+        let asia = (raw.asia ?? []).map { $0.map(project) }
+        let africa = (raw.africa ?? []).map { $0.map(project) }
+        let australia = (raw.australia ?? []).map { $0.map(project) }
         return Basemap(nation: nation, states: states, canada: canada,
-                       mexico: mexico, centralAmerica: central, southAmerica: south)
+                       mexico: mexico, centralAmerica: central, southAmerica: south,
+                       europe: europe, asia: asia, africa: africa, australia: australia)
     }
 }

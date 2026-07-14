@@ -23,7 +23,10 @@ enum GeoProjection {
     static let latMin: Double = -56    // was 18 — now includes South America
     static let latMax: Double = 71
     static let lonMin: Double = -170
-    static let lonMax: Double = -33     // was -66.5 — now includes eastern Brazil
+    static let lonMax: Double = 180     // was -33 — now spans the Eastern Hemisphere
+                                        // (Europe/Africa/Asia/Australia). unit()
+                                        // doesn't use lonMax, so existing points
+                                        // are unaffected; only the canvas grows east.
 
     /// Latitude the longitude compression is anchored to. Pinned at the ORIGINAL
     /// map centre (18…71 → 44.5) so extending the bounds doesn't re-scale or

@@ -56,6 +56,10 @@ struct MapView: View {
     private let canadaColor  = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255) // red
     private let centralColor = Color(red: 0xFF/255, green: 0x9A/255, blue: 0x3C/255) // orange
     private let southColor   = Color(red: 0xED/255, green: 0xB9/255, blue: 0x3C/255) // yellow
+    private let europeColor    = Color(red: 0xA5/255, green: 0x61/255, blue: 0xFF/255) // #A561FF purple
+    private let asiaColor      = Color(red: 0x89/255, green: 0x85/255, blue: 0x76/255) // #898576 taupe
+    private let africaColor    = Color(red: 0xFF/255, green: 0xB7/255, blue: 0x00/255) // #FFB700 amber
+    private let australiaColor = Color(red: 0x43/255, green: 0xCC/255, blue: 0xBA/255) // #43CCBA teal
 
     // Theme-aware chrome. The geography (green outlines/fill) and airports keep
     // the SAME green hue in both themes; only the canvas background, grid,
@@ -118,6 +122,10 @@ struct MapView: View {
             ctx.fill(p, with: .color(color.opacity(isDark ? 0.028 : 0.06)))
             ctx.stroke(p, with: .color(color.opacity(0.35 * strokeBoost)), lineWidth: 1.2)
         }
+        region(map.africa, africaColor)
+        region(map.asia, asiaColor)
+        region(map.europe, europeColor)
+        region(map.australia, australiaColor)
         region(map.canada, canadaColor)
         region(map.southAmerica, southColor)
         region(map.centralAmerica, centralColor)
