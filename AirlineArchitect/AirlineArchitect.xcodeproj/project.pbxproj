@@ -302,6 +302,7 @@
 				CODE_SIGN_ENTITLEMENTS = AirlineArchitect/AirlineArchitect.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = D2PVU8X5Q7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AirlineArchitect/Info.plist;
@@ -335,6 +336,7 @@
 				CODE_SIGN_ENTITLEMENTS = AirlineArchitect/AirlineArchitect.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = D2PVU8X5Q7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = AirlineArchitect/Info.plist;
