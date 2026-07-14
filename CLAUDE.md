@@ -2290,9 +2290,21 @@ where numbers are involved.
   world fleet/route changes on its own (an Alaska Airlines update this
   session was applied because it was reported and independently
   verified, not because anything in the game noticed).
-- Hub connectivity, reputation, passenger demand curves: named in the
-  original design brief, not yet modeled in the prototype or planned in
-  detail — bigger systems, deliberately last.
+- Reputation: named in the original design brief, still not modeled (a
+  service-quality stat fed by delays/AOG/cancellations that feeds back into
+  demand — a good next system). Passenger demand curves and hub connectivity
+  are now BUILT for the native app (see the passenger-demand model and the hub/
+  network effect below) — this open item is down to just reputation.
+- **HUB / NETWORK EFFECT — BUILT (native app).** Concentrating routes through
+  an airport now pays: `Simulation.hubDemandMultiplier(originCode:destCode:
+  excludingRouteId:)` gives a route `+hubBonusRate` (8%) demand per OTHER player
+  route touching either endpoint, capped at `hubBonusCap` (+80%). So a coherent
+  hub-and-spoke network beats scattered point-to-point (connecting passengers).
+  Applied in `rollRevenue` for the player's own aircraft only (background traffic
+  isn't part of the player's network); `excludingRouteId` stops a route counting
+  itself. Folded into the `routeDailyDemand`/`projectedLoadFactor` UI helpers and
+  shown as a "Hub bonus +X%" row in the route-confirm panel. Verified: 2 routes
+  out of DEN give each DEN route +16%, an isolated pair stays ×1.00.
 - **Pinch-zoom on the mobile app**: still not built (this is a browser
   prototype), but the underlying mechanism is no longer blocked or even
   really "open" in the same sense — the camera system built for pan/zoom

@@ -339,6 +339,11 @@ struct RouteConfirmPanel: View {
             // it at — so the player can size the aircraft to the route.
             if sim.useDemandModel {
                 infoRow("Est. demand", "\(sim.routeDailyDemand(origin, dest).formatted()) pax/day", primaryC)
+                // Network/hub effect: connecting pax from your other routes here.
+                let hubBonus = sim.hubBonusPercent(originCode: origin.code, destCode: dest.code)
+                if hubBonus > 0 {
+                    infoRow("Hub bonus", "+\(hubBonus)% (connecting traffic)", green)
+                }
                 if let spare {
                     let lf = sim.projectedLoadFactor(seats: spare.type.seats, from: origin, to: dest)
                     let c = lf >= 0.7 ? green : (lf >= 0.45 ? Color(skyHex: 0xFFB300) : red)

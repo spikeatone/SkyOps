@@ -30,11 +30,34 @@ final class Simulation {
     /// old flat-load-factor economy. See `Demand` in Economics.swift.
     var useDemandModel = true
 
-    /// Convenience for the UI: this route's estimated daily one-way demand, and
-    /// the load factor a given aircraft would fly it at (for the route-open panel).
-    func routeDailyDemand(_ a: Airport, _ b: Airport) -> Int { Int(Demand.dailyOneWay(a, b).rounded()) }
+    /// Network / hub effect: a route through an airport where you already run
+    /// OTHER routes carries connecting passengers, boosting its demand. Each other
+    /// player route touching an endpoint adds `hubBonusRate`; capped. So a coherent
+    /// hub-and-spoke network beats scattered point-to-point — building up a hub
+    /// lifts every route through it.
+    static let hubBonusRate = 0.08
+    static let hubBonusCap = 0.80
+
+    /// Demand multiplier from the hub effect for a city pair. `excludingRouteId`
+    /// omits a route's own id when it's already open (so it doesn't count itself).
+    func hubDemandMultiplier(originCode: String, destCode: String, excludingRouteId: Int? = nil) -> Double {
+        func others(_ code: String) -> Int {
+            playerRoutes.filter { ($0.originCode == code || $0.destCode == code) && $0.id != excludingRouteId }.count
+        }
+        return 1 + min(Simulation.hubBonusCap, Simulation.hubBonusRate * Double(others(originCode) + others(destCode)))
+    }
+    /// The hub bonus a PROSPECTIVE new route would get, as a whole percent (UI).
+    func hubBonusPercent(originCode: String, destCode: String) -> Int {
+        Int(((hubDemandMultiplier(originCode: originCode, destCode: destCode) - 1) * 100).rounded())
+    }
+
+    /// Convenience for the UI: this route's estimated daily one-way demand (incl.
+    /// the hub bonus), and the load factor a given aircraft would fly it at.
+    func routeDailyDemand(_ a: Airport, _ b: Airport) -> Int {
+        Int((Demand.dailyOneWay(a, b) * hubDemandMultiplier(originCode: a.code, destCode: b.code)).rounded())
+    }
     func projectedLoadFactor(seats: Int, from a: Airport, to b: Airport) -> Double {
-        Demand.loadFactor(seats: seats, dailyOneWay: Demand.dailyOneWay(a, b))
+        Demand.loadFactor(seats: seats, dailyOneWay: Demand.dailyOneWay(a, b) * hubDemandMultiplier(originCode: a.code, destCode: b.code))
     }
 
     /// Speed multiplier. Prototype default is 5× (feels smooth; at 1× the
@@ -1402,8 +1425,13 @@ final class Simulation {
         // flat industry baseline. Event/random modifiers apply on top of both.
         let load: Double
         if useDemandModel {
+            // The player's own routes get the hub/network bonus (connecting pax);
+            // background traffic doesn't (it's not part of the player's network).
+            let hub = ac.purchased
+                ? hubDemandMultiplier(originCode: ac.origin.code, destCode: ac.dest.code, excludingRouteId: ac.assignedRouteId)
+                : 1.0
             let base = Demand.loadFactor(seats: ac.type.seats,
-                                         dailyOneWay: Demand.dailyOneWay(ac.origin, ac.dest))
+                                         dailyOneWay: Demand.dailyOneWay(ac.origin, ac.dest) * hub)
             load = min(Demand.maxLoadFactor, base * currentEvent.loadMultiplier * (0.9 + Double.random(in: 0..<0.2)))
         } else {
             load = min(1, baseLoadFactor * currentEvent.loadMultiplier * (0.95 + Double.random(in: 0..<0.1)))  // ±5%, capped
