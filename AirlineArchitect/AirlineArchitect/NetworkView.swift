@@ -214,12 +214,17 @@ struct NetworkView: View {
     private func barButton(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.karla(12, .semibold))
+                // Fixed 10.5pt so every label renders the SAME size. The old
+                // 12pt + minimumScaleFactor let short labels ("Routes") stay big
+                // while long ones ("Acquire A/C") shrank — reading as uneven. At
+                // 10.5 the longest label fits the equal column without scaling;
+                // the low scale floor is only small-device insurance.
+                .font(.karla(10.5, .semibold))
                 .lineLimit(1)
-                .minimumScaleFactor(0.72)   // long labels (Acquire A/C) shrink to fit rather than crowd
+                .minimumScaleFactor(0.8)
                 .foregroundStyle(active ? Sky.brightBlue : barText)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 7).padding(.horizontal, 5)
+                .padding(.vertical, 7).padding(.horizontal, 4)
                 .background(active ? Sky.brightBlue.opacity(0.18) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
         }
@@ -593,7 +598,7 @@ struct FuelHedgePanel: View {
             Spacer()
             Button { sim.buyFuelHedge(days: days) } label: {
                 Text("BUY")
-                    .font(.karla(12, .bold)).foregroundStyle(bodyC)
+                    .font(.karla(12, .bold)).foregroundStyle(.white)
                     .frame(height: 24).padding(.horizontal, 8)
                     .background(afford ? Sky.coreGreen : Color(skyHex: 0xC9C9C9))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
