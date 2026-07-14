@@ -44,6 +44,8 @@ enum BodyType: String {
 
     /// Average one-way fare per seat (AVG_FARE_PER_SEAT_BY_BODYTYPE). Domestic
     /// ~$214, international ~$608 (real 2025-26); regional $165 is an estimate.
+    /// SUPERSEDED by the distance-based `FareModel` (fare depends on the route,
+    /// not the aircraft) — kept only as a reference / calibration anchor.
     var avgFarePerSeat: Double {
         switch self {
         case .narrowbody:      return 214
@@ -51,6 +53,26 @@ enum BodyType: String {
         case .widebody2Engine: return 608
         case .widebody4Engine: return 608
         }
+    }
+
+    /// Cruise speed in nautical miles per block-minute (for distance-based
+    /// operating cost). Bigger jets cruise a touch faster.
+    var cruiseNMPerMin: Double {
+        switch self {
+        case .regionalJet:     return 6.8   // ~410 kt
+        case .narrowbody:      return 7.5   // ~450 kt
+        case .widebody2Engine: return 8.3   // ~500 kt
+        case .widebody4Engine: return 8.3
+        }
+    }
+
+    /// Block minutes for a leg of `nm` nautical miles: a fixed taxi/climb/descent
+    /// overhead plus cruise time. Replaces the fixed `operatingCostBlockMinutes`
+    /// so operating cost scales with the ACTUAL route length — the necessary
+    /// companion to distance-based fares (otherwise a long route is same-cost,
+    /// more-revenue free money). Floored so a very short hop still pays a minimum.
+    func blockMinutes(forNM nm: Double) -> Double {
+        max(Double(operatingCostBlockMinutes) * 0.5, 35 + max(0, nm) / cruiseNMPerMin)
     }
 
     /// True for the widebody gate-fee tier (WIDEBODY_BODY_TYPES).

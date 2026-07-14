@@ -374,6 +374,27 @@ one contradicts the design thesis.)
   timing (which is locked, see Core Simulation section) — the cost
   calculation uses its own realistic assumption, the aircraft still
   visually flies the same fixed cycle either way.
+- **DISTANCE-BASED FARES + DISTANCE-BASED OPERATING COST (native app) —
+  replacing the flat per-bodyType fare AND the fixed per-bodyType block
+  minutes above. A matched pair; done together on purpose.** Fare now depends
+  on the ROUTE, not the aircraft: `FareModel.farePerSeat(nm) = 25 + 2.95 ×
+  nm^0.65` (~$145 at 300nm, $464 at 2,200nm, $982 at 7,300nm — sublinear,
+  long-haul end rich enough for premium-cabin blended yield). This fixes the
+  old quirk where a widebody on a short domestic leg charged the $608
+  "international" fare. Because a distance fare alone makes long routes a
+  same-cost/more-revenue EXPLOIT, operating cost is now distance-based too:
+  `BodyType.blockMinutes(forNM:) = max(oldFixed×0.5, 35 + nm / cruiseNMPerMin)`
+  (cruise 6.8/7.5/8.3 nm-per-min by tier) × `holdCostPerTick`. The two were
+  calibrated TOGETHER against a full aircraft×distance profitability matrix
+  (headless): every type has a real distance sweet spot, widebodies lose on
+  short hops (A380 −$63k at 300nm) but profit big on long-haul (A380 +$73k,
+  B789 +$53k — their purpose), regionals pay on short-medium, mismatches lose.
+  Verified the demand gradient still holds and the $30M 2-aircraft startup
+  grows (+$491k/mo). `avgFarePerSeat` and `operatingCostBlockMinutes` on
+  BodyType are now SUPERSEDED (kept as calibration references). `greatCircleNM`
+  (Airport) is the shared distance source. NOTE the interaction with the demand
+  model: profitability = fare(distance) × load(demand vs seats) − opcost(distance)
+  — so a long route needs BOTH range AND demand to pay; that's the strategic core.
 - **Economic events**: randomly triggered (checked once per sim-day, 15%
   daily chance when conditions are normal, designed pacing not sourced),
   lasting 3-10 sim-days, one active at a time. Four types (Oil Price

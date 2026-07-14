@@ -1373,7 +1373,9 @@ final class Simulation {
     /// Roll a leg's revenue at scheduling time — pax-first so displayed pax and
     /// revenue always agree. Ported from rollRevenue(). Stored on the aircraft.
     private func rollRevenue(for ac: Aircraft) {
-        let avgFare = ac.type.bodyType.avgFarePerSeat
+        // Distance-based fare: depends on the ROUTE's stage length, not the
+        // aircraft's bodyType (see FareModel). Longer routes yield more per seat.
+        let avgFare = FareModel.farePerSeat(distanceNM: ac.origin.greatCircleNM(to: ac.dest))
         // Event fare modifiers: #13 FX shock (widebody only) and #14 fare war
         // (this specific route only) stack on top of the economic condition.
         var fareMult = currentEvent.fareMultiplier
@@ -1409,8 +1411,10 @@ final class Simulation {
         // flight keeps burning money at the gate — booked as cost, so revenue
         // stays = pax × fare and never goes negative). Net is identical to the
         // old "erode revenue" model, just correctly attributed.
-        let opCost = Int((Double(ac.type.bodyType.operatingCostBlockMinutes)
-                          * Double(ac.type.holdCostPerTick) * effectiveCostMultiplier).rounded())
+        // Operating cost scales with the ACTUAL route distance (block minutes)
+        // — the companion to distance-based fares. + any accrued hold burn.
+        let blockMin = ac.type.bodyType.blockMinutes(forNM: ac.origin.greatCircleNM(to: ac.dest))
+        let opCost = Int((blockMin * Double(ac.type.holdCostPerTick) * effectiveCostMultiplier).rounded())
                      + ac.holdBurn
         // DISPLAY-ONLY: a smoothed lease-per-leg figure for the tooltip. Does
         // not affect net/settlement — real lease is billed monthly. Ported

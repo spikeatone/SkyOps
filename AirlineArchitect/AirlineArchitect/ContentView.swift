@@ -316,6 +316,7 @@ struct RouteConfirmPanel: View {
                 Spacer(minLength: 0)
             }
             infoRow("Distance", "\(distanceNM.formatted()) nm", primaryC)
+            infoRow("Fare/seat", "$\(Int(FareModel.farePerSeat(distanceNM: Double(distanceNM)).rounded()))", primaryC)
             // Demand model (prototype): show this city pair's estimated daily
             // demand and the load factor the spare that'd be assigned would fly
             // it at — so the player can size the aircraft to the route.

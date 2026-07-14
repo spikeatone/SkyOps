@@ -67,6 +67,27 @@ enum Demand {
     }
 }
 
+/// Distance-based one-way fare per seat: `fare = base + rate × nm^0.65`. Fare now
+/// depends on the ROUTE's stage length, not the aircraft's bodyType — which also
+/// FIXES the old quirk where a widebody on a short domestic leg charged the $608
+/// "international" fare. The curve rises with distance but SUBLINEARLY (per-mile
+/// yield falls the farther you go): ~$145 at 300 nm, $252 at 800 nm, $464 at
+/// 2,200 nm, $744 at 4,700 nm, $982 at 7,300 nm. The long-haul end is rich enough
+/// (premium-cabin blended yield) to keep widebodies profitable on the long routes
+/// they exist for, given the matching distance-based OPERATING cost (see
+/// `BodyType.blockMinutes(forNM:)`) — the two were calibrated together against a
+/// full aircraft×distance profitability matrix so each type has a real distance
+/// sweet spot and mismatches (widebody on a short hop, regional beyond range) lose
+/// money. Tunable; a small per-flight random spread still applies in rollRevenue.
+enum FareModel {
+    static let base = 25.0
+    static let rate = 2.95
+    static let exponent = 0.65
+    static func farePerSeat(distanceNM: Double) -> Double {
+        base + rate * pow(max(0, distanceNM), exponent)
+    }
+}
+
 /// An economic condition that scales cost / fare / demand together.
 struct EconomicEvent {
     let id: String
