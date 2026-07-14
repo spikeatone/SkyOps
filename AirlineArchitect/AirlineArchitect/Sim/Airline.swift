@@ -41,15 +41,29 @@ struct Airline {
         .init(name: "Endeavor Air",      code: "9E", weight: 3, types: ["CRJ900","CRJ1000"]),
         .init(name: "Horizon Air",       code: "QX", weight: 2, types: ["E175"]),
         .init(name: "PSA Airlines",      code: "OH", weight: 2, types: ["CRJ900","CRJ1000","E175"]),
-        // International — widebody only, deliberately rare
-        .init(name: "Air France",        code: "AF", weight: 1, types: ["B773","B789","A339","A359"]),
-        .init(name: "Lufthansa",         code: "LH", weight: 1, types: ["B789","B747","A380","A340","A359"]),
-        .init(name: "British Airways",   code: "BA", weight: 1, types: ["B773","B788","B789","B78J","A380","A359"]),
-        .init(name: "Emirates",          code: "EK", weight: 1, types: ["B773","A380"]),
-        .init(name: "Air Canada",        code: "AC", weight: 1, types: ["B773","B788","B789","A339"]),
-        .init(name: "Japan Airlines",    code: "JL", weight: 1, types: ["B773","B788","B789","A359"]),
         // Fallback for real-world orphaned types (rare variants / China-only / retired-from-US-feed)
         .init(name: "Independent Operator", code: "", weight: 1, types: ["A319NEO","E190","E195","ERJ135","ERJ140"]),
+    ]
+
+    /// Overseas carriers whose home airports aren't on the map. Painted ONLY on
+    /// routes between two US international gateways (see `pick`) — a stand-in for
+    /// the long-haul widebody traffic that really concentrates at those airports,
+    /// so they never show up on random US-domestic legs. Air Canada is NOT here:
+    /// it has a real in-network home (canadaRoster) and is placed by the region
+    /// rule like every other regional carrier.
+    static let internationalRoster: [Airline] = [
+        .init(name: "Air France",      code: "AF", weight: 1, types: ["B773","B789","A339","A359"]),
+        .init(name: "Lufthansa",       code: "LH", weight: 1, types: ["B789","B747","A380","A340","A359"]),
+        .init(name: "British Airways", code: "BA", weight: 1, types: ["B773","B788","B789","B78J","A380","A359"]),
+        .init(name: "Emirates",        code: "EK", weight: 1, types: ["B773","A380"]),
+        .init(name: "Japan Airlines",  code: "JL", weight: 1, types: ["B773","B788","B789","A359"]),
+    ]
+
+    /// Major US international gateways — where overseas widebodies concentrate.
+    /// A carrier from `internationalRoster` is only eligible for a leg whose
+    /// BOTH endpoints are in this set.
+    static let usGateways: Set<String> = [
+        "JFK","EWR","LAX","SFO","ORD","MIA","IAD","BOS","SEA","ATL","DFW","IAH",
     ]
 
     // MARK: - Regional rosters (background traffic by geography)
@@ -127,12 +141,34 @@ struct Airline {
         }
     }
 
-    /// Region-aware weighted pick among carriers that actually fly `typeId`.
-    /// A same-region leg draws that region's roster; a cross-region leg draws
-    /// both. Every type resolves (Independent Operator fallback).
+    /// Real-world-aware weighted pick among carriers that actually fly `typeId`
+    /// AND realistically serve this leg. A carrier is eligible only if it serves
+    /// one of the leg's endpoints' regions (so a Mexican carrier never appears on
+    /// a US-domestic leg); overseas carriers additionally require BOTH endpoints
+    /// to be US international gateways. Every type still resolves (Independent
+    /// Operator fallback). This is the code path background traffic uses.
+    static func pick(forType typeId: String, originCode: String, destCode: String) -> Airline {
+        let oR = region(originCode), dR = region(destCode)
+        var pool = oR == dR ? roster(for: oR) : roster(for: oR) + roster(for: dR)
+        if usGateways.contains(originCode) && usGateways.contains(destCode) {
+            pool += internationalRoster   // gateway↔gateway: overseas widebodies eligible
+        }
+        return weightedPick(pool.filter { $0.types.contains(typeId) })
+    }
+
+    /// Region-based overload kept for callers/tests that reason in regions.
+    /// No gateway logic — overseas carriers never enter through this path.
     static func pick(forType typeId: String, origin: Region, dest: Region) -> Airline {
         let pool = origin == dest ? roster(for: origin) : roster(for: origin) + roster(for: dest)
-        let eligible = pool.filter { $0.types.contains(typeId) }
+        return weightedPick(pool.filter { $0.types.contains(typeId) })
+    }
+
+    /// US-domestic convenience.
+    static func pick(forType typeId: String) -> Airline {
+        weightedPick(roster.filter { $0.types.contains(typeId) })
+    }
+
+    private static func weightedPick(_ eligible: [Airline]) -> Airline {
         guard !eligible.isEmpty else { return fallback }
         var r = Int.random(in: 0..<max(1, eligible.reduce(0) { $0 + $1.weight }))
         for a in eligible {
@@ -140,11 +176,6 @@ struct Airline {
             if r < 0 { return a }
         }
         return eligible.last!
-    }
-
-    /// US-region convenience (unchanged behaviour for existing callers/tests).
-    static func pick(forType typeId: String) -> Airline {
-        pick(forType: typeId, origin: .us, dest: .us)
     }
 
     static let fallback = roster.last!   // Independent Operator
