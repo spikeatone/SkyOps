@@ -70,7 +70,7 @@ struct NetworkView: View {
     /// Eye toggle — hides the Control Bar + Speed Bar for a clean map.
     @State private var showOverlays = true
 
-    enum NetPanel { case none, acquire, routes, hire, hedge }
+    enum NetPanel { case none, acquire, routes, hire }
 
     private var routeHighlights: Set<String> {
         switch routeMode {
@@ -171,7 +171,6 @@ struct NetworkView: View {
             case .acquire: BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
             case .routes:  RoutesPanel(sim: sim)
             case .hire:    AddCrewPanel(sim: sim) { panel = .none }
-            case .hedge:   FuelHedgePanel(sim: sim)
             case .none:    EmptyView()
             }
             routeFlowPanel
@@ -206,10 +205,8 @@ struct NetworkView: View {
             barButton("Routes", active: panel == .routes) { toggle(.routes) }
             Spacer(minLength: 6)
             barButton("Hire Crew", active: panel == .hire) { toggle(.hire) }
-            Spacer(minLength: 6)
-            barButton("Fuel Hedge", active: panel == .hedge) { toggle(.hedge) }
         }
-        .padding(.horizontal, 8).padding(.vertical, 4)
+        .padding(.horizontal, 10).padding(.vertical, 5)
         .background(barBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
@@ -225,16 +222,15 @@ struct NetworkView: View {
     private func barButton(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                // Fixed 10.5pt so every label renders the SAME size. The old
-                // 12pt + minimumScaleFactor let short labels ("Routes") stay big
-                // while long ones ("Acquire A/C") shrank — reading as uneven. At
-                // 10.5 the longest label fits the equal column without scaling;
-                // the low scale floor is only small-device insurance.
-                .font(.karla(10.5, .semibold))
+                // With Fuel Hedge moved to Ops there are only 4 buttons, so they
+                // can be bigger and more readable on the phone. Content-sized +
+                // equal Spacers keeps the inter-label gaps even; the low scale
+                // floor is small-device insurance so long labels never clip.
+                .font(.karla(13.5, .semibold))
                 .lineLimit(1)
-                .fixedSize()   // size to content so the Spacers get equal leftover space
+                .minimumScaleFactor(0.8)
                 .foregroundStyle(active ? Sky.brightBlue : barText)
-                .padding(.vertical, 7).padding(.horizontal, 6)
+                .padding(.vertical, 8).padding(.horizontal, 8)
                 .background(active ? Sky.brightBlue.opacity(0.18) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
         }
@@ -250,7 +246,7 @@ struct NetworkView: View {
                 let quarterBlocked = (s == 0.25) && sim.quarterSpeedUsesRemaining == 0
                 Button { sim.requestSpeed(s) } label: {
                     Text(speedLabel(s))
-                        .font(.karla(13, .semibold))
+                        .font(.karla(15, .semibold))
                         .foregroundStyle(active ? .white : (quarterBlocked ? barText.opacity(0.35) : barText))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)

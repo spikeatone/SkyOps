@@ -37,6 +37,8 @@ struct OpsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         if !sim.decisionQueue.isEmpty { needsAttentionGroup }
+                        // Fuel Hedge lives on Ops now (moved off the Network tab).
+                        FuelHedgePanel(sim: sim)
                         eventsGroup
                         if sim.decisionQueue.isEmpty && sim.opsEventLog.isEmpty {
                             Text("Nothing to report yet — a quiet day on the network.")
