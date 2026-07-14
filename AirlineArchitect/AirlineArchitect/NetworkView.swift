@@ -179,9 +179,10 @@ struct NetworkView: View {
     // MARK: - Network Control Bar
 
     private var controlBar: some View {
+        // Even columns, no dividers (matches Figma 2:1592 — the dividers made the
+        // equal-width columns read as unevenly spaced).
         HStack(spacing: 0) {
             barButton("Acquire A/C", active: panel == .acquire) { toggle(.acquire) }
-            barDivider
             barButton("Open Route", active: routeMode != .off) {
                 panel = .none
                 if routeMode == .off {
@@ -190,17 +191,14 @@ struct NetworkView: View {
                     routeMode = .pickOrigin; selectedID = nil
                 } else { routeMode = .off }
             }
-            barDivider
             barButton("Routes", active: panel == .routes) { toggle(.routes) }
-            barDivider
             barButton("Hire Crew", active: panel == .hire) { toggle(.hire) }
-            barDivider
             barButton("Fuel Hedge", active: panel == .hedge) { toggle(.hedge) }
         }
-        .padding(.vertical, 4)
+        .padding(4)
         .background(barBG)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(barBorder, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
         .shadow(color: barShadow, radius: 3, y: 1)
     }
 
@@ -225,10 +223,6 @@ struct NetworkView: View {
         .buttonStyle(.plain)
     }
 
-    private var barDivider: some View {
-        Rectangle().fill(barBorder.opacity(0.6)).frame(width: 1, height: 16)
-    }
-
     // MARK: - Sim Speed Control Bar (¼×–25×, ¼× rate-limited)
 
     private var speedBar: some View {
@@ -250,8 +244,8 @@ struct NetworkView: View {
         }
         .padding(4)
         .background(barBG)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(barBorder, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
         .shadow(color: barShadow, radius: 3, y: 1)
     }
 
@@ -272,8 +266,8 @@ struct NetworkView: View {
         }
         .padding(.vertical, 8).padding(.horizontal, 4)
         .background(barBG)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(barBorder, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
         .shadow(color: barShadow, radius: 3, y: 1)
     }
 
