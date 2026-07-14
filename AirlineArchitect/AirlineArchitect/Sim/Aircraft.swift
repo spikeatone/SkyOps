@@ -59,6 +59,17 @@ final class Aircraft: Identifiable {
     /// One completed turnaround = one flight cycle (takeoff + landing).
     var cyclesAccrued: Int = 0
 
+    /// Airframe age as a fraction of its design service life (0 = new, 1.0 = at
+    /// design life, >1 = past it and running on borrowed time).
+    var ageFraction: Double { max(0, Double(cyclesAccrued) / Double(max(1, type.expectedLifespanCycles))) }
+    /// AOG odds and maintenance costs escalate with age — QUADRATICALLY, so the
+    /// climb accelerates as the airframe nears/passes retirement (an old jet is
+    /// disproportionately failure- and money-prone). New: 1×; at design life: AOG
+    /// ~4× as likely, per-flight maintenance ~+40%; past it, higher still. This is
+    /// what makes a cheap high-cycle used aircraft a real trade-off, not a free win.
+    var aogAgeMultiplier: Double { 1 + 3.0 * ageFraction * ageFraction }
+    var maintenanceAgeMultiplier: Double { 1 + 0.4 * ageFraction * ageFraction }
+
     // Ownership (Phase 5). `purchased` = the player owns this aircraft (real
     // stakes: crew, AOG, sell, and it feeds playerBalance). Non-purchased =
     // stress-test/background traffic, pure visual flavor. A purchased aircraft

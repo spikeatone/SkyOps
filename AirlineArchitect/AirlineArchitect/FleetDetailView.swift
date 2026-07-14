@@ -136,6 +136,14 @@ struct FleetDetailView: View {
                     .font(.karla(14, .bold)).foregroundStyle(primary)
             }
             progressBar(Double(min(100, pct)) / 100)
+            // Age escalation: an older airframe costs more to run and breaks more.
+            let maintPct = Int(((aircraft.maintenanceAgeMultiplier - 1) * 100).rounded())
+            HStack {
+                Text("Upkeep (age)").font(.karla(14)).foregroundStyle(secondary)
+                Spacer()
+                Text("+\(maintPct)% cost · \(String(format: "%.1f", aircraft.aogAgeMultiplier))× breakdown risk")
+                    .font(.karla(14, .bold)).foregroundStyle(maintPct >= 15 ? red : primary)
+            }
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Market Value").font(.karla(14)).foregroundStyle(secondary)

@@ -770,7 +770,7 @@ final class Simulation {
             let pressure = Double(familyPressureTicksLeft[ac.type.family] ?? 0)
                          / Double(Simulation.aogClusterDecayTicks)
             let multiplier = 1 + (Simulation.aogClusterMultiplier - 1) * pressure
-            if Double.random(in: 0..<1) < Simulation.aogProbPerTick * multiplier {
+            if Double.random(in: 0..<1) < Simulation.aogProbPerTick * multiplier * ac.aogAgeMultiplier {
                 ac.maint = true
                 // this incident (re)opens the elevated window for the family
                 familyPressureTicksLeft[ac.type.family] = Simulation.aogClusterDecayTicks
@@ -948,7 +948,8 @@ final class Simulation {
     /// AOG card option 1: pay to have the aircraft ready now. Cost is scaled by
     /// any active #12 maintenance-cost inflation (repair costs only).
     func resolveAOGExpedite(_ decision: Decision) {
-        chargeDecisionCost(Int((15_000 * maintCostMultiplier).rounded()))
+        let age = decision.aircraft?.maintenanceAgeMultiplier ?? 1
+        chargeDecisionCost(Int((15_000 * maintCostMultiplier * age).rounded()))
         decision.aircraft?.maint = false
         decisionQueue.removeAll { $0.id == decision.id }
     }
@@ -956,7 +957,8 @@ final class Simulation {
     /// AOG card option 2: cheaper repair on a ~3 sim-hour timer; the aircraft
     /// stays held until it completes. Cost scaled by #12 maintenance inflation.
     func resolveAOGStandard(_ decision: Decision) {
-        chargeDecisionCost(Int((3_000 * maintCostMultiplier).rounded()))
+        let age = decision.aircraft?.maintenanceAgeMultiplier ?? 1
+        chargeDecisionCost(Int((3_000 * maintCostMultiplier * age).rounded()))
         decision.aircraft?.aogAutoClearTick = tick + 180
         decisionQueue.removeAll { $0.id == decision.id }
     }
@@ -1411,10 +1413,12 @@ final class Simulation {
         // flight keeps burning money at the gate — booked as cost, so revenue
         // stays = pax × fare and never goes negative). Net is identical to the
         // old "erode revenue" model, just correctly attributed.
-        // Operating cost scales with the ACTUAL route distance (block minutes)
-        // — the companion to distance-based fares. + any accrued hold burn.
+        // Operating cost scales with the ACTUAL route distance (block minutes) —
+        // the companion to distance-based fares — AND with airframe age (an old
+        // jet costs more to keep flying, `maintenanceAgeMultiplier`). + hold burn.
         let blockMin = ac.type.bodyType.blockMinutes(forNM: ac.origin.greatCircleNM(to: ac.dest))
-        let opCost = Int((blockMin * Double(ac.type.holdCostPerTick) * effectiveCostMultiplier).rounded())
+        let opCost = Int((blockMin * Double(ac.type.holdCostPerTick)
+                          * effectiveCostMultiplier * ac.maintenanceAgeMultiplier).rounded())
                      + ac.holdBurn
         // DISPLAY-ONLY: a smoothed lease-per-leg figure for the tooltip. Does
         // not affect net/settlement — real lease is billed monthly. Ported
