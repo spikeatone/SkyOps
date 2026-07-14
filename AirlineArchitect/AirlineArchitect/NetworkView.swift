@@ -62,6 +62,8 @@ struct NetworkView: View {
 
     // Game UI state.
     @State private var selectedID: UUID?
+    /// Tapped airport (info card) — mutually exclusive with a selected aircraft.
+    @State private var selectedAirportCode: String?
     @State private var routeMode: RouteMode = .off
     @State private var flash: String?
     /// Which control-bar panel is open (mutually exclusive). Route-opening is
@@ -193,9 +195,18 @@ struct NetworkView: View {
             routeFlowPanel
             if let ac = selected {
                 AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { selectedID = nil }
+            } else if let ap = selectedAirport {
+                AirportInfoCard(airport: ap)
             }
             // Alerts (AOG / crew / sell) live in the bell's Alerts modal, not here.
         }
+    }
+
+    /// The tapped airport's info card target — only in the clean state (no
+    /// control-bar panel open, not mid route-pick), mirroring the aircraft tooltip.
+    private var selectedAirport: Airport? {
+        guard panel == .none, routeMode == .off, let code = selectedAirportCode else { return nil }
+        return sim.airports.first { $0.code == code }
     }
 
     // MARK: - Network Control Bar
@@ -214,7 +225,7 @@ struct NetworkView: View {
                 if routeMode == .off {
                     // Free tier: block a new route at the cap, show the paywall.
                     guard store.canOpenRoute(sim) else { onUpgrade(store.capMessage(.route)); return }
-                    routeMode = .pickOrigin; selectedID = nil
+                    routeMode = .pickOrigin; selectedID = nil; selectedAirportCode = nil
                 } else { routeMode = .off }
             }
             Spacer(minLength: 6)
@@ -232,6 +243,7 @@ struct NetworkView: View {
     private func toggle(_ p: NetPanel) {
         routeMode = .off
         selectedID = nil            // never stack a control-bar panel over a tooltip
+        selectedAirportCode = nil
         panel = (panel == p) ? .none : p
     }
 
@@ -406,7 +418,14 @@ struct NetworkView: View {
     private func handleTap(at p: CGPoint) {
         switch routeMode {
         case .off:
-            selectedID = sim.aircraft(atScreenPoint: p)?.id
+            // Aircraft take priority; else an airport shows its info card; else clear.
+            if let ac = sim.aircraft(atScreenPoint: p) {
+                selectedID = ac.id; selectedAirportCode = nil
+            } else if let ap = sim.airport(atScreenPoint: p) {
+                selectedAirportCode = ap.code; selectedID = nil
+            } else {
+                selectedID = nil; selectedAirportCode = nil
+            }
         case .pickOrigin:
             if let ap = sim.airport(atScreenPoint: p) { routeMode = .pickDest(ap.code) }
         case .pickDest(let o):
