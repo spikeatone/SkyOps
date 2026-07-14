@@ -353,6 +353,11 @@ final class Airport: Identifiable {
         .init(code: "WUH", lat: 30.7838, lon: 114.2081, landingFeePerKlb: 5.60, gateFeeNarrowbody: 420, gateFeeWidebody: 960,  groundStopsPerMonth: 5.5),
         .init(code: "SGN", lat: 10.8188, lon: 106.6520, landingFeePerKlb: 5.40, gateFeeNarrowbody: 410, gateFeeWidebody: 940,  groundStopsPerMonth: 3.5),
         .init(code: "SUB", lat: -7.3798, lon: 112.7869, landingFeePerKlb: 4.20, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 3.0),
+        .init(code: "HAN", lat: 21.2212, lon: 105.8072, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 3.5),
+        .init(code: "PNH", lat: 11.5466, lon: 104.8441, landingFeePerKlb: 4.50, gateFeeNarrowbody: 370, gateFeeWidebody: 820,  groundStopsPerMonth: 3.0),
+        .init(code: "RGN", lat: 16.9073, lon: 96.1332,  landingFeePerKlb: 4.20, gateFeeNarrowbody: 350, gateFeeWidebody: 760,  groundStopsPerMonth: 3.5),
+        .init(code: "NYT", lat: 19.6234, lon: 96.2010,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 320, gateFeeWidebody: 680,  groundStopsPerMonth: 3.0),
+        .init(code: "BWN", lat: 4.9442,  lon: 114.9283, landingFeePerKlb: 4.00, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 3.0),
         // South Asia
         .init(code: "DEL", lat: 28.5562, lon: 77.1000,  landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 4.0),
         .init(code: "BOM", lat: 19.0887, lon: 72.8679,  landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 4.5),

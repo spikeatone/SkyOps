@@ -209,6 +209,9 @@ struct Airline {
         .init(name: "Vistara",             code: "UK", weight: 5,  types: ["A320","A320NEO","A321NEO","B789"]),
         .init(name: "Scoot",               code: "TR", weight: 4,  types: ["A320","A320NEO","A321NEO","B788","B789"]),
         .init(name: "Akasa Air",           code: "QP", weight: 4,  types: ["MAX8"]),
+        .init(name: "Royal Brunei",        code: "BI", weight: 2,  types: ["A320NEO","B788"]),
+        .init(name: "Cambodia Angkor Air", code: "K6", weight: 2,  types: ["A320","A321"]),
+        .init(name: "Myanmar National",    code: "UB", weight: 2,  types: ["B737800","E190"]),
     ]
 
     static let middleEastRoster: [Airline] = [
@@ -268,7 +271,7 @@ struct Airline {
     // Asia = East + Southeast + South Asia (Middle East is separate, below).
     static let asiaCodes: Set<String> = [
         "PEK","HND","PVG","CAN","SIN","ICN","BKK","HKG","KUL","SZX","CTU","TPE","MNL","KIX","CGK","KMG","XIY","HGH","NRT","CKG",
-        "WUH","SGN","SUB",
+        "WUH","SGN","SUB","HAN","PNH","RGN","NYT","BWN",
         "DEL","BOM","BLR","HYD","MAA","CCU","AMD","COK","PNQ","GOI",
     ]
     static let middleEastCodes: Set<String> = [
@@ -390,6 +393,7 @@ struct Airline {
         "TU": "Tunisair", "FA": "FlySafair", "WB": "RwandAir", "HF": "Air Côte d'Ivoire",
         "HC": "Air Senegal", "DT": "TAAG Angola Airlines", "KP": "ASKY Airlines", "TC": "Air Tanzania",
         // Asian carriers (CA/MU/CZ/NH/JL/CX/KE/SQ/AI/TG/VN/PR/GA/MH/OZ/CI/BR/UK already above)
+        "BI": "Royal Brunei", "K6": "Cambodia Angkor Air", "UB": "Myanmar National",
         "HU": "Hainan Airlines", "MF": "Xiamen Airlines", "ZH": "Shenzhen Airlines",
         "SG": "SpiceJet", "TR": "Scoot", "AK": "AirAsia", "VJ": "VietJet Air",
         "JT": "Lion Air", "QP": "Akasa Air",

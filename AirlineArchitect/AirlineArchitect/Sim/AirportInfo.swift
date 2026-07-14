@@ -307,6 +307,11 @@ extension Airport {
         "WUH": .init(name: "Wuhan Tianhe International Airport", city: "Wuhan, China", operationsPerYear: 200_000, runways: 2, longestRunwayFt: 11_811, metroPopulation: 13_000_000, annualPassengers: 25_000_000),
         "SGN": .init(name: "Tan Son Nhat International Airport", city: "Ho Chi Minh City, Vietnam", operationsPerYear: 250_000, runways: 2, longestRunwayFt: 12_468, metroPopulation: 9_300_000, annualPassengers: 40_000_000),
         "SUB": .init(name: "Juanda International Airport", city: "Surabaya, Indonesia", operationsPerYear: 120_000, runways: 1, longestRunwayFt: 9_800, metroPopulation: 6_000_000, annualPassengers: 15_000_000),
+        "HAN": .init(name: "Noi Bai International Airport", city: "Hanoi, Vietnam", operationsPerYear: 150_000, runways: 2, longestRunwayFt: 12_466, metroPopulation: 8_000_000, annualPassengers: 25_000_000),
+        "PNH": .init(name: "Phnom Penh International Airport", city: "Phnom Penh, Cambodia", operationsPerYear: 60_000, runways: 1, longestRunwayFt: 9_843, metroPopulation: 2_300_000, annualPassengers: 5_000_000),
+        "RGN": .init(name: "Yangon International Airport", city: "Yangon, Myanmar", operationsPerYear: 50_000, runways: 2, longestRunwayFt: 11_200, metroPopulation: 5_600_000, annualPassengers: 6_000_000),
+        "NYT": .init(name: "Naypyidaw International Airport", city: "Naypyidaw, Myanmar", operationsPerYear: 10_000, runways: 1, longestRunwayFt: 12_140, metroPopulation: 1_000_000, annualPassengers: 300_000),
+        "BWN": .init(name: "Brunei International Airport", city: "Bandar Seri Begawan, Brunei", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 12_000, metroPopulation: 300_000, annualPassengers: 1_500_000),
 
         // ── South Asia (best-effort ~2023–24) ──────────────────────────────
         "DEL": .init(name: "Indira Gandhi International Airport", city: "Delhi, India", operationsPerYear: 480_000, runways: 4, longestRunwayFt: 15_010, metroPopulation: 32_000_000, annualPassengers: 72_000_000),
