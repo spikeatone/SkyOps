@@ -81,7 +81,10 @@ struct NetworkView: View {
     }
 
     var body: some View {
-        let selected = sim.aircraft.first { $0.id == selectedID }
+        // Show the aircraft tooltip ONLY in the clean state — no control-bar
+        // panel open, not mid route-pick. Otherwise a tall tooltip stacked on a
+        // panel/route-confirm box grows up over the top control bar and blocks it.
+        let selected = (panel == .none && routeMode == .off) ? sim.aircraft.first { $0.id == selectedID } : nil
         VStack(spacing: 10) {
             header
             mapCard(selected: selected)
