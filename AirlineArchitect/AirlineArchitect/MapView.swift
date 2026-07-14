@@ -29,14 +29,21 @@ struct MapView: View {
     let highlightCodes: Set<String>
 
     // Per-phase colours, ported from the prototype.
-    private let climbColor   = Color(red: 0x37/255, green: 0xFF/255, blue: 0xB0/255) // #37FFB0
+    // Climb-phase green — also the flight-path arcs and airport dots. The bright
+    // mint #37FFB0 pops on the dark map but is too pale on white, so light mode
+    // uses the app's core green #10B981.
+    private var climbColor: Color { isDark ? Color(red: 0x37/255, green: 0xFF/255, blue: 0xB0/255)
+                                           : Color(red: 0x10/255, green: 0xB9/255, blue: 0x81/255) }
     // Cruise-phase blue for the player's own aircraft. Light-blue #83C9FF reads
     // fine on the dark map but washes out on white, so light mode uses the
     // darker #4E67A0 (the app's section-header blue).
     private var cruiseColor: Color { isDark ? Color(red: 0x83/255, green: 0xC9/255, blue: 0xFF/255)
                                             : Color(red: 0x4E/255, green: 0x67/255, blue: 0xA0/255) }
     private let descentColor = Color(red: 0xFF/255, green: 0xB3/255, blue: 0x00/255) // #FFB300
-    private let groundColor  = Color(red: 0xE8/255, green: 0xA1/255, blue: 0x3C/255) // ground amber
+    // On-ground amber. The dark-map amber #E8A13C is muddy on white, so light
+    // mode uses #FFB700.
+    private var groundColor: Color { isDark ? Color(red: 0xE8/255, green: 0xA1/255, blue: 0x3C/255)
+                                            : Color(red: 0xFF/255, green: 0xB7/255, blue: 0x00/255) }
     private let heldColor    = Color(red: 0xFF/255, green: 0x5C/255, blue: 0x5C/255) // #ff5c5c — held
     private let othersColor  = Color(red: 0xD7/255, green: 0x67/255, blue: 0xFF/255) // #D767FF — competitor traffic
     private let borderColor  = Color(red: 108/255, green: 127/255, blue: 143/255)    // basemap gray
