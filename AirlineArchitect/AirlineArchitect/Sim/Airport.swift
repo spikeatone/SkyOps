@@ -122,6 +122,22 @@ final class Airport: Identifiable {
         .init(code: "LEX", lat: 38.0365, lon: -84.6059,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 3.0),
         .init(code: "PWM", lat: 43.6462, lon: -70.3093,  landingFeePerKlb: 3.60,  gateFeeNarrowbody: 320,  gateFeeWidebody: 680,  groundStopsPerMonth: 3.5),
         .init(code: "BGR", lat: 44.8074, lon: -68.8281,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 4.0),
+        .init(code: "RNO", lat: 39.4991, lon: -119.7681, landingFeePerKlb: 3.80,  gateFeeNarrowbody: 330,  gateFeeWidebody: 700,  groundStopsPerMonth: 2.5),
+        .init(code: "MKE", lat: 42.9472, lon: -87.8966,  landingFeePerKlb: 3.90,  gateFeeNarrowbody: 340,  gateFeeWidebody: 720,  groundStopsPerMonth: 3.5),
+        .init(code: "BTV", lat: 44.4719, lon: -73.1533,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 4.0),
+        .init(code: "MHT", lat: 42.9326, lon: -71.4357,  landingFeePerKlb: 3.60,  gateFeeNarrowbody: 320,  gateFeeWidebody: 680,  groundStopsPerMonth: 3.5),
+        .init(code: "LIT", lat: 34.7294, lon: -92.2243,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 3.5),
+        .init(code: "FAR", lat: 46.9207, lon: -96.8158,  landingFeePerKlb: 3.20,  gateFeeNarrowbody: 300,  gateFeeWidebody: 640,  groundStopsPerMonth: 4.0),
+        .init(code: "FSD", lat: 43.5820, lon: -96.7419,  landingFeePerKlb: 3.20,  gateFeeNarrowbody: 300,  gateFeeWidebody: 640,  groundStopsPerMonth: 3.5),
+        .init(code: "BTR", lat: 30.5332, lon: -91.1496,  landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 3.0),
+        .init(code: "CHS", lat: 32.8986, lon: -80.0405,  landingFeePerKlb: 3.80,  gateFeeNarrowbody: 330,  gateFeeWidebody: 700,  groundStopsPerMonth: 3.0),
+        .init(code: "RIC", lat: 37.5052, lon: -77.3197,  landingFeePerKlb: 3.80,  gateFeeNarrowbody: 330,  gateFeeWidebody: 700,  groundStopsPerMonth: 3.0),
+        .init(code: "ORF", lat: 36.8946, lon: -76.2012,  landingFeePerKlb: 3.80,  gateFeeNarrowbody: 330,  gateFeeWidebody: 700,  groundStopsPerMonth: 3.0),
+        .init(code: "CRW", lat: 38.3731, lon: -81.5932,  landingFeePerKlb: 3.20,  gateFeeNarrowbody: 300,  gateFeeWidebody: 640,  groundStopsPerMonth: 3.5),
+        .init(code: "BDL", lat: 41.9389, lon: -72.6832,  landingFeePerKlb: 4.20,  gateFeeNarrowbody: 350,  gateFeeWidebody: 760,  groundStopsPerMonth: 3.5),
+        .init(code: "PVD", lat: 41.7267, lon: -71.4325,  landingFeePerKlb: 3.90,  gateFeeNarrowbody: 340,  gateFeeWidebody: 720,  groundStopsPerMonth: 3.5),
+        .init(code: "EUG", lat: 44.1246, lon: -123.2119, landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 3.0),
+        .init(code: "GEG", lat: 47.6199, lon: -117.5338, landingFeePerKlb: 3.60,  gateFeeNarrowbody: 320,  gateFeeWidebody: 680,  groundStopsPerMonth: 3.5),
 
         // ── Latin America (added this session). Real lat/lon; fee/ground-stop
         // figures are TIER-BASED ESTIMATES calibrated to the existing US ranges
