@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		AA10000000000000000000B1 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = AA10000000000000000000D1 /* RevenueCat */; };
 		AA10000000000000000000B2 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = AA10000000000000000000D2 /* RevenueCatUI */; };
+		EDAAE2013005EDB9004E03F2 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = EDAAE2003005EDB9004E03F2 /* AppIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		ED35607730042BBE00DC0942 /* AirlineArchitect.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AirlineArchitect.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED35608830042BBF00DC0942 /* AirlineArchitectTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirlineArchitectTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED35609230042BBF00DC0942 /* AirlineArchitectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirlineArchitectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EDAAE2003005EDB9004E03F2 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -99,6 +101,7 @@
 				ED35608B30042BBF00DC0942 /* AirlineArchitectTests */,
 				ED35609530042BBF00DC0942 /* AirlineArchitectUITests */,
 				ED35607830042BBE00DC0942 /* Products */,
+				EDAAE2003005EDB9004E03F2 /* AppIcon.icon */,
 			);
 			sourceTree = "<group>";
 		};
@@ -237,6 +240,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EDAAE2013005EDB9004E03F2 /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
