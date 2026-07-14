@@ -265,9 +265,12 @@ struct FleetDetailView: View {
                     .background(Color(skyHex: 0x4B4B4B)).clipShape(RoundedRectangle(cornerRadius: 4))
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(skyHex: 0xC9C9C9), lineWidth: 1))
             } else {
+                // Figma (5:6673 / 1:892): solid Light Blue #BDE0FF bg, Core Blue
+                // #497AA5 border, Dark Blue #4E67A0 text — the SAME in both themes
+                // (matches the Fleet Home chip; dark mode was wrongly translucent).
                 Text("OWNED").font(.karla(10, .bold)).foregroundStyle(Color(skyHex: 0x4E67A0))
                     .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(isDark ? Color(skyHex: 0x497AA5).opacity(0.35) : Color(skyHex: 0xBDE0FF))
+                    .background(Color(skyHex: 0xBDE0FF))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(skyHex: 0x497AA5), lineWidth: 1))
             }
