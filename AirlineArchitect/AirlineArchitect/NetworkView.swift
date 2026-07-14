@@ -362,14 +362,16 @@ struct NetworkView: View {
         HStack(spacing: 0) {
             Text(text)
                 .font(.karla(14, .bold))
-                .foregroundStyle(Sky.lightBlue)
+                .foregroundStyle(titleColor)   // Dark Blue #4E67A0 in light
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Sky.navBarDark)
+        .background(barBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
+        .shadow(color: barShadow, radius: 3, y: 1)
     }
 
     // MARK: - Handlers
@@ -481,39 +483,53 @@ struct NetPanelBox<Content: View>: View {
 /// ADD CREW — hire crew into families the player owns (no Figma yet; dev-styled).
 struct AddCrewPanel: View {
     let sim: Simulation
-    let onClose: () -> Void
+    var onClose: () -> Void = {}   // kept for the call site; the control-bar toggle closes it
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xE6E6E6) }
+    private var titleC: Color     { isDark ? .white : .black }
+    private var bodyC: Color      { isDark ? .white : Color(skyHex: 0x64748B) }
+    private var labelC: Color     { isDark ? Sky.lightBlue : Color(skyHex: 0x64748B) }
+
     var body: some View {
-        NetPanelBox(title: "ADD CREW", onClose: onClose) {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Add Crew").font(.karla(20, .heavy)).foregroundStyle(titleC)
             let families = sim.ownedFamilies
             if families.isEmpty {
                 Text("No aircraft owned yet — nothing to crew.")
-                    .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
-                    .padding(.vertical, 10)
+                    .font(.karla(14)).foregroundStyle(bodyC)
             } else {
-                ForEach(families, id: \.self) { fam in
+                ForEach(Array(families.enumerated()), id: \.element) { i, fam in
+                    if i > 0 { Rectangle().fill(cardBorder).frame(height: 1) }
                     let cost = sim.crewHireCost(family: fam)
                     let afford = sim.playerBalance >= cost
                     HStack {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(FAMILY_LABELS[fam] ?? fam)
-                                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                            Text("\(sim.crewCount(family: fam)) crew · \(sim.ownedCount(family: fam)) aircraft")
-                                .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(FAMILY_LABELS[fam] ?? fam).font(.karla(14, .bold)).foregroundStyle(labelC)
+                            Text("\(sim.crewCount(family: fam)) crew · \(sim.ownedCount(family: fam)) aircraft · \(money(cost))")
+                                .font(.karla(14)).foregroundStyle(bodyC)
                         }
-                        Spacer()
+                        Spacer(minLength: 8)
                         Button { _ = sim.hireCrew(family: fam) } label: {
-                            Text("Hire · \(compactMoney(cost))")
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                                .padding(.vertical, 6).padding(.horizontal, 10)
-                                .background((afford ? Sky.coreGreen : Color.white).opacity(afford ? 0.22 : 0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 6)).opacity(afford ? 1 : 0.4)
+                            Text("HIRE")
+                                .font(.karla(12, .bold)).foregroundStyle(.white)
+                                .frame(height: 24).padding(.horizontal, 8)
+                                .background(afford ? Sky.coreGreen : Color(skyHex: 0xC9C9C9))
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
                         }.buttonStyle(.plain).disabled(!afford)
                     }
-                    .padding(.vertical, 3)
                 }
             }
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
+    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
 }
 
 /// FUEL HEDGE — Figma "Fuel Hedge Card" (19:6920): title, an explainer, then a
@@ -522,17 +538,24 @@ struct AddCrewPanel: View {
 /// the Figma.
 struct FuelHedgePanel: View {
     let sim: Simulation
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xE6E6E6) }
+    private var titleC: Color     { isDark ? .white : .black }
+    private var bodyC: Color      { isDark ? .white : Color(skyHex: 0x64748B) }
+    private var labelC: Color     { isDark ? Sky.lightBlue : Color(skyHex: 0x64748B) }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Fuel Hedge").font(.karla(20, .heavy)).foregroundStyle(.white)
+            Text("Fuel Hedge").font(.karla(20, .heavy)).foregroundStyle(titleC)
 
             if sim.ownedCount == 0 {
                 Text("No aircraft owned yet — nothing to hedge. The premium is priced against your current fleet's real hold cost, so buy an aircraft first.")
-                    .font(.karla(14)).foregroundStyle(.white)
+                    .font(.karla(14)).foregroundStyle(bodyC)
             } else {
                 let owned = sim.ownedCount
                 Text("Fuel hedging locks your operating costs at a baseline for the chosen term, regardless of future oil-price spikes. Premium is based on your current fleet's real hold cost (\(owned) aircraft owned). Real airline fuel hedges work the same way, priced against expected consumption at purchase time and not adjusted later if your fleet size changes.")
-                    .font(.karla(14)).foregroundStyle(.white)
+                    .font(.karla(14)).foregroundStyle(bodyC)
                     .fixedSize(horizontal: false, vertical: true)
 
                 divider
@@ -541,7 +564,7 @@ struct FuelHedgePanel: View {
                     Text("Hedge active · \(sim.fuelHedgeDaysRemaining) days left")
                         .font(.karla(14, .bold)).foregroundStyle(Sky.coreGreen)
                     Text("A genuine price drop still helps you — the hedge only removes the upside risk, not the downside benefit.")
-                        .font(.karla(14)).foregroundStyle(.white.opacity(0.8))
+                        .font(.karla(14)).foregroundStyle(bodyC.opacity(0.9))
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
                     ForEach(Array(Simulation.fuelHedgeDurations.enumerated()), id: \.element) { i, days in
@@ -553,9 +576,10 @@ struct FuelHedgePanel: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Sky.navBarDark)
+        .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 
     private func hedgeSlot(days: Int) -> some View {
@@ -563,22 +587,21 @@ struct FuelHedgePanel: View {
         let afford = sim.playerBalance >= premium
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(days)-day hedge:").font(.karla(14, .bold)).foregroundStyle(Sky.lightBlue)
-                Text("$\(premium.formatted()) premium").font(.karla(14)).foregroundStyle(.white)
+                Text("\(days)-day hedge:").font(.karla(14, .bold)).foregroundStyle(labelC)
+                Text("$\(premium.formatted()) premium").font(.karla(14)).foregroundStyle(bodyC)
             }
             Spacer()
             Button { sim.buyFuelHedge(days: days) } label: {
                 Text("BUY")
-                    .font(.karla(12, .bold)).foregroundStyle(.white)
+                    .font(.karla(12, .bold)).foregroundStyle(bodyC)
                     .frame(height: 24).padding(.horizontal, 8)
-                    .background(Sky.coreGreen)
+                    .background(afford ? Sky.coreGreen : Color(skyHex: 0xC9C9C9))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .opacity(afford ? 1 : 0.4)
             }.buttonStyle(.plain).disabled(!afford)
         }
     }
 
     private var divider: some View {
-        Rectangle().fill(Sky.onDarkStroke).frame(height: 1)
+        Rectangle().fill(cardBorder).frame(height: 1)
     }
 }

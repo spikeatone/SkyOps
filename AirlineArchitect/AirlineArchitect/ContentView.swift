@@ -134,6 +134,10 @@ struct BuyPanel: View {
     var store: Store
     var onUpgrade: () -> Void = {}
     let onBought: (Aircraft) -> Void
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var panelBG: Color     { isDark ? Sky.navBarDark : Color(skyHex: 0xF1F1F1) }
+    private var panelBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xC9C9C9) }
 
     var body: some View {
         ScrollView {
@@ -144,11 +148,12 @@ struct BuyPanel: View {
                 }
             }
         }
-        .frame(maxHeight: 510)   // sits higher — covers the ~50px gap under the control bar
+        .frame(maxHeight: 360)   // capped so it doesn't overflow up over the top control bar
         .padding(8)
-        .background(Sky.navBarDark)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Sky.onDarkStroke, lineWidth: 1))
+        .background(panelBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(panelBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 }
 
@@ -161,6 +166,13 @@ struct AircraftProfileCard: View {
     let onBought: (Aircraft) -> Void
 
     private let gray = Color(skyHex: 0x8C8C8C)
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xE6E6E6) }
+    private var titleC: Color     { isDark ? .white : .black }
+    private var bodyC: Color      { isDark ? .white : Color(skyHex: 0x64748B) }
+    private var labelC: Color     { isDark ? Sky.lightBlue : Color(skyHex: 0x64748B) }
 
     /// Free-tier gate: at the fleet cap, tapping any acquire button opens the
     /// paywall instead of purchasing. `perform` runs only when allowed.
@@ -170,7 +182,7 @@ struct AircraftProfileCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(type.name).font(.karla(20, .heavy)).foregroundStyle(.white)
+            Text(type.name).font(.karla(20, .heavy)).foregroundStyle(titleC)
 
             illustration
 
@@ -182,7 +194,7 @@ struct AircraftProfileCard: View {
                 spec("Avg Lifespan:", "\(type.expectedLifespanCycles.formatted()) cycles")
             }
 
-            Rectangle().fill(Sky.onDarkStroke).frame(height: 1)
+            Rectangle().fill(cardBorder).frame(height: 1)
 
             row("Buy new:", money(type.purchasePrice), lease: false,
                 afford: sim.playerBalance >= type.purchasePrice) {
@@ -204,9 +216,9 @@ struct AircraftProfileCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Sky.navBarDark)
+        .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     /// Real side-view illustration if one is bundled for this type; otherwise
@@ -224,7 +236,7 @@ struct AircraftProfileCard: View {
                 g.translateBy(x: size.width / 2, y: size.height / 2)
                 g.scaleBy(x: rs, y: rs)
                 g.translateBy(x: -icon.center.x, y: -icon.center.y)
-                g.fill(icon.path, with: .color(.white.opacity(0.85)))
+                g.fill(icon.path, with: .color(isDark ? .white.opacity(0.85) : .black.opacity(0.55)))
             }
             .frame(height: 66)
             .frame(maxWidth: .infinity)
@@ -233,8 +245,8 @@ struct AircraftProfileCard: View {
 
     private func spec(_ label: String, _ value: String) -> some View {
         VStack(spacing: 2) {
-            Text(label).font(.karla(14, .bold)).foregroundStyle(Sky.lightBlue)
-            Text(value).font(.karla(14)).foregroundStyle(.white)
+            Text(label).font(.karla(14, .bold)).foregroundStyle(labelC)
+            Text(value).font(.karla(14)).foregroundStyle(bodyC)
         }
     }
 
@@ -242,8 +254,8 @@ struct AircraftProfileCard: View {
                      action: @escaping () -> Void) -> some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(.karla(14, .bold)).foregroundStyle(Sky.lightBlue)
-                Text(detail).font(.karla(14)).foregroundStyle(.white)
+                Text(label).font(.karla(14, .bold)).foregroundStyle(labelC)
+                Text(detail).font(.karla(14)).foregroundStyle(bodyC)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
@@ -251,9 +263,8 @@ struct AircraftProfileCard: View {
                 Text(lease ? "LEASE" : "BUY")
                     .font(.karla(12, .bold)).foregroundStyle(.white)
                     .padding(.horizontal, 8).frame(height: 24)
-                    .background(lease ? gray : Sky.coreGreen)
+                    .background(!afford ? Color(skyHex: 0xC9C9C9) : (lease ? Color(skyHex: 0x4B4B4B) : Sky.coreGreen))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .opacity(afford ? 1 : 0.4)
             }
             .buttonStyle(.plain).disabled(!afford)
         }
@@ -279,6 +290,14 @@ struct RouteConfirmPanel: View {
 
     private let netGreen = Color(skyHex: 0x87ED7A)
     private let netRed   = Color(skyHex: 0xFF9292)
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xE6E6E6) }
+    private var primaryC: Color   { isDark ? .white : .black }
+    private var labelC: Color     { isDark ? .white : Color(skyHex: 0x64748B) }
+    private var green: Color      { isDark ? netGreen : Color(skyHex: 0x10B981) }
+    private var red: Color        { isDark ? netRed : Color(skyHex: 0xD70000) }
 
     var body: some View {
         let cost = sim.routeOpeningCost(origin, dest)
@@ -288,18 +307,18 @@ struct RouteConfirmPanel: View {
         VStack(alignment: .leading, spacing: 8) {
             // Header: ORIG → DEST
             HStack(spacing: 8) {
-                Text(origin.code).font(.karla(20, .heavy)).foregroundStyle(.white)
-                Image(systemName: "arrow.right").font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
-                Text(dest.code).font(.karla(20, .heavy)).foregroundStyle(.white)
+                Text(origin.code).font(.karla(20, .heavy)).foregroundStyle(primaryC)
+                Image(systemName: "arrow.right").font(.system(size: 14, weight: .bold)).foregroundStyle(primaryC)
+                Text(dest.code).font(.karla(20, .heavy)).foregroundStyle(primaryC)
                 Spacer(minLength: 0)
             }
-            infoRow("Distance", "\(distanceNM.formatted()) nm", .white)
+            infoRow("Distance", "\(distanceNM.formatted()) nm", primaryC)
             infoRow("Slots", slotsOK ? "Avail both ends" : "Buyout needed",
-                    slotsOK ? netGreen : netRed)
-            infoRow("Range check", rangeCheck(spare).text, rangeCheck(spare).ok ? netGreen : netRed)
-            infoRow("Opening cost", "$\(cost.formatted())", affordable ? netGreen : netRed)
+                    slotsOK ? green : red)
+            infoRow("Range check", rangeCheck(spare).text, rangeCheck(spare).ok ? green : red)
+            infoRow("Opening cost", "$\(cost.formatted())", affordable ? green : red)
 
-            Rectangle().fill(Sky.onDarkStroke).frame(height: 1).padding(.vertical, 2)
+            Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
 
             HStack(spacing: 8) {
                 confirmButton("Open route", disabled: spare != nil && !affordable, action: onOpen)
@@ -309,14 +328,15 @@ struct RouteConfirmPanel: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Sky.navBarDark)
+        .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 
     private func infoRow(_ label: String, _ value: String, _ valueColor: Color) -> some View {
         HStack {
-            Text(label).font(.karla(14)).foregroundStyle(.white)
+            Text(label).font(.karla(14)).foregroundStyle(labelC)
             Spacer()
             Text(value).font(.karla(14, .bold)).foregroundStyle(valueColor)
         }
@@ -326,10 +346,10 @@ struct RouteConfirmPanel: View {
         Button(action: action) {
             Text(label)
                 .font(.karla(16, .medium))
-                .foregroundStyle(disabled ? .white.opacity(0.35) : .white)
+                .foregroundStyle(disabled ? primaryC.opacity(0.35) : primaryC)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 8)
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .disabled(disabled)
