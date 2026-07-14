@@ -182,10 +182,14 @@ struct NetworkView: View {
     // MARK: - Network Control Bar
 
     private var controlBar: some View {
-        // Even columns, no dividers (matches Figma 2:1592 — the dividers made the
-        // equal-width columns read as unevenly spaced).
+        // Content-sized labels with equal Spacers between them (NOT equal-width
+        // columns) — equal columns put the label CENTERS evenly apart, but since
+        // the labels differ in width the visible GAPS between them read as
+        // uneven. Spacers make the inter-label gaps equal instead. No dividers
+        // (Figma 2:1592).
         HStack(spacing: 0) {
             barButton("Acquire A/C", active: panel == .acquire) { toggle(.acquire) }
+            Spacer(minLength: 6)
             barButton("Open Route", active: routeMode != .off) {
                 panel = .none
                 if routeMode == .off {
@@ -194,11 +198,14 @@ struct NetworkView: View {
                     routeMode = .pickOrigin; selectedID = nil
                 } else { routeMode = .off }
             }
+            Spacer(minLength: 6)
             barButton("Routes", active: panel == .routes) { toggle(.routes) }
+            Spacer(minLength: 6)
             barButton("Hire Crew", active: panel == .hire) { toggle(.hire) }
+            Spacer(minLength: 6)
             barButton("Fuel Hedge", active: panel == .hedge) { toggle(.hedge) }
         }
-        .padding(4)
+        .padding(.horizontal, 8).padding(.vertical, 4)
         .background(barBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
@@ -221,10 +228,9 @@ struct NetworkView: View {
                 // the low scale floor is only small-device insurance.
                 .font(.karla(10.5, .semibold))
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .fixedSize()   // size to content so the Spacers get equal leftover space
                 .foregroundStyle(active ? Sky.brightBlue : barText)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 7).padding(.horizontal, 4)
+                .padding(.vertical, 7).padding(.horizontal, 6)
                 .background(active ? Sky.brightBlue.opacity(0.18) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
         }
