@@ -149,7 +149,11 @@ struct NetworkView: View {
         .overlay(alignment: .bottom) {
             VStack(spacing: 8) {
                 bottomStack(selected: selected)
-                if showOverlays { speedBar; devControls }
+                // Keep the speed/dev bars' vertical space reserved even when the
+                // overlays are hidden, so an open panel (e.g. Routes) stays put
+                // instead of dropping down into the freed space.
+                speedBar.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
+                devControls.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
             }
             .padding(8)
         }

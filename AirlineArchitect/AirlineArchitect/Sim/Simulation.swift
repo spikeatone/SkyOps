@@ -63,10 +63,10 @@ final class Simulation {
     // MARK: - Camera (pan / zoom), ported from the prototype's camera model.
     // Everything on the map lives in resolution-independent "unit" space; the
     // camera maps unit→screen each frame. Default view frames the continental
-    // US (resetCameraToConus); zoom clamps to [0.4×, 4×].
+    // US (resetCameraToConus); zoom clamps to [0.4×, 28×].
 
     static let cameraMinZoom: CGFloat = 0.4    // out enough to see AK+HI+CONUS
-    static let cameraMaxZoom: CGFloat = 14     // in close enough to inspect a single metro
+    static let cameraMaxZoom: CGFloat = 28     // in close enough to inspect a single airport (was 14)
     private static let elementZoomGrowthMax: CGFloat = 0.15  // icon growth cap
 
     /// Zoom multiplier (× the whole-world fit). Observable → drives redraw.
