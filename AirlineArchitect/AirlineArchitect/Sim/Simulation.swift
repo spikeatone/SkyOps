@@ -288,7 +288,18 @@ final class Simulation {
 
     // MARK: - Ownership economy (Phase 5)
 
-    static let startingCapital = 20_000_000
+    static let startingCapital = 30_000_000
+
+    /// A held aircraft (AOG/crew) still costs money at the gate, but a PARKED
+    /// aircraft doesn't burn full in-flight block-hour cost — only idle cost
+    /// (crew standby, gate, opportunity). So hold burn is a FRACTION of the flight
+    /// operating rate. Early-game tuning: at the full rate, an under-crewed
+    /// starter regional lost ~$5k/held-leg (ruinous, ~3 profitable legs); at 0.4
+    /// it's a recoverable setback that still signals "hire crew" (you also lose
+    /// the flights themselves while held). The AOG expedite-vs-standard tradeoff
+    /// still holds — the standard repair's timed burn is smaller now, so expedite
+    /// stays a premium reserved for expensive aircraft / lost high-value revenue.
+    static let holdBurnRate = 0.4
 
     /// The player's airline name. nil until the first-launch naming screen is
     /// completed (which blocks the game until then). Defaults to "New Airline".
@@ -1511,10 +1522,12 @@ final class Simulation {
             // A booked aircraft still burns money while stuck at the gate
             // (AOG/crew) — accrue that burn as OPERATING COST (not negative
             // revenue), scaled by the effective (hedge-aware) cost multiplier.
-            // Net still crosses profit → loss the longer it's held, so the
-            // incentive to expedite is unchanged.
+            // Charged at a FRACTION of the flight rate (holdBurnRate) — a parked
+            // aircraft isn't burning full block-hour cost. Net still slides toward
+            // loss the longer it's held (plus the lost flights), so the pressure
+            // to resolve a hold / hire crew remains.
             if ac.holdReason == .aog || ac.holdReason == .crew {
-                ac.holdBurn += Int((Double(ac.type.holdCostPerTick) * effectiveCostMultiplier).rounded())
+                ac.holdBurn += Int((Double(ac.type.holdCostPerTick) * Simulation.holdBurnRate * effectiveCostMultiplier).rounded())
             }
         }
     }

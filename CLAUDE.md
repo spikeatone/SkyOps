@@ -1618,9 +1618,32 @@ where numbers are involved.
   real `Sim/*.swift`. Reach for the balance probe whenever a change alters
   rates, capacities, or timing.
 
+- **EARLY-GAME BALANCE PASS (native app) — two tunables.** Playtest analysis
+  found the reported "starter aircraft loses money even full" was NOT the base
+  economics (a well-crewed ERJ135 nets ~+$1.8k/leg on a trunk route, +$2.5k on
+  mid routes — profitable) — it was CREW-HOLD BURN. An under-crewed 1-aircraft
+  operator sits in crew-rest holds, and that burn was charged at the FULL
+  in-flight operating rate (op cost $9.7k vs $2.5k base → ~$5k/held-leg loss,
+  ruinous). Fix 1: `holdBurnRate = 0.4` — a PARKED aircraft (AOG/crew hold)
+  isn't burning full block-hour cost, so hold burn is 40% of the flight rate.
+  Now under-crewing is a recoverable setback (~−$0.1M/mo drift, a clear "hire
+  crew" signal + you still lose the held flights) instead of a death spiral, and
+  a well-run regional is profitable. The AOG expedite-vs-standard tradeoff is
+  PRESERVED and now correct: a regional's standard-repair burn (~$2.4k+$3k) <
+  expedite $15k → wait; a widebody's (~$24k+$3k) > $15k → expedite. Fix 2:
+  `startingCapital` $20M → **$30M** — enough to reach a TWO-aircraft operation
+  (the point where profit compounds: 2 ERJ135 + crew + 2 routes → +$308k/mo).
+  KNOWN DEEPER ISSUE (flagged, not fixed — a designer decision): growth is still
+  slow in absolute terms because REAL aircraft prices ($14M–$300M) against
+  realistic per-leg profit + the LOCKED ~6-hr flight cycle (aircraft fly only
+  ~2 legs/day vs real ~6) mean long aircraft-payback times. Options if faster
+  growth is wanted: higher starting capital, a gameplay revenue multiplier, or
+  variable (distance-based) leg duration — none done, all change the game's
+  core scale/feel.
 - **Phase 5 core loop — the FULL SHIFT to a player-driven game, DONE.**
   Designer chose (over a hybrid) to match the prototype: a fresh session
-  starts EMPTY — `startingCapital` $20M, zero aircraft, zero routes. The
+  starts EMPTY — `startingCapital` **$30M** (was $20M — see the early-game
+  balance pass above), zero aircraft, zero routes. The
   player BUYS aircraft (ACQUIRE panel, affordability-gated, sorted by
   price) which sit as idle SPARES (`isIdleSpare` — a purchased aircraft
   with no `assignedRouteId` returns early from `advance`, fully idle), and
