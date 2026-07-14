@@ -138,6 +138,9 @@ final class Airport: Identifiable {
         .init(code: "PVD", lat: 41.7267, lon: -71.4325,  landingFeePerKlb: 3.90,  gateFeeNarrowbody: 340,  gateFeeWidebody: 720,  groundStopsPerMonth: 3.5),
         .init(code: "EUG", lat: 44.1246, lon: -123.2119, landingFeePerKlb: 3.40,  gateFeeNarrowbody: 310,  gateFeeWidebody: 660,  groundStopsPerMonth: 3.0),
         .init(code: "GEG", lat: 47.6199, lon: -117.5338, landingFeePerKlb: 3.60,  gateFeeNarrowbody: 320,  gateFeeWidebody: 680,  groundStopsPerMonth: 3.5),
+        .init(code: "BUF", lat: 42.9405, lon: -78.7322,  landingFeePerKlb: 3.80,  gateFeeNarrowbody: 330,  gateFeeWidebody: 700,  groundStopsPerMonth: 4.0),
+        .init(code: "ROC", lat: 43.1189, lon: -77.6724,  landingFeePerKlb: 3.60,  gateFeeNarrowbody: 320,  gateFeeWidebody: 680,  groundStopsPerMonth: 4.0),
+        .init(code: "SYR", lat: 43.1112, lon: -76.1063,  landingFeePerKlb: 3.60,  gateFeeNarrowbody: 320,  gateFeeWidebody: 680,  groundStopsPerMonth: 4.0),
 
         // ── Latin America (added this session). Real lat/lon; fee/ground-stop
         // figures are TIER-BASED ESTIMATES calibrated to the existing US ranges

@@ -118,6 +118,9 @@ extension Airport {
         "PVD": .init(name: "Rhode Island T. F. Green International", city: "Providence, RI", operationsPerYear: 80_000, runways: 2, longestRunwayFt: 8_700, metroPopulation: 1_600_000, annualPassengers: 4_100_000),
         "EUG": .init(name: "Eugene Airport (Mahlon Sweet Field)", city: "Eugene, OR", operationsPerYear: 70_000, runways: 2, longestRunwayFt: 8_009, metroPopulation: 380_000, annualPassengers: 1_300_000),
         "GEG": .init(name: "Spokane International Airport", city: "Spokane, WA", operationsPerYear: 90_000, runways: 3, longestRunwayFt: 11_002, metroPopulation: 600_000, annualPassengers: 4_100_000),
+        "BUF": .init(name: "Buffalo Niagara International Airport", city: "Buffalo, NY", operationsPerYear: 110_000, runways: 2, longestRunwayFt: 8_829, metroPopulation: 1_100_000, annualPassengers: 5_000_000),
+        "ROC": .init(name: "Greater Rochester International Airport", city: "Rochester, NY", operationsPerYear: 90_000, runways: 3, longestRunwayFt: 8_001, metroPopulation: 1_100_000, annualPassengers: 2_500_000),
+        "SYR": .init(name: "Syracuse Hancock International Airport", city: "Syracuse, NY", operationsPerYear: 70_000, runways: 2, longestRunwayFt: 9_003, metroPopulation: 660_000, annualPassengers: 2_200_000),
 
         // ── Canada (best-effort ~2023–24) ──────────────────────────────────
         "YYZ": .init(name: "Toronto Pearson International", city: "Toronto, ON", operationsPerYear: 450_000, runways: 5, longestRunwayFt: 11_120, metroPopulation: 6_600_000, annualPassengers: 47_000_000),
