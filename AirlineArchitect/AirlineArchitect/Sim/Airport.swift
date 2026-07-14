@@ -369,6 +369,9 @@ final class Airport: Identifiable {
         .init(code: "COK", lat: 10.1520, lon: 76.4019,  landingFeePerKlb: 3.80, gateFeeNarrowbody: 330, gateFeeWidebody: 700,  groundStopsPerMonth: 3.0),
         .init(code: "PNQ", lat: 18.5793, lon: 73.9089,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 320, gateFeeWidebody: 680,  groundStopsPerMonth: 2.5),
         .init(code: "GOI", lat: 15.3808, lon: 73.8314,  landingFeePerKlb: 3.40, gateFeeNarrowbody: 310, gateFeeWidebody: 660,  groundStopsPerMonth: 2.5),
+        .init(code: "KHI", lat: 24.9065, lon: 67.1608,  landingFeePerKlb: 4.80, gateFeeNarrowbody: 380, gateFeeWidebody: 840,  groundStopsPerMonth: 2.5),
+        .init(code: "LHE", lat: 31.5216, lon: 74.4036,  landingFeePerKlb: 4.40, gateFeeNarrowbody: 360, gateFeeWidebody: 800,  groundStopsPerMonth: 2.5),
+        .init(code: "ISB", lat: 33.5490, lon: 72.8256,  landingFeePerKlb: 4.60, gateFeeNarrowbody: 370, gateFeeWidebody: 820,  groundStopsPerMonth: 2.5),
         // Middle East
         .init(code: "DXB", lat: 25.2532, lon: 55.3657,  landingFeePerKlb: 8.00, gateFeeNarrowbody: 520, gateFeeWidebody: 1400, groundStopsPerMonth: 1.5),
         .init(code: "DOH", lat: 25.2731, lon: 51.6081,  landingFeePerKlb: 7.50, gateFeeNarrowbody: 500, gateFeeWidebody: 1350, groundStopsPerMonth: 1.5),

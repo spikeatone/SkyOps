@@ -324,6 +324,9 @@ extension Airport {
         "COK": .init(name: "Cochin International Airport", city: "Kochi, India", operationsPerYear: 90_000, runways: 1, longestRunwayFt: 11_150, metroPopulation: 2_300_000, annualPassengers: 10_000_000),
         "PNQ": .init(name: "Pune Airport", city: "Pune, India", operationsPerYear: 90_000, runways: 1, longestRunwayFt: 8_300, metroPopulation: 7_400_000, annualPassengers: 9_000_000),
         "GOI": .init(name: "Dabolim Airport", city: "Goa, India", operationsPerYear: 50_000, runways: 1, longestRunwayFt: 11_300, metroPopulation: 600_000, annualPassengers: 8_000_000),
+        "KHI": .init(name: "Jinnah International Airport", city: "Karachi, Pakistan", operationsPerYear: 100_000, runways: 2, longestRunwayFt: 11_154, metroPopulation: 16_000_000, annualPassengers: 6_500_000),
+        "LHE": .init(name: "Allama Iqbal International Airport", city: "Lahore, Pakistan", operationsPerYear: 70_000, runways: 2, longestRunwayFt: 11_024, metroPopulation: 13_000_000, annualPassengers: 4_500_000),
+        "ISB": .init(name: "Islamabad International Airport", city: "Islamabad, Pakistan", operationsPerYear: 60_000, runways: 2, longestRunwayFt: 12_303, metroPopulation: 3_500_000, annualPassengers: 5_500_000),
 
         // ── Middle East (best-effort ~2023–24) ─────────────────────────────
         "DXB": .init(name: "Dubai International Airport", city: "Dubai, UAE", operationsPerYear: 420_000, runways: 2, longestRunwayFt: 13_123, metroPopulation: 3_600_000, annualPassengers: 87_000_000),
