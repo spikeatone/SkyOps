@@ -546,7 +546,8 @@ final class Simulation {
         let type = AircraftType.pickWeighted()
         let (origin, dest) = Airport.randomPair()
         // Region-aware carrier: each leg draws carriers from its endpoints'
-        // regions (US / Canada / Mexico / Central America / South America).
+        // regions (US / Canada / Mexico / Central America / South America /
+        // Europe); a transatlantic leg mixes US + European carriers.
         let airline = Airline.pick(forType: type.id,
                                    originCode: origin.code,
                                    destCode: dest.code)
