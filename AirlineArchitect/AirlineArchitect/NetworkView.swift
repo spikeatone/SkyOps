@@ -461,10 +461,15 @@ struct NetworkView: View {
     private func handleTap(at p: CGPoint) {
         switch routeMode {
         case .off:
-            // Aircraft take priority; else an airport shows its info card; else clear.
-            if let ac = sim.aircraft(atScreenPoint: p) {
+            // Tapping a NEW aircraft or a NEW airport shows its card; tapping the
+            // one already shown, or empty map, DISMISSES. On a dense map an
+            // "empty" tap often lands within tolerance of the shown airport — that
+            // should close it, not re-open it.
+            let tappedAircraft = sim.aircraft(atScreenPoint: p)
+            let tappedAirport = sim.airport(atScreenPoint: p)
+            if let ac = tappedAircraft, ac.id != selectedID {
                 selectedID = ac.id; selectedAirportCode = nil
-            } else if let ap = sim.airport(atScreenPoint: p) {
+            } else if tappedAircraft == nil, let ap = tappedAirport, ap.code != selectedAirportCode {
                 selectedAirportCode = ap.code; selectedID = nil
             } else {
                 selectedID = nil; selectedAirportCode = nil
