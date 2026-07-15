@@ -2515,7 +2515,10 @@ where numbers are involved.
   moment (acquiring an aircraft). Triggers: acquire aircraft (buy/lease/used) →
   success haptic + jet whoosh (`NetworkView.handleBought` + the three `FleetView`
   marketplace buttons); open route → medium impact (`openConfirmedRoute .success`);
-  milestone celebration → success haptic; new decision/alert → warning haptic
+  milestone celebration → success haptic + `Resources/Sounds/milestone.wav`
+  congrats chime (designer-supplied, `MilestoneSound`, fired from the SAME
+  `celebrations.first?.id` change as the badge toast, so chime + badge are synced);
+  new decision/alert → warning haptic
   (`onChange decisionQueue.count` increasing); bankruptcy → error haptic; sell →
   light impact (Alerts sell + Fleet-detail sell). `JetSound` PREFERS a real bundled
   recording (`jet`/`jet_takeoff` .caf/.wav/.m4a/.mp3) over the synthesized fallback.
