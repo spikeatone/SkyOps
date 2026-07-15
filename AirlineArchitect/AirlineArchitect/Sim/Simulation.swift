@@ -1446,6 +1446,8 @@ final class Simulation {
         tickCrewTraining()
         // Airport recruitment offers (an airport pitches you to open a route).
         tickAirportOffers()
+        // Deadline on accepted offers — forfeit + claw back if not staffed in time.
+        tickOfferFulfillment()
         // Rival carriers entering / leaving the player's markets.
         tickCompetition()
 
@@ -1668,9 +1670,35 @@ final class Simulation {
             logOps(.structural, "Route offer accepted",
                    "\(o.code) ↔\u{FE0E} \(d.code): \(spare.tail) assigned · +$\(p.signingBonus.formatted()) bonus")
         } else {
+            // Pending: the player has a deadline to staff it or forfeit the bonus.
+            r.fulfillByTick = tick + Simulation.offerFulfillmentDays * 1440
             logOps(.structural, "Route offer accepted",
-                   "\(o.code) ↔\u{FE0E} \(d.code): awaiting an aircraft · +$\(p.signingBonus.formatted()) bonus")
+                   "\(o.code) ↔\u{FE0E} \(d.code): staff within \(Simulation.offerFulfillmentDays) days · +$\(p.signingBonus.formatted()) bonus")
         }
+    }
+
+    /// Days to put an aircraft on an offer-opened route before it's forfeited.
+    static let offerFulfillmentDays = 14
+
+    /// Once/day: fulfilled pending routes clear their deadline; unfulfilled ones
+    /// past the deadline are FORFEITED — the route closes and the marketing bonus
+    /// is clawed back (the obligation had teeth).
+    private func tickOfferFulfillment() {
+        for r in playerRoutes where r.fulfillByTick != nil {
+            if routeStaffed(r) {
+                r.fulfillByTick = nil   // obligation met
+            } else if tick >= r.fulfillByTick! {
+                playerBalance -= r.incentiveBonus
+                totalOfferIncome -= r.incentiveBonus   // reverse the banked bonus
+                airport(r.originCode)?.slotsAvailable += 1
+                airport(r.destCode)?.slotsAvailable += 1
+                r.closedTick = tick
+                logOps(.structural, "Route offer forfeited",
+                       "\(r.originCode) ↔\u{FE0E} \(r.destCode): not staffed in time — $\(r.incentiveBonus.formatted()) bonus clawed back")
+                closedPlayerRoutes.append(r)
+            }
+        }
+        playerRoutes.removeAll { $0.closedTick != nil }
     }
 
     /// AIRPORT OFFER card: decline.
@@ -2159,7 +2187,7 @@ final class Simulation {
                   openingCost: r.openingCost, cumulativeNet: r.cumulativeNet, flights: r.flights,
                   totalLeaseCost: r.totalLeaseCost, closedTick: r.closedTick,
                   competitionLevel: r.competitionLevel, competitors: r.competitors,
-                  incentiveBonus: r.incentiveBonus, incentiveWaived: r.incentiveWaived,
+                  incentiveBonus: r.incentiveBonus, incentiveWaived: r.incentiveWaived, fulfillByTick: r.fulfillByTick,
                   history: r.history.map { FlightRecordSave(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) },
                   assignmentHistory: r.assignmentHistory.map { RouteAssignmentSave(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) })
     }
@@ -2167,7 +2195,7 @@ final class Simulation {
         let r = Route(id: s.id, originCode: s.originCode, destCode: s.destCode, openedTick: s.openedTick, openingCost: s.openingCost)
         r.cumulativeNet = s.cumulativeNet; r.flights = s.flights; r.totalLeaseCost = s.totalLeaseCost; r.closedTick = s.closedTick
         r.competitionLevel = s.competitionLevel; r.competitors = s.competitors
-        r.incentiveBonus = s.incentiveBonus; r.incentiveWaived = s.incentiveWaived
+        r.incentiveBonus = s.incentiveBonus; r.incentiveWaived = s.incentiveWaived; r.fulfillByTick = s.fulfillByTick
         r.history = s.history.map { FlightRecord(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) }
         r.assignmentHistory = s.assignmentHistory.map { RouteAssignment(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) }
         return r

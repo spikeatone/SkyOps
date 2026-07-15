@@ -77,6 +77,10 @@ final class Route: Identifiable {
     var incentiveBonus: Int = 0
     var incentiveWaived: Int = 0
     var hasIncentive: Bool { incentiveBonus > 0 || incentiveWaived > 0 }
+    /// Deadline to STAFF an offer-opened route (put an aircraft on it). Miss it and
+    /// the route is forfeited + the marketing bonus clawed back. nil = fulfilled /
+    /// no obligation.
+    var fulfillByTick: Int? = nil
 
     /// The player's share of this route's demand given the competition on it and
     /// the airline's reputation. Uncontested = 1.0. Each rival takes a slice, but

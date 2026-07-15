@@ -187,7 +187,7 @@ struct NeedsAttentionCard: View {
             // is in range, it opens PENDING and auto-staffs once you get an
             // aircraft — no more dead-end.
             let note = sim.eligibleSpareForOffer(p) == nil
-                ? " Accepting opens the route now — acquire an in-range aircraft to start flying it."
+                ? " Accepting opens the route now — you'll have \(Simulation.offerFulfillmentDays) days to put an in-range aircraft on it, or the bonus is clawed back."
                 : ""
             return AlertModel(
                 accent: accentBlue, icon: "megaphone.fill", category: "Route offer",

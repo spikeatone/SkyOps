@@ -88,7 +88,7 @@ struct OpsView: View {
                             Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold)).foregroundStyle(secondary)
                             Text(r.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
                         }
-                        Text(pending ? "Awaiting aircraft — acquire one in range" : "In service")
+                        Text(pendingStatus(r, pending: pending))
                             .font(.karla(12)).foregroundStyle(pending ? Color(skyHex: 0xFFB700) : Sky.coreGreen)
                     }
                     Spacer(minLength: 8)
@@ -105,6 +105,15 @@ struct OpsView: View {
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+    /// Pending routes show the fulfillment countdown; staffed ones "In service".
+    private func pendingStatus(_ r: Route, pending: Bool) -> String {
+        guard pending else { return "In service" }
+        if let dl = r.fulfillByTick {
+            let daysLeft = max(0, (dl - sim.tick) / 1440)
+            return "Awaiting aircraft · \(daysLeft)d left to staff"
+        }
+        return "Awaiting aircraft — acquire one in range"
     }
     private func compact(_ v: Int) -> String {
         let a = abs(v), s = v < 0 ? "−" : ""
