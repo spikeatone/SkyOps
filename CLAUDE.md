@@ -2368,8 +2368,18 @@ where numbers are involved.
 - **MILESTONE ladder extended + audio-fix batch — DONE.** Net-worth awards added a
   **$30M** tier (gated on owning ≥1 aircraft, so it fires as "grown back past your
   starting stake", NOT at the $30M start) and a **fleet-of-50** award, alongside
-  the existing $50M/$100M/$250M/$500M/$1B + fleet 5/10/25. Haptics come free via
-  the existing celebration `.onChange` hook.
+  the existing $50M/$100M/$250M/$500M/$1B + fleet 5/10/25. Also a **"First jet
+  purchased!"** milestone (🛩️, `first_aircraft`, fires at `ownedCount >= 1`).
+  Haptics come free via the existing celebration `.onChange` hook.
+  - **SOUND-COLLISION FIXES (designer-reported).** (a) Opening a route by BUYING an
+    aircraft in one action played the jet whoosh AND the "now boarding" voice at
+    once — the voice is now suppressed when it follows a purchase
+    (`openConfirmedRoute(announce:false)` from `handleBought`); the route-open
+    haptic still fires, and opening with an EXISTING spare still says "now
+    boarding". (b) The first-purchase whoosh would collide with the new
+    first-aircraft milestone chime — so `Feedback.aircraftAcquired(isFirst:)` skips
+    the whoosh on the FIRST-EVER acquire (the congrats chime is that moment's
+    sound). `isFirst = sim.ownedCount == 1` at each acquire call site.
 
 - **SAVE / QUIT now persistent on EVERY top-level tab — DONE.** Extracted the pair
   into a shared `SaveQuitBar` (own "Saved ✓" flash + light haptic), flushed right
