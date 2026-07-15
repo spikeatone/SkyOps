@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var showPaywall = false
     /// A saved game found at launch, awaiting the player's Continue / New choice.
     @State private var pendingResume: GameSnapshot?
+    /// Active first-play walkthrough step (nil = not running).
+    @State private var tutorialStep: Int?
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -71,10 +73,28 @@ struct ContentView: View {
                     .transition(.opacity)
             } else if sim.playerAirlineName == nil {
                 // First-launch: name the airline before anything else.
-                AirlineNamingView { name, tailCode in sim.nameAirline(name, tailCode: tailCode) }
-                    .transition(.opacity)
+                AirlineNamingView { name, tailCode in
+                    sim.nameAirline(name, tailCode: tailCode)
+                    if !TutorialState.seen { tab = tutorialSteps[0].tab; tutorialStep = 0 }
+                }
+                .transition(.opacity)
             }
         }
+        // First-play walkthrough — bottom coach card that navigates the tabs.
+        .overlay(alignment: .bottom) {
+            if let step = tutorialStep, step < tutorialSteps.count {
+                TutorialCard(step: tutorialSteps[step], index: step, total: tutorialSteps.count,
+                             onNext: {
+                                 if step + 1 < tutorialSteps.count {
+                                     tutorialStep = step + 1; tab = tutorialSteps[step + 1].tab
+                                 } else { TutorialState.seen = true; tutorialStep = nil; tab = 0 }
+                             },
+                             onSkip: { TutorialState.seen = true; tutorialStep = nil; tab = 0 })
+                    .padding(.bottom, 4)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(Motion.glide, value: tutorialStep)
         // Alerts modal — the bell's target, over everything, on any tab.
         .overlay {
             if showAlerts {
