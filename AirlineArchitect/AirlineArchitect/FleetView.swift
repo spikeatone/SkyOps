@@ -79,16 +79,22 @@ struct FleetView: View {
                         fleetSplitLayout(owned: owned)
                     } else if segment == .myFleet, let id = detailID,
                               let ac = sim.aircraft.first(where: { $0.id == id }) {
+                        // Portrait / iPhone: the detail pushes in from the trailing
+                        // edge while the list slides off — an eased slide, iOS-push
+                        // style. Keyed on detailID only, so rotation stays instant.
                         FleetDetailView(sim: sim, aircraft: ac,
                                         onBack: { detailID = nil },
                                         onAssignRoute: { detailID = nil; tab = 0 },
                                         onSold: { detailID = nil },
                                         onBell: onBell)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
                     } else {
                         stackedLayout
+                            .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .animation(.easeInOut(duration: 0.3), value: detailID)
             }
         }
     }

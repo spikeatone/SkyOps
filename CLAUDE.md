@@ -2555,7 +2555,10 @@ both orientations) incl. the full open-a-route→acquire flow.
   `FleetDetailView` gained `embedded: Bool` — hides its own header (cash line +
   back chevron + title) in the split since the list side already carries the
   header; portrait/iPhone keep the tap-to-push full-screen detail unchanged.
-  Only My Fleet splits — Marketplace stays full-width.
+  Only My Fleet splits — Marketplace stays full-width. The portrait tap-to-push
+  animates: the detail slides in from the trailing edge / list slides off
+  (`.move` + opacity, `.easeInOut(0.3)`), keyed on `detailID` ONLY so a rotation
+  (which flips `split`) stays instant instead of sliding.
 - **Screenshot capture gotcha (for the next session driving the Simulator):**
   `xcrun simctl io … screenshot` captures the RAW framebuffer, so in landscape
   the PNG comes out rotated 90°/180° depending on which way the device was
