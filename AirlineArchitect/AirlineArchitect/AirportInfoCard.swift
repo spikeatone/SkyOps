@@ -35,6 +35,21 @@ struct AirportInfoCard: View {
             }
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
 
+            // The red ring on the map means an active ground stop — explain it.
+            if airport.groundStop {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 12))
+                    Text("Ground stop — \(airport.groundStopReason ?? "Weather")")
+                        .font(.karla(13, .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                    Spacer(minLength: 6)
+                    Text("~\(max(0, airport.groundStopTicksLeft)) min left").font(.karla(12))
+                }
+                .foregroundStyle(Color(skyHex: 0xFF5C5C))
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .background(Color(skyHex: 0xFF5C5C).opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+
             if let i = airport.info {
                 // Daily flights = annual operations (arrivals + departures) / 365
                 // — a more intuitive, human-scale number than annual movements.

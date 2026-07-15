@@ -442,6 +442,9 @@ struct RouteConfirmPanel: View {
 struct RoutesPanel: View {
     let sim: Simulation
     @State private var expandedId: Int?
+    /// Measured content height so the panel HUGS its content (one collapsed route
+    /// card is short), only scrolling when the list exceeds the cap.
+    @State private var contentHeight: CGFloat = 0
 
     private let netGreen = Color(skyHex: 0x87ED7A)
     private let netRed   = Color(skyHex: 0xFF9292)
@@ -475,12 +478,12 @@ struct RoutesPanel: View {
                         if !closed.isEmpty { section("CLOSED ROUTES", closed) }
                     }
                     .padding(8)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
                 }
-                // Match BuyPanel's total card height (its 360 scroll + 8pt
-                // padding on each side = 376) so the two list panels dock at the
-                // same position — switching Acquire<->Routes no longer makes the
-                // panel top jump.
-                .frame(maxHeight: 376)
+                // Hug the content (a single collapsed route card is short) — only
+                // scroll once the list exceeds the cap. Expanding a route's caret
+                // grows the content, so the panel grows with it.
+                .frame(height: min(max(contentHeight, 1), 376))
             }
         }
         .frame(maxWidth: .infinity)

@@ -1191,13 +1191,13 @@ final class Simulation {
         // moderate duration (2.5–5 sim-hours).
         if Double.random(in: 0..<1) < Simulation.atcDailyProbability {
             let hit = Array(airports.shuffled().prefix(Int.random(in: 2...4)))
-            for ap in hit { ap.groundStop = true; ap.groundStopTicksLeft = 150 + Int.random(in: 0...150) }
+            for ap in hit { ap.groundStop = true; ap.groundStopTicksLeft = 150 + Int.random(in: 0...150); ap.groundStopReason = "ATC staffing shortage" }
             logOps(.disruption, "ATC staffing shortage", "Ground stops: \(hit.map { $0.code }.joined(separator: ", "))")
         }
         // Security incident — single airport, sharper & SHORTER than weather
         // (0.75–2 sim-hours vs weather's 1.5–5.5).
         if Double.random(in: 0..<1) < Simulation.securityDailyProbability, let ap = airports.randomElement() {
-            ap.groundStop = true; ap.groundStopTicksLeft = 45 + Int.random(in: 0...75)
+            ap.groundStop = true; ap.groundStopTicksLeft = 45 + Int.random(in: 0...75); ap.groundStopReason = "Security incident"
             logOps(.disruption, "Security incident", "Ground stop at \(ap.code)")
         }
         // Airport expansion — PERMANENT slot capacity increase (durable).
@@ -1725,11 +1725,13 @@ final class Simulation {
                 ap.groundStopTicksLeft -= 1
                 if ap.groundStopTicksLeft <= 0 {
                     ap.groundStop = false
+                    ap.groundStopReason = nil
                     if relevant.contains(ap.code) { logOps(.disruption, "Ground stop lifted", ap.code) }
                 }
             } else if Double.random(in: 0..<1) < ap.groundStopsPerMonth / Double(Simulation.ticksPerMonth) {
                 ap.groundStop = true
                 ap.groundStopTicksLeft = 90 + Int.random(in: 0...240)
+                ap.groundStopReason = "Weather"
                 if relevant.contains(ap.code) { logOps(.disruption, "Ground stop", "Weather hold at \(ap.code)") }
             }
         }

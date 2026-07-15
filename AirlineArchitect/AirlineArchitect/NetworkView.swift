@@ -459,6 +459,12 @@ struct NetworkView: View {
     // MARK: - Handlers
 
     private func handleTap(at p: CGPoint) {
+        // A tap on the visible map dismisses an open control-bar panel (Routes /
+        // Hire Crew — Acquire fills the whole map so there's nothing to tap).
+        if panel != .none {
+            withAnimation(Motion.glide) { panel = .none }
+            return
+        }
         switch routeMode {
         case .off:
             // Tapping a NEW aircraft or a NEW airport shows its card; tapping the

@@ -32,6 +32,9 @@ final class Airport: Identifiable {
     // Weather ground-stop state (Phase 3). Universal — applies to all traffic.
     var groundStop: Bool = false
     var groundStopTicksLeft: Int = 0
+    /// What triggered the current ground stop (Weather / ATC staffing shortage /
+    /// Security incident) — shown on the airport card's red-ring explainer.
+    var groundStopReason: String? = nil
 
     // Route-slot scarcity (Phase 5). Abstract capacity for new player routes —
     // busier/more-expensive airports have fewer. NOT real competitor modeling.
