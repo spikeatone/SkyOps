@@ -169,7 +169,7 @@ struct FinanceView: View {
         func pct(_ m: Double) -> String { (m >= 1 ? "+" : "") + "\(Int(((m - 1) * 100).rounded()))%" }
         let harmful = ev.fareMultiplier < 1 || ev.costMultiplier > 1
         let accent = harmful ? Color(skyHex: 0xFFAB44) : green
-        return HStack(alignment: .top, spacing: 10) {
+        return HStack(alignment: .center, spacing: 10) {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.system(size: 15)).foregroundStyle(accent)
             VStack(alignment: .leading, spacing: 3) {
