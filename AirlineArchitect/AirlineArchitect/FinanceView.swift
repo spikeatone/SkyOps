@@ -21,6 +21,8 @@ struct FinanceView: View {
     let sim: Simulation
     var store: Store
     var onBell: () -> Void = {}
+    var onSave: () -> Void = {}
+    var onQuit: () -> Void = {}
     var onUpgrade: () -> Void = {}
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
@@ -91,7 +93,8 @@ struct FinanceView: View {
                 Text("Cash on hand:").font(.karla(15, .semibold)).foregroundStyle(primary)
                 Text(compactMoney(cash)).font(.karla(15, .semibold))
                     .foregroundStyle(cash < 0 ? red : green)
-                Spacer()
+                Spacer(minLength: 8)
+                SaveQuitBar(onSave: onSave, onQuit: onQuit)
             }
             Divider().overlay(cardBorder)
             HStack {

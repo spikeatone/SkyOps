@@ -117,12 +117,8 @@ struct NetworkView: View {
                     .contentTransition(.numericText())
                     .animation(.snappy(duration: 0.35), value: sim.playerBalance)
                 Spacer(minLength: 8)
-                // Save / Quit — flushed right on the cash line (designer spec).
-                headerButton("Save", "arrow.down.circle") {
-                    onSave()
-                    withAnimation(Motion.glide) { flash = "Game saved" }
-                }
-                headerButton("Quit", "rectangle.portrait.and.arrow.right", action: onQuit)
+                // Save / Quit — flushed right on the cash line (persistent on every tab).
+                SaveQuitBar(onSave: onSave, onQuit: onQuit)
             }
             Divider().overlay((isDark ? Sky.onDarkStroke : Color(skyHex: 0xE2E8F0)).opacity(0.6))
             HStack {
@@ -144,21 +140,6 @@ struct NetworkView: View {
         }
     }
 
-    /// Compact icon+label pill for the Save / Quit header controls.
-    private func headerButton(_ label: String, _ icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 3) {
-                Image(systemName: icon).font(.system(size: 11, weight: .semibold))
-                Text(label).font(.karla(12, .semibold))
-            }
-            .foregroundStyle(barText)
-            .padding(.horizontal, 9).frame(height: 26)
-            .background(barBG)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(barBorder, lineWidth: 1))
-        }
-        .buttonStyle(.plain).pressable()
-    }
 
     private var cashString: String {
         let v = sim.playerBalance, a = abs(v), sign = v < 0 ? "−" : ""

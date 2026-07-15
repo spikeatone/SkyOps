@@ -19,6 +19,8 @@ struct FleetView: View {
     @Binding var tab: Int
     var store: Store
     var onBell: () -> Void = {}
+    var onSave: () -> Void = {}
+    var onQuit: () -> Void = {}
     var onUpgrade: (String?) -> Void = { _ in }
 
     /// Free-tier gate for Marketplace acquires — paywall at the fleet cap.
@@ -96,7 +98,8 @@ struct FleetView: View {
                 Text("Cash on hand:").font(.karla(15, .semibold)).foregroundStyle(primary)
                 Text(cashString).font(.karla(15, .semibold))
                     .foregroundStyle(sim.playerBalance < 0 ? Sky.red : Sky.coreGreen)
-                Spacer()
+                Spacer(minLength: 8)
+                SaveQuitBar(onSave: onSave, onQuit: onQuit)
             }
             Divider().overlay(cardBorder)
             HStack {
