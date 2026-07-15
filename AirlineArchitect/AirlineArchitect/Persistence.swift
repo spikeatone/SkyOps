@@ -17,6 +17,7 @@ import Foundation
 struct GameSnapshot: Codable {
     var version = 3
     var savedAtTick = 0
+    var savedAtEpoch = 0.0   // wall-clock save time (set by GameStore) — orders the slots
 
     // Identity + economy
     var playerAirlineName: String?
@@ -121,28 +122,83 @@ extension CrewStatus {
 
 // MARK: - Disk store
 
-/// Reads/writes the single-slot save file in the app's Documents directory.
+/// Lightweight summary of a saved slot, for the load/quit menu without decoding
+/// the whole snapshot's object graph.
+struct SlotInfo: Identifiable {
+    let index: Int
+    let airlineName: String
+    let day: Int
+    let cash: Int
+    let fleet: Int
+    let routes: Int
+    let savedAtEpoch: Double
+    var id: Int { index }
+}
+
+/// Reads/writes up to `slotCount` save files in the app's Documents directory.
+/// The game keeps a bounded number of slots on purpose — enough to try a few
+/// strategies, not so many that saves become throwaway.
 enum GameStore {
-    private static var url: URL {
+    static let slotCount = 3
+
+    private static func url(_ slot: Int) -> URL {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return dir.appendingPathComponent("savegame.json")
+        return dir.appendingPathComponent("savegame_\(slot).json")
     }
 
-    static var hasSave: Bool { FileManager.default.fileExists(atPath: url.path) }
+    /// Migrate a legacy single-file save (from the pre-slot build) into slot 0 once.
+    private static func migrateLegacyIfNeeded() {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let legacy = dir.appendingPathComponent("savegame.json")
+        guard FileManager.default.fileExists(atPath: legacy.path),
+              !FileManager.default.fileExists(atPath: url(0).path) else { return }
+        try? FileManager.default.moveItem(at: legacy, to: url(0))
+    }
 
-    static func save(_ snapshot: GameSnapshot) {
+    static func hasSave(_ slot: Int) -> Bool {
+        FileManager.default.fileExists(atPath: url(slot).path)
+    }
+
+    static var anySave: Bool {
+        migrateLegacyIfNeeded()
+        return (0..<slotCount).contains { hasSave($0) }
+    }
+
+    /// Index of a free slot, or nil if all are full.
+    static var firstFreeSlot: Int? {
+        migrateLegacyIfNeeded()
+        return (0..<slotCount).first { !hasSave($0) }
+    }
+
+    static func save(_ snapshot: GameSnapshot, slot: Int) {
+        var snap = snapshot
+        snap.savedAtEpoch = Date().timeIntervalSince1970
         do {
-            let data = try JSONEncoder().encode(snapshot)
-            try data.write(to: url, options: .atomic)
+            let data = try JSONEncoder().encode(snap)
+            try data.write(to: url(slot), options: .atomic)
         } catch { /* a failed save shouldn't crash the game */ }
     }
 
-    static func load() -> GameSnapshot? {
-        guard let data = try? Data(contentsOf: url),
+    static func load(slot: Int) -> GameSnapshot? {
+        migrateLegacyIfNeeded()
+        guard let data = try? Data(contentsOf: url(slot)),
               let snap = try? JSONDecoder().decode(GameSnapshot.self, from: data),
               snap.playerAirlineName != nil, !snap.isBankrupt else { return nil }
         return snap
     }
 
-    static func clear() { try? FileManager.default.removeItem(at: url) }
+    static func clear(slot: Int) { try? FileManager.default.removeItem(at: url(slot)) }
+
+    /// Summaries for every slot (nil where empty), for the load menu.
+    static func slotInfos() -> [SlotInfo?] {
+        migrateLegacyIfNeeded()
+        return (0..<slotCount).map { slot in
+            guard let data = try? Data(contentsOf: url(slot)),
+                  let s = try? JSONDecoder().decode(GameSnapshot.self, from: data),
+                  let name = s.playerAirlineName, !s.isBankrupt else { return nil }
+            return SlotInfo(index: slot, airlineName: name, day: s.tick / 1440,
+                            cash: s.playerBalance, fleet: s.aircraft.count,
+                            routes: s.routes.count, savedAtEpoch: s.savedAtEpoch)
+        }
+    }
 }

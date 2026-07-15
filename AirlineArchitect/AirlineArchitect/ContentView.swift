@@ -21,8 +21,10 @@ struct ContentView: View {
     @State private var showAlerts = false
     @State private var paywallReason: String?
     @State private var showPaywall = false
-    /// A saved game found at launch, awaiting the player's Continue / New choice.
-    @State private var pendingResume: GameSnapshot?
+    /// Which save slot the current game occupies (autosave / SAVE target).
+    @State private var currentSlot: Int?
+    /// Showing the load / slot-picker menu (cold launch with saves, or QUIT).
+    @State private var showLoadMenu = false
     /// Active first-play walkthrough step (nil = not running).
     @State private var tutorialStep: Int?
     @Environment(\.scenePhase) private var scenePhase
@@ -35,7 +37,8 @@ struct ContentView: View {
         // so the content lays out above it.
         Group {
             switch tab {
-            case 0:  NetworkView(sim: sim, store: store, onBell: { showAlerts = true }, onUpgrade: upgrade)
+            case 0:  NetworkView(sim: sim, store: store, onBell: { showAlerts = true }, onUpgrade: upgrade,
+                                 onSave: saveCurrent, onQuit: quitToMenu)
             case 1:  FleetView(sim: sim, tab: $tab, store: store, onBell: { showAlerts = true }, onUpgrade: upgrade)
             case 2:  CrewsView(sim: sim, onBell: { showAlerts = true })
             case 3:  OpsView(sim: sim, onBell: { showAlerts = true })
@@ -52,29 +55,30 @@ struct ContentView: View {
         .task(id: gameID) { await sim.run() }
         // Load + observe the Pro entitlement from RevenueCat.
         .task { await store.start() }
-        // On cold launch, offer to resume a saved game (before the naming screen).
+        // On cold launch, show the load menu if any saved game exists; otherwise
+        // fall through to the naming screen for a fresh airline in slot 0.
         .onAppear {
-            if pendingResume == nil, sim.playerAirlineName == nil, let saved = GameStore.load() {
-                pendingResume = saved
+            if currentSlot == nil, sim.playerAirlineName == nil, GameStore.anySave {
+                showLoadMenu = true
             }
         }
-        // Autosave whenever the app leaves the foreground (background/quit).
+        // Autosave to the current slot whenever the app leaves the foreground.
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active, sim.playerAirlineName != nil, !sim.isBankrupt {
-                GameStore.save(sim.snapshot())
+            if phase != .active, sim.playerAirlineName != nil, !sim.isBankrupt, let s = currentSlot {
+                GameStore.save(sim.snapshot(), slot: s)
             }
         }
         .overlay {
-            // Cold-launch resume prompt (takes precedence over naming).
-            if let saved = pendingResume {
-                ResumePromptView(snapshot: saved,
-                                 onContinue: { sim.restore(from: saved); pendingResume = nil },
-                                 onNew: { GameStore.clear(); pendingResume = nil })
+            // Load / slot-picker menu — takes precedence over naming.
+            if showLoadMenu {
+                SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) })
                     .transition(.opacity)
             } else if sim.playerAirlineName == nil {
                 // First-launch: name the airline before anything else.
                 AirlineNamingView { name, tailCode in
+                    if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
                     sim.nameAirline(name, tailCode: tailCode)
+                    if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
                     if !TutorialState.seen { tab = tutorialSteps[0].tab; tutorialStep = 0 }
                 }
                 .transition(.opacity)
@@ -145,15 +149,19 @@ struct ContentView: View {
         .overlay {
             if sim.isBankrupt {
                 GameOverView(sim: sim) {
-                    GameStore.clear()   // the failed airline is gone for good
+                    if let s = currentSlot { GameStore.clear(slot: s) }  // failed airline gone for good
                     sim = Simulation()
                     gameID = UUID()
+                    currentSlot = nil
                     tab = 0
+                    // Other saved airlines? Back to the menu; else a fresh start.
+                    showLoadMenu = GameStore.anySave
                 }
                 .transition(.opacity)
             }
         }
         .animation(.easeOut(duration: 0.25), value: sim.playerAirlineName)
+        .animation(.easeOut(duration: 0.25), value: showLoadMenu)
         .animation(.easeOut(duration: 0.2), value: showAlerts)
         .animation(.easeOut(duration: 0.2), value: showPaywall)
         .animation(.easeOut(duration: 0.3), value: sim.isBankrupt)
@@ -163,6 +171,42 @@ struct ContentView: View {
     private func upgrade(_ reason: String?) {
         paywallReason = reason
         showPaywall = true
+    }
+
+    // MARK: - Save slots
+
+    /// SAVE button — persist the current game to its slot.
+    private func saveCurrent() {
+        if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
+        if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
+    }
+
+    /// QUIT button — save the current game, then return to the load menu.
+    private func quitToMenu() {
+        saveCurrent()
+        withAnimation(.easeOut(duration: 0.25)) { showLoadMenu = true }
+    }
+
+    /// Load a saved slot into a fresh sim instance (so no residue from a prior
+    /// game survives), restart its run loop, and enter it.
+    private func loadSlot(_ slot: Int) {
+        guard let snap = GameStore.load(slot: slot) else { return }
+        let fresh = Simulation()
+        fresh.restore(from: snap)
+        sim = fresh
+        gameID = UUID()
+        currentSlot = slot
+        tab = 0
+        showLoadMenu = false
+    }
+
+    /// Start a brand-new airline in the given (empty) slot.
+    private func newGame(in slot: Int) {
+        sim = Simulation()
+        gameID = UUID()
+        currentSlot = slot
+        tab = 0
+        showLoadMenu = false   // naming screen shows next (playerAirlineName == nil)
     }
 
     /// Fleet / Crews / Ops / Finance — the other four tabs are designed later.

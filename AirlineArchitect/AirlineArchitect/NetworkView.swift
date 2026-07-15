@@ -39,6 +39,10 @@ struct NetworkView: View {
     var store: Store
     var onBell: () -> Void = {}
     var onUpgrade: (String?) -> Void = { _ in }
+    /// Persist the current game to its slot (SAVE button).
+    var onSave: () -> Void = {}
+    /// Save + return to the load menu (QUIT button).
+    var onQuit: () -> Void = {}
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     /// Section-header / icon blue — matches the other tabs (Figma "Dark Blue"
@@ -112,7 +116,13 @@ struct NetworkView: View {
                     // Rolling counter — the money ticks up/down instead of snapping.
                     .contentTransition(.numericText())
                     .animation(.snappy(duration: 0.35), value: sim.playerBalance)
-                Spacer()
+                Spacer(minLength: 8)
+                // Save / Quit — flushed right on the cash line (designer spec).
+                headerButton("Save", "arrow.down.circle") {
+                    onSave()
+                    withAnimation(Motion.glide) { flash = "Game saved" }
+                }
+                headerButton("Quit", "rectangle.portrait.and.arrow.right", action: onQuit)
             }
             Divider().overlay((isDark ? Sky.onDarkStroke : Color(skyHex: 0xE2E8F0)).opacity(0.6))
             HStack {
@@ -132,6 +142,22 @@ struct NetworkView: View {
                 if flyByID > 0 { PlaneFlyBy().id(flyByID) }
             }
         }
+    }
+
+    /// Compact icon+label pill for the Save / Quit header controls.
+    private func headerButton(_ label: String, _ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: icon).font(.system(size: 11, weight: .semibold))
+                Text(label).font(.karla(12, .semibold))
+            }
+            .foregroundStyle(barText)
+            .padding(.horizontal, 9).frame(height: 26)
+            .background(barBG)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(barBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain).pressable()
     }
 
     private var cashString: String {
