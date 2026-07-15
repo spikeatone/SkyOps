@@ -45,8 +45,12 @@ enum Feedback {
     }
 
     /// A milestone celebration (first flight, fleet size, net-worth threshold,
-    /// a route recouping) — the heaviest positive tap, no sound.
-    static func milestone() { success() }
+    /// a route recouping) — a success tap plus the congrats chime, timed with the
+    /// badge toast that slides in.
+    static func milestone() {
+        success()
+        MilestoneSound.shared.play()
+    }
 
     /// A new decision needs the player's attention (AOG / crew / sell / offer).
     static func alert() { warning() }
@@ -232,5 +236,35 @@ final class GateAnnouncement {
         u.preUtteranceDelay = 0.05
         synth.stopSpeaking(at: .immediate)
         synth.speak(u)
+    }
+}
+
+/// The milestone "congrats" chime (bundled recording), played alongside the
+/// badge toast that slides in on a milestone. Loaded once; no-op if absent.
+@MainActor
+final class MilestoneSound {
+    static let shared = MilestoneSound()
+    private var player: AVAudioPlayer?
+    private var lookedUp = false
+
+    private func clip() -> AVAudioPlayer? {
+        if !lookedUp {
+            lookedUp = true
+            for ext in ["wav", "caf", "m4a", "mp3"] {
+                if let url = Bundle.main.url(forResource: "milestone", withExtension: ext),
+                   let p = try? AVAudioPlayer(contentsOf: url) {
+                    p.prepareToPlay(); player = p; break
+                }
+            }
+        }
+        return player
+    }
+
+    func play() {
+        GameAudio.prepareAmbientSessionOnce()
+        guard let p = clip() else { return }
+        p.currentTime = 0
+        p.volume = 0.9
+        p.play()
     }
 }
