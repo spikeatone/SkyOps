@@ -1510,11 +1510,17 @@ final class Simulation {
         // The one event that's a real player CHOICE (Accept/Decline card), not a
         // passive effect. Only one open at a time; only when the player has a route.
         if !decisionQueue.contains(where: { $0.kind == .offer }),
-           Double.random(in: 0..<1) < Simulation.slotOfferDailyProbability,
-           let r = playerRoutes.randomElement() {
-            let amount = Int((Double(r.openingCost) * Double.random(in: 2.0...4.0)).rounded())
-            decisionQueue.append(Decision(id: "offer_\(r.id)_\(tick)", kind: .offer, aircraft: nil,
-                offer: SlotOffer(routeId: r.id, originCode: r.originCode, destCode: r.destCode, amount: amount)))
+           Double.random(in: 0..<1) < Simulation.slotOfferDailyProbability {
+            // The slot's market value = its real establishment cost. A SUBSIDIZED
+            // route (opened via an airport offer) has openingCost 0 but records the
+            // waived cost in `incentiveWaived` — use that so the buyback isn't $0.
+            let candidates = playerRoutes.filter { max($0.openingCost, $0.incentiveWaived) > 0 }
+            if let r = candidates.randomElement() {
+                let base = max(r.openingCost, r.incentiveWaived)
+                let amount = Int((Double(base) * Double.random(in: 2.0...4.0)).rounded())
+                decisionQueue.append(Decision(id: "offer_\(r.id)_\(tick)", kind: .offer, aircraft: nil,
+                    offer: SlotOffer(routeId: r.id, originCode: r.originCode, destCode: r.destCode, amount: amount)))
+            }
         }
 
         // #11 Insurance hard market — a temporary spike in the recurring premium.
