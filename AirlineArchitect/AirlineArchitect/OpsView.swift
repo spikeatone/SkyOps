@@ -17,6 +17,8 @@ struct OpsView: View {
     var onBell: () -> Void = {}
     var onSave: () -> Void = {}
     var onQuit: () -> Void = {}
+    /// Jump to an airport on the Network map (tap a mappable Ops event).
+    var onShowAirport: (String) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     /// Cached so the finder isn't recomputed on every tick — it only changes when
@@ -295,19 +297,35 @@ struct OpsView: View {
     }
 
     private func eventCard(_ e: OpsEvent) -> some View {
-        HStack(alignment: .top) {
+        let mappable = e.airportCode != nil
+        return HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(e.title).font(.karla(16, .semibold)).foregroundStyle(eventOrange)
                 Text(e.subtitle).font(.karla(14)).foregroundStyle(secondary)
+                if mappable {
+                    HStack(spacing: 3) {
+                        Image(systemName: "mappin.and.ellipse").font(.system(size: 10))
+                        Text("Show on map").font(.karla(12, .semibold))
+                    }
+                    .foregroundStyle(Sky.brightBlue).padding(.top, 3)
+                }
             }
             Spacer(minLength: 8)
-            Text(relativeTime(e.tick)).font(.karla(14)).foregroundStyle(secondary)
+            VStack(alignment: .trailing, spacing: 6) {
+                Text(relativeTime(e.tick)).font(.karla(14)).foregroundStyle(secondary)
+                if mappable {
+                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Sky.brightBlue)
+                }
+            }
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(eventSubBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .contentShape(Rectangle())
+        .onTapGesture { if let c = e.airportCode { onShowAirport(c) } }
     }
 
     // MARK: Helpers

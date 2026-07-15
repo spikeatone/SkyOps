@@ -42,7 +42,8 @@ struct ContentView: View {
             case 1:  FleetView(sim: sim, tab: $tab, store: store, onBell: { showAlerts = true },
                                onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: upgrade)
             case 2:  CrewsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu)
-            case 3:  OpsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu)
+            case 3:  OpsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu,
+                             onShowAirport: { code in sim.focusCamera(on: code); tab = 0 })
             default: FinanceView(sim: sim, store: store, onBell: { showAlerts = true },
                                  onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: { upgrade(nil) })
             }

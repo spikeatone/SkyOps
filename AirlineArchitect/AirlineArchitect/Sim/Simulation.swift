@@ -231,7 +231,7 @@ final class Simulation {
     // US (resetCameraToConus); zoom clamps to [0.4×, 28×].
 
     static let cameraMinZoom: CGFloat = 0.4    // out enough to see AK+HI+CONUS
-    static let cameraMaxZoom: CGFloat = 28     // in close enough to inspect a single airport (was 14)
+    static let cameraMaxZoom: CGFloat = 60     // in close enough to separate tight clusters (SFO/OAK) for tapping (was 28)
     private static let elementZoomGrowthMax: CGFloat = 0.15  // icon growth cap
 
     /// Horizontal wrap period in unit space = one full 360° of longitude. The map
@@ -421,6 +421,16 @@ final class Simulation {
         userAdjustedCamera = false
         cameraZoom = defaultZoom
         cameraCenter = Simulation.conusFrame.center
+    }
+
+    /// Center the map on an airport and zoom in enough to see it clearly — the
+    /// target of "show me where this airport is" from the Ops feed.
+    func focusCamera(on code: String) {
+        guard let ap = airport(code) else { return }
+        userAdjustedCamera = true
+        cameraZoom = min(Simulation.cameraMaxZoom, max(defaultZoom * 8, 10))
+        cameraCenter = ap.unit
+        wrapCameraX()
     }
 
     init() {
@@ -1364,9 +1374,9 @@ final class Simulation {
     }
 
     /// Record an event to the (capped, newest-first) Ops feed.
-    private func logOps(_ category: OpsEvent.Category, _ title: String, _ subtitle: String) {
+    private func logOps(_ category: OpsEvent.Category, _ title: String, _ subtitle: String, airportCode: String? = nil) {
         opsEventLog.insert(OpsEvent(id: nextOpsEventId, category: category,
-                                    title: title, subtitle: subtitle, tick: tick), at: 0)
+                                    title: title, subtitle: subtitle, tick: tick, airportCode: airportCode), at: 0)
         nextOpsEventId += 1
         if opsEventLog.count > 40 { opsEventLog.removeLast(opsEventLog.count - 40) }
     }
@@ -1488,13 +1498,13 @@ final class Simulation {
         // (0.75–2 sim-hours vs weather's 1.5–5.5).
         if Double.random(in: 0..<1) < Simulation.securityDailyProbability, let ap = airports.randomElement() {
             ap.groundStop = true; ap.groundStopTicksLeft = 45 + Int.random(in: 0...75); ap.groundStopReason = "Security incident"
-            logOps(.disruption, "Security incident", "Ground stop at \(ap.code)")
+            logOps(.disruption, "Security incident", "Ground stop at \(ap.code)", airportCode: ap.code)
         }
         // Airport expansion — PERMANENT slot capacity increase (durable).
         if Double.random(in: 0..<1) < Simulation.expansionDailyProbability, let ap = airports.randomElement() {
             let added = Int.random(in: 2...3)
             ap.slotsTotal += added; ap.slotsAvailable += added
-            logOps(.structural, "\(ap.code) capacity expansion", "\(added) new slots available")
+            logOps(.structural, "\(ap.code) capacity expansion", "\(added) new slots available", airportCode: ap.code)
         }
         // Slot-value buyback — an airport offers to buy back one route's slot.
         // The one event that's a real player CHOICE (Accept/Decline card), not a
@@ -2294,7 +2304,7 @@ final class Simulation {
                 ap.groundStop = true
                 ap.groundStopTicksLeft = 90 + Int.random(in: 0...240)
                 ap.groundStopReason = "Weather"
-                if relevant.contains(ap.code) { logOps(.disruption, "Ground stop", "Weather hold at \(ap.code)") }
+                if relevant.contains(ap.code) { logOps(.disruption, "Ground stop", "Weather hold at \(ap.code)", airportCode: ap.code) }
             }
         }
     }

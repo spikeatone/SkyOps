@@ -24,4 +24,7 @@ struct OpsEvent: Identifiable {
     let title: String
     let subtitle: String
     let tick: Int
+    /// A single airport this event is about (capacity expansion, ground stop) —
+    /// lets the Ops feed offer "show on map". nil for events with no one airport.
+    var airportCode: String? = nil
 }
