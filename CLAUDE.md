@@ -2290,7 +2290,12 @@ where numbers are involved.
     check (designed daily probs 4%/3%/2.5%). Headless-verified over 120 sim-days.
   - **Phase 2 — DONE** (`f94fb56`): Slot-Value Buyback (#16), the one event
     that's a real CHOICE. Daily 6% check when the player has a route (one open
-    at a time); the dest airport offers 2–4× the route's opening cost. Accept =
+    at a time); the dest airport offers 2–4× the route's opening cost. **BUGFIX
+    (designer-reported):** the base is `max(openingCost, incentiveWaived)`, NOT
+    just `openingCost` — a SUBSIDIZED route (opened via an airport recruitment
+    offer) has `openingCost` 0, which produced a "$0 offered" buyback; the waived
+    cost is recorded in `incentiveWaived` and is the slot's real value. Routes with
+    no real value are filtered out. Accept =
     credit cash + close/archive the route + its aircraft becomes an idle spare
     (SLOT sold, not plane); Decline = keep it. **Decision refactor**:
     `Decision.aircraft` is now OPTIONAL and `Decision` gained an `.offer` kind +
