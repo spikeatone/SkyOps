@@ -159,7 +159,9 @@ final class Simulation {
     private func tickCompetition() {
         for r in playerRoutes {
             let ageDays = (tick - r.openedTick) / 1440
-            if r.competitionLevel < Simulation.competitionCap, r.isProfitable,
+            // Must be actually flown + genuinely profitable (a subsidized route's
+            // $0 opening cost makes isProfitable true from tick 0 — flights>0 guards it).
+            if r.competitionLevel < Simulation.competitionCap, r.flights > 0, r.isProfitable,
                ageDays >= Simulation.competitionMinRouteAgeDays {
                 // High reputation deters entrants (a well-liked incumbent is hard
                 // to unseat): rep 100 → half the base rate, rep 0 → full rate.
@@ -664,17 +666,46 @@ final class Simulation {
         return nil
     }
 
-    /// Open a route and assign a spare to fly it. Ported from openRoute().
+    /// Create the Route (charge cost, consume slots, log). Shared by openRoute
+    /// (staffed now) and the airport-offer accept path (may open PENDING — no
+    /// aircraft yet). Does NOT assign an aircraft.
     @discardableResult
-    /// `subsidized` (an airport incentive — see the airport-recruitment offer)
-    /// waives the opening cost entirely: no charge, and the route's recorded
-    /// opening cost is 0 so its P&L starts even.
+    private func createRoute(from origin: Airport, to dest: Airport, cost: Int,
+                             incentiveBonus: Int = 0, waived: Int = 0) -> Route {
+        playerBalance -= cost
+        totalRouteSpend += cost
+        if origin.slotsAvailable > 0 { origin.slotsAvailable -= 1 }
+        if dest.slotsAvailable > 0 { dest.slotsAvailable -= 1 }
+        let r = Route(id: nextRouteId, originCode: origin.code, destCode: dest.code,
+                      openedTick: tick, openingCost: cost)
+        r.incentiveBonus = incentiveBonus
+        r.incentiveWaived = waived
+        nextRouteId += 1
+        playerRoutes.append(r)
+        routeOpenPulse = RoutePulse(a: origin.code, b: dest.code, tick: tick)   // map ripple
+        logOps(.structural, "Route opened", "\(origin.code) ↔︎ \(dest.code)")
+        return r
+    }
+
+    /// Assign an idle spare to fly a route (range/runway assumed already checked).
+    private func assign(_ ac: Aircraft, to r: Route, origin: Airport, dest: Airport) {
+        r.assignmentHistory.append(RouteAssignment(id: r.assignmentHistory.count, tail: ac.tail,
+                                                   typeName: ac.type.name, assignedTick: tick))
+        ac.assignedRouteId = r.id
+        ac.origin = origin
+        ac.dest = dest
+        ac.stateIndex = FlightState.parked.rawValue
+        ac.stateTick = 0
+        rollRevenue(for: ac)
+    }
+
+    /// Open a route and assign a spare to fly it. `subsidized` (an airport
+    /// incentive) waives the opening cost entirely. Ported from openRoute().
+    @discardableResult
     func openRoute(from origin: Airport, to dest: Airport, using ac: Aircraft, subsidized: Bool = false) -> OpenRouteResult {
         if origin === dest { return .sameAirport }
         if route(between: origin.code, dest.code) != nil { return .alreadyOpen }
         guard ac.purchased, ac.assignedRouteId == nil else { return .noSpare }
-        // Physical constraints: the assigned aircraft must actually be able to fly
-        // it (range + runway at both ends).
         switch routeBlock(for: ac, from: origin, to: dest) {
         case .range:  return .outOfRange
         case .runway(let code): return .runwayTooShort(code)
@@ -682,28 +713,32 @@ final class Simulation {
         }
         let cost = subsidized ? 0 : routeOpeningCost(origin, dest)
         guard playerBalance >= cost else { return .insufficientFunds(cost) }
-
-        playerBalance -= cost
-        totalRouteSpend += cost
-        if origin.slotsAvailable > 0 { origin.slotsAvailable -= 1 }
-        if dest.slotsAvailable > 0 { dest.slotsAvailable -= 1 }
-
-        let r = Route(id: nextRouteId, originCode: origin.code, destCode: dest.code,
-                      openedTick: tick, openingCost: cost)
-        r.assignmentHistory.append(RouteAssignment(id: 0, tail: ac.tail,
-                                                   typeName: ac.type.name, assignedTick: tick))
-        nextRouteId += 1
-        playerRoutes.append(r)
-        routeOpenPulse = RoutePulse(a: origin.code, b: dest.code, tick: tick)   // map ripple
-        logOps(.structural, "Route opened", "\(origin.code) ↔︎ \(dest.code)")
-
-        ac.assignedRouteId = r.id
-        ac.origin = origin
-        ac.dest = dest
-        ac.stateIndex = FlightState.parked.rawValue
-        ac.stateTick = 0
-        rollRevenue(for: ac)
+        let r = createRoute(from: origin, to: dest, cost: cost)
+        assign(ac, to: r, origin: origin, dest: dest)
         return .success
+    }
+
+    // MARK: Pending routes (opened by an accepted offer, awaiting an aircraft)
+
+    /// True if some owned aircraft is flying this route.
+    func routeStaffed(_ r: Route) -> Bool { aircraft.contains { $0.purchased && $0.assignedRouteId == r.id } }
+    /// Open routes with no aircraft yet (accepted an offer, still need a plane).
+    var pendingRoutes: [Route] { playerRoutes.filter { !routeStaffed($0) } }
+    /// Open routes that received an airport incentive (for the Ops box).
+    var incentedRoutes: [Route] { playerRoutes.filter { $0.hasIncentive } }
+
+    /// Auto-staff pending routes with an idle spare that can fly them (oldest
+    /// pending first). So after accepting an offer, buying an aircraft in range
+    /// puts it on that route. Runs per tick, early-returning when no spare exists.
+    private func assignSpareToPendingRoutes() {
+        guard !idleSpares.isEmpty else { return }
+        for r in playerRoutes where !routeStaffed(r) {
+            guard let o = airport(r.originCode), let d = airport(r.destCode) else { continue }
+            if let spare = idleSpares.first(where: { routeBlock(for: $0, from: o, to: d) == nil }) {
+                assign(spare, to: r, origin: o, dest: d)
+                logOps(.structural, "Aircraft assigned", "\(spare.tail) → \(r.originCode) ↔\u{FE0E} \(r.destCode)")
+            }
+        }
     }
 
     // MARK: Selling
@@ -1599,17 +1634,27 @@ final class Simulation {
         return templates[abs(tick) % templates.count]
     }
 
-    /// AIRPORT OFFER card: accept — open the route free (subsidized) using an
-    /// eligible spare and bank the signing bonus.
+    /// AIRPORT OFFER card: accept — ALWAYS opens the route free (subsidized) and
+    /// banks the signing bonus. If an eligible spare exists it's assigned now;
+    /// otherwise the route opens PENDING (awaiting an aircraft) and is auto-staffed
+    /// once the player acquires/frees an in-range spare. No more spare-required
+    /// dead-end.
     func resolveAirportOfferAccept(_ decision: Decision) {
         defer { decisionQueue.removeAll { $0.id == decision.id } }
         guard let p = decision.pitch, let o = airport(p.originCode), let d = airport(p.destCode),
-              let spare = eligibleSpareForOffer(p) else { return }
-        guard case .success = openRoute(from: o, to: d, using: spare, subsidized: true) else { return }
+              route(between: o.code, d.code) == nil else { return }
+        let waived = routeOpeningCost(o, d)   // what it WOULD have cost — for the Ops incentive box
+        let r = createRoute(from: o, to: d, cost: 0, incentiveBonus: p.signingBonus, waived: waived)
         playerBalance += p.signingBonus
         totalOfferIncome += p.signingBonus
-        logOps(.structural, "Route offer accepted",
-               "\(p.originCode) ↔\u{FE0E} \(p.destCode): +$\(p.signingBonus.formatted()) bonus, opening waived")
+        if let spare = eligibleSpareForOffer(p) {
+            assign(spare, to: r, origin: o, dest: d)
+            logOps(.structural, "Route offer accepted",
+                   "\(o.code) ↔\u{FE0E} \(d.code): \(spare.tail) assigned · +$\(p.signingBonus.formatted()) bonus")
+        } else {
+            logOps(.structural, "Route offer accepted",
+                   "\(o.code) ↔\u{FE0E} \(d.code): awaiting an aircraft · +$\(p.signingBonus.formatted()) bonus")
+        }
     }
 
     /// AIRPORT OFFER card: decline.
@@ -2092,6 +2137,7 @@ final class Simulation {
                   openingCost: r.openingCost, cumulativeNet: r.cumulativeNet, flights: r.flights,
                   totalLeaseCost: r.totalLeaseCost, closedTick: r.closedTick,
                   competitionLevel: r.competitionLevel, competitors: r.competitors,
+                  incentiveBonus: r.incentiveBonus, incentiveWaived: r.incentiveWaived,
                   history: r.history.map { FlightRecordSave(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) },
                   assignmentHistory: r.assignmentHistory.map { RouteAssignmentSave(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) })
     }
@@ -2099,6 +2145,7 @@ final class Simulation {
         let r = Route(id: s.id, originCode: s.originCode, destCode: s.destCode, openedTick: s.openedTick, openingCost: s.openingCost)
         r.cumulativeNet = s.cumulativeNet; r.flights = s.flights; r.totalLeaseCost = s.totalLeaseCost; r.closedTick = s.closedTick
         r.competitionLevel = s.competitionLevel; r.competitors = s.competitors
+        r.incentiveBonus = s.incentiveBonus; r.incentiveWaived = s.incentiveWaived
         r.history = s.history.map { FlightRecord(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) }
         r.assignmentHistory = s.assignmentHistory.map { RouteAssignment(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) }
         return r
@@ -2197,6 +2244,7 @@ final class Simulation {
         tickInsuranceBilling()
         tickUsedMarketReplenishment()
         tickSolvency()
+        assignSpareToPendingRoutes()   // staff any offer-opened routes with an in-range spare
         checkMilestones()
         for ac in aircraft {
             switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {

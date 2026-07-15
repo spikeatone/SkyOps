@@ -72,6 +72,12 @@ final class Route: Identifiable {
     var competitionLevel: Int = 0
     var competitors: [String] = []
 
+    // Airport incentive (from an accepted route offer): the signing bonus banked
+    // and the opening cost that was waived — both for the Ops incentives display.
+    var incentiveBonus: Int = 0
+    var incentiveWaived: Int = 0
+    var hasIncentive: Bool { incentiveBonus > 0 || incentiveWaived > 0 }
+
     /// The player's share of this route's demand given the competition on it and
     /// the airline's reputation. Uncontested = 1.0. Each rival takes a slice, but
     /// a strong reputation lets the airline hold more of the market.

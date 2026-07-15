@@ -183,17 +183,20 @@ struct NeedsAttentionCard: View {
         // route (waived opening cost + a signing bonus). Accept only appears when
         // an idle aircraft in range exists; the pitch itself is the subtitle.
         if d.kind == .airportOffer, let p = d.pitch {
-            var btns: [(String, () -> Void)] = []
-            if sim.eligibleSpareForOffer(p) != nil {
-                btns.append(("Open free + \(compactMoney(p.signingBonus))", { Feedback.impact(.medium); sim.resolveAirportOfferAccept(d) }))
-            }
-            btns.append(("Decline", { sim.resolveAirportOfferDecline(d) }))
-            let need = sim.eligibleSpareForOffer(p) == nil ? " — free an idle aircraft in range to accept" : ""
+            // Accept ALWAYS opens the route (free) + banks the bonus. If no spare
+            // is in range, it opens PENDING and auto-staffs once you get an
+            // aircraft — no more dead-end.
+            let note = sim.eligibleSpareForOffer(p) == nil
+                ? " Accepting opens the route now — acquire an in-range aircraft to start flying it."
+                : ""
             return AlertModel(
                 accent: accentBlue, icon: "megaphone.fill", category: "Route offer",
                 title: "\(p.originCity) wants your airline",
-                subtitle: p.pitch + need,
-                buttons: btns.map { (label: $0.0, action: $0.1) })
+                subtitle: p.pitch + note,
+                buttons: [
+                    ("Accept · +\(compactMoney(p.signingBonus))", { Feedback.impact(.medium); sim.resolveAirportOfferAccept(d) }),
+                    ("Decline", { sim.resolveAirportOfferDecline(d) }),
+                ])
         }
         let ac = d.aircraft!   // aog / crew / sell always carry an aircraft
         switch d.kind {

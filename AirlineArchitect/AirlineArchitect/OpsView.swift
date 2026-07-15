@@ -42,6 +42,7 @@ struct OpsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         if !sim.decisionQueue.isEmpty { needsAttentionGroup }
+                        if !sim.incentedRoutes.isEmpty { incentivesGroup }
                         reputationGroup
                         competitionGroup
                         opportunitiesGroup
@@ -68,6 +69,46 @@ struct OpsView: View {
         .onChange(of: sim.opsEventLog.first?.id) { _, _ in sim.markOpsEventsSeen() }
         // Recompute the finder only when the route network changes (not per tick).
         .onChange(of: sim.playerRoutes.count) { _, _ in opportunities = sim.topRouteOpportunities() }
+    }
+
+    // MARK: Airport Incentives (from accepted route offers)
+    private var incentivesGroup: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Airport Incentives").font(.karla(20, .heavy)).foregroundStyle(primary)
+            Text("Deals you accepted — waived opening fees and marketing bonuses.")
+                .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+            ForEach(sim.incentedRoutes) { r in
+                let pending = !sim.routeStaffed(r)
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(r.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                            Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold)).foregroundStyle(secondary)
+                            Text(r.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                        }
+                        Text(pending ? "Awaiting aircraft — acquire one in range" : "In service")
+                            .font(.karla(12)).foregroundStyle(pending ? Color(skyHex: 0xFFB700) : Sky.coreGreen)
+                    }
+                    Spacer(minLength: 8)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("+\(compact(r.incentiveBonus)) bonus").font(.karla(14, .bold)).foregroundStyle(Sky.coreGreen)
+                        Text("opening waived (\(compact(r.incentiveWaived)))").font(.karla(12)).foregroundStyle(secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+    private func compact(_ v: Int) -> String {
+        let a = abs(v), s = v < 0 ? "−" : ""
+        if a >= 1_000_000 { return s + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
+        if a >= 1_000 { return s + "$" + String(format: "%.0fk", Double(a) / 1_000) }
+        return s + "$\(a)"
     }
 
     // MARK: Reputation

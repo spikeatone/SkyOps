@@ -85,6 +85,8 @@ struct RouteSave: Codable {
     var closedTick: Int?
     var competitionLevel: Int = 0
     var competitors: [String] = []
+    var incentiveBonus: Int = 0
+    var incentiveWaived: Int = 0
     var history: [FlightRecordSave]
     var assignmentHistory: [RouteAssignmentSave]
 }
