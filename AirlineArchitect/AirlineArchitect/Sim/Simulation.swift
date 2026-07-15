@@ -584,7 +584,10 @@ final class Simulation {
 
     /// Open a route and assign a spare to fly it. Ported from openRoute().
     @discardableResult
-    func openRoute(from origin: Airport, to dest: Airport, using ac: Aircraft) -> OpenRouteResult {
+    /// `subsidized` (an airport incentive — see the airport-recruitment offer)
+    /// waives the opening cost entirely: no charge, and the route's recorded
+    /// opening cost is 0 so its P&L starts even.
+    func openRoute(from origin: Airport, to dest: Airport, using ac: Aircraft, subsidized: Bool = false) -> OpenRouteResult {
         if origin === dest { return .sameAirport }
         if route(between: origin.code, dest.code) != nil { return .alreadyOpen }
         guard ac.purchased, ac.assignedRouteId == nil else { return .noSpare }
@@ -595,7 +598,7 @@ final class Simulation {
         case .runway(let code): return .runwayTooShort(code)
         case nil: break
         }
-        let cost = routeOpeningCost(origin, dest)
+        let cost = subsidized ? 0 : routeOpeningCost(origin, dest)
         guard playerBalance >= cost else { return .insufficientFunds(cost) }
 
         playerBalance -= cost
@@ -1088,15 +1091,27 @@ final class Simulation {
     // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
 
     struct Decision: Identifiable {
-        enum Kind { case aog, crew, sell, offer, training }
+        enum Kind { case aog, crew, sell, offer, training, airportOffer }
         let id: String
         let kind: Kind
-        /// The subject aircraft (aog / crew / sell). nil for `.offer` / `.training`.
+        /// The subject aircraft (aog / crew / sell). nil for the others.
         let aircraft: Aircraft?
         /// The slot-buyback details (`.offer` only).
         var offer: SlotOffer? = nil
         /// The crew family due for recurrent training (`.training` only).
         var trainingFamily: String? = nil
+        /// An airport recruiting the player to open a route (`.airportOffer` only).
+        var pitch: AirportPitch? = nil
+    }
+
+    /// An airport recruiting the player to open a new route to it — waived
+    /// opening cost + a signing bonus, plus a human pitch from the airport's
+    /// officials. Designed to put a smaller, off-radar airport on the player's
+    /// radar. Regenerates each session (lives only in the decision queue).
+    struct AirportPitch {
+        let originCode, destCode, originCity, destCity: String
+        let signingBonus, demandPerDay, expiryTick: Int
+        let pitch: String
     }
 
     /// A slot-value buyback: an airport (the destination) offers to buy back a
@@ -1290,6 +1305,8 @@ final class Simulation {
 
         // Recurrent crew training (return trainees, run deferred, push due cards).
         tickCrewTraining()
+        // Airport recruitment offers (an airport pitches you to open a route).
+        tickAirportOffers()
 
         // Clear an expired fare war so a new one can start.
         if fareWarRouteId != nil, tick >= fareWarExpiryTick { fareWarRouteId = nil }
@@ -1426,6 +1443,81 @@ final class Simulation {
 
     /// OFFER card: decline — keep the route.
     func resolveOfferDecline(_ decision: Decision) {
+        decisionQueue.removeAll { $0.id == decision.id }
+    }
+
+    // MARK: - Airport recruitment offers (an airport pitches YOU to open a route)
+
+    private static let airportOfferDailyProbability = 0.08
+    private static let airportOfferDurationDays = 12
+
+    func airport(_ code: String) -> Airport? { airports.first { $0.code == code } }
+
+    /// An idle spare (owned, unassigned) that can physically fly this pitched
+    /// route — the accept option only appears when one exists.
+    func eligibleSpareForOffer(_ p: AirportPitch) -> Aircraft? {
+        guard let o = airport(p.originCode), let d = airport(p.destCode) else { return nil }
+        return idleSpares.first { routeBlock(for: $0, from: o, to: d) == nil }
+    }
+
+    /// Once/day: expire a stale offer, then maybe push a new one (one at a time).
+    /// Origin is a smaller, off-radar CONUS airport the player doesn't serve (to
+    /// put it on their radar); dest prefers a hub already in their network.
+    private func tickAirportOffers() {
+        decisionQueue.removeAll { $0.kind == .airportOffer && ($0.pitch?.expiryTick ?? 0) <= tick }
+        guard !decisionQueue.contains(where: { $0.kind == .airportOffer }),
+              Double.random(in: 0..<1) < Simulation.airportOfferDailyProbability else { return }
+
+        let servedCodes = Set(playerRoutes.flatMap { [$0.originCode, $0.destCode] })
+        let servedPairs = Set(playerRoutes.map { pairKey($0.originCode, $0.destCode) })
+        let conus = conusAirports.filter { $0.info != nil }
+        let bySize = conus.sorted { ($0.info?.annualPassengers ?? 0) < ($1.info?.annualPassengers ?? 0) }
+        let smaller = Array(bySize.prefix(max(1, bySize.count * 2 / 3)))   // bottom ~2/3 by traffic
+        guard let origin = smaller.filter({ !servedCodes.contains($0.code) }).randomElement() else { return }
+        let hubs = conus.sorted { ($0.info?.annualPassengers ?? 0) > ($1.info?.annualPassengers ?? 0) }
+        let dest = hubs.first(where: { servedCodes.contains($0.code) && $0.code != origin.code
+                                       && !servedPairs.contains(pairKey(origin.code, $0.code)) })
+            ?? hubs.first(where: { $0.code != origin.code && !servedPairs.contains(pairKey(origin.code, $0.code)) })
+        guard let dest else { return }
+
+        let demand = routeDailyDemand(origin, dest)
+        let bonus = min(500_000, 100_000 + demand * 300)
+        let oCity = origin.info?.city ?? origin.code, dCity = dest.info?.city ?? dest.code
+        let pitchText = airportPitchText(originCity: oCity, destCity: dCity,
+                                         originCode: origin.code, destCode: dest.code, demand: demand, bonus: bonus)
+        decisionQueue.append(Decision(id: "airport_\(origin.code)_\(tick)", kind: .airportOffer, aircraft: nil,
+            pitch: AirportPitch(originCode: origin.code, destCode: dest.code, originCity: oCity, destCity: dCity,
+                                signingBonus: bonus, demandPerDay: demand,
+                                expiryTick: tick + Simulation.airportOfferDurationDays * 1440, pitch: pitchText)))
+        logOps(.structural, "Route offer", "\(oCity) is courting you for \(origin.code) ↔\u{FE0E} \(dest.code)")
+    }
+
+    private func airportPitchText(originCity: String, destCity: String, originCode: String,
+                                  destCode: String, demand: Int, bonus: Int) -> String {
+        let b = "$\(bonus.formatted())"
+        let templates = [
+            "\(originCity)'s airport authority is courting you: fly \(originCode) ↔ \(destCode) and we'll waive every opening fee, plus a \(b) marketing package. ~\(demand) travelers a day, and no direct link to your network yet.",
+            "\(originCity) wants your airline. Launch \(originCode) ↔ \(destCode), pocket a \(b) signing incentive, and we cover your setup costs. This market's been overlooked too long.",
+            "Straight talk from \(originCity): ~\(demand) passengers a day are driving hours to the nearest hub. Open \(originCode) ↔ \(destCode) on us — zero opening cost, plus \(b) to get started.",
+        ]
+        return templates[abs(tick) % templates.count]
+    }
+
+    /// AIRPORT OFFER card: accept — open the route free (subsidized) using an
+    /// eligible spare and bank the signing bonus.
+    func resolveAirportOfferAccept(_ decision: Decision) {
+        defer { decisionQueue.removeAll { $0.id == decision.id } }
+        guard let p = decision.pitch, let o = airport(p.originCode), let d = airport(p.destCode),
+              let spare = eligibleSpareForOffer(p) else { return }
+        guard case .success = openRoute(from: o, to: d, using: spare, subsidized: true) else { return }
+        playerBalance += p.signingBonus
+        totalOfferIncome += p.signingBonus
+        logOps(.structural, "Route offer accepted",
+               "\(p.originCode) ↔\u{FE0E} \(p.destCode): +$\(p.signingBonus.formatted()) bonus, opening waived")
+    }
+
+    /// AIRPORT OFFER card: decline.
+    func resolveAirportOfferDecline(_ decision: Decision) {
         decisionQueue.removeAll { $0.id == decision.id }
     }
 

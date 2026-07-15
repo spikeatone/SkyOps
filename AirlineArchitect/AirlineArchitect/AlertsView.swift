@@ -179,6 +179,22 @@ struct NeedsAttentionCard: View {
                     ("Defer 30 days · \(compactMoney(later))", { sim.resolveTrainingDefer(d) }),
                 ])
         }
+        // Airport recruitment offer — an airport pitches the player to open a
+        // route (waived opening cost + a signing bonus). Accept only appears when
+        // an idle aircraft in range exists; the pitch itself is the subtitle.
+        if d.kind == .airportOffer, let p = d.pitch {
+            var btns: [(String, () -> Void)] = []
+            if sim.eligibleSpareForOffer(p) != nil {
+                btns.append(("Open free + \(compactMoney(p.signingBonus))", { Feedback.impact(.medium); sim.resolveAirportOfferAccept(d) }))
+            }
+            btns.append(("Decline", { sim.resolveAirportOfferDecline(d) }))
+            let need = sim.eligibleSpareForOffer(p) == nil ? " — free an idle aircraft in range to accept" : ""
+            return AlertModel(
+                accent: accentBlue, icon: "megaphone.fill", category: "Route offer",
+                title: "\(p.originCity) wants your airline",
+                subtitle: p.pitch + need,
+                buttons: btns.map { (label: $0.0, action: $0.1) })
+        }
         let ac = d.aircraft!   // aog / crew / sell always carry an aircraft
         switch d.kind {
         case .aog:
@@ -222,6 +238,10 @@ struct NeedsAttentionCard: View {
             return AlertModel(accent: accentBlue, icon: "graduationcap.fill",
                               category: "Crew training", title: "Training due", subtitle: "",
                               buttons: [("Defer", { sim.resolveTrainingDefer(d) })])
+        case .airportOffer:   // handled by the early return above; unreachable
+            return AlertModel(accent: accentBlue, icon: "megaphone.fill",
+                              category: "Route offer", title: "Route offer", subtitle: "",
+                              buttons: [("Decline", { sim.resolveAirportOfferDecline(d) })])
         }
     }
 
