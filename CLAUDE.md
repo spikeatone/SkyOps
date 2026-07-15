@@ -2418,6 +2418,29 @@ where numbers are involved.
   each tick; speed-dependent, acceptable). (5) EASTER EGG — tapping the "NETWORK"
   title zips a ✈️ across the header in an arc (`PlaneFlyBy`, replayed via `.id`).
   Milestone toast verified visually; the rest are standard SwiftUI transitions.
+- **HAPTICS + SUBTLE SFX — BUILT (native app; designer request, extends the
+  delight layer).** `Feedback.swift` (UIKit/AVFoundation, VIEW layer only — the
+  Sim layer stays framework-free for the headless harness, so every trigger is a
+  SwiftUI action or an `.onChange` on observed sim state). Deliberately RESTRAINED
+  per designer direction ("don't cartoon it up"): light haptics on the big
+  moments, and exactly ONE sound — a short jet whoosh reserved for the flagship
+  moment (acquiring an aircraft). Triggers: acquire aircraft (buy/lease/used) →
+  success haptic + jet whoosh (`NetworkView.handleBought` + the three `FleetView`
+  marketplace buttons); open route → medium impact (`openConfirmedRoute .success`);
+  milestone celebration → success haptic; new decision/alert → warning haptic
+  (`onChange decisionQueue.count` increasing); bankruptcy → error haptic; sell →
+  light impact (Alerts sell + Fleet-detail sell). `JetSound` is self-contained:
+  it PREFERS a real bundled recording (`jet`/`jet_takeoff` .caf/.wav/.m4a/.mp3) if
+  one is ever dropped into the bundle — a true drop-in upgrade — else synthesizes
+  a band-passed-noise whoosh swept 2200→400 Hz with a soft rise-then-fall swell at
+  low gain (player.volume 0.5, so effective peak ~0.21 — subtle). Plays under
+  `AVAudioSession.ambient` + `.mixWithOthers`, so the hardware silent switch mutes
+  it and the player's music keeps playing (the tasteful default for non-essential
+  game SFX). The synthesized WAV was validated with `afinfo` (44.1k mono Int16,
+  1.1s, valid container) so `AVAudioPlayer` accepts it — but the TIMBRE and the
+  haptics can only be judged on a REAL DEVICE (the Simulator has no haptics and I
+  can't audition audio here). If the synth whoosh isn't right, dropping a real
+  recording into `Resources/` is all it takes to override it.
 - **Pinch-zoom on the mobile app**: still not built (this is a browser
   prototype), but the underlying mechanism is no longer blocked or even
   really "open" in the same sense — the camera system built for pan/zoom
