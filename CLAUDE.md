@@ -2275,6 +2275,56 @@ where numbers are involved.
   - **ALL 16 external events are now built.** Magnitudes for every built event
     are DESIGNED pacing, not sourced. All surface in the Ops feed and/or the
     economics; the only one that's a player choice is #16 (the Offer card).
+  - **#17 RECURRENT CREW TRAINING — DONE (a recurring player CHOICE).** Each owned
+    crew family comes due for recurrent training on a ~150-day cycle (real FAA
+    analog). Pushes a blue `.training` card (graduation-cap) with: **Train now**
+    (pay the base cost = the crew-hire basis, ERJ $28k; ~half the family's ready
+    crew go `.sidelined` ~4 days — degrades but doesn't stop ops), or **Defer 30
+    days** (no downtime now, auto-runs in 30 days at 1.6× cost). `Decision` gained
+    `.training` + `trainingFamily`. State: `crewTrainingDueByFamily` /
+    `crewTrainingDeferredByFamily` (BOTH persisted — the schedule survives save/
+    load) + a transient downtime expiry. `tickCrewTraining()` (daily) returns
+    trainees, runs due deferrals, pushes due cards; `resizeCrewPools` clears
+    training state when a family is sold off. Verified 11/11 headless.
+  - **#18 AIRPORT RECRUITMENT OFFER — DONE (the counterpart to the #16 slot
+    buyback, which is the OPPOSITE: an airport buying YOUR slot).** A smaller,
+    off-radar CONUS airport periodically courts the player to open a route TO it,
+    with a **human pitch** from its officials (3 templates using real
+    `AirportInfo.city` names) + real incentives: **waived opening cost** (`openRoute`
+    gained a `subsidized` flag → 0 charge, route.openingCost 0) + a **signing
+    bonus** ($100k + demand-scaled, capped $500k). Origin drawn from the bottom
+    ~2/3 by traffic (unserved); dest prefers a hub already in the player's network.
+    Blue `.airportOffer` card (megaphone) via NeedsAttentionCard — **Accept only
+    appears when an idle aircraft in range exists** (else the subtitle says to free
+    one); accept opens the route free + banks the bonus (via `totalOfferIncome`, so
+    the Finance invariant holds). Offers expire after 12 days; one at a time;
+    ~8%/day. `pitch`/`AirportPitch` on `Decision`; not persisted (regenerates).
+    Verified 7/7 headless. Example pitch: "Jackson, MS's airport authority is
+    courting you: fly JAN ↔ ATL and we'll waive every opening fee, plus a $200,800
+    marketing package…".
+
+- **ROUTE OPPORTUNITIES finder — DONE (Ops tab; "underserved markets").**
+  `Simulation.topRouteOpportunities(perClass:)` surfaces high-demand city pairs the
+  player doesn't serve, using the demand model (the truth of profitability here,
+  since no competitor route-saturation is modeled). Returns a SPREAD across fleet
+  tiers (top regional / narrowbody / widebody markets) rather than a raw demand
+  ranking — otherwise it's always the same mega-hub widebody pairs a starter can't
+  touch; the regional tier naturally surfaces the smaller, off-radar airports.
+  Each row: city pair + real city names + est. demand/day + distance + suggested
+  class. Cached in OpsView `@State`, recomputed only when the route network
+  changes (not per tick). Verified visually + headlessly.
+
+- **MILESTONE ladder extended + audio-fix batch — DONE.** Net-worth awards added a
+  **$30M** tier (gated on owning ≥1 aircraft, so it fires as "grown back past your
+  starting stake", NOT at the $30M start) and a **fleet-of-50** award, alongside
+  the existing $50M/$100M/$250M/$500M/$1B + fleet 5/10/25. Haptics come free via
+  the existing celebration `.onChange` hook.
+
+- **SAVE / QUIT now persistent on EVERY top-level tab — DONE.** Extracted the pair
+  into a shared `SaveQuitBar` (own "Saved ✓" flash + light haptic), flushed right
+  on the cash line of Network / Fleet / Crews / Ops / Finance (was Network-only).
+  `.fixedSize(horizontal:)` keeps the labels from truncating to "S…"/"Q…" when the
+  cash line is tight (a real bug caught in the Simulator).
 
 - **PERSISTENCE + MULTI-SLOT SAVES — DONE (native app).** The game persists so a
   player picks up where they left off, with up to 3 named save slots.
@@ -2433,14 +2483,19 @@ where numbers are involved.
   it PREFERS a real bundled recording (`jet`/`jet_takeoff` .caf/.wav/.m4a/.mp3) if
   one is ever dropped into the bundle — a true drop-in upgrade — else synthesizes
   a band-passed-noise whoosh swept 2200→400 Hz with a soft rise-then-fall swell at
-  low gain (player.volume 0.5, so effective peak ~0.21 — subtle). Plays under
-  `AVAudioSession.ambient` + `.mixWithOthers`, so the hardware silent switch mutes
-  it and the player's music keeps playing (the tasteful default for non-essential
-  game SFX). The synthesized WAV was validated with `afinfo` (44.1k mono Int16,
-  1.1s, valid container) so `AVAudioPlayer` accepts it — but the TIMBRE and the
-  haptics can only be judged on a REAL DEVICE (the Simulator has no haptics and I
-  can't audition audio here). If the synth whoosh isn't right, dropping a real
-  recording into `Resources/` is all it takes to override it.
+  low gain (player.volume 0.85). The synthesized WAV was validated with `afinfo`
+  (44.1k mono Int16, 1.1s, valid container) so `AVAudioPlayer` accepts it — but the
+  TIMBRE and the haptics can only be judged on a REAL DEVICE (the Simulator has no
+  haptics and I can't audition audio here). If the synth whoosh isn't right,
+  dropping a real recording into `Resources/` is all it takes to override it.
+  - **AUDIO SESSION CATEGORY — was `.ambient`, now `.playback` + `.mixWithOthers`
+    (real fix).** On-device testing FELT the haptics but heard NOTHING: `.ambient`
+    is muted by the hardware ring/silent switch, and the test device was on silent.
+    `.playback` makes the cues audible regardless of the ringer (a game the player
+    opened should still make its sounds), while `.mixWithOthers` still lets their
+    music keep playing. `GameAudio.prepareAmbientSessionOnce()` (shared by JetSound
+    + GateAnnouncement) sets it. If a silent-switch-respecting option is ever
+    wanted, that's the one line to flip back.
   - **"NOW BOARDING" GATE CALL (native app; designer spitball, shipped).** Opening
     a route also speaks a gate-style "now boarding" call in the PLAYER'S OWN
     airline name via on-device TTS (`GateAnnouncement`, `AVSpeechSynthesizer`) —
