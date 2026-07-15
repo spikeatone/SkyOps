@@ -65,6 +65,55 @@ final class Simulation {
         Demand.loadFactor(seats: seats, dailyOneWay: Demand.dailyOneWay(a, b) * hubDemandMultiplier(originCode: a.code, destCode: b.code))
     }
 
+    // MARK: - Route opportunities (the Ops "underserved markets" finder)
+
+    /// A high-demand city pair the player does NOT currently serve. In this sim
+    /// the demand model is the truth of profitability (no competitor saturation
+    /// modeled), so highest-demand-unserved == best opportunity.
+    struct RouteOpportunity: Identifiable {
+        let id: String
+        let originCode, destCode, originCity, destCity: String
+        let demandPerDay, distanceNM: Int
+        let suggested: String
+    }
+
+    private func pairKey(_ a: String, _ b: String) -> String { a < b ? "\(a)|\(b)" : "\(b)|\(a)" }
+    private func suggestedClass(demand: Int) -> String {
+        switch demand { case ..<180: return "Regional jet"; case ..<560: return "Narrowbody"; default: return "Widebody" }
+    }
+
+    /// Top unserved city pairs, within the player's home region (CONUS). Returns
+    /// a SPREAD across fleet tiers (top `perClass` regional / narrowbody /
+    /// widebody markets) rather than a raw demand ranking — otherwise the list is
+    /// always the same handful of mega-hub widebody pairs a starting player can't
+    /// touch. The regional tier naturally surfaces smaller, off-radar airports.
+    /// Candidates are all CONUS airports with info; already-flown pairs excluded.
+    func topRouteOpportunities(perClass: Int = 2) -> [RouteOpportunity] {
+        let cands = conusAirports.filter { $0.info != nil }
+        let served = Set(playerRoutes.map { pairKey($0.originCode, $0.destCode) })
+        var all: [RouteOpportunity] = []
+        for i in 0..<cands.count {
+            for j in (i + 1)..<cands.count {
+                let a = cands[i], b = cands[j]
+                if served.contains(pairKey(a.code, b.code)) { continue }
+                let demand = routeDailyDemand(a, b)
+                all.append(RouteOpportunity(
+                    id: "\(a.code)-\(b.code)", originCode: a.code, destCode: b.code,
+                    originCity: a.info?.city ?? a.code, destCity: b.info?.city ?? b.code,
+                    demandPerDay: demand, distanceNM: Int(a.greatCircleNM(to: b).rounded()),
+                    suggested: suggestedClass(demand: demand)))
+            }
+        }
+        // Best few of each tier, actionable-first (regional → narrowbody → widebody).
+        var out: [RouteOpportunity] = []
+        for tier in ["Regional jet", "Narrowbody", "Widebody"] {
+            out += all.filter { $0.suggested == tier }
+                .sorted { $0.demandPerDay > $1.demandPerDay }
+                .prefix(perClass)
+        }
+        return out
+    }
+
     /// Speed multiplier. Prototype default is 5× (feels smooth; at 1× the
     /// aircraft visibly steps every 250 ms, which is expected, not a bug).
     private(set) var speed: Double = 5

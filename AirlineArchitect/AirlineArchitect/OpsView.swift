@@ -19,6 +19,9 @@ struct OpsView: View {
     var onQuit: () -> Void = {}
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
+    /// Cached so the finder isn't recomputed on every tick — it only changes when
+    /// the player's route network changes (demand is otherwise static).
+    @State private var opportunities: [Simulation.RouteOpportunity] = []
 
     private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
     private var cardBG: Color      { isDark ? Sky.navBarDark : .white }
@@ -39,6 +42,7 @@ struct OpsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         if !sim.decisionQueue.isEmpty { needsAttentionGroup }
+                        opportunitiesGroup
                         // Fuel Hedge lives on Ops now (moved off the Network tab).
                         FuelHedgePanel(sim: sim)
                         eventsGroup
@@ -58,8 +62,52 @@ struct OpsView: View {
         }
         // While the Ops tab is on screen, everything here is "seen" — clear the
         // tab badge on entry and as new events arrive live.
-        .onAppear { sim.markOpsEventsSeen() }
+        .onAppear { sim.markOpsEventsSeen(); opportunities = sim.topRouteOpportunities() }
         .onChange(of: sim.opsEventLog.first?.id) { _, _ in sim.markOpsEventsSeen() }
+        // Recompute the finder only when the route network changes (not per tick).
+        .onChange(of: sim.playerRoutes.count) { _, _ in opportunities = sim.topRouteOpportunities() }
+    }
+
+    // MARK: Route Opportunities (underserved-markets finder)
+    private var opportunitiesGroup: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Route Opportunities").font(.karla(20, .heavy)).foregroundStyle(primary)
+            Text("Underserved markets you don't fly yet — ranked by estimated daily demand.")
+                .font(.karla(12)).foregroundStyle(secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if opportunities.isEmpty {
+                Text("No opportunities to show yet.").font(.karla(14)).foregroundStyle(secondary)
+                    .padding(.vertical, 4)
+            } else {
+                ForEach(opportunities) { opp in
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(opp.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                                Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(secondary)
+                                Text(opp.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                            }
+                            Text("\(opp.originCity) – \(opp.destCity)")
+                                .font(.karla(12)).foregroundStyle(secondary).lineLimit(1)
+                        }
+                        Spacer(minLength: 8)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("~\(opp.demandPerDay.formatted())/day")
+                                .font(.karla(15, .bold)).foregroundStyle(Sky.coreGreen)
+                            Text("\(opp.distanceNM.formatted()) nm · \(opp.suggested)")
+                                .font(.karla(12)).foregroundStyle(secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     // MARK: Header
