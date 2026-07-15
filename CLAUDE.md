@@ -2364,8 +2364,38 @@ where numbers are involved.
     opening cost + "Awaiting aircraft"/"In service" status. Offers expire after 12
     days; one at a time; ~8%/day. `pitch`/`AirportPitch` on `Decision`; not
     persisted (regenerates). Verified 9/9 headless + live. Example pitch: "Jackson,
-    MS's airport authority is courting you: fly JAN ↔ ATL and we'll waive every
-    opening fee, plus a $200,800 marketing package…".
+    MS's authority is courting you: fly JAN ↔ ATL and we'll waive every opening fee,
+    plus a $200,800 marketing package…".
+    - **FULFILLMENT COUNTDOWN + FORFEIT (designer request) — the obligation has
+      teeth.** Accepting WITHOUT a spare opens the route pending with a **14-day
+      deadline** (`Route.fulfillByTick`, `offerFulfillmentDays`, persisted).
+      `tickOfferFulfillment()` (daily): staffed-in-time clears the deadline (bonus
+      kept); missed → the route is FORFEITED (closed, slots freed) and the marketing
+      **bonus is clawed back** (`playerBalance` + `totalOfferIncome` both reversed,
+      Finance invariant holds). Ops "Airport Incentives" box shows the live "Nd left
+      to staff" countdown; the accept note states the deadline. Verified headlessly.
+
+- **LOAN / FINANCING mechanic — DONE (Finance tab).** The player can borrow to
+  expand faster than cash flow allows, at the cost of interest + a fixed monthly
+  debt-service payment. `Sim/Loan.swift`: `LoanOffer` products (Short-term
+  $5M/24mo/8%, Fleet $15M/48mo/10%, Expansion $40M/72mo/12%) with an amortized
+  monthly payment `P·r/(1−(1+r)^−n)`; `Loan` tracks remaining principal. `takeLoan`
+  credits cash + creates the loan; `tickLoanBilling` (monthly) charges
+  interest-on-balance + a principal slice, retiring the loan over its term.
+  Borrowing capped at `max($30M, fleetMarketValue)` — a base credit line + fleet
+  collateral — so it can't be abused to infinity. `totalLoanProceeds` /
+  `totalDebtService` accumulators; **the Finance cash invariant now includes
+  `+loanProceeds −debtService`** (folded into PeriodFigures.capitalIn / .overhead,
+  so the cash-flow card still ties out). New Finance **"FINANCING"** card: total
+  debt, monthly service, active loans, and gated Borrow options (a product is
+  disabled when it would breach the limit). Persisted (loans + the two totals +
+  FinanceSnapshot/FinanceSave fields). Verified 9/9 headless (gating, cash credit,
+  full amortization to $0 over the term, invariant holding through 28 sim-months) +
+  live (FINANCING card renders; $40M option correctly disabled past the $30M limit).
+  **A related non-bug clarified (designer question):** the Marketplace lease button
+  updates live (FleetView reads `sim.tick`; the check is upfront-only, matching
+  `leaseAircraft`) — a button that looked stuck was the cash DISPLAY rounding
+  ("$2.1M" covers $2.05–2.14M) sitting just under the exact $2.1M upfront.
 
 - **ROUTE OPPORTUNITIES finder — DONE (Ops tab; "underserved markets").**
   `Simulation.topRouteOpportunities(perClass:)` surfaces high-demand city pairs the
