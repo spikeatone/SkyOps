@@ -202,6 +202,7 @@ struct CrewsView: View {
     // MARK: Hire
     private func hire(_ fam: String, name: String) {
         guard sim.hireCrew(family: fam) != nil else { return }
+        Feedback.crewHired()
         withAnimation { successMessage = "New \(name) crew successfully hired!" }
         Task {
             try? await Task.sleep(for: .seconds(3))

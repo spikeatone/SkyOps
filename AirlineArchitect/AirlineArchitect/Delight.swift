@@ -66,19 +66,35 @@ struct MilestoneToast: View {
     private var isDark: Bool { scheme == .dark }
     @State private var wiggle = false
 
+    private let gold = Color(skyHex: 0xFFC73B)
+    private var primary: Color { isDark ? .white : .black }
+    private var secondary: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x64748B) }
+
     var body: some View {
         HStack(spacing: 12) {
-            Text(celebration.emoji)
-                .font(.system(size: 28))
-                .rotationEffect(.degrees(wiggle ? 8 : -8))
+            // App-aesthetic SF Symbol (gold, matching the reward theme) — not emoji.
+            Image(systemName: celebration.symbol)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(gold)
+                .frame(width: 28)
+                .rotationEffect(.degrees(wiggle ? 6 : -6))
                 .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: wiggle)
             VStack(alignment: .leading, spacing: 2) {
-                Text(celebration.title)
-                    .font(.karla(15, .bold))
-                    .foregroundStyle(isDark ? .white : .black)
+                // Route milestone: show the city pair with the ⇄ route icon between
+                // the codes (matches the Ops boxes / Figma "RT Route Arrows").
+                if let o = celebration.originCode, let d = celebration.destCode {
+                    HStack(spacing: 6) {
+                        Text(o).font(.karla(15, .bold)).foregroundStyle(primary)
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.system(size: 11, weight: .bold)).foregroundStyle(secondary)
+                        Text(d).font(.karla(15, .bold)).foregroundStyle(primary)
+                    }
+                } else {
+                    Text(celebration.title).font(.karla(15, .bold)).foregroundStyle(primary)
+                }
                 Text(celebration.subtitle)
                     .font(.karla(12))
-                    .foregroundStyle(isDark ? Sky.lightBlue : Color(skyHex: 0x64748B))
+                    .foregroundStyle(secondary)
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 12)

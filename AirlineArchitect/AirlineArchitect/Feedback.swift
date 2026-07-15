@@ -39,6 +39,12 @@ enum Feedback {
         if !isFirst { JetSound.shared.play() }
     }
 
+    /// Hiring a new crew — a success tap + the "new crew" clip.
+    static func crewHired() {
+        success()
+        NewCrewSound.shared.play()
+    }
+
     /// Opening a route — a solid medium tap plus a gate-style "now boarding"
     /// call. `announce: false` skips the voice call when it would collide with the
     /// jet whoosh (i.e. the route was opened by buying an aircraft in one action).
@@ -242,19 +248,22 @@ final class GateAnnouncement {
     }
 }
 
-/// The milestone "congrats" chime (bundled recording), played alongside the
-/// badge toast that slides in on a milestone. Loaded once; no-op if absent.
+/// A one-shot bundled sound clip, loaded once and reused. Backs the milestone
+/// chime and the new-crew clip; no-op if the file isn't bundled.
 @MainActor
-final class MilestoneSound {
-    static let shared = MilestoneSound()
+final class ClipSound {
+    private let resource: String
+    private let volume: Float
     private var player: AVAudioPlayer?
     private var lookedUp = false
+
+    init(_ resource: String, volume: Float = 0.9) { self.resource = resource; self.volume = volume }
 
     private func clip() -> AVAudioPlayer? {
         if !lookedUp {
             lookedUp = true
             for ext in ["wav", "caf", "m4a", "mp3"] {
-                if let url = Bundle.main.url(forResource: "milestone", withExtension: ext),
+                if let url = Bundle.main.url(forResource: resource, withExtension: ext),
                    let p = try? AVAudioPlayer(contentsOf: url) {
                     p.prepareToPlay(); player = p; break
                 }
@@ -267,7 +276,12 @@ final class MilestoneSound {
         GameAudio.prepareAmbientSessionOnce()
         guard let p = clip() else { return }
         p.currentTime = 0
-        p.volume = 0.9
+        p.volume = volume
         p.play()
     }
 }
+
+/// The milestone "congrats" chime, played alongside the badge toast.
+@MainActor enum MilestoneSound { static let shared = ClipSound("milestone") }
+/// The "new crew hired" clip.
+@MainActor enum NewCrewSound { static let shared = ClipSound("new_crew") }

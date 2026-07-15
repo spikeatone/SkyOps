@@ -625,7 +625,7 @@ struct AddCrewPanel: View {
                                 .font(.karla(14)).foregroundStyle(bodyC)
                         }
                         Spacer(minLength: 8)
-                        Button { _ = sim.hireCrew(family: fam) } label: {
+                        Button { if sim.hireCrew(family: fam) != nil { Feedback.crewHired() } } label: {
                             Text("HIRE")
                                 .font(.karla(12, .bold)).foregroundStyle(.white)
                                 .frame(height: 24).padding(.horizontal, 8)

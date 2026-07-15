@@ -2050,34 +2050,39 @@ final class Simulation {
 
     struct Celebration: Identifiable, Equatable {
         let id: Int
-        let emoji: String
+        let symbol: String          // SF Symbol name (app-aesthetic, not emoji)
         let title: String
         let subtitle: String
+        /// Route milestone: the toast renders the pair with a ⇄ icon between them.
+        var originCode: String? = nil
+        var destCode: String? = nil
     }
     private(set) var celebrations: [Celebration] = []
     private var celebrationSeq = 0
     private var firedMilestones: Set<String> = []
 
     /// Queue a one-time celebration for `key` (deduped — fires once, ever).
-    private func celebrate(_ key: String, _ emoji: String, _ title: String, _ subtitle: String) {
+    private func celebrate(_ key: String, _ symbol: String, _ title: String, _ subtitle: String,
+                           originCode: String? = nil, destCode: String? = nil) {
         guard playerAirlineName != nil, !isBankrupt, firedMilestones.insert(key).inserted else { return }
         celebrationSeq += 1
-        celebrations.append(Celebration(id: celebrationSeq, emoji: emoji, title: title, subtitle: subtitle))
+        celebrations.append(Celebration(id: celebrationSeq, symbol: symbol, title: title, subtitle: subtitle,
+                                        originCode: originCode, destCode: destCode))
         if celebrations.count > 3 { celebrations.removeFirst() }   // never back up too far
     }
     func dismissCelebration(_ id: Int) { celebrations.removeAll { $0.id == id } }
     /// Route recoup is celebrated from settleLeg; expose the trigger.
     fileprivate func celebrateRecoup(_ r: Route) {
-        celebrate("recoup_\(r.id)", "📈", "\(r.originCode) ↔ \(r.destCode) is profitable!",
-                  "It just recouped its opening cost.")
+        celebrate("recoup_\(r.id)", "chart.line.uptrend.xyaxis", "Route is profitable!",
+                  "Recouped its opening cost.", originCode: r.originCode, destCode: r.destCode)
     }
 
     /// Checked once per tick — net-worth thresholds, fleet size, flight counts.
     private func checkMilestones() {
         guard playerAirlineName != nil, !isBankrupt else { return }
-        if ownedCount >= 1 { celebrate("first_aircraft", "🛩️", "First jet purchased!", "Your fleet has its first aircraft.") }
-        if totalFlightsFlown >= 1 { celebrate("first_flight", "🛫", "First flight complete!", "Wheels up — welcome to the skies.") }
-        if totalFlightsFlown >= 1000 { celebrate("flights_1k", "🎉", "1,000 flights flown", "The network is humming.") }
+        if ownedCount >= 1 { celebrate("first_aircraft", "airplane", "First jet purchased!", "Your fleet has its first aircraft.") }
+        if totalFlightsFlown >= 1 { celebrate("first_flight", "airplane.departure", "First flight complete!", "Wheels up — welcome to the skies.") }
+        if totalFlightsFlown >= 1000 { celebrate("flights_1k", "trophy.fill", "1,000 flights flown", "The network is humming.") }
         // Net-worth ladder. Gated on owning at least one aircraft so nothing
         // fires before the player has deployed any capital (net worth == the $20M
         // starting stake). The lowest tier ($30M) is real growth above the start.
@@ -2086,12 +2091,12 @@ final class Simulation {
         if owned >= 1 {
             for (t, label) in [(30_000_000, "$30M"), (50_000_000, "$50M"), (100_000_000, "$100M"),
                                (250_000_000, "$250M"), (500_000_000, "$500M"), (1_000_000_000, "$1B")] where nw >= t {
-                celebrate("nw_\(t)", "💰", "\(label) net worth", "The airline is really taking off.")
+                celebrate("nw_\(t)", "chart.line.uptrend.xyaxis", "\(label) net worth", "The airline is really taking off.")
             }
         }
         for (n, sub) in [(5, "A real fleet now."), (10, "Double digits!"),
                          (25, "A major carrier."), (50, "A powerhouse of the skies.")] where owned >= n {
-            celebrate("fleet_\(n)", "✈️", "\(n) aircraft in the fleet", sub)
+            celebrate("fleet_\(n)", "airplane.circle.fill", "\(n) aircraft in the fleet", sub)
         }
     }
 

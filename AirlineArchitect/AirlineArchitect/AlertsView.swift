@@ -214,7 +214,7 @@ struct NeedsAttentionCard: View {
             var btns: [(String, () -> Void)] = []
             if sim.hasReserve(for: ac) { btns.append(("Reserve $5k", { sim.resolveCrewReserve(d) })) }
             if sim.canAffordCrewHire(for: ac) {
-                btns.append(("Hire \(compactMoney(sim.crewHireCost(family: ac.type.family)))", { sim.resolveCrewHire(d) }))
+                btns.append(("Hire \(compactMoney(sim.crewHireCost(family: ac.type.family)))", { Feedback.crewHired(); sim.resolveCrewHire(d) }))
             }
             btns.append(("Wait", { sim.resolveCrewWait(d) }))
             return AlertModel(
