@@ -531,11 +531,19 @@ final class Simulation {
     /// per-leg proration bug, which made idle leases free). Sub-dollar remainders
     /// carry in ac.leaseAccrued so nothing is lost to rounding. playerBalance is
     /// allowed to go negative (no bankruptcy mechanic yet).
+    /// Committed once per sim-HOUR (not per tick). The obligation is unchanged —
+    /// the same monthly total drains — but it's applied in hourly steps so the
+    /// displayed lease total updates at a readable cadence instead of flickering
+    /// "multiple times a second" at high game speed.
+    private static let leaseBillIntervalTicks = 60   // 1 sim-hour
     private func tickLeaseBilling() {
-        let perTick: (AircraftType) -> Double = { Double($0.monthlyLeaseCost) / Double(Simulation.ticksPerMonth) }
+        guard tick % Simulation.leaseBillIntervalTicks == 0 else { return }
+        let perInterval: (AircraftType) -> Double = {
+            Double($0.monthlyLeaseCost) / Double(Simulation.ticksPerMonth) * Double(Simulation.leaseBillIntervalTicks)
+        }
         for ac in aircraft where ac.isLeased {
-            ac.leaseAccrued += perTick(ac.type)
-            let bill = Int(ac.leaseAccrued)   // whole dollars due this tick
+            ac.leaseAccrued += perInterval(ac.type)
+            let bill = Int(ac.leaseAccrued)   // whole dollars due this hour
             guard bill > 0 else { continue }
             ac.leaseAccrued -= Double(bill)
             playerBalance -= bill
@@ -758,23 +766,35 @@ final class Simulation {
     /// domestic leg within the region; occasionally (from a gateway only) an
     /// international leg to a plausible neighbour region's gateway. This is what
     /// keeps a carrier inside its real sphere — no more "EgyptAir to OKC".
-    func backgroundLeg(for region: Airline.Region) -> (Airport, Airport) {
+    /// A leg the carrier plausibly flies, RANGE-GATED to the aircraft type — a
+    /// narrowbody won't be handed a transatlantic corridor (the "American A320
+    /// FLL→BCN" bug), only widebodies with the legs to reach get long ones. Short
+    /// international corridors (US↔Mexico/Canada) stay open to narrowbodies, which
+    /// is realistic.
+    func backgroundLeg(for region: Airline.Region, type: AircraftType) -> (Airport, Airport) {
+        let range = Double(type.rangeNM)
         let pool = airportsByRegion[region] ?? airports
         guard let origin = pool.randomElement() else { return Airport.randomPair() }
-        // International: from a gateway only, ~25% of the time, to a neighbour gateway.
+        // International: from a gateway only, ~25% of the time, to a neighbour
+        // gateway that's actually WITHIN this aircraft's range.
         if (gatewaysByRegion[region]?.contains(origin.code) ?? false), Int.random(in: 0..<100) < 25,
            let neighbours = Airline.corridors[region] {
             let viable = neighbours.filter { !(gatewaysByRegion[$0]?.isEmpty ?? true) }
-            if let nr = viable.randomElement(), let gws = gatewaysByRegion[nr],
-               let dest = (airportsByRegion[nr] ?? []).filter({ gws.contains($0.code) }).randomElement() {
-                return (origin, dest)
+            if let nr = viable.randomElement(), let gws = gatewaysByRegion[nr] {
+                let dests = (airportsByRegion[nr] ?? []).filter { gws.contains($0.code) && origin.greatCircleNM(to: $0) <= range }
+                if let dest = dests.randomElement() { return (origin, dest) }
+                // No in-range international dest → fall through to a domestic leg.
             }
         }
-        // Domestic: another airport in the same region.
+        // Domestic: another in-region airport within range.
         guard pool.count > 1 else { return (origin, origin) }
-        var dest = pool.randomElement()!
-        while dest === origin { dest = pool.randomElement()! }
-        return (origin, dest)
+        let inRange = pool.filter { $0 !== origin && origin.greatCircleNM(to: $0) <= range }
+        if let dest = inRange.randomElement() { return (origin, dest) }
+        // Origin too remote for this type — use the nearest airport (minimizes any
+        // residual over-range; a rare, purely-cosmetic edge for background traffic).
+        let nearest = pool.filter { $0 !== origin }
+            .min { origin.greatCircleNM(to: $0) < origin.greatCircleNM(to: $1) }
+        return (origin, nearest ?? origin)
     }
 
     /// A type the carrier actually flies, weighted by that type's global commonness.
@@ -796,7 +816,7 @@ final class Simulation {
         let region = pickBackgroundRegion()
         let airline = Airline.weighted(Airline.roster(for: region))
         let type = pickBackgroundType(for: airline)
-        let (origin, dest) = backgroundLeg(for: region)
+        let (origin, dest) = backgroundLeg(for: region, type: type)
         // Tail carries the carrier's real IATA code (Delta → "N123DL"); the
         // generic fallback gets a random non-real code so they aren't uniform.
         let code = airline.code.isEmpty ? Airline.randomTailCode() : airline.code
@@ -2103,7 +2123,7 @@ final class Simulation {
                 // international corridors) — NOT a random global pair, which used to
                 // let a carrier wander anywhere. Owned aircraft keep their assigned
                 // route (advance already swapped origin/dest).
-                if !ac.purchased { (ac.origin, ac.dest) = backgroundLeg(for: ac.homeRegion ?? .us) }
+                if !ac.purchased { (ac.origin, ac.dest) = backgroundLeg(for: ac.homeRegion ?? .us, type: ac.type) }
                 rollRevenue(for: ac)
             case .legCompleted:        settleLeg(ac)
             case nil:                  break
