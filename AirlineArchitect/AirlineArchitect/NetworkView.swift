@@ -523,7 +523,7 @@ struct NetworkView: View {
         }
         switch sim.openRoute(from: origin, to: dest, using: spare) {
         case .success:
-            Feedback.routeOpened()
+            Feedback.routeOpened(airline: sim.playerAirlineName)
             showFlash("Route \(origin.code) ↔ \(dest.code) opened — \(spare.tail) assigned")
             routeMode = .off; panel = .none
         case .insufficientFunds(let c): showFlash("Need $\(c.formatted()) to open this route")

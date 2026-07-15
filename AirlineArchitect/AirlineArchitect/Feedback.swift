@@ -37,8 +37,12 @@ enum Feedback {
         JetSound.shared.play()
     }
 
-    /// Opening a route — a solid medium tap, no sound.
-    static func routeOpened() { impact(.medium) }
+    /// Opening a route — a solid medium tap plus a gate-style "now boarding"
+    /// call in the player's own airline name (a nod, not a nag).
+    static func routeOpened(airline: String?) {
+        impact(.medium)
+        GateAnnouncement.shared.nowBoarding(airline: airline)
+    }
 
     /// A milestone celebration (first flight, fleet size, net-worth threshold,
     /// a route recouping) — the heaviest positive tap, no sound.
@@ -51,6 +55,21 @@ enum Feedback {
     static func gameOver() { failure() }
 }
 
+/// Shared audio session for every game sound. `.ambient` + `.mixWithOthers`
+/// means the hardware silent switch mutes us and the player's own music keeps
+/// playing — the tasteful default for non-essential game audio.
+@MainActor
+enum GameAudio {
+    private static var ready = false
+    static func prepareAmbientSessionOnce() {
+        guard !ready else { return }
+        ready = true
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.ambient, options: [.mixWithOthers])
+        try? session.setActive(true)
+    }
+}
+
 /// A short, subtle jet whoosh. Self-contained: if a real recording is bundled
 /// (`jet` / `jet_takeoff` .caf/.wav/.m4a/.mp3) it's used INSTEAD — a true
 /// drop-in upgrade path — otherwise it synthesizes a band-passed-noise whoosh
@@ -61,15 +80,6 @@ final class JetSound {
     static let shared = JetSound()
 
     private var player: AVAudioPlayer?
-    private var sessionReady = false
-
-    private func prepareSessionOnce() {
-        guard !sessionReady else { return }
-        sessionReady = true
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.ambient, options: [.mixWithOthers])
-        try? session.setActive(true)
-    }
 
     private func makePlayer() -> AVAudioPlayer? {
         // Prefer a real bundled recording if the designer supplies one.
@@ -90,7 +100,7 @@ final class JetSound {
     }
 
     func play() {
-        prepareSessionOnce()
+        GameAudio.prepareAmbientSessionOnce()
         if player == nil { player = makePlayer() }
         guard let player else { return }
         player.currentTime = 0
@@ -167,5 +177,35 @@ final class JetSound {
             data.append(contentsOf: u16(UInt16(bitPattern: v)))
         }
         return data
+    }
+}
+
+/// A gate-style "now boarding" call, spoken in the player's own airline name via
+/// on-device text-to-speech (no bundled asset). Reserved for opening a route — a
+/// deliberate, infrequent action, so it's a flavor nod rather than a nag. Speaks
+/// under the shared .ambient session, so the silent switch mutes it and music
+/// keeps playing. A real recorded PA clip could replace this later; for now TTS
+/// keeps it self-contained and personal (it says the name they chose).
+@MainActor
+final class GateAnnouncement {
+    static let shared = GateAnnouncement()
+    private let synth = AVSpeechSynthesizer()
+
+    func nowBoarding(airline: String?) {
+        GameAudio.prepareAmbientSessionOnce()
+        let name = (airline?.trimmingCharacters(in: .whitespaces)).flatMap { $0.isEmpty ? nil : $0 }
+        let line = name.map { "\($0), now boarding." } ?? "Now boarding."
+
+        let u = AVSpeechUtterance(string: line)
+        u.rate = AVSpeechUtteranceDefaultSpeechRate * 0.94   // an unhurried PA cadence
+        u.pitchMultiplier = 0.98
+        u.volume = 0.7
+        u.voice = AVSpeechSynthesisVoice(language: "en-US")
+        u.preUtteranceDelay = 0.05
+
+        // usesApplicationAudioSession is true by default, so this honors the
+        // .ambient session above rather than ducking/interrupting other audio.
+        synth.stopSpeaking(at: .immediate)   // never let calls pile up
+        synth.speak(u)
     }
 }
