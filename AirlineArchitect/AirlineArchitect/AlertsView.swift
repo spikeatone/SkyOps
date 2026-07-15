@@ -164,6 +164,21 @@ struct NeedsAttentionCard: View {
                     ("Decline", { sim.resolveOfferDecline(d) }),
                 ])
         }
+        // Recurrent crew training (family-based, no aircraft) — train now or
+        // defer 30 days at a higher cost.
+        if d.kind == .training, let fam = d.trainingFamily {
+            let famName = CREW_FAMILY_INFO[fam]?.name ?? fam
+            let now = sim.crewTrainingCost(family: fam)
+            let later = sim.crewTrainingCost(family: fam, deferred: true)
+            return AlertModel(
+                accent: accentBlue, icon: "graduationcap.fill", category: "Crew training",
+                title: "\(famName) crews due for recurrent training",
+                subtitle: "Train now (some crews off-line ~4 days) or defer 30 days for more",
+                buttons: [
+                    ("Train now · \(compactMoney(now))", { Feedback.impact(.light); sim.resolveTrainingNow(d) }),
+                    ("Defer 30 days · \(compactMoney(later))", { sim.resolveTrainingDefer(d) }),
+                ])
+        }
         let ac = d.aircraft!   // aog / crew / sell always carry an aircraft
         switch d.kind {
         case .aog:
@@ -203,6 +218,10 @@ struct NeedsAttentionCard: View {
             return AlertModel(accent: accentBlue, icon: "dollarsign.circle.fill",
                               category: "Offer", title: "Slot buyback", subtitle: "",
                               buttons: [("Decline", { sim.resolveOfferDecline(d) })])
+        case .training:   // handled by the early return above; unreachable
+            return AlertModel(accent: accentBlue, icon: "graduationcap.fill",
+                              category: "Crew training", title: "Training due", subtitle: "",
+                              buttons: [("Defer", { sim.resolveTrainingDefer(d) })])
         }
     }
 

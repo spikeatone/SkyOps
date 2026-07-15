@@ -50,6 +50,8 @@ struct GameSnapshot: Codable {
     var closedRoutes: [RouteSave] = []
     var crewPools: [String: [CrewSave]] = [:]
     var reserveCrews: [String: Int] = [:]
+    var crewTrainingDue: [String: Int] = [:]
+    var crewTrainingDeferred: [String: Int] = [:]
     var financeSnapshots: [FinanceSave] = []
 }
 

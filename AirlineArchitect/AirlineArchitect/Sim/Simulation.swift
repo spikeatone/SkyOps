@@ -876,6 +876,10 @@ final class Simulation {
         for family in Array(crewPoolsByFamily.keys) where ownedCount(family: family) == 0 {
             crewPoolsByFamily[family] = nil
             reserveCrewsByFamily[family] = nil
+            crewTrainingDueByFamily[family] = nil
+            crewTrainingDeferredByFamily[family] = nil
+            crewTrainingExpiryByFamily[family] = nil
+            decisionQueue.removeAll { $0.kind == .training && $0.trainingFamily == family }
         }
     }
 
@@ -885,6 +889,90 @@ final class Simulation {
     func crewHireCost(family: String) -> Int {
         let price = AircraftType.all.first { $0.family == family }?.purchasePrice ?? 0
         return Int((Double(price) * Simulation.crewHireCostRate).rounded())
+    }
+
+    // MARK: - Recurrent crew training (a recurring decision, real regulatory analog)
+
+    // Crews need periodic recurrent training (real FAA requirement). It comes due
+    // per owned family on a recurring cycle; the player can train NOW (a real
+    // cost + some crew sidelined for the training window) or DEFER 30 days at a
+    // higher cost (a rush/premium later). Pacing is designed, not sourced.
+    private static let crewTrainingIntervalDays = 150
+    private static let crewTrainingDeferDays = 30
+    private static let crewTrainingDowntimeDays = 4
+    private static let crewTrainingDeferCostMultiplier = 1.6
+    private static let crewTrainingSidelineFraction = 0.5
+
+    /// Next tick each owned family is due for recurrent training.
+    private(set) var crewTrainingDueByFamily: [String: Int] = [:]
+    /// Tick a deferred training will auto-execute (at the higher cost).
+    private(set) var crewTrainingDeferredByFamily: [String: Int] = [:]
+    /// Tick a family's training downtime ends (its sidelined crew return).
+    private var crewTrainingExpiryByFamily: [String: Int] = [:]
+
+    /// Cost of a training cycle for a family — reuses the hire-cost basis (a
+    /// representative recurring expense). Deferring pays the higher multiple.
+    func crewTrainingCost(family: String, deferred: Bool = false) -> Int {
+        let base = crewHireCost(family: family)
+        return deferred ? Int((Double(base) * Simulation.crewTrainingDeferCostMultiplier).rounded()) : base
+    }
+
+    /// Put a family's crews into training: sideline ~half its ready/resting crew
+    /// for the downtime window (operations degrade but don't fully stop) and
+    /// schedule the next cycle.
+    private func runTraining(_ family: String) {
+        let pool = crewPoolsByFamily[family] ?? []
+        let candidates = pool.filter { $0.status == .available || $0.status == .resting }
+        let n = min(candidates.count, max(1, Int((Double(pool.count) * Simulation.crewTrainingSidelineFraction).rounded())))
+        for c in candidates.shuffled().prefix(n) { c.status = .sidelined }
+        if n > 0 { crewTrainingExpiryByFamily[family] = tick + Simulation.crewTrainingDowntimeDays * 1440 }
+        crewTrainingDueByFamily[family] = tick + Simulation.crewTrainingIntervalDays * 1440
+        crewTrainingDeferredByFamily[family] = nil
+        logOps(.structural, "Crew training", "\(CREW_FAMILY_INFO[family]?.name ?? family): \(n) crew in recurrent training")
+    }
+
+    /// Per-day: return crews whose training window ended, execute any deferred
+    /// training that's come due, and push a card for any family newly due.
+    private func tickCrewTraining() {
+        // Return crews whose training window ended.
+        for (fam, expiry) in crewTrainingExpiryByFamily where tick >= expiry {
+            for c in crewPoolsByFamily[fam] ?? [] where c.status == .sidelined { c.status = .available }
+            crewTrainingExpiryByFamily[fam] = nil
+        }
+        // Execute deferred trainings that have come due (charge the higher cost).
+        for (fam, dtick) in crewTrainingDeferredByFamily where tick >= dtick {
+            chargeDecisionCost(crewTrainingCost(family: fam, deferred: true))
+            runTraining(fam)
+        }
+        // Seed / push due trainings for owned families.
+        for fam in ownedFamilies {
+            if crewTrainingDueByFamily[fam] == nil {          // seed on first sight (new/restored game)
+                crewTrainingDueByFamily[fam] = tick + Simulation.crewTrainingIntervalDays * 1440
+                continue
+            }
+            guard tick >= crewTrainingDueByFamily[fam]!, crewTrainingDeferredByFamily[fam] == nil,
+                  !decisionQueue.contains(where: { $0.kind == .training && $0.trainingFamily == fam }) else { continue }
+            decisionQueue.append(Decision(id: "training_\(fam)_\(tick)", kind: .training,
+                                          aircraft: nil, trainingFamily: fam))
+        }
+    }
+
+    /// TRAINING card: train now — pay the base cost, sideline crews, reset cycle.
+    func resolveTrainingNow(_ decision: Decision) {
+        defer { decisionQueue.removeAll { $0.id == decision.id } }
+        guard let fam = decision.trainingFamily else { return }
+        chargeDecisionCost(crewTrainingCost(family: fam))
+        runTraining(fam)
+    }
+
+    /// TRAINING card: defer 30 days — no downtime now, but it auto-runs then at
+    /// the higher cost. Pushing the due date out stops the card re-prompting.
+    func resolveTrainingDefer(_ decision: Decision) {
+        defer { decisionQueue.removeAll { $0.id == decision.id } }
+        guard let fam = decision.trainingFamily else { return }
+        crewTrainingDeferredByFamily[fam] = tick + Simulation.crewTrainingDeferDays * 1440
+        crewTrainingDueByFamily[fam] = tick + (Simulation.crewTrainingDeferDays + Simulation.crewTrainingIntervalDays) * 1440
+        logOps(.structural, "Crew training deferred", "\(CREW_FAMILY_INFO[fam]?.name ?? fam): scheduled in 30 days")
     }
 
     /// Hire one crew into a family if affordable (real playerBalance cost).
@@ -951,13 +1039,15 @@ final class Simulation {
     // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
 
     struct Decision: Identifiable {
-        enum Kind { case aog, crew, sell, offer }
+        enum Kind { case aog, crew, sell, offer, training }
         let id: String
         let kind: Kind
-        /// The subject aircraft (aog / crew / sell). nil for an `.offer`.
+        /// The subject aircraft (aog / crew / sell). nil for `.offer` / `.training`.
         let aircraft: Aircraft?
         /// The slot-buyback details (`.offer` only).
         var offer: SlotOffer? = nil
+        /// The crew family due for recurrent training (`.training` only).
+        var trainingFamily: String? = nil
     }
 
     /// A slot-value buyback: an airport (the destination) offers to buy back a
@@ -1148,6 +1238,9 @@ final class Simulation {
 
     private func tickWorldEvents() {
         guard tick % 1440 == 0 else { return }   // once per sim-day
+
+        // Recurrent crew training (return trainees, run deferred, push due cards).
+        tickCrewTraining()
 
         // Clear an expired fare war so a new one can start.
         if fareWarRouteId != nil, tick >= fareWarExpiryTick { fareWarRouteId = nil }
@@ -1704,6 +1797,8 @@ final class Simulation {
         s.closedRoutes = closedPlayerRoutes.map(routeSave)
         s.crewPools = crewPoolsByFamily.mapValues { $0.map { CrewSave(id: $0.id, status: $0.status.saveCode, dutyTicks: $0.dutyTicks, restTicksLeft: $0.restTicksLeft) } }
         s.reserveCrews = reserveCrewsByFamily
+        s.crewTrainingDue = crewTrainingDueByFamily
+        s.crewTrainingDeferred = crewTrainingDeferredByFamily
         s.financeSnapshots = financeSnapshots.map { f in
             FinanceSave(tick: f.tick, revenue: f.revenue, fees: f.fees, operatingCost: f.operatingCost,
                         leaseCost: f.leaseCost, insurance: f.insurance, maintenance: f.maintenance,
@@ -1754,6 +1849,8 @@ final class Simulation {
             list.map { cs in let c = Crew(id: cs.id); c.status = CrewStatus(saveCode: cs.status); c.dutyTicks = cs.dutyTicks; c.restTicksLeft = cs.restTicksLeft; return c }
         }
         reserveCrewsByFamily = s.reserveCrews
+        crewTrainingDueByFamily = s.crewTrainingDue
+        crewTrainingDeferredByFamily = s.crewTrainingDeferred
 
         // Routes.
         playerRoutes = s.routes.map(restoreRoute)
