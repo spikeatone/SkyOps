@@ -2431,10 +2431,14 @@ where numbers are involved.
   (progress dots, Skip, Next/"Start playing") that deliberately does NOT dim the
   screen, so the section behind stays visible as the player reads. As they tap
   Next, ContentView advances the step AND switches to that step's tab, building
-  the mental model of where things live. `TutorialState.seen` persists in
-  UserDefaults ("hasSeenTutorial_v1", app-level not per-save — shown ONCE), and
-  the walkthrough only starts after naming a fresh airline when unseen. Verified
-  visually over the Network map.
+  the mental model of where things live. **TRIGGER: it runs whenever the player
+  NAMES a fresh airline** (NOT when Continuing a save — that's correctly no
+  walkthrough). The old "seen once, ever" UserDefaults gate (`hasSeenTutorial_v*`)
+  was REMOVED — it kept the walkthrough from re-showing for returning testers who
+  saw it on an earlier build (designer-reported TWICE); it's skippable, so
+  re-showing on each new game is fine. `TutorialState` still exists but is no
+  longer read for gating. Verified live (set the seen flag true → walkthrough
+  still appears on a new airline).
 
 ## Open / not yet decided
 
