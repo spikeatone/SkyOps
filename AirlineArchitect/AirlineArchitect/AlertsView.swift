@@ -221,6 +221,17 @@ struct NeedsAttentionCard: View {
                 buttons: btns.map { (label: $0.0, action: $0.1) })
         case .sell:
             let pct = 100 * ac.cyclesAccrued / max(1, ac.type.expectedLifespanCycles)
+            if ac.isLeased {   // can't sell a leased jet — hand it back (with the penalty)
+                let fee = sim.leaseTerminationPenalty(ac)
+                return AlertModel(
+                    accent: accentAmber, icon: "clock.arrow.circlepath", category: "End of service",
+                    title: "\(ac.tail) nearing end of life",
+                    subtitle: "\(pct)% of lifespan · terminate lease for a \(money(fee)) fee",
+                    buttons: [
+                        ("Terminate · \(compactMoney(fee))", { Feedback.impact(.light); sim.resolveSell(d) }),
+                        ("Keep flying", { sim.resolveSellKeep(d) }),
+                    ])
+            }
             let value = sim.sellValue(of: ac)
             return AlertModel(
                 accent: accentAmber, icon: "clock.arrow.circlepath", category: "End of service",

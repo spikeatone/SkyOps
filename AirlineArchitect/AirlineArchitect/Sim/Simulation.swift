@@ -1531,6 +1531,11 @@ final class Simulation {
 
     /// Randomly start / end economic events. Ported from tickEconomicEvents():
     /// checked once per sim-day, 15% chance to start when normal, 3–10 days.
+    /// After an economic event ends, the SAME event can't recur for this long —
+    /// so you don't get two "Fuel Price Drop"s a few days apart (unrealistic).
+    private static let economicEventCooldownDays = 30
+    private var eventCooldownUntil: [String: Int] = [:]
+
     private func tickEconomicEvents() {
         if !currentEvent.isNormal {
             economicEventTicksLeft -= 1
@@ -1539,7 +1544,13 @@ final class Simulation {
         }
         guard tick % Simulation.economicEventCheckInterval == 0 else { return }
         if Double.random(in: 0..<1) < Simulation.economicEventDailyProbability {
-            currentEvent = EconomicEvent.all.randomElement()!
+            // Pick only from event types not on cooldown (fall back to all if every
+            // type is cooling down, which shouldn't happen with 5 types + 30 days).
+            let eligible = EconomicEvent.all.filter { (eventCooldownUntil[$0.id] ?? 0) <= tick }
+            currentEvent = (eligible.isEmpty ? EconomicEvent.all : eligible).randomElement()!
+            // Cooldown from ONSET: guarantees the same event can't recur within
+            // `economicEventCooldownDays` regardless of how long this one lasts.
+            eventCooldownUntil[currentEvent.id] = tick + Simulation.economicEventCooldownDays * 1440
             let days = Double(Simulation.economicEventMinDurationDays)
                      + Double.random(in: 0..<1) * Double(Simulation.economicEventMaxDurationDays - Simulation.economicEventMinDurationDays)
             economicEventTicksLeft = Int((days * 24 * 60).rounded())
@@ -1760,7 +1771,10 @@ final class Simulation {
     }
 
     /// SELL card option: sell at linear-depreciated value, close its route.
-    func resolveSell(_ decision: Decision) { if let ac = decision.aircraft { sellAircraft(ac) } }
+    func resolveSell(_ decision: Decision) {
+        // A leased aircraft can't be sold — it's handed back (with the penalty).
+        if let ac = decision.aircraft { ac.isLeased ? terminateLease(ac) : sellAircraft(ac) }
+    }
 
     /// Sell an aircraft (from the SELL card OR the Fleet detail screen): credit
     /// its depreciated value, release its crew, archive its route, remove it,
@@ -1769,6 +1783,25 @@ final class Simulation {
         let proceeds = sellValue(of: ac)
         totalSaleProceeds += proceeds
         liquidate(ac, proceeds: proceeds)
+    }
+
+    /// Early lease-termination penalty — you don't own a leased jet, so you can't
+    /// sell it; ending the lease early costs a fee. Real leases charge a few
+    /// months' rent (or forfeit reserves) to break early; modeled here as 3
+    /// months of the monthly lease payment. $0 for a non-leased aircraft.
+    static let leaseTerminationMonths = 3
+    func leaseTerminationPenalty(_ ac: Aircraft) -> Int {
+        ac.isLeased ? Simulation.leaseTerminationMonths * ac.type.monthlyLeaseCost : 0
+    }
+
+    /// Terminate a lease early: hand the jet back (no proceeds — you never owned
+    /// it) and pay the early-termination penalty. Charged to the lease-cost
+    /// bucket so the Finance ledger stays consistent.
+    func terminateLease(_ ac: Aircraft) {
+        let penalty = leaseTerminationPenalty(ac)
+        playerBalance -= penalty
+        totalLeaseCost += penalty
+        liquidate(ac, proceeds: 0)
     }
 
     /// Remove an aircraft from the fleet — crediting `proceeds` (a real sale) or

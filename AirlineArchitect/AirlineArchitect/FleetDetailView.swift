@@ -51,14 +51,22 @@ struct FleetDetailView: View {
             .padding(.top, 6)
             .padding(.bottom, 12)
         }
-        .confirmationDialog("Sell \(aircraft.tail)?",
+        .confirmationDialog(aircraft.isLeased ? "Terminate lease on \(aircraft.tail)?" : "Sell \(aircraft.tail)?",
                             isPresented: $confirmSell, titleVisibility: .visible) {
-            Button("Sell for \(money(sim.sellValue(of: aircraft)))", role: .destructive) {
-                Feedback.impact(.light); sim.sellAircraft(aircraft); onSold()
+            if aircraft.isLeased {
+                Button("Terminate · \(money(sim.leaseTerminationPenalty(aircraft))) fee", role: .destructive) {
+                    Feedback.impact(.light); sim.terminateLease(aircraft); onSold()
+                }
+            } else {
+                Button("Sell for \(money(sim.sellValue(of: aircraft)))", role: .destructive) {
+                    Feedback.impact(.light); sim.sellAircraft(aircraft); onSold()
+                }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This closes its route and returns its crew to the pool.")
+            Text(aircraft.isLeased
+                 ? "Early termination hands the jet back and costs a \(money(sim.leaseTerminationPenalty(aircraft))) penalty (≈3 months' lease). Closes its route; crew returns to the pool."
+                 : "This closes its route and returns its crew to the pool.")
         }
     }
 
@@ -210,7 +218,7 @@ struct FleetDetailView: View {
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(skyHex: 0xC9C9C9), lineWidth: 1))
             }.buttonStyle(.plain)
             Button { confirmSell = true } label: {
-                Text("SELL AIRCRAFT")
+                Text(aircraft.isLeased ? "TERMINATE LEASE" : "SELL AIRCRAFT")
                     .font(.karla(15, .medium)).foregroundStyle(.white)
                     .frame(maxWidth: .infinity).frame(height: 48)
                     .background(red)
