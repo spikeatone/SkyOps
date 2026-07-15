@@ -1462,13 +1462,21 @@ where numbers are involved.
   Simulator control for computer-use — so the drag/pinch handlers
   themselves are only verified by inspection, not by a real gesture.
   UPDATE: designer confirmed interactively — "pan feels great, as does
-  pinch." Max zoom then raised 4→14 per designer, with the icon-growth
-  curve re-anchored to a FIXED span (defaultZoom×2.5) so icon feel at
-  already-tuned zoom levels didn't change; labels get their own
-  `labelScale` reaching +15% over other elements at max zoom (designer
-  request). Basemap coastline reads faceted at extreme zoom
-  (topology-simplified source) — accepted for now, re-extract higher-res
-  geometry if crisp coastlines are ever wanted.
+  pinch." Max zoom raised 4→14→28→**60** (`cameraMaxZoom`) across designer
+  passes — the latest bump (28→60) so tightly-clustered airports (SFO/OAK/SJC)
+  can be pinched far enough apart to tap the right one against the 44pt hit
+  target. The icon-growth curve is anchored to a FIXED span (defaultZoom×2.5) so
+  icons/airports don't balloon as max zoom rises; labels get their own
+  `labelScale` reaching +15% at max zoom. Basemap coastline reads faceted at
+  extreme zoom (topology-simplified source) — accepted for now.
+- **TAP AN OPS EVENT TO LOCATE ITS AIRPORT — DONE (native app).** `OpsEvent`
+  gained an optional `airportCode` (set on capacity-expansion + single-airport
+  ground-stop logs via `logOps(..., airportCode:)`). Those Ops event cards show a
+  "Show on map" affordance + chevron and are tappable → `Simulation.focusCamera(on:)`
+  centers the map on that airport (zoom `max(defaultZoom*8, 10)`, capped at max)
+  and ContentView switches to the Network tab (`onShowAirport` closure). Solves
+  "most airport codes are foreign to the player" (WLG, YVR…) — they can see WHERE
+  it is. Route-opened (two airports) is deliberately not mappable.
 - **Label declutter — DONE, better than the prototype.** Ports
   computeAirportLabelPositions() (greedy 13px-threshold clustering, ring
   fan from cluster centroid starting straight up, leader lines) but
