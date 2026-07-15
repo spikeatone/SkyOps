@@ -92,7 +92,7 @@ struct FinanceView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Text("Cash on hand:").font(.karla(15, .semibold)).foregroundStyle(primary)
-                Text(compactMoney(cash)).font(.karla(15, .semibold))
+                Text(cashLabel(cash)).font(.karla(15, .semibold))
                     .foregroundStyle(cash < 0 ? red : green)
                 Spacer(minLength: 8)
                 SaveQuitBar(onSave: onSave, onQuit: onQuit)

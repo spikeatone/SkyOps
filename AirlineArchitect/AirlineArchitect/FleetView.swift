@@ -111,12 +111,7 @@ struct FleetView: View {
         }
     }
 
-    private var cashString: String {
-        let v = sim.playerBalance, a = abs(v), sign = v < 0 ? "−" : ""
-        if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-        return sign + "$\(a)"
-    }
+    private var cashString: String { cashLabel(sim.playerBalance) }
 
     // MARK: Segmented control (My Fleet / Marketplace)
     private var segmentedControl: some View {
@@ -324,13 +319,13 @@ struct FleetView: View {
             Rectangle().fill(cardBorder).frame(height: 1)
             // Buy new
             offerRow("Buy new:", money(type.purchasePrice),
-                     kind: .buy, afford: sim.playerBalance >= type.purchasePrice) {
+                     kind: .buy, cost: type.purchasePrice) {
                 gatedAcquire { if sim.buyAircraft(type) != nil { Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1) } }
             }
             // Lease new
             offerRow("Lease new:",
                      "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
-                     kind: .lease, afford: sim.playerBalance >= sim.leaseUpfront(type)) {
+                     kind: .lease, cost: sim.leaseUpfront(type)) {
                 gatedAcquire { if sim.leaseAircraft(type) != nil { Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1) } }
             }
             // Buy used (one row per listing, cheapest first)
@@ -338,7 +333,7 @@ struct FleetView: View {
                 let pct = 100 * listing.cyclesAccrued / max(1, type.expectedLifespanCycles)
                 offerRow("Buy used:",
                          "\(money(listing.price)) · \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
-                         kind: .buy, afford: sim.playerBalance >= listing.price) {
+                         kind: .buy, cost: listing.price) {
                     gatedAcquire { if sim.buyUsedAircraft(listing) != nil { Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1) } }
                 }
             }
@@ -359,11 +354,16 @@ struct FleetView: View {
 
     private enum OfferKind { case buy, lease }
     private func offerRow(_ label: String, _ detail: String, kind: OfferKind,
-                          afford: Bool, action: @escaping () -> Void) -> some View {
-        HStack(alignment: .center) {
+                          cost: Int, action: @escaping () -> Void) -> some View {
+        let afford = sim.playerBalance >= cost
+        let short = cost - sim.playerBalance
+        return HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label).font(.karla(14, .bold)).foregroundStyle(secondary)
                 Text(detail).font(.karla(14)).foregroundStyle(secondary)
+                if !afford {
+                    Text("Need \(money(short)) more").font(.karla(12, .semibold)).foregroundStyle(red)
+                }
             }
             Spacer(minLength: 8)
             Button(action: action) {

@@ -246,6 +246,17 @@ func compactMoney(_ v: Int) -> String {
     return sign + "$\(a)"
 }
 
+/// Cash-on-hand display — MORE precise than compactMoney near thresholds so a
+/// balance a hair under a price doesn't read as if it's at it. 2 decimals under
+/// $10M (where early acquire decisions live), 1 decimal above, $1k below $1M.
+func cashLabel(_ v: Int) -> String {
+    let a = abs(v), sign = v < 0 ? "−" : ""
+    if a >= 10_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
+    if a >= 1_000_000  { return sign + "$" + String(format: "%.2fM", Double(a) / 1_000_000) }
+    if a >= 1_000      { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
+    return sign + "$\(a)"
+}
+
 
 /// The route-opening flow's UI state.
 enum RouteMode: Equatable {
@@ -329,19 +340,19 @@ struct AircraftProfileCard: View {
             Rectangle().fill(cardBorder).frame(height: 1)
 
             row("Buy new:", money(type.purchasePrice), lease: false,
-                afford: sim.playerBalance >= type.purchasePrice) {
+                cost: type.purchasePrice) {
                 gated { if let ac = sim.buyAircraft(type) { onBought(ac) } }
             }
             row("Lease new:",
                 "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
-                lease: true, afford: sim.playerBalance >= sim.leaseUpfront(type)) {
+                lease: true, cost: sim.leaseUpfront(type)) {
                 gated { if let ac = sim.leaseAircraft(type) { onBought(ac) } }
             }
             ForEach(sim.usedInventory[type.id] ?? []) { listing in
                 let pct = 100 * listing.cyclesAccrued / max(1, type.expectedLifespanCycles)
                 row("Buy used:",
                     "\(money(listing.price)) - \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
-                    lease: false, afford: sim.playerBalance >= listing.price) {
+                    lease: false, cost: listing.price) {
                     gated { if let ac = sim.buyUsedAircraft(listing) { onBought(ac) } }
                 }
             }
@@ -382,13 +393,18 @@ struct AircraftProfileCard: View {
         }
     }
 
-    private func row(_ label: String, _ detail: String, lease: Bool, afford: Bool,
+    private func row(_ label: String, _ detail: String, lease: Bool, cost: Int,
                      action: @escaping () -> Void) -> some View {
-        HStack(alignment: .center) {
+        let afford = sim.playerBalance >= cost
+        let short = cost - sim.playerBalance
+        return HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label).font(.karla(14, .bold)).foregroundStyle(labelC)
                 Text(detail).font(.karla(14)).foregroundStyle(bodyC)
                     .fixedSize(horizontal: false, vertical: true)
+                if !afford {
+                    Text("Need \(money(short)) more").font(.karla(12, .semibold)).foregroundStyle(Sky.red)
+                }
             }
             Spacer(minLength: 8)
             Button(action: action) {

@@ -345,10 +345,5 @@ struct OpsView: View {
         return "\(mins / 1440)d ago"
     }
 
-    private var cashString: String {
-        let v = sim.playerBalance, a = abs(v), sign = v < 0 ? "−" : ""
-        if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-        return sign + "$\(a)"
-    }
+    private var cashString: String { cashLabel(sim.playerBalance) }
 }
