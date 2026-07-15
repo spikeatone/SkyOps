@@ -45,6 +45,12 @@ enum Feedback {
         NewCrewSound.shared.play()
     }
 
+    /// Drawing a loan (funds hit the balance) — a success tap + the "loan" clip.
+    static func loanTaken() {
+        success()
+        LoanSound.shared.play()
+    }
+
     /// Opening a route — a solid medium tap plus a gate-style "now boarding"
     /// call. `announce: false` skips the voice call when it would collide with the
     /// jet whoosh (i.e. the route was opened by buying an aircraft in one action).
@@ -285,3 +291,5 @@ final class ClipSound {
 @MainActor enum MilestoneSound { static let shared = ClipSound("milestone") }
 /// The "new crew hired" clip.
 @MainActor enum NewCrewSound { static let shared = ClipSound("new_crew") }
+/// The "loan drawn" clip.
+@MainActor enum LoanSound { static let shared = ClipSound("loan_closed") }

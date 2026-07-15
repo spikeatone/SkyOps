@@ -403,7 +403,7 @@ struct FinanceView: View {
                     .font(.karla(12)).foregroundStyle(secondary)
             }
             Spacer(minLength: 8)
-            Button { if sim.takeLoan(offer) { Feedback.impact(.medium) } } label: {
+            Button { if sim.takeLoan(offer) { Feedback.loanTaken() } } label: {
                 Text("BORROW").font(.karla(12, .bold)).foregroundStyle(.white)
                     .padding(.horizontal, 10).frame(height: 26)
                     .background(ok ? Sky.coreGreen : Color(skyHex: 0xC9C9C9))
