@@ -2517,15 +2517,15 @@ where numbers are involved.
   marketplace buttons); open route → medium impact (`openConfirmedRoute .success`);
   milestone celebration → success haptic; new decision/alert → warning haptic
   (`onChange decisionQueue.count` increasing); bankruptcy → error haptic; sell →
-  light impact (Alerts sell + Fleet-detail sell). `JetSound` is self-contained:
-  it PREFERS a real bundled recording (`jet`/`jet_takeoff` .caf/.wav/.m4a/.mp3) if
-  one is ever dropped into the bundle — a true drop-in upgrade — else synthesizes
-  a band-passed-noise whoosh swept 2200→400 Hz with a soft rise-then-fall swell at
-  low gain (player.volume 0.85). The synthesized WAV was validated with `afinfo`
-  (44.1k mono Int16, 1.1s, valid container) so `AVAudioPlayer` accepts it — but the
-  TIMBRE and the haptics can only be judged on a REAL DEVICE (the Simulator has no
-  haptics and I can't audition audio here). If the synth whoosh isn't right,
-  dropping a real recording into `Resources/` is all it takes to override it.
+  light impact (Alerts sell + Fleet-detail sell). `JetSound` PREFERS a real bundled
+  recording (`jet`/`jet_takeoff` .caf/.wav/.m4a/.mp3) over the synthesized fallback.
+  **REAL RECORDINGS NOW SHIPPED (designer-supplied):** `Resources/Sounds/jet.wav`
+  (Jet Overhead, 3.5s) is used on aircraft acquisition; the synthesized whoosh
+  (band-passed noise swept 2200→400 Hz) is now the FALLBACK only. Files in
+  `Resources/Sounds/` flatten into the app root (like the fonts), so
+  `Bundle.main.url(forResource:"jet",withExtension:"wav")` finds them — confirmed
+  in the built `.app`. TIMBRE/level are the designer's call on-device; swap the
+  file to change the sound (no code change).
   - **AUDIO SESSION CATEGORY — was `.ambient`, now `.playback` + `.mixWithOthers`
     (real fix).** On-device testing FELT the haptics but heard NOTHING: `.ambient`
     is muted by the hardware ring/silent switch, and the test device was on silent.
@@ -2535,18 +2535,14 @@ where numbers are involved.
     + GateAnnouncement) sets it. If a silent-switch-respecting option is ever
     wanted, that's the one line to flip back.
   - **"NOW BOARDING" GATE CALL (native app; designer spitball, shipped).** Opening
-    a route also speaks a gate-style "now boarding" call in the PLAYER'S OWN
-    airline name via on-device TTS (`GateAnnouncement`, `AVSpeechSynthesizer`) —
-    e.g. "Aster Air, now boarding." (blank name → "Now boarding."). Uses the
-    player's chosen name specifically because airports only carry 3-letter CODES
-    (no city names in the model) and TTS mangles codes ("DEN"→"den") — the airline
-    name is both safe and personal. Reserved for route-open only (a deliberate,
-    infrequent action — a nod, not a nag). Speaks under the shared `GameAudio`
-    `.ambient` session (`usesApplicationAudioSession` default true), so the silent
-    switch mutes it and music keeps playing; `stopSpeaking(.immediate)` before each
-    so calls never pile up. TTS VOICE quality is only judgeable on-device; a
-    recorded PA clip could replace it later. If cities are ever wanted in the call,
-    add a `[code: city]` map (Airport has no name field today).
+    a route plays a gate-style "now boarding" call. **REAL RECORDING NOW SHIPPED:**
+    `Resources/Sounds/now_boarding.wav` (1.4s, designer-supplied) is played via
+    `AVAudioPlayer` in `GateAnnouncement`. The on-device TTS path (in the player's
+    own airline name — "Aster Air, now boarding.") is now the FALLBACK only, used
+    if the recording is missing. Reserved for route-open only (a deliberate,
+    infrequent action — a nod, not a nag), under the shared `.playback` session.
+    Swap the file to change the call (no code change); the recording is generic
+    (not airline-specific), which is the designer's choice.
 - **Pinch-zoom on the mobile app**: still not built (this is a browser
   prototype), but the underlying mechanism is no longer blocked or even
   really "open" in the same sense — the camera system built for pan/zoom
