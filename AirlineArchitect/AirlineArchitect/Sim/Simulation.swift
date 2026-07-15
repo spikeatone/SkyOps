@@ -1837,7 +1837,54 @@ final class Simulation {
     private(set) var totalHedgeSpend = 0         // fuel-hedge premiums
     private(set) var totalSaleProceeds = 0       // aircraft sales
     private(set) var totalOfferIncome = 0        // slot-buyback offers accepted
+    private(set) var totalLoanProceeds = 0       // cash drawn from loans
+    private(set) var totalDebtService = 0        // loan payments (principal + interest)
     private(set) var totalFlightsFlown = 0       // owned-aircraft legs settled
+
+    // MARK: - Loans / financing
+
+    private(set) var loans: [Loan] = []
+    private var nextLoanId = 1
+    private var nextLoanBillTick = Simulation.ticksPerMonth
+
+    /// Sum of all remaining loan balances.
+    var totalDebtOutstanding: Int { Int(loans.reduce(0.0) { $0 + $1.remainingPrincipal }.rounded()) }
+    /// Combined monthly debt-service obligation across active loans.
+    var monthlyDebtService: Int { loans.reduce(0) { $0 + $1.monthlyPayment } }
+    /// Collateral-based borrowing limit: a base credit line + the fleet's resale value.
+    var borrowingLimit: Int { max(30_000_000, fleetMarketValue) }
+    func canBorrow(_ offer: LoanOffer) -> Bool { totalDebtOutstanding + offer.principal <= borrowingLimit }
+
+    /// Draw a loan: credit the cash now, owe a fixed monthly payment until repaid.
+    @discardableResult
+    func takeLoan(_ offer: LoanOffer) -> Bool {
+        guard canBorrow(offer) else { return false }
+        playerBalance += offer.principal
+        totalLoanProceeds += offer.principal
+        loans.append(Loan(id: nextLoanId, originalPrincipal: offer.principal,
+                          remainingPrincipal: Double(offer.principal), monthlyRate: offer.monthlyRate,
+                          monthlyPayment: offer.monthlyPayment, termMonths: offer.termMonths, takenTick: tick))
+        nextLoanId += 1
+        logOps(.structural, "Loan drawn",
+               "$\(offer.principal.formatted()) at \(Int((offer.apr * 100).rounded()))% · $\(offer.monthlyPayment.formatted())/mo")
+        return true
+    }
+
+    /// Monthly debt service: interest on the remaining balance + a slice of
+    /// principal; a final short payment retires the loan.
+    private func tickLoanBilling() {
+        guard tick >= nextLoanBillTick else { return }
+        nextLoanBillTick += Simulation.ticksPerMonth
+        for i in loans.indices {
+            let interest = loans[i].remainingPrincipal * loans[i].monthlyRate
+            let due = min(Double(loans[i].monthlyPayment), loans[i].remainingPrincipal + interest)
+            loans[i].remainingPrincipal -= (due - interest)
+            let payment = Int(due.rounded())
+            playerBalance -= payment
+            totalDebtService += payment
+        }
+        loans.removeAll { $0.remainingPrincipal <= 0.5 }
+    }
 
     // MARK: Per-period finance history (for the Finance tab's period views)
 
@@ -1850,6 +1897,7 @@ final class Simulation {
         let leaseCost, insurance, maintenance: Int
         let acquisition, routeSpend, hedgeSpend: Int
         let saleProceeds, offerIncome, flights: Int
+        let loanProceeds, debtService: Int
         let cash, netWorth: Int
     }
     private(set) var financeSnapshots: [FinanceSnapshot] = []
@@ -1860,6 +1908,7 @@ final class Simulation {
                         acquisition: totalAcquisitionSpend, routeSpend: totalRouteSpend,
                         hedgeSpend: totalHedgeSpend, saleProceeds: totalSaleProceeds,
                         offerIncome: totalOfferIncome, flights: totalFlightsFlown,
+                        loanProceeds: totalLoanProceeds, debtService: totalDebtService,
                         cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
     }
 
@@ -2153,6 +2202,10 @@ final class Simulation {
         s.totalAcquisitionSpend = totalAcquisitionSpend; s.totalRouteSpend = totalRouteSpend
         s.totalHedgeSpend = totalHedgeSpend; s.totalSaleProceeds = totalSaleProceeds
         s.totalOfferIncome = totalOfferIncome; s.totalFlightsFlown = totalFlightsFlown
+        s.totalLoanProceeds = totalLoanProceeds; s.totalDebtService = totalDebtService
+        s.loans = loans.map { LoanSave(id: $0.id, originalPrincipal: $0.originalPrincipal,
+                                       remainingPrincipal: $0.remainingPrincipal, monthlyRate: $0.monthlyRate,
+                                       monthlyPayment: $0.monthlyPayment, termMonths: $0.termMonths, takenTick: $0.takenTick) }
         s.isBankrupt = isBankrupt; s.insolventSinceTick = insolventSinceTick
         s.useDemandModel = useDemandModel
         s.reputation = reputation
@@ -2177,7 +2230,8 @@ final class Simulation {
                         leaseCost: f.leaseCost, insurance: f.insurance, maintenance: f.maintenance,
                         acquisition: f.acquisition, routeSpend: f.routeSpend, hedgeSpend: f.hedgeSpend,
                         saleProceeds: f.saleProceeds, offerIncome: f.offerIncome, flights: f.flights,
-                        cash: f.cash, netWorth: f.netWorth)
+                        cash: f.cash, netWorth: f.netWorth,
+                        loanProceeds: f.loanProceeds, debtService: f.debtService)
         }
         return s
     }
@@ -2215,6 +2269,11 @@ final class Simulation {
         totalAcquisitionSpend = s.totalAcquisitionSpend; totalRouteSpend = s.totalRouteSpend
         totalHedgeSpend = s.totalHedgeSpend; totalSaleProceeds = s.totalSaleProceeds
         totalOfferIncome = s.totalOfferIncome; totalFlightsFlown = s.totalFlightsFlown
+        totalLoanProceeds = s.totalLoanProceeds; totalDebtService = s.totalDebtService
+        loans = s.loans.map { Loan(id: $0.id, originalPrincipal: $0.originalPrincipal,
+                                   remainingPrincipal: $0.remainingPrincipal, monthlyRate: $0.monthlyRate,
+                                   monthlyPayment: $0.monthlyPayment, termMonths: $0.termMonths, takenTick: $0.takenTick) }
+        nextLoanId = (loans.map { $0.id }.max() ?? 0) + 1
         isBankrupt = s.isBankrupt; insolventSinceTick = s.insolventSinceTick
         useDemandModel = s.useDemandModel
         reputation = s.reputation
@@ -2254,6 +2313,7 @@ final class Simulation {
                             leaseCost: f.leaseCost, insurance: f.insurance, maintenance: f.maintenance,
                             acquisition: f.acquisition, routeSpend: f.routeSpend, hedgeSpend: f.hedgeSpend,
                             saleProceeds: f.saleProceeds, offerIncome: f.offerIncome, flights: f.flights,
+                            loanProceeds: f.loanProceeds, debtService: f.debtService,
                             cash: f.cash, netWorth: f.netWorth)
         }
         if financeSnapshots.isEmpty { financeSnapshots = [financeSnapshotNow()] }
@@ -2267,6 +2327,7 @@ final class Simulation {
             byCode[r.destCode].map { $0.slotsAvailable = max(0, $0.slotsAvailable - 1) }
         }
         nextInsuranceBillTick = ((tick / Simulation.ticksPerMonth) + 1) * Simulation.ticksPerMonth
+        nextLoanBillTick = ((tick / Simulation.ticksPerMonth) + 1) * Simulation.ticksPerMonth
 
         // Regenerate the competitor (background) traffic to the saved count.
         setFleetSize(s.stressTestCount)
@@ -2292,6 +2353,7 @@ final class Simulation {
         tickSlotAvailability()
         tickLeaseBilling()
         tickInsuranceBilling()
+        tickLoanBilling()
         tickUsedMarketReplenishment()
         tickSolvency()
         assignSpareToPendingRoutes()   // staff any offer-opened routes with an in-range spare

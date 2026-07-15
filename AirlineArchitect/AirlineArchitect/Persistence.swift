@@ -31,6 +31,8 @@ struct GameSnapshot: Codable {
     var totalInsuranceSpent = 0, maintenanceSpend = 0
     var totalAcquisitionSpend = 0, totalRouteSpend = 0, totalHedgeSpend = 0
     var totalSaleProceeds = 0, totalOfferIncome = 0, totalFlightsFlown = 0
+    var totalLoanProceeds = 0, totalDebtService = 0
+    var loans: [LoanSave] = []
 
     // Flags
     var isBankrupt = false
@@ -111,6 +113,17 @@ struct CrewSave: Codable {
 struct FinanceSave: Codable {
     var tick, revenue, fees, operatingCost, leaseCost, insurance, maintenance: Int
     var acquisition, routeSpend, hedgeSpend, saleProceeds, offerIncome, flights, cash, netWorth: Int
+    var loanProceeds = 0, debtService = 0
+}
+
+struct LoanSave: Codable {
+    var id: Int
+    var originalPrincipal: Int
+    var remainingPrincipal: Double
+    var monthlyRate: Double
+    var monthlyPayment: Int
+    var termMonths: Int
+    var takenTick: Int
 }
 
 extension CrewStatus {

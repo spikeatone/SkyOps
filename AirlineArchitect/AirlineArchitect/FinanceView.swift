@@ -76,6 +76,7 @@ struct FinanceView: View {
                         } else {
                             unavailableCard
                         }
+                        financingCard
                     }
                     .padding(.bottom, 8)
                 }
@@ -265,6 +266,7 @@ struct FinanceView: View {
                 leaseCost: sim.totalLeaseCost, insurance: sim.totalInsuranceSpent, maintenance: sim.maintenanceSpend,
                 acquisition: sim.totalAcquisitionSpend, routeSpend: sim.totalRouteSpend, hedgeSpend: sim.totalHedgeSpend,
                 saleProceeds: sim.totalSaleProceeds, offerIncome: sim.totalOfferIncome, flights: sim.totalFlightsFlown,
+                loanProceeds: sim.totalLoanProceeds, debtService: sim.totalDebtService,
                 cashStart: Simulation.startingCapital, cashEnd: sim.playerBalance, isTotal: true)
         case .thisMonth:
             return delta(from: s.last, toLive: true)
@@ -292,6 +294,8 @@ struct FinanceView: View {
             saleProceeds: d(sim.totalSaleProceeds, \.saleProceeds),
             offerIncome: d(sim.totalOfferIncome, \.offerIncome),
             flights: d(sim.totalFlightsFlown, \.flights),
+            loanProceeds: d(sim.totalLoanProceeds, \.loanProceeds),
+            debtService: d(sim.totalDebtService, \.debtService),
             cashStart: base?.cash ?? Simulation.startingCapital,
             cashEnd: toLive ? sim.playerBalance : (end?.cash ?? sim.playerBalance),
             isTotal: false)
@@ -328,9 +332,11 @@ struct FinanceView: View {
                 ledgerRow("Aircraft acquisition", f.acquisition, sign: .minus)
                 ledgerRow("Route openings", f.routeSpend, sign: .minus)
                 ledgerRow("Fuel hedges", f.hedgeSpend, sign: .minus)
+                ledgerRow("Debt service", f.debtService, sign: .minus)
                 Divider().overlay(cardBorder.opacity(0.5))
                 ledgerRow("Aircraft sales", f.saleProceeds, sign: .plus)
                 ledgerRow("Slot buybacks", f.offerIncome, sign: .plus)
+                ledgerRow("Loans drawn", f.loanProceeds, sign: .plus)
             }
         }
     }
@@ -349,6 +355,63 @@ struct FinanceView: View {
                 ledgerRow(f.isTotal ? "Cash on hand" : "Cash, period end", f.cashEnd, sign: .net, bold: true)
             }
         }
+    }
+
+    // MARK: Financing (loans)
+    private var financingCard: some View {
+        card {
+            VStack(alignment: .leading, spacing: 10) {
+                sectionTitle("FINANCING")
+                if sim.loans.isEmpty {
+                    Text("No active loans. Borrow to expand faster than cash flow allows — you'll owe interest and a fixed monthly payment.")
+                        .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+                } else {
+                    HStack {
+                        Text("Total debt").font(.karla(13)).foregroundStyle(secondary)
+                        Spacer()
+                        Text(compactMoney(sim.totalDebtOutstanding)).font(.karla(14, .bold)).foregroundStyle(red)
+                    }
+                    HStack {
+                        Text("Monthly debt service").font(.karla(13)).foregroundStyle(secondary)
+                        Spacer()
+                        Text("\(compactMoney(sim.monthlyDebtService))/mo").font(.karla(14, .bold)).foregroundStyle(red)
+                    }
+                    ForEach(sim.loans) { loan in
+                        HStack {
+                            Text("\(compactMoney(loan.originalPrincipal)) loan").font(.karla(12, .semibold)).foregroundStyle(primary)
+                            Spacer()
+                            Text("\(compactMoney(Int(loan.remainingPrincipal.rounded()))) left")
+                                .font(.karla(12)).foregroundStyle(secondary)
+                        }
+                    }
+                    Divider().overlay(cardBorder.opacity(0.5))
+                }
+                Text("BORROW").font(.karla(11, .bold)).foregroundStyle(secondary)
+                ForEach(LoanOffer.all) { loanOfferRow($0) }
+                Text("Limit: \(compactMoney(sim.borrowingLimit)) total debt (a credit line + your fleet's resale value).")
+                    .font(.karla(11)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func loanOfferRow(_ offer: LoanOffer) -> some View {
+        let ok = sim.canBorrow(offer)
+        return HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(offer.name) · \(compactMoney(offer.principal))").font(.karla(14, .bold)).foregroundStyle(primary)
+                Text("\(Int((offer.apr * 100).rounded()))% APR · \(offer.termMonths) mo · \(compactMoney(offer.monthlyPayment))/mo")
+                    .font(.karla(12)).foregroundStyle(secondary)
+            }
+            Spacer(minLength: 8)
+            Button { if sim.takeLoan(offer) { Feedback.impact(.medium) } } label: {
+                Text("BORROW").font(.karla(12, .bold)).foregroundStyle(.white)
+                    .padding(.horizontal, 10).frame(height: 26)
+                    .background(ok ? Sky.coreGreen : Color(skyHex: 0xC9C9C9))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+            .buttonStyle(.plain).disabled(!ok)
+        }
+        .padding(.vertical, 3)
     }
 
     private var unavailableCard: some View {
@@ -417,12 +480,13 @@ struct PeriodFigures {
     var leaseCost, insurance, maintenance: Int
     var acquisition, routeSpend, hedgeSpend: Int
     var saleProceeds, offerIncome, flights: Int
+    var loanProceeds = 0, debtService = 0
     var cashStart, cashEnd: Int
     var isTotal: Bool
     var operatingProfit: Int { revenue - fees - operatingCost }
-    var overhead: Int { leaseCost + insurance + maintenance }
+    var overhead: Int { leaseCost + insurance + maintenance + debtService }
     var capitalOut: Int { acquisition + routeSpend + hedgeSpend }
-    var capitalIn: Int { saleProceeds + offerIncome }
+    var capitalIn: Int { saleProceeds + offerIncome + loanProceeds }
 }
 
 /// A compact net-worth-over-time line. Line is green above the launch baseline,
