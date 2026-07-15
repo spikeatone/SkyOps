@@ -2547,7 +2547,13 @@ where numbers are involved.
   recouping its opening cost from `settleLeg`); ContentView shows the first as a
   gold-rimmed toast that glides down from the top and auto-dismisses (3.6s). Fired
   once each via a `firedMilestones` Set; `checkMilestones()` runs in the tick
-  loop. (4) MAP ROUTE-OPEN RIPPLE — `routeOpenPulse` (set in `openRoute`) drives
+  loop. **The badge now uses app-aesthetic SF SYMBOLS (not emoji), tinted gold:**
+  `Celebration.symbol` (airplane / airplane.departure / trophy.fill /
+  chart.line.uptrend.xyaxis / airplane.circle.fill). For a ROUTE milestone (a
+  route recouping), `Celebration.originCode`/`destCode` drive a city-pair line
+  rendered with the ⇄ `arrow.left.arrow.right` icon between the codes (matches the
+  Figma "RT Route Arrows" 61:4824 + the Ops boxes) instead of a unicode ↔ in the
+  title string. (4) MAP ROUTE-OPEN RIPPLE — `routeOpenPulse` (set in `openRoute`) drives
   two staggered expanding rings at both endpoints in `MapView.drawRoutePulse`
   (tick-driven over 48 ticks, no SwiftUI animation — the Canvas already redraws
   each tick; speed-dependent, acceptable). (5) EASTER EGG — tapping the "NETWORK"
@@ -2575,7 +2581,12 @@ where numbers are involved.
   `Resources/Sounds/` flatten into the app root (like the fonts), so
   `Bundle.main.url(forResource:"jet",withExtension:"wav")` finds them — confirmed
   in the built `.app`. TIMBRE/level are the designer's call on-device; swap the
-  file to change the sound (no code change).
+  file to change the sound (no code change). Four clips now ship in
+  `Resources/Sounds/`: `jet.wav` (acquire aircraft), `now_boarding.wav` (open
+  route), `milestone.wav` (milestone), `new_crew.wav` (hire crew). Single-clip
+  players are a shared `ClipSound(resource:volume:)`; `Feedback.crewHired()`
+  (success haptic + `new_crew`) fires at all three hire sites (Crews tab, Network
+  ADD CREW panel, CREW alert card's Hire option).
   - **AUDIO SESSION CATEGORY — was `.ambient`, now `.playback` + `.mixWithOthers`
     (real fix).** On-device testing FELT the haptics but heard NOTHING: `.ambient`
     is muted by the hardware ring/silent switch, and the test device was on silent.
