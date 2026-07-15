@@ -31,17 +31,20 @@ enum Feedback {
     // MARK: - Named big events (one call site each)
 
     /// Buying / leasing / used-buying an aircraft — the flagship moment:
-    /// a success tap + a short, subtle jet whoosh.
-    static func aircraftAcquired() {
+    /// a success tap + a short jet whoosh. On the FIRST-EVER purchase the whoosh
+    /// is skipped so it doesn't collide with the "First jet purchased!" milestone
+    /// chime (which plays on the next tick); the chime is that moment's sound.
+    static func aircraftAcquired(isFirst: Bool = false) {
         success()
-        JetSound.shared.play()
+        if !isFirst { JetSound.shared.play() }
     }
 
     /// Opening a route — a solid medium tap plus a gate-style "now boarding"
-    /// call in the player's own airline name (a nod, not a nag).
-    static func routeOpened(airline: String?) {
+    /// call. `announce: false` skips the voice call when it would collide with the
+    /// jet whoosh (i.e. the route was opened by buying an aircraft in one action).
+    static func routeOpened(airline: String?, announce: Bool = true) {
         impact(.medium)
-        GateAnnouncement.shared.nowBoarding(airline: airline)
+        if announce { GateAnnouncement.shared.nowBoarding(airline: airline) }
     }
 
     /// A milestone celebration (first flight, fleet size, net-worth threshold,

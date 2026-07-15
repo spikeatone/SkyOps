@@ -496,7 +496,10 @@ struct NetworkView: View {
         }
     }
 
-    private func openConfirmedRoute(_ origin: Airport, _ dest: Airport) {
+    /// `announce` is false when this follows an aircraft purchase (handleBought) —
+    /// the jet whoosh already played, so we skip the "now boarding" voice to avoid
+    /// the two sounds colliding.
+    private func openConfirmedRoute(_ origin: Airport, _ dest: Airport, announce: Bool = true) {
         guard let spare = sim.idleSpares.first else {
             showFlash("No spare aircraft — buy one to fly this route")
             panel = .acquire
@@ -504,7 +507,7 @@ struct NetworkView: View {
         }
         switch sim.openRoute(from: origin, to: dest, using: spare) {
         case .success:
-            Feedback.routeOpened(airline: sim.playerAirlineName)
+            Feedback.routeOpened(airline: sim.playerAirlineName, announce: announce)
             showFlash("Route \(origin.code) ↔ \(dest.code) opened — \(spare.tail) assigned")
             routeMode = .off; panel = .none
         case .insufficientFunds(let c): showFlash("Need $\(c.formatted()) to open this route")
@@ -517,13 +520,13 @@ struct NetworkView: View {
     }
 
     private func handleBought(_ ac: Aircraft) {
-        Feedback.aircraftAcquired()
+        Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1)
         let verb = ac.isLeased ? "Leased" : "Bought"
         showFlash("\(verb) \(ac.type.name) — now a spare")
         if case .confirm(let o, let d) = routeMode,
            let origin = sim.airports.first(where: { $0.code == o }),
            let dest = sim.airports.first(where: { $0.code == d }) {
-            openConfirmedRoute(origin, dest)
+            openConfirmedRoute(origin, dest, announce: false)   // jet whoosh already played
         }
     }
 

@@ -2065,6 +2065,7 @@ final class Simulation {
     /// Checked once per tick — net-worth thresholds, fleet size, flight counts.
     private func checkMilestones() {
         guard playerAirlineName != nil, !isBankrupt else { return }
+        if ownedCount >= 1 { celebrate("first_aircraft", "🛩️", "First jet purchased!", "Your fleet has its first aircraft.") }
         if totalFlightsFlown >= 1 { celebrate("first_flight", "🛫", "First flight complete!", "Wheels up — welcome to the skies.") }
         if totalFlightsFlown >= 1000 { celebrate("flights_1k", "🎉", "1,000 flights flown", "The network is humming.") }
         // Net-worth ladder. Gated on owning at least one aircraft so nothing
