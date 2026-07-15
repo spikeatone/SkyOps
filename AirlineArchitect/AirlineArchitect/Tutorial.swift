@@ -31,7 +31,9 @@ let tutorialSteps: [TutorialStep] = [
 
 /// Whether the walkthrough has been shown (app-level, not per-save).
 enum TutorialState {
-    private static let key = "hasSeenTutorial_v1"
+    // Bump this suffix to re-show the walkthrough to everyone on a new build
+    // (e.g. after it was seen/dismissed on an earlier TestFlight build).
+    private static let key = "hasSeenTutorial_v2"
     static var seen: Bool {
         get { UserDefaults.standard.bool(forKey: key) }
         set { UserDefaults.standard.set(newValue, forKey: key) }

@@ -365,7 +365,7 @@ final class Simulation {
 
     // MARK: - Ownership economy (Phase 5)
 
-    static let startingCapital = 30_000_000
+    static let startingCapital = 20_000_000
 
     /// A held aircraft (AOG/crew) still costs money at the gate, but a PARKED
     /// aircraft doesn't burn full in-flight block-hour cost — only idle cost
@@ -1938,10 +1938,8 @@ final class Simulation {
         if totalFlightsFlown >= 1 { celebrate("first_flight", "🛫", "First flight complete!", "Wheels up — welcome to the skies.") }
         if totalFlightsFlown >= 1000 { celebrate("flights_1k", "🎉", "1,000 flights flown", "The network is humming.") }
         // Net-worth ladder. Gated on owning at least one aircraft so nothing
-        // fires at the $30M start (net worth == starting capital before you've
-        // deployed any of it) — acquiring an aircraft always dips net worth below
-        // $30M (cash out for a lease / a depreciating asset + route cost), so
-        // crossing $30M again is a real "grown past your starting stake" moment.
+        // fires before the player has deployed any capital (net worth == the $20M
+        // starting stake). The lowest tier ($30M) is real growth above the start.
         let nw = playerBalance + fleetMarketValue
         let owned = ownedCount
         if owned >= 1 {
