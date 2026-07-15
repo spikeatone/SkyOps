@@ -28,6 +28,9 @@ struct ContentView: View {
     /// Active first-play walkthrough step (nil = not running).
     @State private var tutorialStep: Int?
     @Environment(\.scenePhase) private var scenePhase
+    /// Regular width (iPad, full screen) → sidebar rail; compact (iPhone) → bottom tabs.
+    @Environment(\.horizontalSizeClass) private var hSize
+    private var isPadLayout: Bool { hSize == .regular }
 
     var body: some View {
         // Custom bottom nav (SkyTabBar) — the Figma tab bar (yellow-on-dark /
@@ -35,23 +38,7 @@ struct ContentView: View {
         // selection ourselves and switch the content. Only NETWORK is built;
         // the others are placeholders. safeAreaInset reserves the bar's space
         // so the content lays out above it.
-        Group {
-            switch tab {
-            case 0:  NetworkView(sim: sim, store: store, onBell: { showAlerts = true }, onUpgrade: upgrade,
-                                 onSave: saveCurrent, onQuit: quitToMenu)
-            case 1:  FleetView(sim: sim, tab: $tab, store: store, onBell: { showAlerts = true },
-                               onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: upgrade)
-            case 2:  CrewsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu)
-            case 3:  OpsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu,
-                             onShowAirport: { code in sim.focusCamera(on: code); tab = 0 })
-            default: FinanceView(sim: sim, store: store, onBell: { showAlerts = true },
-                                 onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: { upgrade(nil) })
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            SkyTabBar(selection: $tab, opsBadge: sim.unseenOpsEventCount)
-        }
+        adaptiveShell
         // Run the sim for the whole session, independent of the selected tab.
         // Keyed on gameID so a fresh start (post-bankruptcy) cancels the old
         // loop and runs the new instance.
@@ -177,6 +164,40 @@ struct ContentView: View {
         .animation(.easeOut(duration: 0.2), value: showAlerts)
         .animation(.easeOut(duration: 0.2), value: showPaywall)
         .animation(.easeOut(duration: 0.3), value: sim.isBankrupt)
+    }
+
+    /// iPad (regular width) → a persistent left sidebar rail; iPhone (compact)
+    /// → the bottom tab bar. Same `content` in both.
+    @ViewBuilder private var adaptiveShell: some View {
+        if isPadLayout {
+            HStack(spacing: 0) {
+                SkySidebarRail(selection: $tab, opsBadge: sim.unseenOpsEventCount,
+                               airlineName: sim.playerAirlineName)
+                content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        } else {
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    SkyTabBar(selection: $tab, opsBadge: sim.unseenOpsEventCount)
+                }
+        }
+    }
+
+    /// The selected tab's screen. Shared by both nav layouts.
+    @ViewBuilder private var content: some View {
+        switch tab {
+        case 0:  NetworkView(sim: sim, store: store, onBell: { showAlerts = true }, onUpgrade: upgrade,
+                             onSave: saveCurrent, onQuit: quitToMenu)
+        case 1:  FleetView(sim: sim, tab: $tab, store: store, onBell: { showAlerts = true },
+                           onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: upgrade)
+        case 2:  CrewsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu)
+        case 3:  OpsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu,
+                         onShowAirport: { code in sim.focusCamera(on: code); tab = 0 })
+        default: FinanceView(sim: sim, store: store, onBell: { showAlerts = true },
+                             onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: { upgrade(nil) })
+        }
     }
 
     /// Show the paywall with an optional context line (which cap was hit).

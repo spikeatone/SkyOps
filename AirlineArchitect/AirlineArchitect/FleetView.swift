@@ -29,6 +29,7 @@ struct FleetView: View {
     }
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
+    @Environment(\.horizontalSizeClass) private var hSize
 
     @State private var segment: Segment = .myFleet
     @State private var detailID: UUID?
@@ -65,30 +66,79 @@ struct FleetView: View {
         // small, so a per-tick body re-eval is cheap (unlike the 250-acircraft
         // Canvas).
         let _ = sim.tick
+        let owned = sim.aircraft.filter { $0.purchased }.sorted { $0.tail < $1.tail }
         ZStack {
             bg.ignoresSafeArea()
-            if let id = detailID, let ac = sim.aircraft.first(where: { $0.id == id }) {
-                FleetDetailView(sim: sim, aircraft: ac,
-                                onBack: { detailID = nil },
-                                onAssignRoute: { detailID = nil; tab = 0 },
-                                onSold: { detailID = nil },
-                                onBell: onBell)
-            } else {
-                VStack(spacing: 16) {
-                    header
-                    segmentedControl
-                    if segment == .myFleet {
-                        statusBar
-                        fleetList
+            GeometryReader { geo in
+                // iPad landscape + My Fleet → list on the left, live detail on the
+                // right. Portrait / iPhone / Marketplace keep the tap-to-push flow.
+                let split = PadLayout.isPad(hSize) && geo.size.width > geo.size.height
+                    && segment == .myFleet && !owned.isEmpty
+                Group {
+                    if split {
+                        fleetSplitLayout(owned: owned)
+                    } else if segment == .myFleet, let id = detailID,
+                              let ac = sim.aircraft.first(where: { $0.id == id }) {
+                        FleetDetailView(sim: sim, aircraft: ac,
+                                        onBack: { detailID = nil },
+                                        onAssignRoute: { detailID = nil; tab = 0 },
+                                        onSold: { detailID = nil },
+                                        onBell: onBell)
                     } else {
-                        marketplacePlaceholder
+                        stackedLayout
                     }
-                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+    }
+
+    /// Portrait / iPhone / Marketplace: the single-column stack.
+    private var stackedLayout: some View {
+        VStack(spacing: 16) {
+            header
+            segmentedControl
+            if segment == .myFleet {
+                statusBar
+                fleetList(selectedID: nil)
+            } else {
+                marketplacePlaceholder
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+    }
+
+    /// iPad landscape My Fleet: the list on the left, the selected aircraft's
+    /// detail on the right (defaulting to the first aircraft until one is tapped).
+    private func fleetSplitLayout(owned: [Aircraft]) -> some View {
+        let detailAC = owned.first { $0.id == detailID } ?? owned.first
+        return VStack(spacing: 16) {
+            header
+            segmentedControl
+            HStack(alignment: .top, spacing: 16) {
+                VStack(spacing: 16) {
+                    statusBar
+                    fleetList(selectedID: detailAC?.id)
+                }
+                .frame(maxWidth: .infinity)   // 50/50 split with the detail pane
+                Group {
+                    if let ac = detailAC {
+                        FleetDetailView(sim: sim, aircraft: ac,
+                                        onBack: {},
+                                        onAssignRoute: { tab = 0 },
+                                        onSold: { detailID = nil },
+                                        onBell: onBell,
+                                        embedded: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
     }
 
     // MARK: Header (cash + FLEET HOME + bell)
@@ -165,7 +215,7 @@ struct FleetView: View {
     }
 
     // MARK: Fleet list
-    private var fleetList: some View {
+    private func fleetList(selectedID: UUID?) -> some View {
         let owned = sim.aircraft.filter { $0.purchased }
             .sorted { $0.tail < $1.tail }
         return Group {
@@ -180,7 +230,7 @@ struct FleetView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        ForEach(owned) { fleetCard($0) }
+                        ForEach(owned) { fleetCard($0, selected: $0.id == selectedID) }
                     }
                     .padding(.bottom, 8)
                 }
@@ -188,7 +238,7 @@ struct FleetView: View {
         }
     }
 
-    private func fleetCard(_ ac: Aircraft) -> some View {
+    private func fleetCard(_ ac: Aircraft, selected: Bool = false) -> some View {
         let pct = 100 * ac.cyclesAccrued / max(1, ac.type.expectedLifespanCycles)
         let st = status(ac)
         return VStack(alignment: .leading, spacing: 12) {
@@ -239,7 +289,8 @@ struct FleetView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 4)
+            .stroke(selected ? fill : cardBorder, lineWidth: selected ? 2 : 1))
         .contentShape(Rectangle())
         .onTapGesture { detailID = ac.id }
     }
@@ -306,7 +357,8 @@ struct FleetView: View {
         return VStack(alignment: .leading, spacing: 12) {
             Text(type.name).font(.karla(20, .heavy)).foregroundStyle(primary)
             if let img = AircraftArt.image(for: type.id) {
-                img.resizable().scaledToFit().frame(maxWidth: .infinity)
+                img.resizable().scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: PadLayout.isPad(hSize) ? 340 : nil)
             }
             // Spec row
             HStack(alignment: .top) {

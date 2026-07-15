@@ -45,6 +45,8 @@ struct NetworkView: View {
     var onQuit: () -> Void = {}
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
+    @Environment(\.horizontalSizeClass) private var hSize
+    private var isPad: Bool { hSize == .regular }
     /// Section-header / icon blue — matches the other tabs (Figma "Dark Blue"
     /// #4E67A0 in light, light-blue in dark). Was the brighter #0EA5E9.
     private var titleColor: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x4E67A0) }
@@ -95,11 +97,87 @@ struct NetworkView: View {
         let selected = (panel == .none && routeMode == .off) ? sim.aircraft.first { $0.id == selectedID } : nil
         VStack(spacing: 10) {
             header
-            mapCard(selected: selected)
+            GeometryReader { geo in
+                // Side-dock only when there's real width to spare (iPad in
+                // landscape). Portrait iPad + iPhone keep the panels floating over
+                // the map — a tall screen has no room for a 380pt rail alongside.
+                let wide = geo.size.width > geo.size.height
+                Group {
+                    if isPad && wide {
+                        HStack(alignment: .top, spacing: 10) {
+                            mapCard(selected: selected, sideDocked: true)
+                            if hasSidePanel(selected: selected) {
+                                sidePanelColumn(selected: selected)
+                                    .frame(width: 380)
+                                    .frame(maxHeight: .infinity, alignment: .top)
+                                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                            }
+                        }
+                        .animation(Motion.glide, value: panel)
+                        .animation(Motion.glide, value: routeMode)
+                        .animation(Motion.glide, value: selectedID)
+                        .animation(Motion.glide, value: selectedAirportCode)
+                    } else {
+                        mapCard(selected: selected, sideDocked: false)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 6)
         .background((isDark ? Sky.darkBG : Color.white).ignoresSafeArea())
+    }
+
+    /// The route flow's confirm step (step 3) — the one that docks into the rail.
+    /// The pick-origin / pick-dest HINTS overlay the map instead (see mapCard),
+    /// so picking airports doesn't cost the whole rail.
+    private var isRouteConfirm: Bool {
+        if case .confirm = routeMode { return true }
+        return false
+    }
+
+    /// The pick-step instruction that floats over the map (nil outside pick steps).
+    private var routePickHintText: String? {
+        switch routeMode {
+        case .pickOrigin: return "Step One: Tap one of the airports you want in the city pair"
+        case .pickDest:   return "Step Two: Now tap the other airport pair"
+        default:          return nil
+        }
+    }
+
+    /// iPad: is any panel/flow active that should occupy the right-hand rail?
+    private func hasSidePanel(selected: Aircraft?) -> Bool {
+        panel != .none || isRouteConfirm || selected != nil || selectedAirport != nil
+    }
+
+    /// iPad: the docked right-hand rail. Mirrors the height treatment the panels
+    /// had in the floating overlay — Acquire/Routes fill (they scroll internally),
+    /// the shorter panels sit at the top.
+    @ViewBuilder private func sidePanelColumn(selected: Aircraft?) -> some View {
+        switch panel {
+        case .acquire:
+            BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
+                .frame(maxHeight: .infinity, alignment: .top)
+        case .routes:
+            RoutesPanel(sim: sim).frame(maxHeight: .infinity, alignment: .top)
+        case .hire:
+            VStack(spacing: 0) {
+                AddCrewPanel(sim: sim) { withAnimation(Motion.glide) { panel = .none } }
+                Spacer(minLength: 0)
+            }
+        case .none:
+            VStack(spacing: 8) {
+                if isRouteConfirm {
+                    routeFlowPanel
+                } else if let ac = selected {
+                    AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { withAnimation(Motion.glide) { selectedID = nil } }
+                } else if let ap = selectedAirport {
+                    AirportInfoCard(airport: ap)
+                }
+                Spacer(minLength: 0)
+            }
+        }
     }
 
     // MARK: - Header (cash + NETWORK + eye/bell)
@@ -145,7 +223,7 @@ struct NetworkView: View {
 
     // MARK: - Map card + overlays
 
-    private func mapCard(selected: Aircraft?) -> some View {
+    private func mapCard(selected: Aircraft?, sideDocked: Bool) -> some View {
         ZStack {
             MapView(sim: sim, tick: sim.tick,
                     cameraZoom: sim.cameraZoom, cameraCenter: sim.cameraCenter,
@@ -164,7 +242,22 @@ struct NetworkView: View {
         .overlay {
             VStack(spacing: 8) {
                 controlBar.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
-                panelMiddle(selected: selected)
+                // iPad docks panels into the side rail (see body); the map overlay
+                // keeps only the bars. EXCEPTION: the route-pick hints (Step One /
+                // Step Two) float over the map as a chip instead of taking the rail
+                // — you're tapping the map, so the instruction belongs on it.
+                if sideDocked {
+                    if let hint = routePickHintText {
+                        HStack(alignment: .top, spacing: 0) {
+                            routeHint(hint).frame(maxWidth: 460)
+                            Spacer(minLength: 0)
+                        }
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                    Spacer(minLength: 0)
+                } else {
+                    panelMiddle(selected: selected)
+                }
                 if let flash {
                     Text(flash).font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(.white).padding(8)
@@ -425,10 +518,8 @@ struct NetworkView: View {
         switch routeMode {
         case .off:
             EmptyView()
-        case .pickOrigin:
-            routeHint("Step One: Tap one of the airports you want in the city pair")
-        case .pickDest:
-            routeHint("Step Two: Now tap the other airport pair")
+        case .pickOrigin, .pickDest:
+            if let t = routePickHintText { routeHint(t) }
         case .confirm(let o, let d):
             if let origin = sim.airports.first(where: { $0.code == o }),
                let dest = sim.airports.first(where: { $0.code == d }) {

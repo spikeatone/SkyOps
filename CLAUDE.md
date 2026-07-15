@@ -2493,6 +2493,79 @@ where numbers are involved.
   longer read for gating. Verified live (set the seen flag true → walkthrough
   still appears on a new airline).
 
+## Decided — iPad Adaptation (native app; universal, one codebase)
+
+Designer wanted a genuinely iPad-DESIGNED experience, not a stretched phone
+app ("with all the extra space it'll just make the game better"). Built
+code-first with screenshot iteration — designer explicitly decided **NO iPad
+Figma frames were needed** after seeing it ("I don't see anything that needs
+major changes"). Verified live on the iPad Pro 13" simulator (both themes,
+both orientations) incl. the full open-a-route→acquire flow.
+
+- **Already universal — no new target.** `TARGETED_DEVICE_FAMILY = "1,2"` and
+  all iPad orientations were already set from the template, so the app always
+  RAN on iPad; the work was purely adaptive LAYOUT, not a port. iPhone is
+  completely untouched — every fork is gated on
+  `@Environment(\.horizontalSizeClass) == .regular` (`PadLayout.isPad(hSize)`
+  in `AdaptiveLayout.swift`, the one shared predicate). Compact width = the
+  existing iPhone layout verbatim.
+- **Sidebar rail replaces the bottom tab bar on iPad** (`SkySidebar.swift`,
+  `SkySidebarRail`). Reuses the SAME `SkyTabIcon` glyphs, active/inactive
+  tints, and Ops badge as `SkyTabBar` — so it stays visually consistent, just
+  vertical. Width 232. Header = the `AppLogo` badge LARGE and centered above a
+  centered two-line "Airline / Architect" wordmark (designer's explicit call).
+  ContentView picks `SkySidebarRail` (regular) vs `SkyTabBar` (compact) in
+  `adaptiveShell`; the tab content is shared via a `content` @ViewBuilder.
+- **All list screens are FULL-WIDTH single column on iPad, NOT multi-column
+  grids.** A multi-column grid was built first (2-up portrait / 3-up
+  landscape) and REJECTED by the designer twice: Fleet/Marketplace went
+  full-width so the aircraft art could be BIG (marketplace image capped at
+  340pt tall on iPad), then Finance + Ops + Crews followed for consistency
+  ("I don't like how there are big gaps between cards" — the gaps were
+  LazyVGrid row-height staggering when a short card sits next to a tall one).
+  Net: `PadLayout.cardColumns` was built then DELETED as dead code — every
+  list is a plain `LazyVStack`/`VStack` at full content width on both idioms.
+  Only `PadLayout.isPad` survives.
+- **Landscape Network = map + docked side rail** (the flagship interaction the
+  designer loved). In `NetworkView`, gated to iPad LANDSCAPE only via a
+  `GeometryReader` (`wide = width > height`) — portrait iPad + iPhone keep the
+  panels FLOATING over the map (a tall screen has no room for a 380pt rail).
+  When wide, the body is an `HStack { mapCard(sideDocked: true) | sidePanelColumn }`;
+  the map keeps its control/speed bars and stays fully live (all airports
+  tappable) while whatever panel would have overlaid it — Acquire / Routes /
+  Hire / route-confirm / aircraft tooltip / airport card — docks into a 380pt
+  right rail instead. `sideDocked` swaps the map overlay's `panelMiddle` for a
+  `Spacer`. Verified end-to-end: open route with no spare → rail swaps from the
+  confirm panel to Acquire (route stays pending) → buy → route auto-opens with
+  the jet assigned and flying, balance deducted, rail dismisses.
+  - **EXCEPTION the designer requested: the route-PICK hints (Step One / Step
+    Two) float over the map as a chip, they do NOT take the rail** — you're
+    tapping the map to pick airports, so the instruction belongs on it. Only
+    the CONFIRM step (step 3, with buttons) docks in the rail.
+    `isRouteConfirm` gates the rail; `routePickHintText` (single source, also
+    consumed by the iPhone `routeFlowPanel`) drives the floating chip in the
+    map overlay.
+- **Fleet = list + detail side-by-side on iPad landscape** (`fleetSplitLayout`),
+  50/50 split (`.frame(maxWidth:.infinity)` on both columns — designer bumped
+  it from an initial fixed-400pt list "for better visual balance"). Left =
+  status bar + fleet list; right = the selected aircraft's detail, defaulting
+  to the FIRST owned aircraft until one is tapped (`detailAC = owned.first{
+  id==detailID } ?? owned.first` — no state mutation). The tapped card gets a
+  blue selection ring (`fleetCard(_:selected:)`, `fleetList(selectedID:)`).
+  `FleetDetailView` gained `embedded: Bool` — hides its own header (cash line +
+  back chevron + title) in the split since the list side already carries the
+  header; portrait/iPhone keep the tap-to-push full-screen detail unchanged.
+  Only My Fleet splits — Marketplace stays full-width.
+- **Screenshot capture gotcha (for the next session driving the Simulator):**
+  `xcrun simctl io … screenshot` captures the RAW framebuffer, so in landscape
+  the PNG comes out rotated 90°/180° depending on which way the device was
+  rotated (cmd+Right vs cmd+Left give opposite handedness). Rotate the file for
+  viewing with `sips -r 90` or `-r 270` (whichever lands upright) — the app
+  itself is fine, it's purely a capture artifact.
+- **Not adapted (deliberate, designer OK'd):** the naming/paywall/tutorial
+  modals still float centered (functional on iPad, not restyled); portrait
+  iPad Network uses the floating-overlay panels rather than the rail.
+
 ## Open / not yet decided
 
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on

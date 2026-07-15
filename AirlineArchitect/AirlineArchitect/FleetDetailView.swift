@@ -18,6 +18,10 @@ struct FleetDetailView: View {
     let onAssignRoute: () -> Void
     let onSold: () -> Void
     var onBell: () -> Void = {}
+    /// When shown in the iPad landscape list+detail split, the list side already
+    /// carries the cash/FLEET header, so the detail pane hides its own header
+    /// (no back button either — you switch aircraft by tapping the list).
+    var embedded: Bool = false
 
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
@@ -40,7 +44,7 @@ struct FleetDetailView: View {
         let _ = sim.tick   // keep status/progress live
         ScrollView {
             VStack(spacing: 16) {
-                header
+                if !embedded { header }
                 identity
                 currentStatusCard
                 maintenanceValueCard
