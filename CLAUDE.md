@@ -1686,9 +1686,11 @@ where numbers are involved.
   crew" signal + you still lose the held flights) instead of a death spiral, and
   a well-run regional is profitable. The AOG expedite-vs-standard tradeoff is
   PRESERVED and now correct: a regional's standard-repair burn (~$2.4k+$3k) <
-  expedite $15k → wait; a widebody's (~$24k+$3k) > $15k → expedite. Fix 2:
-  `startingCapital` $20M → **$30M** — enough to reach a TWO-aircraft operation
-  (the point where profit compounds: 2 ERJ135 + crew + 2 routes → +$308k/mo).
+  expedite $15k → wait; a widebody's (~$24k+$3k) > $15k → expedite. Fix 2 was
+  `startingCapital` $20M → $30M, but **REVERTED to $20M by designer direction** —
+  the starting stake is **$20M** again ($30M briefly aimed to reach a two-aircraft
+  operation faster; the designer prefers the leaner $20M start). The slow-early-
+  growth issue below still stands at $20M — revisit with a revenue lever if wanted.
   KNOWN DEEPER ISSUE (flagged, not fixed — a designer decision): growth is still
   slow in absolute terms because REAL aircraft prices ($14M–$300M) against
   realistic per-leg profit + the LOCKED ~6-hr flight cycle (aircraft fly only
@@ -1698,8 +1700,9 @@ where numbers are involved.
   core scale/feel.
 - **Phase 5 core loop — the FULL SHIFT to a player-driven game, DONE.**
   Designer chose (over a hybrid) to match the prototype: a fresh session
-  starts EMPTY — `startingCapital` **$30M** (was $20M — see the early-game
-  balance pass above), zero aircraft, zero routes. The
+  starts EMPTY — `startingCapital` **$20M** (was briefly $30M in an early-game
+  balance pass, then reverted to $20M by designer direction — see above), zero
+  aircraft, zero routes. The
   player BUYS aircraft (ACQUIRE panel, affordability-gated, sorted by
   price) which sit as idle SPARES (`isIdleSpare` — a purchased aircraft
   with no `assignedRouteId` returns early from `advance`, fully idle), and
