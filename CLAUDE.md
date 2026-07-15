@@ -1870,7 +1870,9 @@ where numbers are involved.
   leased aircraft to terminate instead of crediting a bogus sell value. Verified
   live (button + dialog) + 6/6 headless. KNOWN cosmetic gap (not fixed): the
   Fleet-detail "Market Value" card still shows a sell-value figure for a leased
-  jet, which is slightly misleading (you don't own it) — left as-is for now.
+  jet — RESOLVED: the Fleet-detail "Maintenance & Value" card now shows the real
+  lease figures for a leased jet (Monthly Lease + Early Termination fee) instead of
+  a resale value/depreciation; owned aircraft still show Market Value + Depreciation.
 - **Leasing + used-aircraft market — DONE (native app).** Ported faithfully
   from the prototype. LEASING: 15% upfront (`leaseUpfrontRate`) + a fixed
   MONTHLY obligation (`AircraftType.monthlyLeaseCost` = 0.8% of purchase price),
@@ -2453,15 +2455,21 @@ where numbers are involved.
   guess at layouts from descriptions. Note the raster-export limitation
   documented above under Icons — full-screen mockups may hit the same
   wall the icon nodes did; verify early rather than assuming it'll work.
-- Route competition / competitor airline AI: STILL deferred — this is
-  about actual competitive gameplay (competing for routes/slots/traffic),
-  not the same thing as the real competitor airline NAMES/branding added
-  to background traffic this session (see "Airline Identity & Competitor
-  Traffic" section above). Background traffic with a real airline name
-  painted on it is cosmetic identity, not an AI opponent — it doesn't
-  compete for anything, doesn't react to the player, doesn't have its
-  own economy. Don't conflate the two when this phase eventually gets
-  revisited.
+- **ROUTE COMPETITION — BUILT (native app), a first real version.** Rival
+  carriers now REACT to the player: `tickCompetition()` (daily) has rivals ENTER
+  the player's PROFITABLE, established (≥8-day-old) routes — up to 3 per route,
+  ~6%/day, chasing the traffic — and occasionally EXIT (churn, ~2%/day). Each
+  rival SPLITS the route's demand via `Route.competitionShare(reputation:)` =
+  `1/(1 + level × (0.6 − 0.3·rep/100))`, floored at 0.2 — so 2 rivals at rep 70 ≈
+  −44% demand. A strong REPUTATION both defends share (the factor shrinks with
+  rep) AND deters entrants (entry rate halves at rep 100). Applied in `rollRevenue`
+  for owned aircraft only. Entries/exits log to the Ops feed (MARKET) naming a
+  Big-Four/ULCC rival; a dedicated Ops "Competition" box lists contested routes +
+  rivals + the demand hit. Persisted (`competitionLevel`/`competitors` on Route).
+  Verified 8/8 headless + live. STILL NOT modeled (deliberate, future): rivals
+  competing for SLOTS at open time, or having their own economy/network — this is
+  demand-share competition on the player's routes, which is the impactful, visible
+  slice. The background-traffic airline NAMES are still separate cosmetic identity.
 - The airline roster (`AIRLINE_ROSTER`) and its US-market-share weighting
   is hardcoded to the current US-only airport network. If a future
   version adds other regions/countries, the roster and weights need to
@@ -2470,11 +2478,17 @@ where numbers are involved.
   world fleet/route changes on its own (an Alaska Airlines update this
   session was applied because it was reported and independently
   verified, not because anything in the game noticed).
-- Reputation: named in the original design brief, still not modeled (a
-  service-quality stat fed by delays/AOG/cancellations that feeds back into
-  demand — a good next system). Passenger demand curves and hub connectivity
-  are now BUILT for the native app (see the passenger-demand model and the hub/
-  network effect below) — this open item is down to just reputation.
+- **REPUTATION — BUILT (native app).** A service-quality stat (0–100, starts 70)
+  that feeds back into demand. FALLS when the operation fails passengers (an
+  aircraft grounded −4 at AOG-hold start, a flight held for crew −2) and RECOVERS
+  slowly through flights completed cleanly (+0.15 each). `reputationDemandMultiplier`
+  = `0.85 + 0.30·rep/100` (0.85 at rep 0 · 1.0 at rep 50 · 1.15 at rep 100), applied
+  to owned-aircraft demand in `rollRevenue`. It ALSO defends market share vs
+  competitors (see ROUTE COMPETITION above). Dedicated Ops "Reputation" box: score
+  bar + tier (Poor/Fair/Good/Excellent) + signed demand %. Persisted. The feedback
+  loop: bad service → fewer pax → less revenue → harder to recover. Resolves the
+  original-design-brief reputation item (demand curves + hub effect were already
+  built).
 - **HUB / NETWORK EFFECT — BUILT (native app).** Concentrating routes through
   an airport now pays: `Simulation.hubDemandMultiplier(originCode:destCode:
   excludingRouteId:)` gives a route `+hubBonusRate` (8%) demand per OTHER player
