@@ -71,6 +71,8 @@ struct NetworkView: View {
     @State private var panel: NetPanel = .none
     /// Eye toggle — hides the Control Bar + Speed Bar for a clean map.
     @State private var showOverlays = true
+    /// Easter-egg counter — bumped when the NETWORK title is tapped (plane fly-by).
+    @State private var flyByID = 0
 
     enum NetPanel { case none, acquire, routes, hire }
 
@@ -107,6 +109,9 @@ struct NetworkView: View {
                 Text(cashString)
                     .font(.karla(15, .semibold))
                     .foregroundStyle(sim.playerBalance < 0 ? Sky.red : Sky.coreGreen)
+                    // Rolling counter — the money ticks up/down instead of snapping.
+                    .contentTransition(.numericText())
+                    .animation(.snappy(duration: 0.35), value: sim.playerBalance)
                 Spacer()
             }
             Divider().overlay((isDark ? Sky.onDarkStroke : Color(skyHex: 0xE2E8F0)).opacity(0.6))
@@ -114,12 +119,17 @@ struct NetworkView: View {
                 Text("NETWORK")
                     .font(.karla(22, .bold))
                     .foregroundStyle(titleColor)
+                    // Easter egg: tap the title and a plane zips across the header.
+                    .onTapGesture { flyByID += 1 }
                 Spacer()
                 Button { showOverlays.toggle() } label: {
                     Image(systemName: showOverlays ? "eye" : "eye.slash")
                         .font(.system(size: 18)).foregroundStyle(titleColor)
-                }.buttonStyle(.plain)
+                }.pressable()
                 AlertBell(count: sim.decisionQueue.count, tint: titleColor, action: onBell)
+            }
+            .overlay(alignment: .leading) {
+                if flyByID > 0 { PlaneFlyBy().id(flyByID) }
             }
         }
     }
@@ -157,6 +167,7 @@ struct NetworkView: View {
                     Text(flash).font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(.white).padding(8)
                         .background(Color.black.opacity(0.75)).clipShape(Capsule())
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 // Reserve the speed/dev bars' space even when hidden so the layout
                 // doesn't shift when the overlays toggle.
@@ -165,6 +176,12 @@ struct NetworkView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(8)
+            // Panels / route flow / tooltip glide instead of snapping.
+            .animation(Motion.glide, value: panel)
+            .animation(Motion.glide, value: routeMode)
+            .animation(Motion.glide, value: selectedID)
+            .animation(Motion.glide, value: selectedAirportCode)
+            .animation(Motion.pop, value: flash)
         }
     }
 
@@ -172,15 +189,19 @@ struct NetworkView: View {
     /// all of it; the others sit at the top with a Spacer pushing the bars down;
     /// with no panel open, the route-flow / tooltip dock just above the bars.
     @ViewBuilder private func panelMiddle(selected: Aircraft?) -> some View {
+        // Panels glide in from the top and out; driven by the .animation on the
+        // overlay stack (see mapCard). A slide+fade reads as the panel "opening".
+        let slide = AnyTransition.move(edge: .top).combined(with: .opacity)
         switch panel {
         case .acquire:
             BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
                 .frame(maxHeight: .infinity, alignment: .top)
+                .transition(slide)
         case .routes:
-            RoutesPanel(sim: sim)
+            RoutesPanel(sim: sim).transition(slide)
             Spacer(minLength: 0)
         case .hire:
-            AddCrewPanel(sim: sim) { panel = .none }
+            AddCrewPanel(sim: sim) { withAnimation(Motion.glide) { panel = .none } }.transition(slide)
             Spacer(minLength: 0)
         case .none:
             Spacer(minLength: 0)
@@ -191,12 +212,14 @@ struct NetworkView: View {
     /// The route-open flow and the aircraft tooltip, docked just above the bars
     /// when no control-bar panel is open.
     @ViewBuilder private func bottomDocked(selected: Aircraft?) -> some View {
+        let rise = AnyTransition.move(edge: .bottom).combined(with: .opacity)
         VStack(spacing: 8) {
             routeFlowPanel
             if let ac = selected {
-                AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { selectedID = nil }
+                AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { withAnimation(Motion.glide) { selectedID = nil } }
+                    .transition(rise)
             } else if let ap = selectedAirport {
-                AirportInfoCard(airport: ap)
+                AirportInfoCard(airport: ap).transition(rise)
             }
             // Alerts (AOG / crew / sell) live in the bell's Alerts modal, not here.
         }
@@ -262,7 +285,7 @@ struct NetworkView: View {
                 .background(active ? Sky.brightBlue.opacity(0.18) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
         }
-        .buttonStyle(.plain)
+        .pressable()
     }
 
     // MARK: - Sim Speed Control Bar (¼×–25×, ¼× rate-limited)
@@ -281,7 +304,7 @@ struct NetworkView: View {
                         .background(active ? Sky.brightBlue : Color.clear)
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
-                .buttonStyle(.plain)
+                .pressable(0.9)
             }
         }
         .padding(4)

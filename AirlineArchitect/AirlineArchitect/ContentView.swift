@@ -86,6 +86,20 @@ struct ContentView: View {
                 .transition(.opacity)
             }
         }
+        // Milestone celebrations — glide down from the top, auto-dismiss.
+        .overlay(alignment: .top) {
+            if let c = sim.celebrations.first {
+                MilestoneToast(celebration: c)
+                    .id(c.id)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .task(id: c.id) {
+                        try? await Task.sleep(for: .seconds(3.6))
+                        sim.dismissCelebration(c.id)
+                    }
+            }
+        }
+        .animation(Motion.toast, value: sim.celebrations.first?.id)
         // Game over — bankruptcy. Modal recap + fresh start (new sim instance).
         .overlay {
             if sim.isBankrupt {

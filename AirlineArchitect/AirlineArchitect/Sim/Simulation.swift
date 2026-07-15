@@ -30,6 +30,11 @@ final class Simulation {
     /// old flat-load-factor economy. See `Demand` in Economics.swift.
     var useDemandModel = true
 
+    /// The most recently opened route (endpoint codes + the tick it opened) —
+    /// drives a brief expanding-ring "ripple" on the map at both airports.
+    struct RoutePulse { let a: String; let b: String; let tick: Int }
+    private(set) var routeOpenPulse: RoutePulse?
+
     /// Network / hub effect: a route through an airport where you already run
     /// OTHER routes carries connecting passengers, boosting its demand. Each other
     /// player route touching an endpoint adds `hubBonusRate`; capped. So a coherent
@@ -555,6 +560,7 @@ final class Simulation {
                                                    typeName: ac.type.name, assignedTick: tick))
         nextRouteId += 1
         playerRoutes.append(r)
+        routeOpenPulse = RoutePulse(a: origin.code, b: dest.code, tick: tick)   // map ripple
         logOps(.structural, "Route opened", "\(origin.code) ↔︎ \(dest.code)")
 
         ac.assignedRouteId = r.id
@@ -1502,7 +1508,9 @@ final class Simulation {
         totalOperatingCost += econ.operatingCost
         playerBalance += econ.net
         if let id = ac.assignedRouteId, let r = playerRoutes.first(where: { $0.id == id }) {
+            let wasShort = r.cumulativeNet < r.openingCost
             r.cumulativeNet += econ.net
+            if wasShort && r.cumulativeNet >= r.openingCost { celebrateRecoup(r) }
             r.flights += 1
             r.history.append(FlightRecord(
                 id: r.history.count, tick: tick, tail: ac.tail,
@@ -1611,6 +1619,49 @@ final class Simulation {
         }
     }
 
+    // MARK: - Milestones / celebrations (surprise & delight)
+
+    struct Celebration: Identifiable, Equatable {
+        let id: Int
+        let emoji: String
+        let title: String
+        let subtitle: String
+    }
+    private(set) var celebrations: [Celebration] = []
+    private var celebrationSeq = 0
+    private var firedMilestones: Set<String> = []
+
+    /// Queue a one-time celebration for `key` (deduped — fires once, ever).
+    private func celebrate(_ key: String, _ emoji: String, _ title: String, _ subtitle: String) {
+        guard playerAirlineName != nil, !isBankrupt, firedMilestones.insert(key).inserted else { return }
+        celebrationSeq += 1
+        celebrations.append(Celebration(id: celebrationSeq, emoji: emoji, title: title, subtitle: subtitle))
+        if celebrations.count > 3 { celebrations.removeFirst() }   // never back up too far
+    }
+    func dismissCelebration(_ id: Int) { celebrations.removeAll { $0.id == id } }
+    /// Route recoup is celebrated from settleLeg; expose the trigger.
+    fileprivate func celebrateRecoup(_ r: Route) {
+        celebrate("recoup_\(r.id)", "📈", "\(r.originCode) ↔ \(r.destCode) is profitable!",
+                  "It just recouped its opening cost.")
+    }
+
+    /// Checked once per tick — net-worth thresholds, fleet size, flight counts.
+    private func checkMilestones() {
+        guard playerAirlineName != nil, !isBankrupt else { return }
+        if totalFlightsFlown >= 1 { celebrate("first_flight", "🛫", "First flight complete!", "Wheels up — welcome to the skies.") }
+        if totalFlightsFlown >= 1000 { celebrate("flights_1k", "🎉", "1,000 flights flown", "The network is humming.") }
+        // Above the $30M starting capital, so each is a real growth milestone.
+        let nw = playerBalance + fleetMarketValue
+        for (t, label) in [(50_000_000, "$50M"), (100_000_000, "$100M"), (250_000_000, "$250M"),
+                           (500_000_000, "$500M"), (1_000_000_000, "$1B")] where nw >= t {
+            celebrate("nw_\(t)", "💰", "\(label) net worth", "The airline is really taking off.")
+        }
+        let owned = ownedCount
+        for (n, sub) in [(5, "A real fleet now."), (10, "Double digits!"), (25, "A major carrier.")] where owned >= n {
+            celebrate("fleet_\(n)", "✈️", "\(n) aircraft in the fleet", sub)
+        }
+    }
+
     /// SELL card option: keep flying (don't re-prompt this aircraft).
     func resolveSellKeep(_ decision: Decision) {
         decision.aircraft?.sellOfferDismissed = true
@@ -1633,6 +1684,7 @@ final class Simulation {
         tickInsuranceBilling()
         tickUsedMarketReplenishment()
         tickSolvency()
+        checkMilestones()
         for ac in aircraft {
             switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {
             case .aogHoldStarted:      pushDecision(.aog, for: ac)

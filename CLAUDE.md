@@ -2319,6 +2319,27 @@ where numbers are involved.
   itself. Folded into the `routeDailyDemand`/`projectedLoadFactor` UI helpers and
   shown as a "Hub bonus +X%" row in the route-confirm panel. Verified: 2 routes
   out of DEN give each DEN route +16%, an isolated pair stays ×1.00.
+- **MICRO-INTERACTIONS / DELIGHT PASS — BUILT (native app; designer request for
+  polish + "surprise and delight").** New `Delight.swift` holds the shared
+  primitives: a `Motion` enum of standard spring curves (glide / pop / toast) so
+  everything animates consistently; a `Pressable` ButtonStyle (`.pressable()`) —
+  scale+fade on press — applied to the control-bar / speed-bar / eye buttons; a
+  `PlaneFlyBy` easter egg; and the `MilestoneToast`. Wired in: (1) the Cash-on-
+  hand value is a rolling counter (`.contentTransition(.numericText())`); (2) the
+  Network control-bar panels, route-flow, tooltip and airport card GLIDE in/out
+  (move+opacity transitions driven by `.animation(Motion.glide, value:)` on the
+  overlay stack); (3) MILESTONE CELEBRATIONS — `Simulation` queues one-time
+  `Celebration`s (first flight, fleet 5/10/25, net worth $50M/$100M/$250M/$500M/
+  $1B — thresholds ABOVE the $30M start so they're real growth, and a route
+  recouping its opening cost from `settleLeg`); ContentView shows the first as a
+  gold-rimmed toast that glides down from the top and auto-dismisses (3.6s). Fired
+  once each via a `firedMilestones` Set; `checkMilestones()` runs in the tick
+  loop. (4) MAP ROUTE-OPEN RIPPLE — `routeOpenPulse` (set in `openRoute`) drives
+  two staggered expanding rings at both endpoints in `MapView.drawRoutePulse`
+  (tick-driven over 48 ticks, no SwiftUI animation — the Canvas already redraws
+  each tick; speed-dependent, acceptable). (5) EASTER EGG — tapping the "NETWORK"
+  title zips a ✈️ across the header in an arc (`PlaneFlyBy`, replayed via `.id`).
+  Milestone toast verified visually; the rest are standard SwiftUI transitions.
 - **Pinch-zoom on the mobile app**: still not built (this is a browser
   prototype), but the underlying mechanism is no longer blocked or even
   really "open" in the same sense — the camera system built for pan/zoom

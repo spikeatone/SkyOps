@@ -89,6 +89,7 @@ struct MapView: View {
                 drawRoutes(w)
                 drawAirports(w)
                 drawAircraft(w)
+                drawRoutePulse(w)
             }
         }
         .background(mapBackground)
@@ -294,6 +295,29 @@ struct MapView: View {
                 tri.addLine(to: CGPoint(x: -len * 0.45, y: -len * 0.32))
                 tri.closeSubpath()
                 g.fill(tri, with: .color(color))
+            }
+        }
+    }
+
+    /// A brief celebratory expanding ring at both endpoints of a just-opened
+    /// route — two concentric ripples that grow and fade. Tick-driven (no SwiftUI
+    /// animation needed): the Canvas already redraws every tick.
+    private func drawRoutePulse(_ ctx: GraphicsContext) {
+        guard let p = sim.routeOpenPulse else { return }
+        let elapsed = tick - p.tick
+        let duration = 48
+        guard elapsed >= 0, elapsed < duration else { return }
+        let prog = Double(elapsed) / Double(duration)      // 0 → 1
+        let es = sim.elementScale
+        for code in [p.a, p.b] {
+            guard let ap = sim.airports.first(where: { $0.code == code }) else { continue }
+            // Two staggered rings for a richer ripple.
+            for delay in [0.0, 0.28] {
+                let t = prog - delay
+                guard t > 0, t < 1 else { continue }
+                let r = (5 + t * 34) * es
+                ctx.stroke(Path(ellipseIn: CGRect(x: ap.screen.x - r, y: ap.screen.y - r, width: r * 2, height: r * 2)),
+                           with: .color(climbColor.opacity((1 - t) * 0.8)), lineWidth: 2)
             }
         }
     }
