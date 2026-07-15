@@ -1768,6 +1768,16 @@ where numbers are involved.
   still exists (region-combining) but is no longer used by background spawns.
   Helpers are `@ObservationIgnored lazy` (the `@Observable` macro rejects plain
   `lazy` stored props — needed that attribute to cache the region grouping).
+  - **RANGE-GATED (native app) — a narrowbody is never handed a leg it can't
+    fly.** A playtester saw an American A320 on FLL→BCN (transatlantic, far past an
+    A320's range). `backgroundLeg(for:type:)` now takes the aircraft TYPE (picked
+    before the leg in `makeAircraft`) and filters both the international-corridor
+    dest AND the domestic dest to airports within `type.rangeNM` of the origin; a
+    remote origin with nothing in range falls back to its NEAREST airport (rare,
+    cosmetic). So only widebodies get the long corridors; short international
+    (US↔Mexico/Canada) stays open to narrowbodies — realistic. Both call sites
+    (spawn + the per-leg re-route in `advanceTick`'s `.legScheduled`) pass the
+    type. Verified: 0 over-range legs across 400 background aircraft over 8k ticks.
 - **Player airline naming — DONE, and the FIRST Figma-built screen.**
   First-launch modal (`AirlineNamingView`, overlaid in ContentView while
   `sim.playerAirlineName == nil`; blank submits as "New Airline"). Built to
@@ -1860,12 +1870,16 @@ where numbers are involved.
   jet, which is slightly misleading (you don't own it) — left as-is for now.
 - **Leasing + used-aircraft market — DONE (native app).** Ported faithfully
   from the prototype. LEASING: 15% upfront (`leaseUpfrontRate`) + a fixed
-  MONTHLY bill (`AircraftType.monthlyLeaseCost` = 0.8% of purchase price),
-  billed by `tickLeaseBilling()` every tick the moment it comes due
-  (`nextLeaseBillTick`), REGARDLESS of utilization — an idle leased spare
-  that never flies still bleeds money (the whole reason leasing is a real
-  tradeoff, not strictly dominant; the prototype's original per-leg proration
-  bug made idle leases free — did NOT reappear here). Leased aircraft are
+  MONTHLY obligation (`AircraftType.monthlyLeaseCost` = 0.8% of purchase price),
+  ACCRUED continuously (`monthlyLeaseCost / ticksPerMonth`) but COMMITTED once per
+  sim-HOUR (`tickLeaseBilling`, `leaseBillIntervalTicks = 60`), REGARDLESS of
+  utilization — an idle leased spare that never flies still bleeds money (the
+  whole reason leasing is a real tradeoff, not strictly dominant; the prototype's
+  original per-leg proration bug made idle leases free — did NOT reappear here).
+  **The hourly commit is a DISPLAY-cadence fix** (was per-tick, which made the
+  Finance "Lease payments" total flicker "multiple times/second" at speed — a
+  playtester flagged it); the monthly total is unchanged (1 sim-month bills
+  ≈ `monthlyLeaseCost`, verified). Sub-dollar remainders carry in `ac.leaseAccrued`. Leased aircraft are
   still `purchased: true`. Route P&L absorbs lease bills (`Route.totalLeaseCost`
   + `cumulativeNet -= bill`). USED MARKET: buy-only, persistent per-type
   inventory (`usedInventory`, 1–2 listings/type at start via
