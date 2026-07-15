@@ -1662,6 +1662,134 @@ final class Simulation {
         }
     }
 
+    // MARK: - Persistence (save / restore)
+
+    /// Export the persistent game state. Background traffic, live event effects,
+    /// and the used market are NOT saved — they regenerate on load.
+    func snapshot() -> GameSnapshot {
+        var s = GameSnapshot()
+        s.savedAtTick = tick
+        s.playerAirlineName = playerAirlineName
+        s.playerTailCode = playerTailCode
+        s.playerBalance = playerBalance
+        s.tick = tick
+        s.nextTailNum = nextTailNum
+        s.nextRouteId = nextRouteId
+        s.totalRevenue = totalRevenue; s.totalFees = totalFees
+        s.totalOperatingCost = totalOperatingCost; s.totalLeaseCost = totalLeaseCost
+        s.totalInsuranceSpent = totalInsuranceSpent; s.maintenanceSpend = maintenanceSpend
+        s.totalAcquisitionSpend = totalAcquisitionSpend; s.totalRouteSpend = totalRouteSpend
+        s.totalHedgeSpend = totalHedgeSpend; s.totalSaleProceeds = totalSaleProceeds
+        s.totalOfferIncome = totalOfferIncome; s.totalFlightsFlown = totalFlightsFlown
+        s.isBankrupt = isBankrupt; s.insolventSinceTick = insolventSinceTick
+        s.useDemandModel = useDemandModel
+        s.firedMilestones = Array(firedMilestones)
+        s.stressTestCount = stressTestCount
+        s.cameraZoom = cameraZoom; s.cameraCenterX = cameraCenter.x; s.cameraCenterY = cameraCenter.y
+        s.aircraft = aircraft.filter { $0.purchased }.map { ac in
+            AircraftSave(tail: ac.tail, typeId: ac.type.id, originCode: ac.origin.code, destCode: ac.dest.code,
+                         stateIndex: ac.stateIndex, stateTick: ac.stateTick, cyclesAccrued: ac.cyclesAccrued,
+                         assignedRouteId: ac.assignedRouteId, sellOfferDismissed: ac.sellOfferDismissed,
+                         isLeased: ac.isLeased, leaseAccrued: ac.leaseAccrued, maint: ac.maint,
+                         aogAutoClearTick: ac.aogAutoClearTick, crewId: ac.crewId)
+        }
+        s.routes = playerRoutes.map(routeSave)
+        s.closedRoutes = closedPlayerRoutes.map(routeSave)
+        s.crewPools = crewPoolsByFamily.mapValues { $0.map { CrewSave(id: $0.id, status: $0.status.saveCode, dutyTicks: $0.dutyTicks, restTicksLeft: $0.restTicksLeft) } }
+        s.reserveCrews = reserveCrewsByFamily
+        s.financeSnapshots = financeSnapshots.map { f in
+            FinanceSave(tick: f.tick, revenue: f.revenue, fees: f.fees, operatingCost: f.operatingCost,
+                        leaseCost: f.leaseCost, insurance: f.insurance, maintenance: f.maintenance,
+                        acquisition: f.acquisition, routeSpend: f.routeSpend, hedgeSpend: f.hedgeSpend,
+                        saleProceeds: f.saleProceeds, offerIncome: f.offerIncome, flights: f.flights,
+                        cash: f.cash, netWorth: f.netWorth)
+        }
+        return s
+    }
+
+    private func routeSave(_ r: Route) -> RouteSave {
+        RouteSave(id: r.id, originCode: r.originCode, destCode: r.destCode, openedTick: r.openedTick,
+                  openingCost: r.openingCost, cumulativeNet: r.cumulativeNet, flights: r.flights,
+                  totalLeaseCost: r.totalLeaseCost, closedTick: r.closedTick,
+                  history: r.history.map { FlightRecordSave(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) },
+                  assignmentHistory: r.assignmentHistory.map { RouteAssignmentSave(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) })
+    }
+    private func restoreRoute(_ s: RouteSave) -> Route {
+        let r = Route(id: s.id, originCode: s.originCode, destCode: s.destCode, openedTick: s.openedTick, openingCost: s.openingCost)
+        r.cumulativeNet = s.cumulativeNet; r.flights = s.flights; r.totalLeaseCost = s.totalLeaseCost; r.closedTick = s.closedTick
+        r.history = s.history.map { FlightRecord(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) }
+        r.assignmentHistory = s.assignmentHistory.map { RouteAssignment(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) }
+        return r
+    }
+
+    /// Load a saved game into this (fresh) Simulation instance.
+    func restore(from s: GameSnapshot) {
+        playerAirlineName = s.playerAirlineName
+        playerTailCode = s.playerTailCode
+        playerBalance = s.playerBalance
+        tick = s.tick
+        nextTailNum = s.nextTailNum
+        nextRouteId = s.nextRouteId
+        totalRevenue = s.totalRevenue; totalFees = s.totalFees
+        totalOperatingCost = s.totalOperatingCost; totalLeaseCost = s.totalLeaseCost
+        totalInsuranceSpent = s.totalInsuranceSpent; maintenanceSpend = s.maintenanceSpend
+        totalAcquisitionSpend = s.totalAcquisitionSpend; totalRouteSpend = s.totalRouteSpend
+        totalHedgeSpend = s.totalHedgeSpend; totalSaleProceeds = s.totalSaleProceeds
+        totalOfferIncome = s.totalOfferIncome; totalFlightsFlown = s.totalFlightsFlown
+        isBankrupt = s.isBankrupt; insolventSinceTick = s.insolventSinceTick
+        useDemandModel = s.useDemandModel
+        firedMilestones = Set(s.firedMilestones)
+        cameraZoom = s.cameraZoom; cameraCenter = CGPoint(x: s.cameraCenterX, y: s.cameraCenterY)
+        userAdjustedCamera = true   // don't auto-reframe over the restored camera
+
+        // Crew pools first (aircraft reference crew by id within their family).
+        crewPoolsByFamily = s.crewPools.mapValues { list in
+            list.map { cs in let c = Crew(id: cs.id); c.status = CrewStatus(saveCode: cs.status); c.dutyTicks = cs.dutyTicks; c.restTicksLeft = cs.restTicksLeft; return c }
+        }
+        reserveCrewsByFamily = s.reserveCrews
+
+        // Routes.
+        playerRoutes = s.routes.map(restoreRoute)
+        closedPlayerRoutes = s.closedRoutes.map(restoreRoute)
+
+        // Owned fleet (rebuild; background traffic regenerates below).
+        let byCode = Dictionary(airports.map { ($0.code, $0) }, uniquingKeysWith: { a, _ in a })
+        aircraft.removeAll { $0.purchased }
+        for a in s.aircraft {
+            guard let type = AircraftType.byId[a.typeId], let o = byCode[a.originCode], let d = byCode[a.destCode] else { continue }
+            let ac = Aircraft(tail: a.tail, type: type, origin: o, dest: d, stateIndex: a.stateIndex,
+                              cyclesAccrued: a.cyclesAccrued, purchased: true)
+            ac.stateTick = a.stateTick; ac.assignedRouteId = a.assignedRouteId
+            ac.sellOfferDismissed = a.sellOfferDismissed; ac.isLeased = a.isLeased; ac.leaseAccrued = a.leaseAccrued
+            ac.maint = a.maint; ac.aogAutoClearTick = a.aogAutoClearTick; ac.crewId = a.crewId
+            rollRevenue(for: ac)
+            aircraft.append(ac)
+        }
+
+        // Finance history.
+        financeSnapshots = s.financeSnapshots.map { f in
+            FinanceSnapshot(tick: f.tick, revenue: f.revenue, fees: f.fees, operatingCost: f.operatingCost,
+                            leaseCost: f.leaseCost, insurance: f.insurance, maintenance: f.maintenance,
+                            acquisition: f.acquisition, routeSpend: f.routeSpend, hedgeSpend: f.hedgeSpend,
+                            saleProceeds: f.saleProceeds, offerIncome: f.offerIncome, flights: f.flights,
+                            cash: f.cash, netWorth: f.netWorth)
+        }
+        if financeSnapshots.isEmpty { financeSnapshots = [financeSnapshotNow()] }
+
+        // Transient state: reset event, decisions, market; re-account slots.
+        currentEvent = .normal
+        decisionQueue.removeAll()
+        provisionSlots()
+        for r in playerRoutes {
+            byCode[r.originCode].map { $0.slotsAvailable = max(0, $0.slotsAvailable - 1) }
+            byCode[r.destCode].map { $0.slotsAvailable = max(0, $0.slotsAvailable - 1) }
+        }
+        nextInsuranceBillTick = ((tick / Simulation.ticksPerMonth) + 1) * Simulation.ticksPerMonth
+
+        // Regenerate the competitor (background) traffic to the saved count.
+        setFleetSize(s.stressTestCount)
+    }
+
     /// SELL card option: keep flying (don't re-prompt this aircraft).
     func resolveSellKeep(_ decision: Decision) {
         decision.aircraft?.sellOfferDismissed = true

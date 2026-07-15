@@ -21,6 +21,9 @@ struct ContentView: View {
     @State private var showAlerts = false
     @State private var paywallReason: String?
     @State private var showPaywall = false
+    /// A saved game found at launch, awaiting the player's Continue / New choice.
+    @State private var pendingResume: GameSnapshot?
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         // Custom bottom nav (SkyTabBar) — the Figma tab bar (yellow-on-dark /
@@ -47,9 +50,27 @@ struct ContentView: View {
         .task(id: gameID) { await sim.run() }
         // Load + observe the Pro entitlement from RevenueCat.
         .task { await store.start() }
+        // On cold launch, offer to resume a saved game (before the naming screen).
+        .onAppear {
+            if pendingResume == nil, sim.playerAirlineName == nil, let saved = GameStore.load() {
+                pendingResume = saved
+            }
+        }
+        // Autosave whenever the app leaves the foreground (background/quit).
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active, sim.playerAirlineName != nil, !sim.isBankrupt {
+                GameStore.save(sim.snapshot())
+            }
+        }
         .overlay {
-            // First-launch: name the airline before anything else.
-            if sim.playerAirlineName == nil {
+            // Cold-launch resume prompt (takes precedence over naming).
+            if let saved = pendingResume {
+                ResumePromptView(snapshot: saved,
+                                 onContinue: { sim.restore(from: saved); pendingResume = nil },
+                                 onNew: { GameStore.clear(); pendingResume = nil })
+                    .transition(.opacity)
+            } else if sim.playerAirlineName == nil {
+                // First-launch: name the airline before anything else.
                 AirlineNamingView { name, tailCode in sim.nameAirline(name, tailCode: tailCode) }
                     .transition(.opacity)
             }
@@ -104,6 +125,7 @@ struct ContentView: View {
         .overlay {
             if sim.isBankrupt {
                 GameOverView(sim: sim) {
+                    GameStore.clear()   // the failed airline is gone for good
                     sim = Simulation()
                     gameID = UUID()
                     tab = 0

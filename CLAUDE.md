@@ -2280,8 +2280,27 @@ where numbers are involved.
 
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on
   a Mac (can't be done from a Linux sandbox). See ROADMAP Phase 0.
-- SwiftData vs Core Data for persistence — leaning SwiftData (iOS 17+) for
-  developer-ergonomics reasons, not finalized.
+- **Persistence — BUILT (native app), and NOT via SwiftData.** Went with a
+  plain Codable snapshot to disk (JSON), not SwiftData/Core Data — the sim state
+  is a self-contained object graph that serializes cleanly, and a single-slot
+  save doesn't need a database. `Persistence.swift` has `GameSnapshot` (+ per-
+  aircraft/route/crew/finance sub-structs) and `GameStore` (save/load/clear to
+  Documents/savegame.json). `Simulation.snapshot()` exports and
+  `Simulation.restore(from:)` imports (both live IN Simulation.swift so they can
+  set the `private(set)` state). ONLY persisted: identity, balance, tick, all
+  economy accumulators, PURCHASED aircraft, open+closed routes (with history),
+  crew pools/reserves, finance snapshots, camera, firedMilestones, the traffic
+  count. NOT persisted (regenerated on load): background/competitor traffic
+  (`setFleetSize(savedCount)`), live event effects (reset to Normal), the used
+  market (re-inited), airport ground-stops (cleared), slots (re-provisioned then
+  decremented per open route). Aircraft reference type-by-id and airport-by-code;
+  crew reconstruct by their per-family id. ContentView autosaves on scenePhase !=
+  .active (background/quit) and, on cold launch, shows `ResumePromptView`
+  (Continue / Start a New Airline) if a save exists — bankruptcy and "new
+  airline" clear the save. Verified: JSON round-trip (7KB) restores every field
+  exactly AND the restored sim keeps running/earning (29 new flights, balance
+  advancing). SwiftData model classes are still present but unused; this
+  supersedes the "SwiftData returns in Phase 5" plan.
 - Figma → SwiftUI pipeline: designer has real mockups in Figma; pull via
   Figma MCP `get_design_context` against actual file/node URLs, don't
   guess at layouts from descriptions. Note the raster-export limitation
