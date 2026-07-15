@@ -38,6 +38,9 @@ struct SaveQuitBar: View {
             }
             pill("Quit", "rectangle.portrait.and.arrow.right", action: onQuit)
         }
+        // Keep the pills at their intrinsic width so the labels never truncate to
+        // "S…" / "Q…" when the cash line gets tight.
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func pill(_ label: String, _ icon: String, action: @escaping () -> Void) -> some View {
