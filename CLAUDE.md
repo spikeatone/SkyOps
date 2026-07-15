@@ -2276,6 +2276,65 @@ where numbers are involved.
     are DESIGNED pacing, not sourced. All surface in the Ops feed and/or the
     economics; the only one that's a player choice is #16 (the Offer card).
 
+- **PERSISTENCE + MULTI-SLOT SAVES — DONE (native app).** The game persists so a
+  player picks up where they left off, with up to 3 named save slots.
+  - **`Persistence.swift`**: a `Codable` `GameSnapshot` captures the PERSISTENT
+    state only — identity (name/tail code), economy + all the Finance
+    reconciling accumulators, `playerBalance`/`tick`, owned aircraft
+    (`AircraftSave`: tail/type/origin-dest/state-index+tick/cycles/route/leased/
+    maint/crewId), routes + closed routes (`RouteSave` incl. full `history` so the
+    ROUTES P&L/chart survive a reload), per-family crew pools (`CrewSave`:
+    status-as-int/dutyTicks/restTicksLeft), reserve counts, finance snapshots,
+    camera, fired milestones, `stressTestCount`. Background (competitor) traffic,
+    the in-flight event state, and the used market are **NOT** persisted — they
+    regenerate on load, which keeps the snapshot small (~1KB/save) and the
+    restore robust. `CrewStatus.saveCode` maps sidelined→available on reload (the
+    labor action itself isn't persisted).
+  - **`Simulation.snapshot()` / `restore(from:)`** live IN Simulation.swift so
+    they can set `private(set)` state. `restore` rebuilds crew pools → routes →
+    owned aircraft (airport-by-code lookup, re-rolls each leg's revenue), then
+    resets transient state (`currentEvent = .normal`, clears the decision queue,
+    re-provisions + decrements slots per open route, re-seeds the insurance bill
+    tick) and re-applies `stressTestCount`. Verified round-trip last session (a
+    restored sim keeps ticking + earning), and live this session (loading a slot
+    restored the exact $16.0M balance).
+  - **Slots (max 3, a DELIBERATE cap — designer):** enough to try a few
+    strategies, not so many saves become throwaway save-scum (which would gut the
+    bankruptcy stakes). `GameStore` is slot-based (`savegame_<n>.json`):
+    `save(_:slot:)`/`load(slot:)`/`clear(slot:)`/`slotInfos()` (lightweight
+    summaries for the menu)/`firstFreeSlot`/`anySave`. Migrates a legacy
+    single-file `savegame.json` into slot 0 once. `GameSnapshot.savedAtEpoch`
+    (stamped at save time) drives the "saved Xm ago" labels.
+  - **`SaveSlotsView`** = the load / slot-picker menu: shown at cold launch when
+    ANY save exists, and again on QUIT. Each saved slot shows airline/day/cash/
+    fleet/routes + relative save time and loads in place; each empty slot starts
+    a fresh airline there (dashed card); per-slot Delete with a two-tap confirm.
+  - **`ContentView` tracks `currentSlot`** — autosave-on-background
+    (`scenePhase != .active`) and the SAVE button both target it; naming a fresh
+    airline claims `firstFreeSlot`; bankruptcy clears that slot and returns to the
+    menu if other airlines remain (else the naming screen). LOAD always builds a
+    FRESH `Simulation()` + bumps `gameID` (so the `.task(id:)` run loop restarts
+    on the restored instance, no residue from a prior game) — same restart family
+    as the bankruptcy path.
+  - **SAVE / QUIT buttons** (NetworkView, flushed right on the cash line, per
+    designer): SAVE persists to the current slot with a "Game saved" flash; QUIT
+    auto-saves then returns to the load menu. Both are `onSave`/`onQuit` closures
+    from ContentView.
+  - Verified live end-to-end in the Simulator: launch→menu (real path, driven by
+    on-disk saves), tap a slot→loads the exact game, SAVE/QUIT render, QUIT→
+    auto-save→menu with updated timestamps.
+
+- **FIRST-PLAY TUTORIAL — DONE (native app).** `Tutorial.swift`: 5 coach cards
+  (`tutorialSteps`) — goal → open your first route → Fleet → Crews → Ops/Finance
+  — each tagged with the tab it describes. `TutorialCard` is a BOTTOM-DOCKED card
+  (progress dots, Skip, Next/"Start playing") that deliberately does NOT dim the
+  screen, so the section behind stays visible as the player reads. As they tap
+  Next, ContentView advances the step AND switches to that step's tab, building
+  the mental model of where things live. `TutorialState.seen` persists in
+  UserDefaults ("hasSeenTutorial_v1", app-level not per-save — shown ONCE), and
+  the walkthrough only starts after naming a fresh airline when unseen. Verified
+  visually over the Network map.
+
 ## Open / not yet decided
 
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on
