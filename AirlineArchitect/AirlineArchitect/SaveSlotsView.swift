@@ -34,8 +34,8 @@ struct SaveSlotsView: View {
         ZStack {
             screenBG.ignoresSafeArea()
             VStack(spacing: 20) {
-                VStack(spacing: 6) {
-                    AppLogo().frame(width: 62, height: 50)
+                VStack(spacing: 10) {
+                    AppLogo().frame(width: 132, height: 106)
                     Text("Airline Architect").font(.karla(24, .bold)).foregroundStyle(primary)
                     Text("Choose a game to continue, or start a new airline.")
                         .font(.karla(13)).foregroundStyle(secondary)
