@@ -66,6 +66,25 @@ final class Route: Identifiable {
     /// Set when the route is archived (its aircraft was sold). nil = open.
     var closedTick: Int?
 
+    // Competition: rival carriers that have entered this market (they enter a
+    // profitable route to chase the traffic, and split its demand). `competitors`
+    // names them for display; count drives the share split.
+    var competitionLevel: Int = 0
+    var competitors: [String] = []
+
+    /// The player's share of this route's demand given the competition on it and
+    /// the airline's reputation. Uncontested = 1.0. Each rival takes a slice, but
+    /// a strong reputation lets the airline hold more of the market.
+    func competitionShare(reputation: Double) -> Double {
+        guard competitionLevel > 0 else { return 1.0 }
+        let factor = 0.6 - 0.3 * (reputation / 100)   // rep 100 → 0.30, rep 0 → 0.60
+        return max(0.2, 1.0 / (1.0 + Double(competitionLevel) * factor))
+    }
+    /// Signed demand impact of competition for the Ops box, given reputation.
+    func competitionPercent(reputation: Double) -> Int {
+        Int(((competitionShare(reputation: reputation) - 1) * 100).rounded())
+    }
+
     init(id: Int, originCode: String, destCode: String, openedTick: Int, openingCost: Int) {
         self.id = id
         self.originCode = originCode

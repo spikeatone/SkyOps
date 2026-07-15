@@ -36,6 +36,7 @@ struct GameSnapshot: Codable {
     var isBankrupt = false
     var insolventSinceTick: Int?
     var useDemandModel = true
+    var reputation = Simulation.reputationStart
     var firedMilestones: [String] = []
     var stressTestCount = 0
 
@@ -82,6 +83,8 @@ struct RouteSave: Codable {
     var flights: Int
     var totalLeaseCost: Int
     var closedTick: Int?
+    var competitionLevel: Int = 0
+    var competitors: [String] = []
     var history: [FlightRecordSave]
     var assignmentHistory: [RouteAssignmentSave]
 }

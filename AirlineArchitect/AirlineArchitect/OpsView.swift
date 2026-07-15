@@ -42,6 +42,8 @@ struct OpsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         if !sim.decisionQueue.isEmpty { needsAttentionGroup }
+                        reputationGroup
+                        competitionGroup
                         opportunitiesGroup
                         // Fuel Hedge lives on Ops now (moved off the Network tab).
                         FuelHedgePanel(sim: sim)
@@ -66,6 +68,88 @@ struct OpsView: View {
         .onChange(of: sim.opsEventLog.first?.id) { _, _ in sim.markOpsEventsSeen() }
         // Recompute the finder only when the route network changes (not per tick).
         .onChange(of: sim.playerRoutes.count) { _, _ in opportunities = sim.topRouteOpportunities() }
+    }
+
+    // MARK: Reputation
+    private func repColor(_ r: Double) -> Color {
+        switch r {
+        case ..<40: return Sky.red
+        case ..<60: return Color(skyHex: 0xFFB700)
+        case ..<80: return Sky.brightBlue
+        default:    return Sky.coreGreen
+        }
+    }
+    private var reputationGroup: some View {
+        let rep = sim.reputation
+        let dp = sim.reputationDemandPercent
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Reputation").font(.karla(20, .heavy)).foregroundStyle(primary)
+                Spacer()
+                Text(sim.reputationTier).font(.karla(14, .bold)).foregroundStyle(repColor(rep))
+                Text("· \(Int(rep.rounded()))/100").font(.karla(14, .bold)).foregroundStyle(primary)
+            }
+            // Score bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(isDark ? Color.white.opacity(0.12) : Color(skyHex: 0xE6E6E6))
+                    Capsule().fill(repColor(rep)).frame(width: max(4, geo.size.width * rep / 100))
+                }
+            }
+            .frame(height: 8)
+            HStack {
+                Text("Passenger demand").font(.karla(13)).foregroundStyle(secondary)
+                Spacer()
+                Text("\(dp >= 0 ? "+" : "")\(dp)%")
+                    .font(.karla(14, .bold)).foregroundStyle(dp >= 0 ? Sky.coreGreen : Sky.red)
+            }
+            Text("Built by on-time flights; hurt by groundings and crew holds.")
+                .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    // MARK: Competition (rival carriers on the player's routes)
+    private var competitionGroup: some View {
+        let contested = sim.contestedRoutes
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Competition").font(.karla(20, .heavy)).foregroundStyle(primary)
+            if contested.isEmpty {
+                Text("No rival carriers on your routes. Profitable routes attract competitors — your reputation helps keep them out.")
+                    .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+            } else {
+                ForEach(contested) { r in
+                    let pct = r.competitionPercent(reputation: sim.reputation)
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(r.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                                Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold)).foregroundStyle(secondary)
+                                Text(r.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                            }
+                            Text("vs \(r.competitors.joined(separator: ", "))")
+                                .font(.karla(12)).foregroundStyle(secondary).lineLimit(2)
+                        }
+                        Spacer(minLength: 8)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(pct)% demand").font(.karla(15, .bold)).foregroundStyle(Sky.red)
+                            Text("\(r.competitionLevel) rival\(r.competitionLevel == 1 ? "" : "s")")
+                                .font(.karla(12)).foregroundStyle(secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     // MARK: Route Opportunities (underserved-markets finder)

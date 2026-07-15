@@ -152,15 +152,31 @@ struct FleetDetailView: View {
                 Text("+\(maintPct)% cost · \(String(format: "%.1f", aircraft.aogAgeMultiplier))× breakdown risk")
                     .font(.karla(14, .bold)).foregroundStyle(maintPct >= 15 ? red : primary)
             }
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Market Value").font(.karla(14)).foregroundStyle(secondary)
-                    Text(money(value)).font(.karla(14, .bold)).foregroundStyle(primary)
+            // A leased jet isn't an owned asset, so a "resale value" is misleading
+            // — show the real lease figures (monthly cost + early-termination fee).
+            if aircraft.isLeased {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Monthly Lease").font(.karla(14)).foregroundStyle(secondary)
+                        Text(money(aircraft.type.monthlyLeaseCost)).font(.karla(14, .bold)).foregroundStyle(primary)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Early Termination").font(.karla(14)).foregroundStyle(secondary)
+                        Text(money(sim.leaseTerminationPenalty(aircraft))).font(.karla(14, .bold)).foregroundStyle(red)
+                    }
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("Depreciation").font(.karla(14)).foregroundStyle(secondary)
-                    Text("−\(deprPct)% vs new").font(.karla(14, .bold)).foregroundStyle(red)
+            } else {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Market Value").font(.karla(14)).foregroundStyle(secondary)
+                        Text(money(value)).font(.karla(14, .bold)).foregroundStyle(primary)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Depreciation").font(.karla(14)).foregroundStyle(secondary)
+                        Text("−\(deprPct)% vs new").font(.karla(14, .bold)).foregroundStyle(red)
+                    }
                 }
             }
         }

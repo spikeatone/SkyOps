@@ -114,6 +114,80 @@ final class Simulation {
         return out
     }
 
+    // MARK: - Reputation (service quality → demand)
+
+    /// Airline service-quality reputation, 0–100. Falls when the operation fails
+    /// passengers (an aircraft grounded, a flight held for want of crew) and
+    /// recovers slowly through flights completed cleanly. Feeds back into demand,
+    /// and helps the airline defend market share against competitors.
+    private(set) var reputation: Double = Simulation.reputationStart
+    static let reputationStart = 70.0
+    private static let repHitAOG = 4.0
+    private static let repHitCrew = 2.0
+    private static let repRecoverPerFlight = 0.15
+
+    /// Demand multiplier from reputation: 0.85 (rep 0) · 1.0 (rep 50) · 1.15 (rep 100).
+    var reputationDemandMultiplier: Double { 0.85 + 0.30 * (reputation / 100) }
+    /// Signed passenger-demand impact for the Ops box.
+    var reputationDemandPercent: Int { Int(((reputationDemandMultiplier - 1) * 100).rounded()) }
+    /// Reputation tier label (for the Ops box).
+    var reputationTier: String {
+        switch reputation {
+        case ..<40: return "Poor"
+        case ..<60: return "Fair"
+        case ..<80: return "Good"
+        default:    return "Excellent"
+        }
+    }
+
+    private func dingReputation(_ amount: Double) { reputation = max(0, reputation - amount) }
+    private func recoverReputation(_ amount: Double) { reputation = min(100, reputation + amount) }
+
+    // MARK: - Route competition (rival carriers reacting to the player)
+
+    private static let competitionCap = 3
+    private static let competitorEntryDailyProbability = 0.06   // per eligible route
+    private static let competitorExitDailyProbability = 0.02
+    private static let competitionMinRouteAgeDays = 8
+
+    /// Every open player route with a competitor on it (for the Ops box).
+    var contestedRoutes: [Route] { playerRoutes.filter { $0.competitionLevel > 0 } }
+
+    /// Once/day: rivals ENTER the player's profitable, established routes (chasing
+    /// the traffic) up to a cap, and occasionally EXIT (churn). A strong
+    /// reputation makes the player a harder target — fewer entrants.
+    private func tickCompetition() {
+        for r in playerRoutes {
+            let ageDays = (tick - r.openedTick) / 1440
+            if r.competitionLevel < Simulation.competitionCap, r.isProfitable,
+               ageDays >= Simulation.competitionMinRouteAgeDays {
+                // High reputation deters entrants (a well-liked incumbent is hard
+                // to unseat): rep 100 → half the base rate, rep 0 → full rate.
+                let deter = 0.5 + 0.5 * (reputation / 100)
+                if Double.random(in: 0..<1) < Simulation.competitorEntryDailyProbability * (1.5 - deter) {
+                    let name = competitorName(excluding: r.competitors)
+                    r.competitionLevel += 1
+                    r.competitors.append(name)
+                    logOps(.market, "Competitor entered your market",
+                           "\(name) now flies \(r.originCode) ↔\u{FE0E} \(r.destCode)")
+                }
+            }
+            if r.competitionLevel > 0, Double.random(in: 0..<1) < Simulation.competitorExitDailyProbability {
+                let name = r.competitors.popLast() ?? "A rival"
+                r.competitionLevel -= 1
+                logOps(.market, "Competitor exited",
+                       "\(name) pulled out of \(r.originCode) ↔\u{FE0E} \(r.destCode)")
+            }
+        }
+    }
+
+    /// A plausible rival carrier (avoids duplicating one already on the route).
+    private func competitorName(excluding used: [String]) -> String {
+        let pool = ["American Airlines", "Delta Air Lines", "United Airlines", "Southwest Airlines",
+                    "JetBlue", "Alaska Airlines", "Spirit", "Frontier"]
+        return pool.filter { !used.contains($0) }.randomElement() ?? "A new entrant"
+    }
+
     /// Speed multiplier. Prototype default is 5× (feels smooth; at 1× the
     /// aircraft visibly steps every 250 ms, which is expected, not a bug).
     private(set) var speed: Double = 5
@@ -1327,6 +1401,8 @@ final class Simulation {
         tickCrewTraining()
         // Airport recruitment offers (an airport pitches you to open a route).
         tickAirportOffers()
+        // Rival carriers entering / leaving the player's markets.
+        tickCompetition()
 
         // Clear an expired fare war so a new one can start.
         if fareWarRouteId != nil, tick >= fareWarExpiryTick { fareWarRouteId = nil }
@@ -1721,8 +1797,16 @@ final class Simulation {
             let hub = ac.purchased
                 ? hubDemandMultiplier(originCode: ac.origin.code, destCode: ac.dest.code, excludingRouteId: ac.assignedRouteId)
                 : 1.0
-            let base = Demand.loadFactor(seats: ac.type.seats,
-                                         dailyOneWay: Demand.dailyOneWay(ac.origin, ac.dest) * hub)
+            var effDemand = Demand.dailyOneWay(ac.origin, ac.dest) * hub
+            if ac.purchased {
+                // Reputation lifts/depresses demand overall; competitors on this
+                // specific route split what's left of the market.
+                effDemand *= reputationDemandMultiplier
+                if let rid = ac.assignedRouteId, let r = playerRoutes.first(where: { $0.id == rid }) {
+                    effDemand *= r.competitionShare(reputation: reputation)
+                }
+            }
+            let base = Demand.loadFactor(seats: ac.type.seats, dailyOneWay: effDemand)
             load = min(Demand.maxLoadFactor, base * currentEvent.loadMultiplier * (0.9 + Double.random(in: 0..<0.2)))
         } else {
             load = min(1, baseLoadFactor * currentEvent.loadMultiplier * (0.95 + Double.random(in: 0..<0.1)))  // ±5%, capped
@@ -1767,6 +1851,7 @@ final class Simulation {
     private func settleLeg(_ ac: Aircraft) {
         let econ = legEconomics(for: ac)
         guard ac.purchased else { return }
+        recoverReputation(Simulation.repRecoverPerFlight)   // a clean completed flight rebuilds trust
         totalFlightsFlown += 1
         totalRevenue += econ.revenue
         totalFees += econ.fees
@@ -1975,6 +2060,7 @@ final class Simulation {
         s.totalOfferIncome = totalOfferIncome; s.totalFlightsFlown = totalFlightsFlown
         s.isBankrupt = isBankrupt; s.insolventSinceTick = insolventSinceTick
         s.useDemandModel = useDemandModel
+        s.reputation = reputation
         s.firedMilestones = Array(firedMilestones)
         s.stressTestCount = stressTestCount
         s.cameraZoom = cameraZoom; s.cameraCenterX = cameraCenter.x; s.cameraCenterY = cameraCenter.y
@@ -2005,12 +2091,14 @@ final class Simulation {
         RouteSave(id: r.id, originCode: r.originCode, destCode: r.destCode, openedTick: r.openedTick,
                   openingCost: r.openingCost, cumulativeNet: r.cumulativeNet, flights: r.flights,
                   totalLeaseCost: r.totalLeaseCost, closedTick: r.closedTick,
+                  competitionLevel: r.competitionLevel, competitors: r.competitors,
                   history: r.history.map { FlightRecordSave(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) },
                   assignmentHistory: r.assignmentHistory.map { RouteAssignmentSave(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) })
     }
     private func restoreRoute(_ s: RouteSave) -> Route {
         let r = Route(id: s.id, originCode: s.originCode, destCode: s.destCode, openedTick: s.openedTick, openingCost: s.openingCost)
         r.cumulativeNet = s.cumulativeNet; r.flights = s.flights; r.totalLeaseCost = s.totalLeaseCost; r.closedTick = s.closedTick
+        r.competitionLevel = s.competitionLevel; r.competitors = s.competitors
         r.history = s.history.map { FlightRecord(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) }
         r.assignmentHistory = s.assignmentHistory.map { RouteAssignment(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) }
         return r
@@ -2032,6 +2120,7 @@ final class Simulation {
         totalOfferIncome = s.totalOfferIncome; totalFlightsFlown = s.totalFlightsFlown
         isBankrupt = s.isBankrupt; insolventSinceTick = s.insolventSinceTick
         useDemandModel = s.useDemandModel
+        reputation = s.reputation
         firedMilestones = Set(s.firedMilestones)
         cameraZoom = s.cameraZoom; cameraCenter = CGPoint(x: s.cameraCenterX, y: s.cameraCenterY)
         userAdjustedCamera = true   // don't auto-reframe over the restored camera
@@ -2111,9 +2200,9 @@ final class Simulation {
         checkMilestones()
         for ac in aircraft {
             switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {
-            case .aogHoldStarted:      pushDecision(.aog, for: ac)
+            case .aogHoldStarted:      pushDecision(.aog, for: ac); dingReputation(Simulation.repHitAOG)
             case .aogRepairCompleted:  clearDecision(.aog, for: ac)   // defensive — card normally already resolved
-            case .crewHoldStarted:     pushDecision(.crew, for: ac)
+            case .crewHoldStarted:     pushDecision(.crew, for: ac); dingReputation(Simulation.repHitCrew)
             case .crewHoldResolved:    clearDecision(.crew, for: ac)  // crew freed up outside the card's own buttons
             case .legScheduled:
                 // Background traffic picks a NEW route each cycle, but within its
