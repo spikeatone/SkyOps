@@ -2334,14 +2334,25 @@ where numbers are involved.
     gained a `subsidized` flag → 0 charge, route.openingCost 0) + a **signing
     bonus** ($100k + demand-scaled, capped $500k). Origin drawn from the bottom
     ~2/3 by traffic (unserved); dest prefers a hub already in the player's network.
-    Blue `.airportOffer` card (megaphone) via NeedsAttentionCard — **Accept only
-    appears when an idle aircraft in range exists** (else the subtitle says to free
-    one); accept opens the route free + banks the bonus (via `totalOfferIncome`, so
-    the Finance invariant holds). Offers expire after 12 days; one at a time;
-    ~8%/day. `pitch`/`AirportPitch` on `Decision`; not persisted (regenerates).
-    Verified 7/7 headless. Example pitch: "Jackson, MS's airport authority is
-    courting you: fly JAN ↔ ATL and we'll waive every opening fee, plus a $200,800
-    marketing package…".
+    Blue `.airportOffer` card (megaphone) via NeedsAttentionCard. **ACCEPT ALWAYS
+    WORKS now (was a spare-required dead-end — designer-reported).** Accept opens
+    the route free + banks the bonus (`totalOfferIncome`, Finance invariant holds)
+    regardless of fleet: with an in-range spare it's assigned + flies immediately;
+    WITHOUT one the route opens PENDING (no aircraft), and `assignSpareToPendingRoutes()`
+    (per tick) auto-staffs it once the player acquires/frees an in-range spare —
+    so "accept → buy a plane → it flies the route" just works. `openRoute` was
+    refactored into shared `createRoute` + `assign` helpers; accept reuses them.
+    **PENDING ROUTES are a real concept now**: `routeStaffed(_)`/`pendingRoutes`
+    (a route in `playerRoutes` with no aircraft assigned) — harmless (no flights,
+    no demand rolled) until staffed. Competition entry now also requires `flights>0`
+    (a subsidized route's $0 opening cost makes `isProfitable` true from tick 0).
+    Route gains `incentiveBonus`/`incentiveWaived` (persisted); a new Ops **"Airport
+    Incentives"** box lists each incented route with the banked bonus + waived
+    opening cost + "Awaiting aircraft"/"In service" status. Offers expire after 12
+    days; one at a time; ~8%/day. `pitch`/`AirportPitch` on `Decision`; not
+    persisted (regenerates). Verified 9/9 headless + live. Example pitch: "Jackson,
+    MS's airport authority is courting you: fly JAN ↔ ATL and we'll waive every
+    opening fee, plus a $200,800 marketing package…".
 
 - **ROUTE OPPORTUNITIES finder — DONE (Ops tab; "underserved markets").**
   `Simulation.topRouteOpportunities(perClass:)` surfaces high-demand city pairs the
