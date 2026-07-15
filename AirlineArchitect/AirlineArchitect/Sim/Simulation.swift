@@ -1650,14 +1650,21 @@ final class Simulation {
         guard playerAirlineName != nil, !isBankrupt else { return }
         if totalFlightsFlown >= 1 { celebrate("first_flight", "🛫", "First flight complete!", "Wheels up — welcome to the skies.") }
         if totalFlightsFlown >= 1000 { celebrate("flights_1k", "🎉", "1,000 flights flown", "The network is humming.") }
-        // Above the $30M starting capital, so each is a real growth milestone.
+        // Net-worth ladder. Gated on owning at least one aircraft so nothing
+        // fires at the $30M start (net worth == starting capital before you've
+        // deployed any of it) — acquiring an aircraft always dips net worth below
+        // $30M (cash out for a lease / a depreciating asset + route cost), so
+        // crossing $30M again is a real "grown past your starting stake" moment.
         let nw = playerBalance + fleetMarketValue
-        for (t, label) in [(50_000_000, "$50M"), (100_000_000, "$100M"), (250_000_000, "$250M"),
-                           (500_000_000, "$500M"), (1_000_000_000, "$1B")] where nw >= t {
-            celebrate("nw_\(t)", "💰", "\(label) net worth", "The airline is really taking off.")
-        }
         let owned = ownedCount
-        for (n, sub) in [(5, "A real fleet now."), (10, "Double digits!"), (25, "A major carrier.")] where owned >= n {
+        if owned >= 1 {
+            for (t, label) in [(30_000_000, "$30M"), (50_000_000, "$50M"), (100_000_000, "$100M"),
+                               (250_000_000, "$250M"), (500_000_000, "$500M"), (1_000_000_000, "$1B")] where nw >= t {
+                celebrate("nw_\(t)", "💰", "\(label) net worth", "The airline is really taking off.")
+            }
+        }
+        for (n, sub) in [(5, "A real fleet now."), (10, "Double digits!"),
+                         (25, "A major carrier."), (50, "A powerhouse of the skies.")] where owned >= n {
             celebrate("fleet_\(n)", "✈️", "\(n) aircraft in the fleet", sub)
         }
     }

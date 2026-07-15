@@ -55,9 +55,15 @@ enum Feedback {
     static func gameOver() { failure() }
 }
 
-/// Shared audio session for every game sound. `.ambient` + `.mixWithOthers`
-/// means the hardware silent switch mutes us and the player's own music keeps
-/// playing — the tasteful default for non-essential game audio.
+/// Shared audio session for every game sound. `.playback` + `.mixWithOthers`
+/// means the cues are AUDIBLE even when the phone's ring/silent switch is set to
+/// silent (a game the player deliberately opened should still make its sounds),
+/// while still mixing under — never interrupting — the player's own music.
+///
+/// NOTE: this was `.ambient` originally, which is muted by the hardware silent
+/// switch — the reason on-device testing heard nothing while haptics worked
+/// (the test device was on silent). `.playback` is the right category for
+/// game SFX the player wants to hear.
 @MainActor
 enum GameAudio {
     private static var ready = false
@@ -65,7 +71,7 @@ enum GameAudio {
         guard !ready else { return }
         ready = true
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.ambient, options: [.mixWithOthers])
+        try? session.setCategory(.playback, options: [.mixWithOthers])
         try? session.setActive(true)
     }
 }
@@ -104,7 +110,7 @@ final class JetSound {
         if player == nil { player = makePlayer() }
         guard let player else { return }
         player.currentTime = 0
-        player.volume = 0.5          // subtle — this stacks under the source gain
+        player.volume = 0.85         // audible-but-subtle; the synth gain is already low
         player.play()
     }
 
@@ -199,7 +205,7 @@ final class GateAnnouncement {
         let u = AVSpeechUtterance(string: line)
         u.rate = AVSpeechUtteranceDefaultSpeechRate * 0.94   // an unhurried PA cadence
         u.pitchMultiplier = 0.98
-        u.volume = 0.7
+        u.volume = 0.9
         u.voice = AVSpeechSynthesisVoice(language: "en-US")
         u.preUtteranceDelay = 0.05
 
