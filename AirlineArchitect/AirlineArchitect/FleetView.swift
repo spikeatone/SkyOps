@@ -322,13 +322,13 @@ struct FleetView: View {
             // Buy new
             offerRow("Buy new:", money(type.purchasePrice),
                      kind: .buy, afford: sim.playerBalance >= type.purchasePrice) {
-                gatedAcquire { _ = sim.buyAircraft(type) }
+                gatedAcquire { if sim.buyAircraft(type) != nil { Feedback.aircraftAcquired() } }
             }
             // Lease new
             offerRow("Lease new:",
                      "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
                      kind: .lease, afford: sim.playerBalance >= sim.leaseUpfront(type)) {
-                gatedAcquire { _ = sim.leaseAircraft(type) }
+                gatedAcquire { if sim.leaseAircraft(type) != nil { Feedback.aircraftAcquired() } }
             }
             // Buy used (one row per listing, cheapest first)
             ForEach(used.sorted { $0.price < $1.price }) { listing in
@@ -336,7 +336,7 @@ struct FleetView: View {
                 offerRow("Buy used:",
                          "\(money(listing.price)) · \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
                          kind: .buy, afford: sim.playerBalance >= listing.price) {
-                    gatedAcquire { _ = sim.buyUsedAircraft(listing) }
+                    gatedAcquire { if sim.buyUsedAircraft(listing) != nil { Feedback.aircraftAcquired() } }
                 }
             }
         }

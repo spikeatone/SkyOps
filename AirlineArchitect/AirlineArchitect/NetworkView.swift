@@ -523,6 +523,7 @@ struct NetworkView: View {
         }
         switch sim.openRoute(from: origin, to: dest, using: spare) {
         case .success:
+            Feedback.routeOpened()
             showFlash("Route \(origin.code) ↔ \(dest.code) opened — \(spare.tail) assigned")
             routeMode = .off; panel = .none
         case .insufficientFunds(let c): showFlash("Need $\(c.formatted()) to open this route")
@@ -535,6 +536,7 @@ struct NetworkView: View {
     }
 
     private func handleBought(_ ac: Aircraft) {
+        Feedback.aircraftAcquired()
         let verb = ac.isLeased ? "Leased" : "Bought"
         showFlash("\(verb) \(ac.type.name) — now a spare")
         if case .confirm(let o, let d) = routeMode,

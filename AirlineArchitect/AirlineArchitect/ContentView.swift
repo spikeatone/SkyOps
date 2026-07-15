@@ -68,6 +68,12 @@ struct ContentView: View {
                 GameStore.save(sim.snapshot(), slot: s)
             }
         }
+        // Haptics on the big observed moments (the delight layer). Player-initiated
+        // actions (buy / open route) tap at their own call sites; these are the
+        // events that arrive from the sim itself.
+        .onChange(of: sim.celebrations.first?.id) { _, id in if id != nil { Feedback.milestone() } }
+        .onChange(of: sim.decisionQueue.count) { old, new in if new > old { Feedback.alert() } }
+        .onChange(of: sim.isBankrupt) { _, bankrupt in if bankrupt { Feedback.gameOver() } }
         .overlay {
             // Load / slot-picker menu — takes precedence over naming.
             if showLoadMenu {

@@ -54,7 +54,7 @@ struct FleetDetailView: View {
         .confirmationDialog("Sell \(aircraft.tail)?",
                             isPresented: $confirmSell, titleVisibility: .visible) {
             Button("Sell for \(money(sim.sellValue(of: aircraft)))", role: .destructive) {
-                sim.sellAircraft(aircraft); onSold()
+                Feedback.impact(.light); sim.sellAircraft(aircraft); onSold()
             }
             Button("Cancel", role: .cancel) {}
         } message: {

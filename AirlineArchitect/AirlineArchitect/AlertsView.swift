@@ -196,7 +196,7 @@ struct NeedsAttentionCard: View {
                 title: "\(ac.tail) nearing retirement",
                 subtitle: "\(pct)% of lifespan · sell value \(money(value))",
                 buttons: [
-                    ("Sell \(compactMoney(value))", { sim.resolveSell(d) }),
+                    ("Sell \(compactMoney(value))", { Feedback.impact(.light); sim.resolveSell(d) }),
                     ("Keep flying", { sim.resolveSellKeep(d) }),
                 ])
         case .offer:   // handled by the early return above; unreachable
