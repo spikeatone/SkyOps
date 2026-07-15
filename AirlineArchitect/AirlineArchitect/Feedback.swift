@@ -129,7 +129,7 @@ final class JetSound {
         if player == nil { player = makePlayer() }
         guard let player else { return }
         player.currentTime = 0
-        player.volume = 0.85         // audible-but-subtle; the synth gain is already low
+        player.volume = 0.765        // audible-but-subtle (was 0.85; dropped 10%)
         player.play()
     }
 
@@ -236,7 +236,7 @@ final class GateAnnouncement {
         // Prefer the recorded PA clip.
         if let p = recording() {
             p.currentTime = 0
-            p.volume = 0.9
+            p.volume = 0.81   // was 0.9; dropped 10%
             p.play()
             return
         }
@@ -246,7 +246,7 @@ final class GateAnnouncement {
         let u = AVSpeechUtterance(string: name.map { "\($0), now boarding." } ?? "Now boarding.")
         u.rate = AVSpeechUtteranceDefaultSpeechRate * 0.94
         u.pitchMultiplier = 0.98
-        u.volume = 0.9
+        u.volume = 0.81   // was 0.9; dropped 10%
         u.voice = AVSpeechSynthesisVoice(language: "en-US")
         u.preUtteranceDelay = 0.05
         synth.stopSpeaking(at: .immediate)
@@ -263,7 +263,7 @@ final class ClipSound {
     private var player: AVAudioPlayer?
     private var lookedUp = false
 
-    init(_ resource: String, volume: Float = 0.9) { self.resource = resource; self.volume = volume }
+    init(_ resource: String, volume: Float = 0.81) { self.resource = resource; self.volume = volume }   // was 0.9; dropped 10%
 
     private func clip() -> AVAudioPlayer? {
         if !lookedUp {
