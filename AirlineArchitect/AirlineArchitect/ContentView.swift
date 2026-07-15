@@ -87,7 +87,10 @@ struct ContentView: View {
                     if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
                     sim.nameAirline(name, tailCode: tailCode)
                     if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
-                    if !TutorialState.seen { tab = tutorialSteps[0].tab; tutorialStep = 0 }
+                    // Always run the walkthrough when NAMING a fresh airline (not
+                    // when Continuing a save). No "seen once, ever" gate — that
+                    // kept it from re-showing for returning testers; it's skippable.
+                    tab = tutorialSteps[0].tab; tutorialStep = 0
                 }
                 .transition(.opacity)
             }
