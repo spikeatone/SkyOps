@@ -436,6 +436,14 @@ one contradicts the design thesis.)
   everything else just compresses — this wasn't hand-tuned, it fell out
   of the real cost/revenue math, and it happens to match the actual
   historical dynamic that pushed those aircraft toward retirement.
+  - **PER-EVENT COOLDOWN (native app) — the same economic event can't recur
+    within 30 sim-days.** A playtester saw two "Fuel Price Drop"s a few days
+    apart (unrealistic). `tickEconomicEvents` now sets `eventCooldownUntil[id] =
+    tick + 30d` at ONSET (not end — onset-based is airtight regardless of the
+    event's duration) and picks only from ids whose cooldown has expired (falls
+    back to all if every type is cooling, which can't happen with 5 types).
+    Verified 0 same-within-30d violations across 3× 3-sim-year runs. Cooldowns are
+    transient (not persisted — events reset to Normal on load anyway).
 - **Financials UI is a stacked ledger** (Revenue / −Operating Costs /
   −Fees / =Net Revenue), replacing a single-line formula string — net
   revenue colors green/red by sign. Same breakdown surfaced in the
@@ -1837,6 +1845,19 @@ where numbers are involved.
   UI directly — screenshots still worked): the custom tab bar icons render
   correctly, Karla renders in the header/control bar, and the control-bar
   spacing is clean.
+- **EARLY LEASE TERMINATION (native app) — a leased jet can't be SOLD, it's
+  handed back with a penalty.** The Fleet-detail action button reads **TERMINATE
+  LEASE** (not SELL AIRCRAFT) for `ac.isLeased`, and the confirm dialog charges a
+  real early-termination fee = **3 months' lease** (`leaseTerminationPenalty` =
+  `3 × monthlyLeaseCost`; ERJ135 = $336k) — the real-world "few months' rent to
+  break early" analog (there's no fixed lease TERM in this model, so months-of-rent
+  is the honest proxy). `terminateLease()` hands the jet back (proceeds $0 — you
+  never owned it) and books the fee to `totalLeaseCost` so the Finance invariant
+  holds. `resolveSell` (the SELL card) and the end-of-service card also route a
+  leased aircraft to terminate instead of crediting a bogus sell value. Verified
+  live (button + dialog) + 6/6 headless. KNOWN cosmetic gap (not fixed): the
+  Fleet-detail "Market Value" card still shows a sell-value figure for a leased
+  jet, which is slightly misleading (you don't own it) — left as-is for now.
 - **Leasing + used-aircraft market — DONE (native app).** Ported faithfully
   from the prototype. LEASING: 15% upfront (`leaseUpfrontRate`) + a fixed
   MONTHLY bill (`AircraftType.monthlyLeaseCost` = 0.8% of purchase price),
