@@ -186,32 +186,51 @@ final class JetSound {
     }
 }
 
-/// A gate-style "now boarding" call, spoken in the player's own airline name via
-/// on-device text-to-speech (no bundled asset). Reserved for opening a route — a
-/// deliberate, infrequent action, so it's a flavor nod rather than a nag. Speaks
-/// under the shared .ambient session, so the silent switch mutes it and music
-/// keeps playing. A real recorded PA clip could replace this later; for now TTS
-/// keeps it self-contained and personal (it says the name they chose).
+/// A gate-style "now boarding" call, played on opening a route — a deliberate,
+/// infrequent action, so it's a flavor nod rather than a nag. Plays the bundled
+/// recording (`now_boarding.*`) if present; otherwise falls back to on-device TTS
+/// in the player's own airline name. Plays under the shared game audio session.
 @MainActor
 final class GateAnnouncement {
     static let shared = GateAnnouncement()
     private let synth = AVSpeechSynthesizer()
+    private var player: AVAudioPlayer?
+    private var lookedUp = false
+
+    /// The bundled recording, loaded once (nil if none is bundled → TTS fallback).
+    private func recording() -> AVAudioPlayer? {
+        if !lookedUp {
+            lookedUp = true
+            for ext in ["wav", "caf", "m4a", "mp3"] {
+                if let url = Bundle.main.url(forResource: "now_boarding", withExtension: ext),
+                   let p = try? AVAudioPlayer(contentsOf: url) {
+                    p.prepareToPlay(); player = p; break
+                }
+            }
+        }
+        return player
+    }
 
     func nowBoarding(airline: String?) {
         GameAudio.prepareAmbientSessionOnce()
-        let name = (airline?.trimmingCharacters(in: .whitespaces)).flatMap { $0.isEmpty ? nil : $0 }
-        let line = name.map { "\($0), now boarding." } ?? "Now boarding."
 
-        let u = AVSpeechUtterance(string: line)
-        u.rate = AVSpeechUtteranceDefaultSpeechRate * 0.94   // an unhurried PA cadence
+        // Prefer the recorded PA clip.
+        if let p = recording() {
+            p.currentTime = 0
+            p.volume = 0.9
+            p.play()
+            return
+        }
+
+        // Fallback: synthesize the call in the player's airline name.
+        let name = (airline?.trimmingCharacters(in: .whitespaces)).flatMap { $0.isEmpty ? nil : $0 }
+        let u = AVSpeechUtterance(string: name.map { "\($0), now boarding." } ?? "Now boarding.")
+        u.rate = AVSpeechUtteranceDefaultSpeechRate * 0.94
         u.pitchMultiplier = 0.98
         u.volume = 0.9
         u.voice = AVSpeechSynthesisVoice(language: "en-US")
         u.preUtteranceDelay = 0.05
-
-        // usesApplicationAudioSession is true by default, so this honors the
-        // .ambient session above rather than ducking/interrupting other audio.
-        synth.stopSpeaking(at: .immediate)   // never let calls pile up
+        synth.stopSpeaking(at: .immediate)
         synth.speak(u)
     }
 }
