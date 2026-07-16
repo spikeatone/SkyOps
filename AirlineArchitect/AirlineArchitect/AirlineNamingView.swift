@@ -11,13 +11,14 @@
 import SwiftUI
 
 struct AirlineNamingView: View {
-    /// Called with the entered airline name and 2-letter fleet tail code when
-    /// the player launches their airline.
-    let onLaunch: (String, String) -> Void
+    /// Called with the entered airline name, 2-letter fleet tail code, and the
+    /// chosen home region when the player launches their airline.
+    let onLaunch: (String, String, Airline.PlayerRegion) -> Void
 
     @Environment(\.colorScheme) private var scheme
     @State private var name = ""
     @State private var tailCode = ""
+    @State private var region: Airline.PlayerRegion = .northAmerica
     @FocusState private var fieldFocused: Bool
     @FocusState private var tailFocused: Bool
     /// Drives the blinking prompt cursor shown in the empty, unfocused field.
@@ -57,6 +58,8 @@ struct AirlineNamingView: View {
     var body: some View {
         ZStack {
             background.ignoresSafeArea()
+            // Scrolls on smaller iPhones now that the region picker adds height.
+            ScrollView(showsIndicators: false) {
             VStack(spacing: 24) {
                 Spacer().frame(height: 8)
 
@@ -157,6 +160,37 @@ struct AirlineNamingView: View {
                 }
                 .frame(width: 360)
 
+                // Home region — the designer's seven start choices (the map
+                // frames here on launch; the player can still fly anywhere).
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("WHICH REGION DO YOU WANT TO START IN?")
+                        .font(.karla(12, .semibold))
+                        .foregroundStyle(labelColor)
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8),
+                                        GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                        ForEach(Airline.PlayerRegion.allCases, id: \.self) { r in
+                            Button { region = r } label: {
+                                Text(r.label)
+                                    .font(.karla(14, region == r ? .bold : .medium))
+                                    .foregroundStyle(region == r ? buttonText : labelColor)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.72)
+                                    .frame(maxWidth: .infinity, minHeight: 40)
+                                    .background(region == r ? buttonBG
+                                        : (isDark ? Color.white.opacity(0.06) : .white))
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                    .overlay(RoundedRectangle(cornerRadius: 4)
+                                        .stroke(region == r ? buttonBG : hex(0xE2E8F0), lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    Text("Your starting map focuses here — you can still fly anywhere.")
+                        .font(.karla(12))
+                        .foregroundStyle(subtitleColor.opacity(0.85))
+                }
+                .frame(width: 360)
+
                 // Launch button.
                 Button(action: launch) {
                     Text("Launch Your Airline")
@@ -171,9 +205,11 @@ struct AirlineNamingView: View {
                 .buttonStyle(.plain)
                 .disabled(tailInvalid)
 
-                Spacer()
+                Spacer().frame(height: 24)
             }
             .padding(.top, 8)
+            .frame(maxWidth: .infinity)
+            }
         }
         .onAppear {
             // Blink the prompt cursor; don't auto-focus (keeps the keyboard
@@ -186,6 +222,6 @@ struct AirlineNamingView: View {
 
     private func launch() {
         guard !tailInvalid else { return }
-        onLaunch(name, tailCode)
+        onLaunch(name, tailCode, region)
     }
 }

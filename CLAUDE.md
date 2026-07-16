@@ -2637,6 +2637,26 @@ both orientations) incl. the full open-a-route→acquire flow.
   every new game showed identical markets). Queued bigger items live in
   `TASKS.md`: region selection at start, Hawaii+Caribbean "leisure
   destination" airports with a fare premium, and `HUBS_AND_CLUBS_SPEC.md`.
+- **REGION SELECTION AT START — BUILT (designer playtest request).** The naming
+  screen asks "WHICH REGION DO YOU WANT TO START IN?" — 7 chips in the
+  designer's wording/order (Africa, Asia, Australia/New Zealand, Central
+  America, Europe, North America, South America), North America default.
+  `Airline.PlayerRegion` maps the 7 player choices onto the 10 internal carrier
+  regions (NA = us+canada+mexico; Asia folds in middleEast — not offered as its
+  own start; oceania = the whole South Pacific). `Simulation.homeRegion`
+  (persisted in GameSnapshot as rawValue; nil/legacy saves → NA) drives FOUR
+  things: (1) default map framing — `Simulation.frame(for:)`, where NA keeps
+  the proven CONUS frame and every other region gets the padded bounding box of
+  its airports; `configure()`/`resetCamera()` now use the instance `homeFrame`,
+  and `applyHomeFraming()` re-fits on region change or viewport change; (2)
+  spare bases — `homeBaseAirports` = home airports INSIDE the frame, which
+  generalizes the old "no ANC/HNL bases" visibility rule to every region; (3)
+  `topRouteOpportunities`; (4) airport recruitment offers. ALL former
+  `conusAirports` uses are replaced (that pool is gone). FOCUS NOT FENCE: the
+  player can still open routes anywhere on the globe. Verified 57/57 headless
+  (per-region pools, frames, in-region spares/opportunities, save/load
+  round-trip, legacy default) + live (Europe start frames Europe with its
+  region colours). Naming screen now scrolls (the picker adds height).
 - **GameKit (leaderboards/achievements) — still DEFERRED, reaffirmed this
   session.** Designer's friend suggested it; decision was to skip for now (it's a
   no-architectural-risk bolt-on). If revisited: rank on EFFICIENCY not

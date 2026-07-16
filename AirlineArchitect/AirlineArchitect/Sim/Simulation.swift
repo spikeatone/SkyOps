@@ -89,7 +89,7 @@ final class Simulation {
     /// touch. The regional tier naturally surfaces smaller, off-radar airports.
     /// Candidates are all CONUS airports with info; already-flown pairs excluded.
     func topRouteOpportunities(perClass: Int = 2) -> [RouteOpportunity] {
-        let cands = conusAirports.filter { $0.info != nil }
+        let cands = homeAirports.filter { $0.info != nil }
         let served = Set(playerRoutes.map { pairKey($0.originCode, $0.destCode) })
         var all: [RouteOpportunity] = []
         for i in 0..<cands.count {
@@ -278,24 +278,67 @@ final class Simulation {
         return (tl, size, CGPoint(x: (tl.x + br.x) / 2, y: (tl.y + br.y) / 2))
     }()
 
+    // MARK: Home region (player's start-region choice)
+
+    /// Chosen on the naming screen; persisted. Drives the default map framing
+    /// and the home-scoped pools (spare bases, route opportunities, airport
+    /// recruitment offers). The player can still fly anywhere — this is focus,
+    /// not a fence.
+    private(set) var homeRegion: Airline.PlayerRegion = .northAmerica
+    /// The default camera frame for the home region (CONUS for North America).
+    private var homeFrame: (origin: CGPoint, size: CGSize, center: CGPoint) = Simulation.conusFrame
+
+    /// Unit-space frame for a start region: North America keeps the proven CONUS
+    /// frame (Hawaii/Alaska outliers deliberately excluded from the fit);
+    /// everything else is the padded bounding box of the region's airports.
+    static func frame(for region: Airline.PlayerRegion, airports: [Airport])
+        -> (origin: CGPoint, size: CGSize, center: CGPoint) {
+        if region == .northAmerica { return conusFrame }
+        let regs = Set(region.gameRegions)
+        let pts = airports.filter { regs.contains(Airline.region($0.code)) }.map(\.unit)
+        guard pts.count >= 2 else { return conusFrame }
+        var minX = pts[0].x, maxX = pts[0].x, minY = pts[0].y, maxY = pts[0].y
+        for p in pts {
+            minX = min(minX, p.x); maxX = max(maxX, p.x)
+            minY = min(minY, p.y); maxY = max(maxY, p.y)
+        }
+        let padX = (maxX - minX) * 0.08, padY = (maxY - minY) * 0.08
+        let o = CGPoint(x: minX - padX, y: minY - padY)
+        let s = CGSize(width: (maxX - minX) + 2 * padX, height: (maxY - minY) + 2 * padY)
+        return (o, s, CGPoint(x: o.x + s.width / 2, y: o.y + s.height / 2))
+    }
+
+    /// Set (or restore) the player's start region and re-frame the map on it.
+    func setHomeRegion(_ region: Airline.PlayerRegion) {
+        homeRegion = region
+        homeFrame = Simulation.frame(for: region, airports: airports)
+        userAdjustedCamera = false
+        applyHomeFraming()
+    }
+
+    /// Fit `homeFrame` in the current viewport → defaultZoom, and re-center on
+    /// it unless the user has taken manual camera control.
+    private func applyHomeFraming() {
+        guard viewport.width > 0, viewport.height > 0 else { return }
+        let fit = min(viewport.width / (homeFrame.size.width * worldScale),
+                      viewport.height / (homeFrame.size.height * worldScale)) * 0.92
+        defaultZoom = min(Simulation.cameraMaxZoom, max(Simulation.cameraMinZoom, fit))
+        if !userAdjustedCamera {
+            cameraZoom = defaultZoom
+            cameraCenter = homeFrame.center
+        }
+    }
+
     /// Ensure the camera is configured for the current viewport. Recomputes the
-    /// whole-world scale and the CONUS-fit default zoom on size change; frames
-    /// CONUS on first configure. Ported from resetCameraToConus() semantics.
+    /// whole-world scale and the home-region-fit default zoom on size change;
+    /// frames the home region on first configure (CONUS until a region is set).
     func configure(viewport size: CGSize) {
         guard size.width > 0, size.height > 0 else { return }
         if size != viewport {
             viewport = size
             let w = Simulation.worldUnitSize
             worldScale = min(size.width / w.width, size.height / w.height)
-            let conus = Simulation.conusFrame
-            let fit = min(size.width / (conus.size.width * worldScale),
-                          size.height / (conus.size.height * worldScale)) * 0.92
-            defaultZoom = min(Simulation.cameraMaxZoom, max(Simulation.cameraMinZoom, fit))
-            // Auto-frame CONUS until the user takes manual control.
-            if !userAdjustedCamera {
-                cameraZoom = defaultZoom
-                cameraCenter = conus.center
-            }
+            applyHomeFraming()
         }
     }
 
@@ -430,7 +473,7 @@ final class Simulation {
     func resetCamera() {
         userAdjustedCamera = false
         cameraZoom = defaultZoom
-        cameraCenter = Simulation.conusFrame.center
+        cameraCenter = homeFrame.center
     }
 
     /// Center the map on an airport and zoom in enough to see it clearly — the
@@ -549,20 +592,29 @@ final class Simulation {
     // invisible and untappable until it was routed. The base is cosmetic
     // (openRoute reassigns origin), so restricting it purely improves
     // visibility; background traffic is unaffected (it can fly AK/HI freely).
-    private static let conusLatRange = 24.5...49.5
-    private static let conusLonRange = (-125.0)...(-66.5)
-    /// Airports inside the CONUS frame (falls back to all if somehow empty).
-    private var conusAirports: [Airport] {
-        let inside = airports.filter {
-            Simulation.conusLatRange.contains($0.lat) && Simulation.conusLonRange.contains($0.lon)
-        }
+    /// Airports in the player's home region (falls back to all if somehow empty).
+    var homeAirports: [Airport] {
+        let regs = Set(homeRegion.gameRegions)
+        let inside = airports.filter { regs.contains(Airline.region($0.code)) }
         return inside.isEmpty ? airports : inside
     }
 
-    /// A genuinely fresh purchase — 0 cycles, PARKED at a random CONUS base, no
-    /// route (a spare). Separate from makeAircraft (stress-test) by design.
+    /// Home-region airports inside the default frame — spare bases come from
+    /// here so a fresh purchase is always VISIBLE in the starting view (for
+    /// North America this excludes ANC/HNL, same rule as the old CONUS pool).
+    private var homeBaseAirports: [Airport] {
+        let f = homeFrame
+        let inside = homeAirports.filter {
+            $0.unit.x >= f.origin.x && $0.unit.x <= f.origin.x + f.size.width
+                && $0.unit.y >= f.origin.y && $0.unit.y <= f.origin.y + f.size.height
+        }
+        return inside.isEmpty ? homeAirports : inside
+    }
+
+    /// A genuinely fresh purchase — 0 cycles, PARKED at a random home-region
+    /// base, no route (a spare). Separate from makeAircraft (stress-test).
     private func makePurchasedAircraft(_ type: AircraftType, startingCycles: Int = 0) -> Aircraft {
-        let base = conusAirports.randomElement()!
+        let base = homeBaseAirports.randomElement()!
         let tail = "N\(nextTailNum)\(playerTailCode)"
         nextTailNum += 1
         let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
@@ -1629,7 +1681,7 @@ final class Simulation {
 
         let servedCodes = Set(playerRoutes.flatMap { [$0.originCode, $0.destCode] })
         let servedPairs = Set(playerRoutes.map { pairKey($0.originCode, $0.destCode) })
-        let conus = conusAirports.filter { $0.info != nil }
+        let conus = homeAirports.filter { $0.info != nil }
         let bySize = conus.sorted { ($0.info?.annualPassengers ?? 0) < ($1.info?.annualPassengers ?? 0) }
         let smaller = Array(bySize.prefix(max(1, bySize.count * 2 / 3)))   // bottom ~2/3 by traffic
         guard let origin = smaller.filter({ !servedCodes.contains($0.code) }).randomElement() else { return }
@@ -2222,6 +2274,7 @@ final class Simulation {
         s.firedMilestones = Array(firedMilestones)
         s.stressTestCount = stressTestCount
         s.cameraZoom = cameraZoom; s.cameraCenterX = cameraCenter.x; s.cameraCenterY = cameraCenter.y
+        s.homeRegion = homeRegion.rawValue
         s.aircraft = aircraft.filter { $0.purchased }.map { ac in
             AircraftSave(tail: ac.tail, typeId: ac.type.id, originCode: ac.origin.code, destCode: ac.dest.code,
                          stateIndex: ac.stateIndex, stateTick: ac.stateTick, cyclesAccrued: ac.cyclesAccrued,
@@ -2288,6 +2341,10 @@ final class Simulation {
         useDemandModel = s.useDemandModel
         reputation = s.reputation
         firedMilestones = Set(s.firedMilestones)
+        // Home region BEFORE camera: sets homeFrame without clobbering the
+        // restored camera (userAdjustedCamera goes true right after).
+        homeRegion = s.homeRegion.flatMap { Airline.PlayerRegion(rawValue: $0) } ?? .northAmerica
+        homeFrame = Simulation.frame(for: homeRegion, airports: airports)
         cameraZoom = s.cameraZoom; cameraCenter = CGPoint(x: s.cameraCenterX, y: s.cameraCenterY)
         userAdjustedCamera = true   // don't auto-reframe over the restored camera
 

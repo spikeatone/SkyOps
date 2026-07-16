@@ -67,6 +67,42 @@ struct Airline {
     /// a Brazilian one South American carriers, etc. — not a lumped LatAm pool.
     enum Region { case us, canada, mexico, centralAmerica, southAmerica, europe, africa, asia, middleEast, oceania }
 
+    /// The PLAYER-facing start-region choice (designer's list of seven), mapped
+    /// onto the finer internal carrier regions above. Chosen on the naming
+    /// screen; drives the starting map framing and the home-scoped pools
+    /// (spare bases, route opportunities, airport recruitment offers).
+    enum PlayerRegion: String, Codable, CaseIterable {
+        case africa, asia, oceania, centralAmerica, europe, northAmerica, southAmerica
+
+        /// Display label, in the designer's wording.
+        var label: String {
+            switch self {
+            case .africa:         return "Africa"
+            case .asia:           return "Asia"
+            case .oceania:        return "Australia / New Zealand"
+            case .centralAmerica: return "Central America"
+            case .europe:         return "Europe"
+            case .northAmerica:   return "North America"
+            case .southAmerica:   return "South America"
+            }
+        }
+
+        /// The internal carrier regions this start choice spans. North America
+        /// folds US+Canada+Mexico; Asia folds in the Middle East (not offered
+        /// as its own start); Oceania covers the whole South Pacific.
+        var gameRegions: [Region] {
+            switch self {
+            case .africa:         return [.africa]
+            case .asia:           return [.asia, .middleEast]
+            case .oceania:        return [.oceania]
+            case .centralAmerica: return [.centralAmerica]
+            case .europe:         return [.europe]
+            case .northAmerica:   return [.us, .canada, .mexico]
+            case .southAmerica:   return [.southAmerica]
+            }
+        }
+    }
+
     /// Real Canadian carriers. Per-type eligibility researched per carrier,
     /// limited to the game's types. Air Canada also appears in the US roster
     /// (transborder widebody); that overlap is intentional.

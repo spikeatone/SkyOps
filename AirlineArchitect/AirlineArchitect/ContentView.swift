@@ -76,8 +76,9 @@ struct ContentView: View {
                     .transition(.opacity)
             } else if sim.playerAirlineName == nil {
                 // First-launch: name the airline before anything else.
-                AirlineNamingView { name, tailCode in
+                AirlineNamingView { name, tailCode, region in
                     if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
+                    sim.setHomeRegion(region)
                     sim.nameAirline(name, tailCode: tailCode)
                     if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
                     // Always run the walkthrough when NAMING a fresh airline (not

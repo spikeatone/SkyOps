@@ -42,6 +42,9 @@ struct GameSnapshot: Codable {
     var firedMilestones: [String] = []
     var stressTestCount = 0
 
+    // Home region (player's start-region choice; nil in pre-region saves → NA)
+    var homeRegion: String?
+
     // Camera
     var cameraZoom = 1.0
     var cameraCenterX = 0.0

@@ -34,11 +34,19 @@ Done this session:
       deterministic top-2, so new games stop showing the identical markets.
 
 Queued (bigger, not started):
-- [ ] REGION SELECTION at new-airline start ("Which region do you want to
-      start in?" — Africa / Asia / Australia-NZ / Central America / Europe /
-      North America / South America). Starting map focuses there. Real scope:
-      starting airport pool + camera framing + region-aware competitor
-      weights (partially exists) + starting-capital/economy sanity per region.
+- [x] REGION SELECTION — BUILT. Naming screen gained "WHICH REGION DO YOU
+      WANT TO START IN?" (7 chips, designer wording/order, NA default).
+      Airline.PlayerRegion maps 7 choices onto the 10 internal regions (NA =
+      us+canada+mexico; Asia folds middleEast; Oceania = South Pacific).
+      Simulation.homeRegion (persisted; legacy saves -> NA) drives: default
+      map framing (Simulation.frame(for:) — NA keeps the proven CONUS frame,
+      others = padded bounding box of region airports), spare bases
+      (homeBaseAirports = home airports INSIDE the frame, generalizing the
+      old ANC/HNL visibility rule), route opportunities, and airport
+      recruitment offers (all conusAirports uses replaced). Verified 57/57
+      headless (pools/frames/spares/opps/persistence per region) + live
+      (Europe start frames Europe). Focus not fence: flying anywhere still
+      allowed.
 - [ ] LEISURE DESTINATIONS expansion: add Hawaii neighbors (LIH Lihue, OGG
       Kahului/Maui, ITO Hilo, KOA Kona) + ~20 Caribbean primaries (SJU Puerto
       Rico, GCM Cayman, STT USVI, EIS BVI, AXA Anguilla, SXM St Martin, SBH
