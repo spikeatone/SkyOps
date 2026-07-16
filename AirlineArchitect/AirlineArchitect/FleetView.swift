@@ -33,6 +33,8 @@ struct FleetView: View {
 
     @State private var segment: Segment = .myFleet
     @State private var detailID: UUID?
+    /// Fleet-list status filter, driven by tapping a status box (nil = all).
+    @State private var fleetFilter: FleetStatus?
     enum Segment: Hashable { case myFleet, marketplace }
 
     // MARK: Theme tokens (light Figma / dark Sky)
@@ -199,18 +201,21 @@ struct FleetView: View {
         let idle = owned.filter { status($0) == .idle }.count
         let grounded = owned.filter { status($0) == .grounded }.count
         return HStack(spacing: 4) {
-            statusBox("Total", owned.count, totalColor)
-            statusBox("Flying", flying, flyingColor)
-            statusBox("Idle", idle, yellow)
-            statusBox("Grounded", grounded, groundedColor)
+            statusBox("Total", owned.count, totalColor, filter: nil)
+            statusBox("Flying", flying, flyingColor, filter: .flying)
+            statusBox("Idle", idle, yellow, filter: .idle)
+            statusBox("Grounded", grounded, groundedColor, filter: .grounded)
         }
         .padding(4)
         .background(segBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
-    private func statusBox(_ label: String, _ value: Int, _ color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    /// Tapping a box filters the fleet list to that state (tap again, or tap
+    /// Total, to clear). The active filter shows a ring in the box's own colour.
+    private func statusBox(_ label: String, _ value: Int, _ color: Color, filter: FleetStatus?) -> some View {
+        let selected = fleetFilter != nil && fleetFilter == filter
+        return VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.karla(14)).foregroundStyle(statusLabel)
             Text("\(value)").font(.karla(20, .heavy)).foregroundStyle(color)
         }
@@ -218,6 +223,11 @@ struct FleetView: View {
         .padding(12)
         .background(statusBoxBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(selected ? color : .clear, lineWidth: 2))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(Motion.glide) { fleetFilter = (fleetFilter == filter) ? nil : filter }
+        }
     }
 
     // MARK: Fleet list
@@ -234,13 +244,27 @@ struct FleetView: View {
                 }
                 .frame(maxWidth: .infinity).padding(.top, 40)
             } else {
+                let shown = fleetFilter == nil ? owned : owned.filter { status($0) == fleetFilter }
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        ForEach(owned) { fleetCard($0, selected: $0.id == selectedID) }
+                        if shown.isEmpty, let f = fleetFilter {
+                            Text("No aircraft currently \(filterLabel(f)).")
+                                .font(.karla(14)).foregroundStyle(secondary)
+                                .frame(maxWidth: .infinity).padding(.top, 24)
+                        }
+                        ForEach(shown) { fleetCard($0, selected: $0.id == selectedID) }
                     }
                     .padding(.bottom, 8)
                 }
             }
+        }
+    }
+
+    private func filterLabel(_ f: FleetStatus) -> String {
+        switch f {
+        case .flying:   return "flying"
+        case .idle:     return "idle"
+        case .grounded: return "grounded"
         }
     }
 

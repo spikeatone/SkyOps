@@ -104,12 +104,18 @@ final class Simulation {
                     suggested: suggestedClass(demand: demand)))
             }
         }
-        // Best few of each tier, actionable-first (regional → narrowbody → widebody).
+        // A few of each tier, actionable-first (regional → narrowbody → widebody).
+        // SAMPLED from each tier's top pool rather than always the absolute best —
+        // the demand model is static, so a deterministic top-2 showed the exact
+        // same markets in every new game (designer-reported). Every pick is still
+        // a genuinely strong market; games just stop looking identical.
         var out: [RouteOpportunity] = []
         for tier in ["Regional jet", "Narrowbody", "Widebody"] {
-            out += all.filter { $0.suggested == tier }
+            let pool = all.filter { $0.suggested == tier }
                 .sorted { $0.demandPerDay > $1.demandPerDay }
-                .prefix(perClass)
+                .prefix(8)
+            out += pool.shuffled().prefix(perClass)
+                .sorted { $0.demandPerDay > $1.demandPerDay }
         }
         return out
     }
@@ -193,6 +199,10 @@ final class Simulation {
     /// Speed multiplier. Prototype default is 5× (feels smooth; at 1× the
     /// aircraft visibly steps every 250 ms, which is expected, not a bug).
     private(set) var speed: Double = 5
+    /// Hard pause (QUIT-to-menu, app backgrounded). Not persisted — transient UI
+    /// state. Distinct from the design's "no player-facing pause DURING play":
+    /// this only stops the world while the player isn't looking at it.
+    var isPaused = false
 
     /// Selectable speeds (¼×/½× are the slow-mo tiers; ¼× is rate-limited).
     static let speedOptions: [Double] = [0.25, 0.5, 1, 5, 10, 25]
@@ -2424,9 +2434,18 @@ final class Simulation {
                         + Double((now - last).components.seconds) * 1000
             last = now
 
+            // Paused (QUIT-to-menu, app backgrounded): no ticks, and DISCARD any
+            // accumulated time so unpausing never fast-forwards.
+            if isPaused { accumulatorMs = 0; continue }
+
             guard speed > 0 else { continue }
 
-            accumulatorMs += deltaMs
+            // Clamp the per-wake delta: if the process was suspended (app in the
+            // background), the wall clock kept running but the game must NOT —
+            // without this clamp the accumulator drains the whole absence as
+            // catch-up ticks (50 per wake) after resume. Real time away from the
+            // app never becomes sim time.
+            accumulatorMs += min(deltaMs, 250)
             let intervalMs = Simulation.baseTickMs / speed
             var ticksThisWake = 0
             while accumulatorMs >= intervalMs && ticksThisWake < 50 {

@@ -130,7 +130,7 @@ struct FleetDetailView: View {
                 Spacer()
                 labeled("ETA", eta.map(etaString) ?? (aircraft.isIdleSpare ? "—" : "At gate"), trailing: true)
             }
-            progressBar(prog)
+            progressBar(prog, planeTip: !aircraft.isIdleSpare)
         }
     }
 
@@ -313,12 +313,25 @@ struct FleetDetailView: View {
         }
     }
 
-    private func progressBar(_ frac: Double) -> some View {
+    /// `planeTip` rides a little aircraft icon on the tip of the fill — used by
+    /// the Current Status leg bar to reinforce that the plane is en route (the
+    /// airframe-life bar keeps the plain fill).
+    private func progressBar(_ frac: Double, planeTip: Bool = false) -> some View {
         GeometryReader { geo in
+            let f = CGFloat(max(0, min(1, frac)))
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 4).fill(track)
                 RoundedRectangle(cornerRadius: 4).fill(fill)
-                    .frame(width: geo.size.width * CGFloat(max(0, min(1, frac))))
+                    .frame(width: geo.size.width * f)
+                if planeTip {
+                    // The plane leads the fill — fully on the track side, in the
+                    // fill blue, so its silhouette reads against the grey track in
+                    // both themes (straddling the tip made it blue-on-blue mush).
+                    Image(systemName: "airplane")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(fill)
+                        .offset(x: min(geo.size.width * f + 2, geo.size.width - 20))
+                }
             }
         }.frame(height: 8)
     }

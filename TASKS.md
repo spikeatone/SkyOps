@@ -16,6 +16,42 @@ actual technical detail on all of it; this file is just the task-tracking
 layer. Don't let it drift this far again — update it in the same session
 as the work, not "later."
 
+## Playtest feedback batch (designer, post-build-18 playtest)
+
+Done this session:
+- [x] BUG: sim kept progressing after QUIT-to-menu (milestone toasts over the
+      saved-game screen) and background time drained as catch-up ticks on
+      resume. Fixed: `Simulation.isPaused` (QUIT/menu/background pause, zeroes
+      the accumulator) + a 250ms per-wake delta clamp in `run()` so real time
+      away from the app NEVER becomes sim time.
+- [x] Fleet status boxes (Total/Flying/Idle/Grounded) are tappable FILTERS on
+      the fleet list (selection ring in the box's colour; tap again or tap
+      Total to clear; empty-filter hint). Verified live.
+- [x] Aircraft-detail leg-progress bar rides a little airplane icon at the
+      fill tip (Current Status bar only; airframe-life bar unchanged).
+      Verified live.
+- [x] Route Opportunities: sampled from each tier's top-8 pool instead of a
+      deterministic top-2, so new games stop showing the identical markets.
+
+Queued (bigger, not started):
+- [ ] REGION SELECTION at new-airline start ("Which region do you want to
+      start in?" — Africa / Asia / Australia-NZ / Central America / Europe /
+      North America / South America). Starting map focuses there. Real scope:
+      starting airport pool + camera framing + region-aware competitor
+      weights (partially exists) + starting-capital/economy sanity per region.
+- [ ] LEISURE DESTINATIONS expansion: add Hawaii neighbors (LIH Lihue, OGG
+      Kahului/Maui, ITO Hilo, KOA Kona) + ~20 Caribbean primaries (SJU Puerto
+      Rico, GCM Cayman, STT USVI, EIS BVI, AXA Anguilla, SXM St Martin, SBH
+      St Barts, ANU Antigua, SKB St Kitts, DOM Dominica, UVF St Lucia, SVD
+      St Vincent, GND Grenada, BGI Barbados, AUA Aruba, CUR Curaçao, BON
+      Bonaire, POS Trinidad, NAS Bahamas, PLS Turks & Caicos). Designer
+      intent: these are "leisure route destinations" — fares run a PREMIUM
+      (new leisure fare multiplier on routes touching them). Needs real
+      lat/lon + tier-based fee estimates + region/carrier assignment
+      (Caribbean roster?) + the leisure-fare mechanic + balance check.
+- [ ] HUBS & CLUBS — spec'd and designer-reviewed, see
+      `HUBS_AND_CLUBS_SPEC.md`. Build phased H1→H4 when called.
+
 ## In progress
 
 - [ ] The full system — fleet, airports, economy, route network, leasing,

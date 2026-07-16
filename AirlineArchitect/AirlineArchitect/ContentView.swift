@@ -50,13 +50,18 @@ struct ContentView: View {
         .onAppear {
             if currentSlot == nil, sim.playerAirlineName == nil, GameStore.anySave {
                 showLoadMenu = true
+                sim.isPaused = true
             }
         }
-        // Autosave to the current slot whenever the app leaves the foreground.
+        // Autosave to the current slot whenever the app leaves the foreground —
+        // and pause the sim: time away from the app must not become sim time.
+        // Returning to the foreground unpauses only if we're actually in a game
+        // (not sitting on the load menu).
         .onChange(of: scenePhase) { _, phase in
             if phase != .active, sim.playerAirlineName != nil, !sim.isBankrupt, let s = currentSlot {
                 GameStore.save(sim.snapshot(), slot: s)
             }
+            sim.isPaused = (phase != .active) || showLoadMenu
         }
         // Haptics on the big observed moments (the delight layer). Player-initiated
         // actions (buy / open route) tap at their own call sites; these are the
@@ -215,8 +220,11 @@ struct ContentView: View {
     }
 
     /// QUIT button — save the current game, then return to the load menu.
+    /// The sim PAUSES at the menu — a quit game must not keep progressing
+    /// (milestone toasts were firing over the saved-game screen).
     private func quitToMenu() {
         saveCurrent()
+        sim.isPaused = true
         withAnimation(.easeOut(duration: 0.25)) { showLoadMenu = true }
     }
 

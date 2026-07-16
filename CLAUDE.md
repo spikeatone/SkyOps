@@ -2618,6 +2618,25 @@ both orientations) incl. the full open-a-route→acquire flow.
   input glitch; keys (rotation, Escape) still worked. Work around by seeding the
   target `tab`/state and driving via `simctl` rather than clicks; a Simulator
   restart may clear it.
+- **TIME AWAY FROM THE APP NEVER BECOMES SIM TIME (designer-reported playtest
+  bug, fixed).** Two holes: (a) QUIT-to-menu left the sim ticking behind the
+  SaveSlotsView (milestone toasts fired over the saved-game screen — the run
+  loop is keyed on `gameID`, which QUIT doesn't change); (b) backgrounding let
+  the `ContinuousClock` accumulator bank the whole suspension and drain it at
+  50 catch-up ticks per 8ms wake after resume. Fix: `Simulation.isPaused`
+  (transient, not persisted — set on QUIT/menu/background via ContentView,
+  cleared by fresh instances on load/new; run() zeroes the accumulator while
+  paused so unpausing never fast-forwards) PLUS a `min(deltaMs, 250)` per-wake
+  clamp in `run()` as a structural guarantee. NOTE: this is distinct from the
+  design's "no player-facing pause DURING play" — that still holds; this only
+  stops the world while the player isn't looking at it.
+- **Playtest quick wins (same batch):** fleet status boxes are tappable list
+  FILTERS (ring in the box's colour, tap-again/Total clears); the detail
+  leg-progress bar rides an airplane icon at the fill tip (leg bar only);
+  `topRouteOpportunities` samples each tier's top-8 (was deterministic top-2 —
+  every new game showed identical markets). Queued bigger items live in
+  `TASKS.md`: region selection at start, Hawaii+Caribbean "leisure
+  destination" airports with a fare premium, and `HUBS_AND_CLUBS_SPEC.md`.
 - **GameKit (leaderboards/achievements) — still DEFERRED, reaffirmed this
   session.** Designer's friend suggested it; decision was to skip for now (it's a
   no-architectural-risk bolt-on). If revisited: rank on EFFICIENCY not
