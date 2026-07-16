@@ -2581,6 +2581,53 @@ both orientations) incl. the full open-a-route→acquire flow.
   modals still float centered (functional on iPad, not restyled); portrait
   iPad Network uses the floating-overlay panels rather than the rail.
 
+## Decided — Release Candidate & QA pass
+
+- **The app is being treated as a RELEASE CANDIDATE (universal iPhone + iPad,
+  build 18 on TestFlight as of this work).** Build history this stretch: 12–14
+  (pre-iPad polish), 15 (cash precision + "need $X more" hint), 16 (iPad
+  adaptation), 17 (portrait Fleet slide transition), 18 (map-flinch fix). Each
+  TestFlight cut = bump `CURRENT_PROJECT_VERSION` (6 configs) → archive →
+  Organizer → the DESIGNER does the credentialed Distribute/upload (Claude opens
+  the Organizer but can't upload).
+- **A three-part RC QA pass was run and is CLEAN** (the designer owns the 4th
+  part — on-device feel/fun playtest, which no automated check can cover):
+  1. **Independent code review** of the iPad changes → safe to ship, no
+     must-fix issues (no crashes, no iPhone regressions, no stuck state). Its one
+     finding (the map-flinch) is FIXED (reserved rail width, above).
+  2. **Headless economy regression** (`scratchpad/main.swift`, compile the real
+     `Sim/*.swift` + `Persistence.swift` with `swiftc -O`; entry file MUST be
+     named `main.swift`) → **525/525 checks, 0 failures.** Asserts the master
+     Finance cash invariant (`startingCapital + revenue − fees − opCost −
+     leaseCost − insurance − maintenance − acquisition − routeSpend − hedgeSpend
+     + saleProceeds + offerIncome + loanProceeds − debtService == playerBalance`)
+     holds through every money-moving action, 10 long randomized games (0
+     bankruptcies under competent play), and a forced bankruptcy→liquidation.
+     Trim tick volume (≤~6M ticks) or it exceeds a 5-min run cap. LoanOffer ids
+     are `small`/`medium`/`large` (not "fleet"). This harness is the proven net
+     for any future economy change — re-run it.
+  3. **iPad visual sweep** with a populated game → clean across tabs/orientations
+     /themes. (A "empty detail pane" scare in the Fleet split was a rotation
+     transient, not a bug — the split's `detailAC` defaults to the first owned
+     aircraft.)
+- **Screenshot/verification gotchas for the Simulator (recurring this session):**
+  (a) `xcrun simctl io … screenshot` captures the RAW framebuffer, so LANDSCAPE
+  comes out rotated 90°/180° — `sips -r 90` or `-r 270` to view upright (the app
+  is fine). (b) computer-use CLICKS on the Simulator started intermittently
+  landing on the macOS menu bar (opening Window/Integrate/Help menus) — a real
+  input glitch; keys (rotation, Escape) still worked. Work around by seeding the
+  target `tab`/state and driving via `simctl` rather than clicks; a Simulator
+  restart may clear it.
+- **GameKit (leaderboards/achievements) — still DEFERRED, reaffirmed this
+  session.** Designer's friend suggested it; decision was to skip for now (it's a
+  no-architectural-risk bolt-on). If revisited: rank on EFFICIENCY not
+  accumulation (fastest-to-a-milestone / score-at-fixed-sim-day), NOT raw net
+  worth (the sim is time-decoupled + 25× speed → raw net worth rewards grind).
+  Achievements map ~1:1 to the existing milestone system. GameKit's aggregate
+  achievement/leaderboard completion rates are useful balance signal but NOT
+  gameplay telemetry — for that, a privacy-first SDK (TelemetryDeck) is the right
+  tool, and the headless balance-sim is better still for PRE-launch tuning.
+
 ## Open / not yet decided
 
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on
