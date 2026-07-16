@@ -324,13 +324,12 @@ struct FleetDetailView: View {
                 RoundedRectangle(cornerRadius: 4).fill(fill)
                     .frame(width: geo.size.width * f)
                 if planeTip {
-                    // The plane leads the fill just past the tip. #FFFFFF per
-                    // designer spec; the hairline shadow keeps it readable on the
-                    // light theme's pale track (white pops on its own in dark).
+                    // The plane leads the fill just past the tip. Theme-aware per
+                    // designer spec: #FFFFFF on dark (pops against the dark track),
+                    // the fill blue on light (white washed out on the pale track).
                     Image(systemName: "airplane")
                         .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.white)
-                        .shadow(color: .black.opacity(0.45), radius: 1)
+                        .foregroundStyle(isDark ? Color.white : fill)
                         .offset(x: min(geo.size.width * f + 2, geo.size.width - 20))
                 }
             }
