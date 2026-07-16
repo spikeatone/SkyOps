@@ -162,6 +162,37 @@ extension Airport {
         "MZT": .init(name: "Mazatlán International (General Rafael Buelna)", city: "Mazatlán, Mexico", operationsPerYear: 25_000, runways: 1, longestRunwayFt: 8_858, metroPopulation: 500_000, annualPassengers: 2_000_000),
         "CZM": .init(name: "Cozumel International", city: "Cozumel, Mexico", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 10_165, metroPopulation: 90_000, annualPassengers: 1_000_000),
 
+        // LEISURE destinations (designer request). Runways/passengers real
+        // (Wikipedia-tier); operations/metro are estimates. SBH and EIS have
+        // genuinely tiny runways — turboprop-only in reality, unservable by the
+        // game's jets (deliberate, matches the real world).
+        "LIH": .init(name: "Lihue Airport", city: "Lihue, Kauai, HI", operationsPerYear: 100_000, runways: 2, longestRunwayFt: 6_500, metroPopulation: 73_000, annualPassengers: 3_500_000),
+        "OGG": .init(name: "Kahului Airport", city: "Kahului, Maui, HI", operationsPerYear: 150_000, runways: 2, longestRunwayFt: 6_995, metroPopulation: 165_000, annualPassengers: 7_900_000),
+        "ITO": .init(name: "Hilo International", city: "Hilo, HI", operationsPerYear: 60_000, runways: 2, longestRunwayFt: 9_800, metroPopulation: 45_000, annualPassengers: 1_400_000),
+        "KOA": .init(name: "Ellison Onizuka Kona International", city: "Kailua-Kona, HI", operationsPerYear: 90_000, runways: 2, longestRunwayFt: 11_000, metroPopulation: 82_000, annualPassengers: 4_000_000),
+        "SJU": .init(name: "Luis Muñoz Marín International", city: "San Juan, Puerto Rico", operationsPerYear: 180_000, runways: 2, longestRunwayFt: 10_400, metroPopulation: 2_400_000, annualPassengers: 12_000_000),
+        "STT": .init(name: "Cyril E. King Airport", city: "Charlotte Amalie, U.S. Virgin Islands", operationsPerYear: 40_000, runways: 1, longestRunwayFt: 7_000, metroPopulation: 52_000, annualPassengers: 1_500_000),
+        "NAS": .init(name: "Lynden Pindling International", city: "Nassau, The Bahamas", operationsPerYear: 90_000, runways: 2, longestRunwayFt: 11_351, metroPopulation: 275_000, annualPassengers: 4_100_000),
+        "PLS": .init(name: "Providenciales International", city: "Providenciales, Turks and Caicos", operationsPerYear: 40_000, runways: 1, longestRunwayFt: 9_199, metroPopulation: 33_000, annualPassengers: 1_800_000),
+        "GCM": .init(name: "Owen Roberts International", city: "George Town, Cayman Islands", operationsPerYear: 40_000, runways: 1, longestRunwayFt: 7_021, metroPopulation: 65_000, annualPassengers: 1_400_000),
+        "EIS": .init(name: "Terrance B. Lettsome International", city: "Tortola, British Virgin Islands", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 4_642, metroPopulation: 24_000, annualPassengers: 400_000),
+        "AXA": .init(name: "Clayton J. Lloyd International", city: "The Valley, Anguilla", operationsPerYear: 10_000, runways: 1, longestRunwayFt: 5_462, metroPopulation: 15_000, annualPassengers: 100_000),
+        "SXM": .init(name: "Princess Juliana International", city: "Philipsburg, Sint Maarten", operationsPerYear: 50_000, runways: 1, longestRunwayFt: 7_546, metroPopulation: 75_000, annualPassengers: 1_800_000),
+        "SBH": .init(name: "Gustaf III Airport", city: "St. Jean, Saint Barthélemy", operationsPerYear: 15_000, runways: 1, longestRunwayFt: 2_119, metroPopulation: 10_000, annualPassengers: 200_000),
+        "ANU": .init(name: "V.C. Bird International", city: "St. John's, Antigua and Barbuda", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 9_003, metroPopulation: 95_000, annualPassengers: 1_000_000),
+        "SKB": .init(name: "Robert L. Bradshaw International", city: "Basseterre, St. Kitts and Nevis", operationsPerYear: 15_000, runways: 1, longestRunwayFt: 7_602, metroPopulation: 48_000, annualPassengers: 400_000),
+        "DOM": .init(name: "Douglas–Charles Airport", city: "Marigot, Dominica", operationsPerYear: 10_000, runways: 1, longestRunwayFt: 5_738, metroPopulation: 72_000, annualPassengers: 200_000),
+        "UVF": .init(name: "Hewanorra International", city: "Vieux Fort, Saint Lucia", operationsPerYear: 25_000, runways: 1, longestRunwayFt: 9_003, metroPopulation: 180_000, annualPassengers: 800_000),
+        "SVD": .init(name: "Argyle International", city: "Kingstown, St. Vincent and the Grenadines", operationsPerYear: 12_000, runways: 1, longestRunwayFt: 9_006, metroPopulation: 110_000, annualPassengers: 300_000),
+        "GND": .init(name: "Maurice Bishop International", city: "St. George's, Grenada", operationsPerYear: 15_000, runways: 1, longestRunwayFt: 9_003, metroPopulation: 112_000, annualPassengers: 500_000),
+        "BGI": .init(name: "Grantley Adams International", city: "Bridgetown, Barbados", operationsPerYear: 50_000, runways: 1, longestRunwayFt: 11_109, metroPopulation: 290_000, annualPassengers: 2_200_000),
+        "AUA": .init(name: "Queen Beatrix International", city: "Oranjestad, Aruba", operationsPerYear: 60_000, runways: 1, longestRunwayFt: 8_999, metroPopulation: 110_000, annualPassengers: 2_900_000),
+        "CUR": .init(name: "Curaçao International", city: "Willemstad, Curaçao", operationsPerYear: 45_000, runways: 1, longestRunwayFt: 11_188, metroPopulation: 160_000, annualPassengers: 1_700_000),
+        "BON": .init(name: "Flamingo International", city: "Kralendijk, Bonaire", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 9_449, metroPopulation: 22_000, annualPassengers: 600_000),
+        "POS": .init(name: "Piarco International", city: "Port of Spain, Trinidad and Tobago", operationsPerYear: 60_000, runways: 1, longestRunwayFt: 10_500, metroPopulation: 550_000, annualPassengers: 2_500_000),
+        "MLE": .init(name: "Velana International", city: "Malé, Maldives", operationsPerYear: 120_000, runways: 1, longestRunwayFt: 10_499, metroPopulation: 250_000, annualPassengers: 7_000_000),
+        "SEZ": .init(name: "Seychelles International", city: "Mahé, Seychelles", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 9_800, metroPopulation: 90_000, annualPassengers: 1_200_000),
+
         // ── Central America (best-effort ~2023–24) ─────────────────────────
         "PTY": .init(name: "Tocumen International", city: "Panama City, Panama", operationsPerYear: 120_000, runways: 2, longestRunwayFt: 10_006, metroPopulation: 1_900_000, annualPassengers: 16_000_000),
         "SJO": .init(name: "Juan Santamaría International", city: "San José, Costa Rica", operationsPerYear: 80_000, runways: 1, longestRunwayFt: 9_882, metroPopulation: 2_200_000, annualPassengers: 5_500_000),

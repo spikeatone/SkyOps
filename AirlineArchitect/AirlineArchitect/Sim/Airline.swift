@@ -292,6 +292,13 @@ struct Airline {
     ]
     static let centralAmericaCodes: Set<String> = [
         "PTY","SJO","SAL","GUA","LIR","SAP","MGA","BZE","XPL","RTB",
+        // Caribbean leisure islands ride the Central America carrier region
+        // (Copa/Avianca genuinely blanket the Caribbean; a dedicated Caribbean
+        // roster — Caribbean Airlines, interCaribbean — is a future refinement).
+        // SJU/STT are deliberately NOT here: US territories, US carriers (same
+        // principle as GUM).
+        "NAS","PLS","GCM","EIS","AXA","SXM","SBH","ANU","SKB","DOM",
+        "UVF","SVD","GND","BGI","AUA","CUR","BON","POS",
     ]
     static let southAmericaCodes: Set<String> = [
         "BOG","GRU","SCL","LIM","CGH","AEP","GIG","VCP","MDE","BSB","EZE","UIO","SDU","CLO","CNF","CTG","POA","REC","SSA","GYE",
@@ -304,13 +311,13 @@ struct Airline {
     ]
     static let africaCodes: Set<String> = [
         "CAI","JNB","ADD","CMN","CPT","HRG","NBO","RAK","LOS","ALG","TUN","DUR","ABJ","ACC","ABV","DSS","SSH","MRU","RBA","KGL",
-        "EBB","LAD","DAR","AGA","TNG",
+        "EBB","LAD","DAR","AGA","TNG","SEZ",
     ]
     // Asia = East + Southeast + South Asia (Middle East is separate, below).
     static let asiaCodes: Set<String> = [
         "PEK","HND","PVG","CAN","SIN","ICN","BKK","HKG","KUL","SZX","CTU","TPE","MNL","KIX","CGK","KMG","XIY","HGH","NRT","CKG",
         "WUH","SGN","SUB","HAN","PNH","RGN","NYT","BWN",
-        "DEL","BOM","BLR","HYD","MAA","CCU","AMD","COK","PNQ","GOI","KHI","LHE","ISB",
+        "DEL","BOM","BLR","HYD","MAA","CCU","AMD","COK","PNQ","GOI","KHI","LHE","ISB","MLE",
     ]
     static let middleEastCodes: Set<String> = [
         "DXB","DOH","JED","RUH","AUH","MCT","KWI","BAH","DMM","SHJ","TLV","MED","AMM","BEY","MHD","IKA","THR",

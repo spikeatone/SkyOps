@@ -54,6 +54,23 @@ final class Airport: Identifiable {
         self.unit = GeoProjection.unit(lat: lat, lon: lon)
     }
 
+    /// "Leisure route destinations" (designer): island/beach markets where
+    /// fares run a PREMIUM and route establishment costs MORE (labor, setup,
+    /// materials all cost more on an island). Hawaii neighbors + the Caribbean
+    /// primaries + Indian Ocean/South Pacific islands. PPT (Tahiti) included by
+    /// the same logic even though it predates the list; the Mexican beach
+    /// airports (CUN/CZM/SJD/PVR) are deliberately NOT leisure yet — easy to
+    /// extend if the designer wants them in.
+    static let leisureCodes: Set<String> = [
+        "LIH", "OGG", "ITO", "KOA",                                  // Hawaii
+        "SJU", "STT", "NAS", "PLS", "GCM", "EIS", "AXA", "SXM",      // Caribbean
+        "SBH", "ANU", "SKB", "DOM", "UVF", "SVD", "GND", "BGI",
+        "AUA", "CUR", "BON", "POS",
+        "MLE", "SEZ", "MRU",                                          // Indian Ocean
+        "NAN", "PPT",                                                 // South Pacific
+    ]
+    static func isLeisure(_ code: String) -> Bool { leisureCodes.contains(code) }
+
     /// The real airport network: 48 U.S. (top-50 by fee, minus 2 cross-batch
     /// duplicates; includes ANC/HNL) + 46 Latin American + 20 Canadian, 114 total.
     static let all: [Airport] = [
@@ -105,6 +122,16 @@ final class Airport: Identifiable {
         .init(code: "SAT", lat: 29.5337, lon: -98.4698,  landingFeePerKlb: 3.50,  gateFeeNarrowbody: 200,  gateFeeWidebody: 400,  groundStopsPerMonth: 0.8),
         .init(code: "ANC", lat: 61.1743, lon: -149.9963, landingFeePerKlb: 2.11,  gateFeeNarrowbody: 300,  gateFeeWidebody: 550,  groundStopsPerMonth: 1.8),
         .init(code: "HNL", lat: 21.3245, lon: -157.9251, landingFeePerKlb: 2.74,  gateFeeNarrowbody: 320,  gateFeeWidebody: 600,  groundStopsPerMonth: 0.2),
+
+        // Hawaii neighbor islands + Caribbean US territories — LEISURE
+        // destinations (designer request). Fee/ground-stop figures are
+        // tier-based ESTIMATES like the LatAm set.
+        .init(code: "LIH", lat: 21.9760, lon: -159.3390, landingFeePerKlb: 2.40, gateFeeNarrowbody: 290, gateFeeWidebody: 560, groundStopsPerMonth: 0.3),
+        .init(code: "OGG", lat: 20.8986, lon: -156.4305, landingFeePerKlb: 2.50, gateFeeNarrowbody: 300, gateFeeWidebody: 580, groundStopsPerMonth: 0.3),
+        .init(code: "ITO", lat: 19.7188, lon: -155.0478, landingFeePerKlb: 2.30, gateFeeNarrowbody: 280, gateFeeWidebody: 540, groundStopsPerMonth: 0.5),
+        .init(code: "KOA", lat: 19.7388, lon: -156.0456, landingFeePerKlb: 2.40, gateFeeNarrowbody: 290, gateFeeWidebody: 560, groundStopsPerMonth: 0.3),
+        .init(code: "SJU", lat: 18.4394, lon: -66.0018,  landingFeePerKlb: 2.60, gateFeeNarrowbody: 310, gateFeeWidebody: 620, groundStopsPerMonth: 2.5),
+        .init(code: "STT", lat: 18.3373, lon: -64.9734,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 2.5),
         // Additional US airports (mid-continent / mountain-west / mid-south).
         .init(code: "BZN", lat: 45.7772, lon: -111.1530, landingFeePerKlb: 3.20,  gateFeeNarrowbody: 300,  gateFeeWidebody: 620,  groundStopsPerMonth: 4.0),
         .init(code: "BOI", lat: 43.5644, lon: -116.2228, landingFeePerKlb: 3.80,  gateFeeNarrowbody: 330,  gateFeeWidebody: 700,  groundStopsPerMonth: 3.0),
@@ -182,6 +209,31 @@ final class Airport: Identifiable {
         .init(code: "BZE", lat: 17.5391, lon: -88.3082,  landingFeePerKlb: 1.50, gateFeeNarrowbody: 200, gateFeeWidebody: 400, groundStopsPerMonth: 2.0),
         .init(code: "XPL", lat: 14.3822, lon: -87.6211,  landingFeePerKlb: 1.55, gateFeeNarrowbody: 210, gateFeeWidebody: 420, groundStopsPerMonth: 2.2),
         .init(code: "RTB", lat: 16.3167, lon: -86.5230,  landingFeePerKlb: 1.45, gateFeeNarrowbody: 195, gateFeeWidebody: 390, groundStopsPerMonth: 2.5),
+
+        // Caribbean — LEISURE destinations (designer request; primary airport
+        // per territory). Fee/ground-stop figures are tier-based ESTIMATES;
+        // ground stops lean 2-2.5 for hurricane season. NOTE: SBH (2,119 ft)
+        // and EIS (4,642 ft) have REAL runways below every game type's minimum
+        // — turboprop-only fields in reality; they render and host background
+        // flavor but no game jet can serve them until a turboprop type exists.
+        .init(code: "NAS", lat: 25.0390, lon: -77.4662,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 330, gateFeeWidebody: 660, groundStopsPerMonth: 2.5),
+        .init(code: "PLS", lat: 21.7736, lon: -72.2659,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 330, gateFeeWidebody: 660, groundStopsPerMonth: 2.0),
+        .init(code: "GCM", lat: 19.2928, lon: -81.3577,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 330, gateFeeWidebody: 660, groundStopsPerMonth: 2.0),
+        .init(code: "EIS", lat: 18.4448, lon: -64.5430,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 2.0),
+        .init(code: "AXA", lat: 18.2048, lon: -63.0551,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 2.0),
+        .init(code: "SXM", lat: 18.0410, lon: -63.1089,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 340, gateFeeWidebody: 700, groundStopsPerMonth: 2.5),
+        .init(code: "SBH", lat: 17.9044, lon: -62.8436,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 320, gateFeeWidebody: 640, groundStopsPerMonth: 2.0),
+        .init(code: "ANU", lat: 17.1367, lon: -61.7927,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 320, gateFeeWidebody: 640, groundStopsPerMonth: 2.0),
+        .init(code: "SKB", lat: 17.3112, lon: -62.7187,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 320, gateFeeWidebody: 640, groundStopsPerMonth: 2.0),
+        .init(code: "DOM", lat: 15.5470, lon: -61.3000,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 2.5),
+        .init(code: "UVF", lat: 13.7332, lon: -60.9526,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 320, gateFeeWidebody: 640, groundStopsPerMonth: 2.5),
+        .init(code: "SVD", lat: 13.1564, lon: -61.1493,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 2.0),
+        .init(code: "GND", lat: 12.0042, lon: -61.7862,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 2.0),
+        .init(code: "BGI", lat: 13.0746, lon: -59.4925,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 340, gateFeeWidebody: 700, groundStopsPerMonth: 2.0),
+        .init(code: "AUA", lat: 12.5014, lon: -70.0152,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 340, gateFeeWidebody: 700, groundStopsPerMonth: 1.5),
+        .init(code: "CUR", lat: 12.1889, lon: -68.9598,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 330, gateFeeWidebody: 660, groundStopsPerMonth: 1.5),
+        .init(code: "BON", lat: 12.1310, lon: -68.2685,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 1.5),
+        .init(code: "POS", lat: 10.5954, lon: -61.3372,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 320, gateFeeWidebody: 640, groundStopsPerMonth: 2.5),
 
         // South America (top 20)
         .init(code: "BOG", lat: 4.7016,   lon: -74.1469,  landingFeePerKlb: 3.80, gateFeeNarrowbody: 380, gateFeeWidebody: 820, groundStopsPerMonth: 6.5),
@@ -322,6 +374,8 @@ final class Airport: Identifiable {
         .init(code: "DSS", lat: 14.6710, lon: -17.0733, landingFeePerKlb: 3.10, gateFeeNarrowbody: 305, gateFeeWidebody: 650, groundStopsPerMonth: 2.2),
         .init(code: "SSH", lat: 27.9773, lon: 34.3950,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 1.5),
         .init(code: "MRU", lat: -20.4302, lon: 57.6836, landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 2.5),
+        // Indian Ocean island LEISURE destinations (designer request; estimates).
+        .init(code: "SEZ", lat: -4.6743,  lon: 55.5218, landingFeePerKlb: 3.40, gateFeeNarrowbody: 340, gateFeeWidebody: 700, groundStopsPerMonth: 1.5),
         .init(code: "RBA", lat: 34.0515, lon: -6.7515,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 580, groundStopsPerMonth: 1.8),
         .init(code: "KGL", lat: -1.9686, lon: 30.1395,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 2.5),
         .init(code: "EBB", lat: 0.0424,  lon: 32.4435,  landingFeePerKlb: 3.10, gateFeeNarrowbody: 305, gateFeeWidebody: 650, groundStopsPerMonth: 2.8),
@@ -366,6 +420,8 @@ final class Airport: Identifiable {
         .init(code: "BWN", lat: 4.9442,  lon: 114.9283, landingFeePerKlb: 4.00, gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 3.0),
         // South Asia
         .init(code: "DEL", lat: 28.5562, lon: 77.1000,  landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 4.0),
+        // Maldives — LEISURE destination (designer request; estimates).
+        .init(code: "MLE", lat: 4.1918,   lon: 73.5291,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 360, gateFeeWidebody: 760,  groundStopsPerMonth: 2.0),
         .init(code: "BOM", lat: 19.0887, lon: 72.8679,  landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 4.5),
         .init(code: "BLR", lat: 13.1986, lon: 77.7066,  landingFeePerKlb: 5.20, gateFeeNarrowbody: 400, gateFeeWidebody: 900,  groundStopsPerMonth: 2.5),
         .init(code: "HYD", lat: 17.2403, lon: 78.4294,  landingFeePerKlb: 4.80, gateFeeNarrowbody: 380, gateFeeWidebody: 840,  groundStopsPerMonth: 2.5),

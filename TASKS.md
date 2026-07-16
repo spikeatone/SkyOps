@@ -47,22 +47,21 @@ Queued (bigger, not started):
       headless (pools/frames/spares/opps/persistence per region) + live
       (Europe start frames Europe). Focus not fence: flying anywhere still
       allowed.
-- [ ] LEISURE DESTINATIONS expansion: add Hawaii neighbors (LIH Lihue, OGG
-      Kahului/Maui, ITO Hilo, KOA Kona) + ~20 Caribbean primaries (SJU Puerto
-      Rico, GCM Cayman, STT USVI, EIS BVI, AXA Anguilla, SXM St Martin, SBH
-      St Barts, ANU Antigua, SKB St Kitts, DOM Dominica, UVF St Lucia, SVD
-      St Vincent, GND Grenada, BGI Barbados, AUA Aruba, CUR Curaçao, BON
-      Bonaire, POS Trinidad, NAS Bahamas, PLS Turks & Caicos) + long-haul
-      island leisure: MLE Maldives, SEZ Seychelles, MRU Mauritius, NAN Fiji
-      (Nadi). Designer intent — two leisure mechanics, both designer-specified:
-      (1) fares run a PREMIUM on routes touching a leisure destination (new
-      leisure fare multiplier); (2) OPENING a leisure route costs MORE than a
-      domestic one — "labor, setup costs, materials all cost more in a
-      leisure destination" (route-opening cost multiplier at leisure
-      endpoints). Needs real lat/lon + tier-based fee estimates +
-      region/carrier assignment (Caribbean/Indian-Ocean/Pacific rosters) +
-      both mechanics + balance-harness check (premium fares vs premium
-      opening costs must net out fair, not printer).
+- [x] LEISURE DESTINATIONS — BUILT. 26 new airports (343 total): Hawaii
+      neighbors LIH/OGG/ITO/KOA, US-territory SJU/STT, 18 Caribbean primaries
+      (NAS PLS GCM EIS AXA SXM SBH ANU SKB DOM UVF SVD GND BGI AUA CUR BON
+      POS), MLE Maldives, SEZ Seychelles — plus existing MRU/NAN/PPT marked
+      leisure (29 leisure codes in Airport.leisureCodes; CUN/CZM/SJD/PVR
+      deliberately not yet). Real lat/lon + runways/passengers; fees are
+      tier ESTIMATES. Both designer mechanics: leisure fare premium ×1.15
+      (rollRevenue) and leisure route-opening premium ×1.75
+      (routeOpeningCost — flows to the confirm panel + slot buybacks
+      automatically). Regions: Caribbean -> centralAmerica carriers
+      (SJU/STT stay US, like GUM); MLE -> asia; SEZ -> africa. SBH (2,119ft)
+      + EIS (4,642ft) keep their REAL runways -> jet-unservable, matching
+      reality (turboprop future hook). Verified 75/75 headless (uniqueness,
+      regions, exact ×1.75, revenue + invariant, runway blocks, Central
+      America start spans the Caribbean) + live map check.
 - [ ] HUBS & CLUBS — spec'd and designer-reviewed, see
       `HUBS_AND_CLUBS_SPEC.md`. Build phased H1→H4 when called.
 

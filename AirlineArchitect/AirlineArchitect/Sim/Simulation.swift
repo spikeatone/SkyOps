@@ -715,11 +715,21 @@ final class Simulation {
 
     /// Real opening cost: base + both endpoints' gate fees, plus a premium per
     /// endpoint with no free slot. Ported from computeRouteOpeningCost().
+    /// Leisure economics (designer-specified pair, deliberately opposed): island
+    /// fares run a PREMIUM (+15%), but ESTABLISHING an island route costs more
+    /// (×1.75 — "labor, setup costs, materials all cost more in a leisure
+    /// destination"). Bigger buy-in, richer payback curve. DESIGNED pacing.
+    static let leisureFareMultiplier = 1.15
+    static let leisureOpeningCostMultiplier = 1.75
+
     func routeOpeningCost(_ origin: Airport, _ dest: Airport) -> Int {
         var cost = Double(Simulation.routeBaseCost)
                  + Double(origin.gateFeeNarrowbody + dest.gateFeeNarrowbody) * Double(Simulation.routeCostPerGateFeeUnit)
         if origin.slotsAvailable <= 0 { cost += Double(Simulation.routeSlotPurchasePremium) }
         if dest.slotsAvailable <= 0 { cost += Double(Simulation.routeSlotPurchasePremium) }
+        if Airport.isLeisure(origin.code) || Airport.isLeisure(dest.code) {
+            cost *= Simulation.leisureOpeningCostMultiplier
+        }
         return Int(cost.rounded())
     }
 
@@ -1985,6 +1995,11 @@ final class Simulation {
         var fareMult = currentEvent.fareMultiplier
         if fxShockActive, ac.type.bodyType.usesWidebodyGateFee { fareMult *= Simulation.fxFareMultiplier }
         if let fw = fareWarRouteId, ac.assignedRouteId == fw, tick < fareWarExpiryTick { fareMult *= Simulation.fareWarMultiplier }
+        // Leisure destinations command premium fares (designer: island/beach
+        // markets run a premium, as in the real world).
+        if Airport.isLeisure(ac.origin.code) || Airport.isLeisure(ac.dest.code) {
+            fareMult *= Simulation.leisureFareMultiplier
+        }
         let farePerSeat = avgFare * fareMult * (0.9 + Double.random(in: 0..<0.2))  // ±10%
         // Load factor: with the demand model ON (prototype), it's an OUTCOME of
         // this route's passenger demand vs. this aircraft's seats — so a widebody

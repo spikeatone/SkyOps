@@ -2657,6 +2657,29 @@ both orientations) incl. the full open-a-route→acquire flow.
   (per-region pools, frames, in-region spares/opportunities, save/load
   round-trip, legacy default) + live (Europe start frames Europe with its
   region colours). Naming screen now scrolls (the picker adds height).
+- **LEISURE DESTINATIONS — BUILT (designer playtest request).** 26 new airports
+  (343 total): Hawaii neighbors (LIH/OGG/ITO/KOA), the Caribbean primaries per
+  the designer's territory list (SJU STT NAS PLS GCM EIS AXA SXM SBH ANU SKB
+  DOM UVF SVD GND BGI AUA CUR BON POS), MLE Maldives + SEZ Seychelles. Real
+  lat/lon and real runways/passenger counts; fee/ground-stop figures are
+  tier-based ESTIMATES (same confidence tier as the LatAm set, flagged in
+  code). `Airport.leisureCodes` (29 — includes existing MRU/NAN and PPT by the
+  same island-leisure logic; Mexican beach airports CUN/CZM/SJD/PVR
+  deliberately NOT leisure yet). TWO designer-specified mechanics, deliberately
+  opposed: fares on any route touching a leisure code run ×1.15
+  (`leisureFareMultiplier`, in `rollRevenue`'s fareMult stack) while OPENING a
+  leisure route costs ×1.75 (`leisureOpeningCostMultiplier`, in
+  `routeOpeningCost` — automatically surfaces in the route-confirm panel and
+  slot-buyback values). Bigger buy-in, richer payback; both numbers are
+  DESIGNED pacing. Carrier regions: Caribbean islands ride
+  `centralAmericaCodes` (Copa/Avianca approximation — a real Caribbean roster
+  is a future refinement); SJU/STT stay US-region (territories, same principle
+  as GUM); MLE→asia, SEZ→africa. REAL-RUNWAY HONESTY: SBH (2,119 ft) and EIS
+  (4,642 ft) are genuinely jet-unservable — turboprop-only in reality; they
+  render + host background flavor and are a future turboprop-type hook, NOT a
+  data error. Verified 75/75 headless + live (Central America start now frames
+  the whole Caribbean; the label declutterer fans the Lesser Antilles cluster
+  automatically).
 - **GameKit (leaderboards/achievements) — still DEFERRED, reaffirmed this
   session.** Designer's friend suggested it; decision was to skip for now (it's a
   no-architectural-risk bolt-on). If revisited: rank on EFFICIENCY not
