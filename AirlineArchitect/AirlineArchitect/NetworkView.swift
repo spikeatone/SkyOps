@@ -106,12 +106,15 @@ struct NetworkView: View {
                     if isPad && wide {
                         HStack(alignment: .top, spacing: 10) {
                             mapCard(selected: selected, sideDocked: true)
-                            if hasSidePanel(selected: selected) {
-                                sidePanelColumn(selected: selected)
-                                    .frame(width: 380)
-                                    .frame(maxHeight: .infinity, alignment: .top)
-                                    .transition(.move(edge: .trailing).combined(with: .opacity))
-                            }
+                            // The rail's width is reserved PERMANENTLY — even when
+                            // nothing is docked the 380pt gutter stays. Otherwise
+                            // docking a panel narrows the map card, which recomputes
+                            // the map's world-scale and makes the whole map visibly
+                            // "flinch". The gutter just sits empty (page background)
+                            // when idle; its CONTENT fades in/out.
+                            sidePanelColumn(selected: selected)
+                                .frame(width: 380)
+                                .frame(maxHeight: .infinity, alignment: .top)
                         }
                         .animation(Motion.glide, value: panel)
                         .animation(Motion.glide, value: routeMode)
@@ -144,11 +147,6 @@ struct NetworkView: View {
         case .pickDest:   return "Step Two: Now tap the other airport pair"
         default:          return nil
         }
-    }
-
-    /// iPad: is any panel/flow active that should occupy the right-hand rail?
-    private func hasSidePanel(selected: Aircraft?) -> Bool {
-        panel != .none || isRouteConfirm || selected != nil || selectedAirport != nil
     }
 
     /// iPad: the docked right-hand rail. Mirrors the height treatment the panels

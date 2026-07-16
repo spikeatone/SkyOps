@@ -2538,6 +2538,18 @@ both orientations) incl. the full open-a-route→acquire flow.
   `Spacer`. Verified end-to-end: open route with no spare → rail swaps from the
   confirm panel to Acquire (route stays pending) → buy → route auto-opens with
   the jet assigned and flying, balance deducted, rail dismisses.
+  - **The rail's 380pt width is RESERVED PERMANENTLY (designer decision), even
+    when nothing is docked** — the `sidePanelColumn` is always in the HStack at
+    `.frame(width: 380)`, empty (page background) when idle. This was a real QA
+    finding (independent code review during the RC pass): docking a panel used
+    to NARROW the map card, which recomputes the map's `worldScale` (=
+    `min(width/worldW, height/worldH)`, width-limited since the world is ~390°
+    wide) → the whole map visibly "flinched"/rescaled every time a panel opened
+    or an aircraft was selected. Reserving the width keeps the map card a
+    constant size so it never rescales. Tradeoff the designer accepted: the map
+    is always a bit narrower in landscape (a ~380pt right margin when idle). The
+    OLD approach (conditionally adding the column via a now-removed
+    `hasSidePanel`) is what caused the flinch — don't reintroduce it.
   - **EXCEPTION the designer requested: the route-PICK hints (Step One / Step
     Two) float over the map as a chip, they do NOT take the rail** — you're
     tapping the map to pick airports, so the instruction belongs on it. Only
