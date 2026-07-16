@@ -44,11 +44,17 @@ Queued (bigger, not started):
       Rico, GCM Cayman, STT USVI, EIS BVI, AXA Anguilla, SXM St Martin, SBH
       St Barts, ANU Antigua, SKB St Kitts, DOM Dominica, UVF St Lucia, SVD
       St Vincent, GND Grenada, BGI Barbados, AUA Aruba, CUR Curaçao, BON
-      Bonaire, POS Trinidad, NAS Bahamas, PLS Turks & Caicos). Designer
-      intent: these are "leisure route destinations" — fares run a PREMIUM
-      (new leisure fare multiplier on routes touching them). Needs real
-      lat/lon + tier-based fee estimates + region/carrier assignment
-      (Caribbean roster?) + the leisure-fare mechanic + balance check.
+      Bonaire, POS Trinidad, NAS Bahamas, PLS Turks & Caicos) + long-haul
+      island leisure: MLE Maldives, SEZ Seychelles, MRU Mauritius, NAN Fiji
+      (Nadi). Designer intent — two leisure mechanics, both designer-specified:
+      (1) fares run a PREMIUM on routes touching a leisure destination (new
+      leisure fare multiplier); (2) OPENING a leisure route costs MORE than a
+      domestic one — "labor, setup costs, materials all cost more in a
+      leisure destination" (route-opening cost multiplier at leisure
+      endpoints). Needs real lat/lon + tier-based fee estimates +
+      region/carrier assignment (Caribbean/Indian-Ocean/Pacific rosters) +
+      both mechanics + balance-harness check (premium fares vs premium
+      opening costs must net out fair, not printer).
 - [ ] HUBS & CLUBS — spec'd and designer-reviewed, see
       `HUBS_AND_CLUBS_SPEC.md`. Build phased H1→H4 when called.
 
