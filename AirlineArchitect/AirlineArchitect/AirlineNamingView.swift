@@ -162,34 +162,20 @@ struct AirlineNamingView: View {
 
                 // Home region — the designer's seven start choices (the map
                 // frames here on launch; the player can still fly anywhere).
-                VStack(alignment: .leading, spacing: 8) {
+                // A snapping card carousel: neighbors peek at the margins so it
+                // reads as swipeable; each card wears its region's map hue.
+                VStack(alignment: .center, spacing: 8) {
                     Text("CHOOSE YOUR FOUNDING REGION")
                         .font(.karla(12, .semibold))
                         .foregroundStyle(labelColor)
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 8),
-                                        GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                        ForEach(Airline.PlayerRegion.allCases, id: \.self) { r in
-                            Button { region = r } label: {
-                                Text(r.label)
-                                    .font(.karla(14, region == r ? .bold : .medium))
-                                    .foregroundStyle(region == r ? buttonText : labelColor)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.72)
-                                    .frame(maxWidth: .infinity, minHeight: 40)
-                                    .background(region == r ? buttonBG
-                                        : (isDark ? Color.white.opacity(0.06) : .white))
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                                    .overlay(RoundedRectangle(cornerRadius: 4)
-                                        .stroke(region == r ? buttonBG : hex(0xE2E8F0), lineWidth: 1))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
+                        .frame(width: 360, alignment: .leading)
+                    RegionCarousel(region: $region)
+                        .frame(maxWidth: 480)
                     Text("Your starting map focuses here — you can still fly anywhere.")
                         .font(.karla(12))
                         .foregroundStyle(subtitleColor.opacity(0.85))
+                        .frame(width: 360, alignment: .leading)
                 }
-                .frame(width: 360)
 
                 // Launch button.
                 Button(action: launch) {
