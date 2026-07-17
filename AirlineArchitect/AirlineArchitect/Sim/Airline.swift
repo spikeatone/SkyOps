@@ -302,6 +302,7 @@ struct Airline {
     ]
     static let southAmericaCodes: Set<String> = [
         "BOG","GRU","SCL","LIM","CGH","AEP","GIG","VCP","MDE","BSB","EZE","UIO","SDU","CLO","CNF","CTG","POA","REC","SSA","GYE",
+        "FOR","CWB","FLN","BEL","CCS","MAO","CUZ","VIX","CGB","BAQ",
     ]
     static let europeCodes: Set<String> = [
         "LHR","IST","CDG","AMS","MAD","FRA","BCN","FCO","SVO","LGW","MUC","SAW","LIS","DUB","PMI","ORY","MAN","STN","DME","CPH",

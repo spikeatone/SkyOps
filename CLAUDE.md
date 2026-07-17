@@ -2711,6 +2711,15 @@ both orientations) incl. the full open-a-route→acquire flow.
   bar) + `devToggles` (Pro/Demand, wrapped in `#if DEBUG` at the call site —
   absent from Release builds entirely, not just hidden). Verified in a real
   Release-configuration build.
+- **SOUTH AMERICA EXPANSION — DONE (designer: "next 10 by size"). 373 → 383
+  airports.** Added FOR CWB FLN BEL CCS MAO CUZ VIX CGB BAQ — strictly the
+  next tier by annual passengers, which lands 7 Brazilian regionals (accurate:
+  Brazil's domestic market is huge) plus Caracas, Cusco, Barranquilla. Real
+  lat/lon + runway/pax data; fees tier-estimated to the existing SA entries.
+  NOTE for a future pass: Venezuela is now in, but Paraguay (ASU), Uruguay
+  (MVD), and Bolivia (VVI/LPB) are still unrepresented — their largest
+  airports fall below this size cut; add them if country coverage matters
+  more than the strict ranking. Verified 27/27 headless.
 - **ASIA EXPANSION — DONE (designer list). 363 → 373 airports.** Japan grew
   3 → 10 (designer: "Japan is large enough for 10"): added FUK CTS OKA ITM
   NGO KOJ SDJ alongside the existing HND/NRT/KIX — fees calibrated to the

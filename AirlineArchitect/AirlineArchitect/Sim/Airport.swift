@@ -256,6 +256,18 @@ final class Airport: Identifiable {
         .init(code: "POA", lat: -29.9944, lon: -51.1714,  landingFeePerKlb: 2.00, gateFeeNarrowbody: 270, gateFeeWidebody: 540, groundStopsPerMonth: 3.2),
         .init(code: "REC", lat: -8.1265,  lon: -34.9236,  landingFeePerKlb: 1.95, gateFeeNarrowbody: 265, gateFeeWidebody: 530, groundStopsPerMonth: 3.0),
         .init(code: "SSA", lat: -12.9086, lon: -38.3225,  landingFeePerKlb: 1.95, gateFeeNarrowbody: 265, gateFeeWidebody: 530, groundStopsPerMonth: 3.2),
+        // South America expansion (designer: next 10 by size) — real lat/lon;
+        // fees are tier ESTIMATES calibrated to the existing SA entries.
+        .init(code: "FOR", lat: -3.7763,  lon: -38.5326, landingFeePerKlb: 1.95, gateFeeNarrowbody: 265, gateFeeWidebody: 530, groundStopsPerMonth: 2.8),
+        .init(code: "CWB", lat: -25.5285, lon: -49.1758, landingFeePerKlb: 1.95, gateFeeNarrowbody: 265, gateFeeWidebody: 530, groundStopsPerMonth: 3.4),
+        .init(code: "FLN", lat: -27.6702, lon: -48.5525, landingFeePerKlb: 1.90, gateFeeNarrowbody: 255, gateFeeWidebody: 510, groundStopsPerMonth: 3.2),
+        .init(code: "BEL", lat: -1.3792,  lon: -48.4763, landingFeePerKlb: 1.90, gateFeeNarrowbody: 255, gateFeeWidebody: 510, groundStopsPerMonth: 3.6),
+        .init(code: "CCS", lat: 10.6013,  lon: -66.9911, landingFeePerKlb: 2.10, gateFeeNarrowbody: 275, gateFeeWidebody: 560, groundStopsPerMonth: 2.6),
+        .init(code: "MAO", lat: -3.0386,  lon: -60.0497, landingFeePerKlb: 1.90, gateFeeNarrowbody: 255, gateFeeWidebody: 510, groundStopsPerMonth: 3.8),
+        .init(code: "CUZ", lat: -13.5357, lon: -71.9388, landingFeePerKlb: 2.00, gateFeeNarrowbody: 270, gateFeeWidebody: 540, groundStopsPerMonth: 3.4),
+        .init(code: "VIX", lat: -20.2581, lon: -40.2864, landingFeePerKlb: 1.85, gateFeeNarrowbody: 250, gateFeeWidebody: 500, groundStopsPerMonth: 3.0),
+        .init(code: "CGB", lat: -15.6529, lon: -56.1167, landingFeePerKlb: 1.85, gateFeeNarrowbody: 250, gateFeeWidebody: 500, groundStopsPerMonth: 3.0),
+        .init(code: "BAQ", lat: 10.8896,  lon: -74.7808, landingFeePerKlb: 1.95, gateFeeNarrowbody: 265, gateFeeWidebody: 530, groundStopsPerMonth: 2.6),
         .init(code: "GYE", lat: -2.1574,  lon: -79.8836,  landingFeePerKlb: 2.40, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 2.8),
 
         // Canada (top 20). Same tier-based fee ESTIMATES as the LatAm set;
