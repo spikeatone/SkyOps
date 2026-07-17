@@ -2665,7 +2665,11 @@ both orientations) incl. the full open-a-route→acquire flow.
   Japan-to-10 + Central Asia — 373 airports), 22 (cold-launch splash
   route-network reveal at the 1.25× tempo, naming-screen fit pass — smaller
   badge / 44pt fields / fits unscrolled on iPhone 17 Pro, "Central America &
-  The Caribbean" card label, South America +10 — 383 airports). Each
+  The Caribbean" card label, South America +10 — 383 airports), 23 (tappable
+  Route Opportunities → one-tap map preview + open, turboprop tier — Beech
+  1900D / ATR 42-600 / Dornier 328-110 / Dash 8-200 (shortest-field, reaches
+  St. Barths), Canary→Africa region + Azores stays Europe + early loan pay-off;
+  merged via PR #1). Each
   TestFlight cut = bump `CURRENT_PROJECT_VERSION` (6 configs) → archive →
   Organizer → the DESIGNER does the credentialed Distribute/upload (Claude opens
   the Organizer but can't upload).
