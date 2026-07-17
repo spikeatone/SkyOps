@@ -80,7 +80,7 @@ struct Airline {
             case .africa:         return "Africa"
             case .asia:           return "Asia"
             case .oceania:        return "Australia / New Zealand"
-            case .centralAmerica: return "Central America"
+            case .centralAmerica: return "Central America & The Caribbean"
             case .europe:         return "Europe"
             case .northAmerica:   return "North America"
             case .southAmerica:   return "South America"
