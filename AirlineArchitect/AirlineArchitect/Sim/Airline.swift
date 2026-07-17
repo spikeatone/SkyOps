@@ -320,6 +320,7 @@ struct Airline {
         "WUH","SGN","SUB","HAN","PNH","RGN","NYT","BWN",
         "DEL","BOM","BLR","HYD","MAA","CCU","AMD","COK","PNQ","GOI","KHI","LHE","ISB","MLE",
         "DAC","KTM","PBH",
+        "FUK","CTS","OKA","ITM","NGO","KOJ","SDJ","ASB","TAS","ALA",
     ]
     static let middleEastCodes: Set<String> = [
         "DXB","DOH","JED","RUH","AUH","MCT","KWI","BAH","DMM","SHJ","TLV","MED","AMM","BEY","MHD","IKA","THR",

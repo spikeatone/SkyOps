@@ -67,7 +67,7 @@ final class Airport: Identifiable {
         "SBH", "ANU", "SKB", "DOM", "UVF", "SVD", "GND", "BGI",
         "AUA", "CUR", "BON", "POS",
         "MLE", "SEZ", "MRU", "ZNZ",                                   // Indian Ocean
-        "NAN", "PPT",                                                 // South Pacific
+        "NAN", "PPT", "OKA",                                          // South Pacific + Okinawa
         "SID",                                                        // Cape Verde (Sal)
     ]
     static func isLeisure(_ code: String) -> Bool { leisureCodes.contains(code) }
@@ -435,6 +435,19 @@ final class Airport: Identifiable {
         .init(code: "XIY", lat: 34.4471, lon: 108.7516, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 5.5),
         .init(code: "HGH", lat: 30.2295, lon: 120.4344, landingFeePerKlb: 6.20, gateFeeNarrowbody: 450, gateFeeWidebody: 1080, groundStopsPerMonth: 5.5),
         .init(code: "NRT", lat: 35.7720, lon: 140.3929, landingFeePerKlb: 7.50, gateFeeNarrowbody: 500, gateFeeWidebody: 1300, groundStopsPerMonth: 3.5),
+        // Japan expansion (designer: Japan is big enough for 10) — real lat/lon;
+        // fees calibrated to the existing HND/NRT/KIX tier (Japan runs high).
+        .init(code: "FUK", lat: 33.5859, lon: 130.4510, landingFeePerKlb: 6.50, gateFeeNarrowbody: 460, gateFeeWidebody: 1100, groundStopsPerMonth: 3.2),
+        .init(code: "CTS", lat: 42.7752, lon: 141.6923, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 4.5),
+        .init(code: "OKA", lat: 26.1958, lon: 127.6460, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 3.8),
+        .init(code: "ITM", lat: 34.7855, lon: 135.4382, landingFeePerKlb: 6.20, gateFeeNarrowbody: 450, gateFeeWidebody: 1080, groundStopsPerMonth: 2.8),
+        .init(code: "NGO", lat: 34.8584, lon: 136.8049, landingFeePerKlb: 6.20, gateFeeNarrowbody: 450, gateFeeWidebody: 1080, groundStopsPerMonth: 3.0),
+        .init(code: "KOJ", lat: 31.8034, lon: 130.7194, landingFeePerKlb: 5.40, gateFeeNarrowbody: 400, gateFeeWidebody: 950, groundStopsPerMonth: 3.2),
+        .init(code: "SDJ", lat: 38.1397, lon: 140.9170, landingFeePerKlb: 5.20, gateFeeNarrowbody: 390, gateFeeWidebody: 920, groundStopsPerMonth: 3.4),
+        // Central Asia (designer: largest in Turkmenistan / Uzbekistan / Kazakhstan).
+        .init(code: "ASB", lat: 37.9868, lon: 58.3610,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 2.0),
+        .init(code: "TAS", lat: 41.2579, lon: 69.2812,  landingFeePerKlb: 3.40, gateFeeNarrowbody: 320, gateFeeWidebody: 700, groundStopsPerMonth: 2.4),
+        .init(code: "ALA", lat: 43.3521, lon: 77.0405,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 330, gateFeeWidebody: 720, groundStopsPerMonth: 3.0),
         .init(code: "CKG", lat: 29.7192, lon: 106.6417, landingFeePerKlb: 6.00, gateFeeNarrowbody: 440, gateFeeWidebody: 1050, groundStopsPerMonth: 5.5),
         .init(code: "WUH", lat: 30.7838, lon: 114.2081, landingFeePerKlb: 5.60, gateFeeNarrowbody: 420, gateFeeWidebody: 960,  groundStopsPerMonth: 5.5),
         .init(code: "SGN", lat: 10.8188, lon: 106.6520, landingFeePerKlb: 5.40, gateFeeNarrowbody: 410, gateFeeWidebody: 940,  groundStopsPerMonth: 3.5),

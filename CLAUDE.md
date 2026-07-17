@@ -2708,6 +2708,17 @@ both orientations) incl. the full open-a-route→acquire flow.
   bar) + `devToggles` (Pro/Demand, wrapped in `#if DEBUG` at the call site —
   absent from Release builds entirely, not just hidden). Verified in a real
   Release-configuration build.
+- **ASIA EXPANSION — DONE (designer list). 363 → 373 airports.** Japan grew
+  3 → 10 (designer: "Japan is large enough for 10"): added FUK CTS OKA ITM
+  NGO KOJ SDJ alongside the existing HND/NRT/KIX — fees calibrated to the
+  high HND/NRT tier; HND↔CTS and HND↔FUK correctly come out as
+  widebody-grade trunk demand (they're two of the world's busiest routes).
+  Central Asia: ASB (Ashgabat), TAS (Tashkent), ALA (Almaty) — largest in
+  Turkmenistan/Uzbekistan/Kazakhstan. TPE was already in the game (checked,
+  not duplicated). OKA (Okinawa) joined the leisure set (32 total) — Japan's
+  island-beach destination, same principle as Hawaii. Okinawa's island
+  geometry added to the asia basemap layer (110m Japan is main-islands only).
+  Verified 32/32 headless + live Asia-start screenshot.
 - **AFRICA EXPANSION + SOUTH ASIA TRIO — DONE (designer list). 343 → 363
   airports.** Parsed the designer's top-40 African airports list against the
   existing roster (23 already in game), added the 17 missing: ZNZ FIH MPM HRE
