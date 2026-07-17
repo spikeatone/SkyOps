@@ -2716,7 +2716,10 @@ both orientations) incl. the full open-a-route→acquire flow.
   Route Opportunities → one-tap map preview + open, turboprop tier — Beech
   1900D / ATR 42-600 / Dornier 328-110 / Dash 8-200 (shortest-field, reaches
   St. Barths), Canary→Africa region + Azores stays Europe + early loan pay-off;
-  merged via PR #1). Each
+  merged via PR #1), 24 (iCloud cross-device save sync with delete tombstones +
+  the iCloud Key-value-storage capability now enabled/provisioned, iPad
+  responsiveness fix — throttled UI heartbeat, pending-route staffing reason in
+  the Ops incentive box). Each
   TestFlight cut = bump `CURRENT_PROJECT_VERSION` (6 configs) → archive →
   Organizer → the DESIGNER does the credentialed Distribute/upload (Claude opens
   the Organizer but can't upload).
