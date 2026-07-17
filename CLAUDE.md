@@ -2592,7 +2592,10 @@ both orientations) incl. the full open-a-route→acquire flow.
   also superseded before upload), 21 (RC2: everything above + island basemap
   geometry, player-build control-bar layout with DEV toggles compiled out of
   Release, region-carousel peek polish, Africa expansion + South Asia trio,
-  Japan-to-10 + Central Asia — 373 airports). Each
+  Japan-to-10 + Central Asia — 373 airports), 22 (cold-launch splash
+  route-network reveal at the 1.25× tempo, naming-screen fit pass — smaller
+  badge / 44pt fields / fits unscrolled on iPhone 17 Pro, "Central America &
+  The Caribbean" card label, South America +10 — 383 airports). Each
   TestFlight cut = bump `CURRENT_PROJECT_VERSION` (6 configs) → archive →
   Organizer → the DESIGNER does the credentialed Distribute/upload (Claude opens
   the Organizer but can't upload).
