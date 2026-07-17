@@ -66,8 +66,9 @@ final class Airport: Identifiable {
         "SJU", "STT", "NAS", "PLS", "GCM", "EIS", "AXA", "SXM",      // Caribbean
         "SBH", "ANU", "SKB", "DOM", "UVF", "SVD", "GND", "BGI",
         "AUA", "CUR", "BON", "POS",
-        "MLE", "SEZ", "MRU",                                          // Indian Ocean
+        "MLE", "SEZ", "MRU", "ZNZ",                                   // Indian Ocean
         "NAN", "PPT",                                                 // South Pacific
+        "SID",                                                        // Cape Verde (Sal)
     ]
     static func isLeisure(_ code: String) -> Bool { leisureCodes.contains(code) }
 
@@ -379,6 +380,31 @@ final class Airport: Identifiable {
         .init(code: "RBA", lat: 34.0515, lon: -6.7515,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 580, groundStopsPerMonth: 1.8),
         .init(code: "KGL", lat: -1.9686, lon: 30.1395,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 2.5),
         .init(code: "EBB", lat: 0.0424,  lon: 32.4435,  landingFeePerKlb: 3.10, gateFeeNarrowbody: 305, gateFeeWidebody: 650, groundStopsPerMonth: 2.8),
+        // Africa expansion (designer list, top-40 pass) — real lat/lon; fees are
+        // tier ESTIMATES calibrated to the existing Africa entries.
+        .init(code: "ZNZ", lat: -6.2220, lon: 39.2249,  landingFeePerKlb: 2.90, gateFeeNarrowbody: 290, gateFeeWidebody: 620, groundStopsPerMonth: 2.2),
+        .init(code: "FIH", lat: -4.3858, lon: 15.4446,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 3.0),
+        .init(code: "MPM", lat: -25.9208, lon: 32.5726, landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 2.4),
+        .init(code: "HRE", lat: -17.9319, lon: 31.0928, landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 2.3),
+        .init(code: "MIR", lat: 35.7581, lon: 10.7547,  landingFeePerKlb: 2.90, gateFeeNarrowbody: 290, gateFeeWidebody: 620, groundStopsPerMonth: 1.8),
+        .init(code: "TNR", lat: -18.7969, lon: 47.4788, landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 2.6),
+        .init(code: "DJE", lat: 33.8750, lon: 10.7755,  landingFeePerKlb: 2.90, gateFeeNarrowbody: 290, gateFeeWidebody: 620, groundStopsPerMonth: 1.8),
+        .init(code: "BFN", lat: -29.0927, lon: 26.3024, landingFeePerKlb: 2.70, gateFeeNarrowbody: 270, gateFeeWidebody: 580, groundStopsPerMonth: 2.0),
+        .init(code: "LUN", lat: -15.3308, lon: 28.4526, landingFeePerKlb: 3.10, gateFeeNarrowbody: 305, gateFeeWidebody: 650, groundStopsPerMonth: 2.5),
+        .init(code: "LBV", lat: 0.4586,  lon: 9.4123,   landingFeePerKlb: 3.00, gateFeeNarrowbody: 300, gateFeeWidebody: 640, groundStopsPerMonth: 2.7),
+        .init(code: "KAN", lat: 12.0476, lon: 8.5246,   landingFeePerKlb: 2.90, gateFeeNarrowbody: 290, gateFeeWidebody: 620, groundStopsPerMonth: 2.2),
+        .init(code: "CKY", lat: 9.5770,  lon: -13.6120, landingFeePerKlb: 2.90, gateFeeNarrowbody: 290, gateFeeWidebody: 620, groundStopsPerMonth: 2.6),
+        .init(code: "PLZ", lat: -33.9850, lon: 25.6173, landingFeePerKlb: 2.70, gateFeeNarrowbody: 270, gateFeeWidebody: 580, groundStopsPerMonth: 2.2),
+        .init(code: "EDL", lat: 0.4045,  lon: 35.2389,  landingFeePerKlb: 2.60, gateFeeNarrowbody: 260, gateFeeWidebody: 560, groundStopsPerMonth: 2.2),
+        .init(code: "BSK", lat: 34.7933, lon: 5.7382,   landingFeePerKlb: 2.60, gateFeeNarrowbody: 260, gateFeeWidebody: 560, groundStopsPerMonth: 1.8),
+        .init(code: "SID", lat: 16.7414, lon: -22.9494, landingFeePerKlb: 2.90, gateFeeNarrowbody: 290, gateFeeWidebody: 620, groundStopsPerMonth: 2.0),
+        .init(code: "DZA", lat: -12.8047, lon: 45.2811, landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 600, groundStopsPerMonth: 2.4),
+        // South Asia trio (designer request: largest in Bangladesh / Nepal / Bhutan).
+        // PBH's high ground-stop rate is deliberate — Paro is a real daylight/
+        // VFR-only valley approach, one of the world's most restricted fields.
+        .init(code: "DAC", lat: 23.8433, lon: 90.3978,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 330, gateFeeWidebody: 720, groundStopsPerMonth: 3.0),
+        .init(code: "KTM", lat: 27.6966, lon: 85.3591,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 3.2),
+        .init(code: "PBH", lat: 27.4032, lon: 89.4246,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 600, groundStopsPerMonth: 3.5),
         .init(code: "LAD", lat: -8.8584, lon: 13.2312,  landingFeePerKlb: 3.60, gateFeeNarrowbody: 330, gateFeeWidebody: 720, groundStopsPerMonth: 2.5),
         .init(code: "DAR", lat: -6.8781, lon: 39.2026,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 310, gateFeeWidebody: 660, groundStopsPerMonth: 2.8),
         .init(code: "AGA", lat: 30.3250, lon: -9.4131,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 280, gateFeeWidebody: 580, groundStopsPerMonth: 1.8),

@@ -312,12 +312,14 @@ struct Airline {
     static let africaCodes: Set<String> = [
         "CAI","JNB","ADD","CMN","CPT","HRG","NBO","RAK","LOS","ALG","TUN","DUR","ABJ","ACC","ABV","DSS","SSH","MRU","RBA","KGL",
         "EBB","LAD","DAR","AGA","TNG","SEZ",
+        "ZNZ","FIH","MPM","HRE","MIR","TNR","DJE","BFN","LUN","LBV","KAN","CKY","PLZ","EDL","BSK","SID","DZA",
     ]
     // Asia = East + Southeast + South Asia (Middle East is separate, below).
     static let asiaCodes: Set<String> = [
         "PEK","HND","PVG","CAN","SIN","ICN","BKK","HKG","KUL","SZX","CTU","TPE","MNL","KIX","CGK","KMG","XIY","HGH","NRT","CKG",
         "WUH","SGN","SUB","HAN","PNH","RGN","NYT","BWN",
         "DEL","BOM","BLR","HYD","MAA","CCU","AMD","COK","PNQ","GOI","KHI","LHE","ISB","MLE",
+        "DAC","KTM","PBH",
     ]
     static let middleEastCodes: Set<String> = [
         "DXB","DOH","JED","RUH","AUH","MCT","KWI","BAH","DMM","SHJ","TLV","MED","AMM","BEY","MHD","IKA","THR",

@@ -2708,6 +2708,24 @@ both orientations) incl. the full open-a-route→acquire flow.
   bar) + `devToggles` (Pro/Demand, wrapped in `#if DEBUG` at the call site —
   absent from Release builds entirely, not just hidden). Verified in a real
   Release-configuration build.
+- **AFRICA EXPANSION + SOUTH ASIA TRIO — DONE (designer list). 343 → 363
+  airports.** Parsed the designer's top-40 African airports list against the
+  existing roster (23 already in game), added the 17 missing: ZNZ FIH MPM HRE
+  MIR TNR DJE BFN LUN LBV KAN CKY PLZ EDL BSK SID DZA — plus the largest
+  airport in Bangladesh (DAC Dhaka), Nepal (KTM Kathmandu), and Bhutan (PBH
+  Paro). Real lat/lon + runways/passengers; fees are tier ESTIMATES calibrated
+  to the existing Africa entries (same confidence tier as LatAm/leisure).
+  Region sets: 17 → africaCodes, 3 → asiaCodes. LEISURE grew 29 → 31: ZNZ
+  (Zanzibar) + SID (Sal, Cape Verde) added by the same island-leisure
+  principle as NAS/PPT/MRU — flag if that extension isn't wanted.
+  REAL-RUNWAY HONESTY (same principle as SBH/EIS): PBH Paro (7,431 ft valley
+  strip, daylight/VFR-only in reality — modeled with a high ground-stop rate)
+  and DZA Mayotte (6,345 ft) block widebodies; PLZ Gqeberha (6,496 ft) too.
+  Island basemap geometry added in the same pass (Cabo Verde — NE names it
+  "Cabo Verde" not "Cape Verde" — Mayotte via a France bbox slice, Zanzibar +
+  Pemba via a Tanzania bbox slice) → africa layer. Verified 74/74 headless
+  (count/dupes/regions/rosters/leisure/runway-blocks/demand/home-pool
+  framing) + live Africa-start screenshot with every new airport on land.
 - **GameKit (leaderboards/achievements) — still DEFERRED, reaffirmed this
   session.** Designer's friend suggested it; decision was to skip for now (it's a
   no-architectural-risk bolt-on). If revisited: rank on EFFICIENCY not
