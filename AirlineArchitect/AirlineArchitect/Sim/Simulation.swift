@@ -702,6 +702,42 @@ final class Simulation {
         wrapCameraX()
     }
 
+    // MARK: - Route suggestion preview (Ops "Route Opportunities" → tap → map)
+
+    /// A suggested city pair the player tapped in Ops, previewed on the map with
+    /// a dashed line + pulsing endpoints and an Open This Route / Don't Open
+    /// panel. Purely a UI-intent flag (not persisted); the map + NetworkView
+    /// read it. Survives the Ops→Network tab switch because it lives on the sim.
+    struct RouteSuggestion: Equatable { let origin: String; let dest: String }
+    private(set) var pendingSuggestion: RouteSuggestion?
+
+    /// Preview a suggested route: flag the pair and frame the camera so both
+    /// endpoints sit comfortably on screen.
+    func suggestRoute(from o: String, to d: String) {
+        guard let a = airport(o), let b = airport(d) else { return }
+        pendingSuggestion = RouteSuggestion(origin: o, dest: d)
+        frameRoute(a, b)
+    }
+    func clearSuggestion() { pendingSuggestion = nil }
+
+    /// Center on the two airports' midpoint and zoom so both fit with generous
+    /// padding (so the dashed line reads as a route across open map, not edge
+    /// to edge). Same fit math as applyHomeFraming.
+    private func frameRoute(_ a: Airport, _ b: Airport) {
+        guard viewport.width > 0, viewport.height > 0 else { return }
+        userAdjustedCamera = true
+        let minX = min(a.unit.x, b.unit.x), maxX = max(a.unit.x, b.unit.x)
+        let minY = min(a.unit.y, b.unit.y), maxY = max(a.unit.y, b.unit.y)
+        let w = max(maxX - minX, 0.001), h = max(maxY - minY, 0.001)
+        // Pad so the pair occupies the middle ~45% of the frame.
+        let boxW = w * 2.2 + 0.03, boxH = h * 2.2 + 0.03
+        let fit = min(viewport.width / (boxW * worldScale),
+                      viewport.height / (boxH * worldScale))
+        cameraZoom = min(Simulation.cameraMaxZoom, max(Simulation.cameraMinZoom, fit))
+        cameraCenter = CGPoint(x: (minX + maxX) / 2, y: (minY + maxY) / 2)
+        wrapCameraX()
+    }
+
     init() {
         // Phase 2: the full 48-airport network and a stress-test fleet flying
         // real routes between them. These are stress-test aircraft (no

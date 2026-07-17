@@ -206,12 +206,14 @@ struct ContentView: View {
     @ViewBuilder private var content: some View {
         switch tab {
         case 0:  NetworkView(sim: sim, store: store, onBell: { showAlerts = true }, onUpgrade: upgrade,
-                             onSave: saveCurrent, onQuit: quitToMenu)
+                             onSave: saveCurrent, onQuit: quitToMenu,
+                             onReturnToOps: { tab = 3 })
         case 1:  FleetView(sim: sim, tab: $tab, store: store, onBell: { showAlerts = true },
                            onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: upgrade)
         case 2:  CrewsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu)
         case 3:  OpsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu,
-                         onShowAirport: { code in sim.focusCamera(on: code); tab = 0 })
+                         onShowAirport: { code in sim.focusCamera(on: code); tab = 0 },
+                         onPreviewRoute: { opp in sim.suggestRoute(from: opp.originCode, to: opp.destCode); tab = 0 })
         default: FinanceView(sim: sim, store: store, onBell: { showAlerts = true },
                              onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: { upgrade(nil) })
         }
@@ -476,6 +478,12 @@ struct RouteConfirmPanel: View {
     let dest: Airport
     let onOpen: () -> Void
     let onCancel: () -> Void
+    /// Button labels — customized when this panel previews an Ops route
+    /// suggestion ("Open This Route" / "Don't Open") vs. the manual pick flow.
+    var openTitle: String = "Open route"
+    var cancelTitle: String = "Abandon"
+    /// Optional context line above the header (e.g. the suggestion's demand).
+    var subtitle: String? = nil
 
     private let netGreen = Color(skyHex: 0x87ED7A)
     private let netRed   = Color(skyHex: 0xFF9292)
@@ -494,6 +502,10 @@ struct RouteConfirmPanel: View {
         let slotsOK = origin.slotsAvailable > 0 && dest.slotsAvailable > 0
         let affordable = sim.playerBalance >= cost
         VStack(alignment: .leading, spacing: 8) {
+            if let subtitle {
+                Text(subtitle).font(.karla(12, .semibold)).foregroundStyle(labelC)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             // Header: ORIG → DEST
             HStack(spacing: 8) {
                 Text(origin.code).font(.karla(20, .heavy)).foregroundStyle(primaryC)
@@ -528,8 +540,8 @@ struct RouteConfirmPanel: View {
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
 
             HStack(spacing: 8) {
-                confirmButton("Open route", disabled: spare != nil && (!affordable || !cap.ok), action: onOpen)
-                confirmButton("Abandon", disabled: false, action: onCancel)
+                confirmButton(openTitle, disabled: spare != nil && (!affordable || !cap.ok), action: onOpen)
+                confirmButton(cancelTitle, disabled: false, action: onCancel)
             }
             .frame(height: 32)
         }

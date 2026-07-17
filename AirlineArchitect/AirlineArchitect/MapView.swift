@@ -90,6 +90,7 @@ struct MapView: View {
                 drawAirports(w)
                 drawAircraft(w)
                 drawRoutePulse(w)
+                drawSuggestion(w)
             }
         }
         .background(mapBackground)
@@ -346,6 +347,45 @@ struct MapView: View {
                 ctx.stroke(Path(ellipseIn: CGRect(x: ap.screen.x - r, y: ap.screen.y - r, width: r * 2, height: r * 2)),
                            with: .color(climbColor.opacity((1 - t) * 0.8)), lineWidth: 2)
             }
+        }
+    }
+
+    /// The Ops "Route Opportunities" preview: a bright dashed arc between the
+    /// tapped city pair with continuously pulsing endpoints, so the player sees
+    /// exactly which route the panel's Open This Route / Don't Open buttons act
+    /// on. Tick-driven (the Canvas already redraws each tick), so the pulse
+    /// loops for as long as the suggestion is up.
+    private func drawSuggestion(_ ctx: GraphicsContext) {
+        guard let sug = sim.pendingSuggestion,
+              let a = sim.airports.first(where: { $0.code == sug.origin }),
+              let b = sim.airports.first(where: { $0.code == sug.dest }) else { return }
+        let accent = groundColor          // amber — the route-picker's accent
+        let es = sim.elementScale
+
+        // Dashed great-circle arc between the pair (same curve as real routes),
+        // marching so it reads as "proposed, not yet flown".
+        let pp = FlightPath.pathPoints(origin: a.screen, dest: b.screen)
+        var arc = Path()
+        arc.move(to: pp.start); arc.addQuadCurve(to: pp.end, control: pp.mid)
+        let phase = CGFloat(sim.tick % 12)   // marching-ants offset
+        ctx.stroke(arc, with: .color(accent),
+                   style: StrokeStyle(lineWidth: 2.2, lineCap: .round, dash: [7, 5], dashPhase: phase))
+
+        // Pulsing endpoints — a looping ripple at both airports.
+        let period = 44
+        let prog = Double(sim.tick % period) / Double(period)   // 0 → 1, loops
+        for ap in [a, b] {
+            for delay in [0.0, 0.3] {
+                let t = prog - delay
+                guard t > 0, t < 1 else { continue }
+                let r = (5 + t * 26) * es
+                ctx.stroke(Path(ellipseIn: CGRect(x: ap.screen.x - r, y: ap.screen.y - r, width: r * 2, height: r * 2)),
+                           with: .color(accent.opacity((1 - t) * 0.85)), lineWidth: 2)
+            }
+            // Solid ring so the endpoint stays anchored between ripples.
+            let rr = 3.2 * es + 5
+            ctx.stroke(Path(ellipseIn: CGRect(x: ap.screen.x - rr, y: ap.screen.y - rr, width: rr * 2, height: rr * 2)),
+                       with: .color(accent), lineWidth: 2.5)
         }
     }
 

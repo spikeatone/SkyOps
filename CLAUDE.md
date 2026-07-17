@@ -2410,6 +2410,25 @@ where numbers are involved.
     cash crosses the balance). No new accumulators, no persistence change — an
     early payoff just removes the loan and bumps the existing debtService total.
 
+- **ROUTE OPPORTUNITIES ARE TAPPABLE → one-tap open (Ops → map preview).**
+  Each Route Opportunity row is now a button (chevron + "tap one to preview it
+  on the map" hint). Tapping one calls `sim.suggestRoute(from:to:)` — sets
+  `pendingSuggestion` (a `RouteSuggestion`, survives the tab switch because it
+  lives on the sim) and frames the camera on both endpoints (`frameRoute`,
+  same fit math as `applyHomeFraming`) — then ContentView switches to the
+  Network tab. NetworkView's `.onAppear`/`.onChange(pendingSuggestion)` adopts
+  it by driving the EXISTING `routeMode = .confirm(o,d)` flow, so opening/buying
+  reuses all the normal machinery (openConfirmedRoute + the no-spare→Acquire
+  branch + handleBought auto-open). MapView.drawSuggestion renders a marching
+  amber DASHED arc between the pair (the in-game FlightPath curve) with
+  continuously PULSING endpoints (tick-driven loop). The RouteConfirmPanel
+  gained `openTitle`/`cancelTitle`/`subtitle` params: for a suggestion it reads
+  "Open This Route" / "Don't Open" with a "Suggested market · ~N pax/day"
+  subtitle. "Open This Route" → openConfirmedRoute + clearSuggestion; "Don't
+  Open" → clearSuggestion + `onReturnToOps` (→ Ops tab). Verified live on iPad:
+  tap FLL↔CLE → framed map + dashed line + pulse → Don't Open returned to Ops;
+  tap CMH↔NLU with an in-range spare → Open This Route opened it (green player
+  route drawn, panel dismissed, Ops event logged).
 - **ROUTE OPPORTUNITIES finder — DONE (Ops tab; "underserved markets").**
   `Simulation.topRouteOpportunities(perClass:)` surfaces high-demand city pairs the
   player doesn't serve, using the demand model (the truth of profitability here,
