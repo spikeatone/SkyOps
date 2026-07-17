@@ -222,7 +222,7 @@ enum GameStore {
 
     static func clear(slot: Int) {
         try? FileManager.default.removeItem(at: url(slot))
-        cloudRemove(slot: slot)
+        cloudDelete(slot: slot)   // save key removed + a dated tombstone written
     }
 
     /// Summaries for every slot (nil where empty), for the load menu.
@@ -253,25 +253,36 @@ enum GameStore {
 // limit. KVS is best-effort/eventually-consistent (syncs within seconds–minutes,
 // not instantly); that's fine for turn-based save handoff.
 //
-// KNOWN v1 LIMITATION (no tombstones): deleting a slot clears it here AND in
-// iCloud, but if the OTHER device still holds that slot locally and hasn't
-// synced, its next reconcile sees "local present / cloud absent" and re-pushes,
-// resurrecting the save. Data is never lost (the safe failure direction); a
-// deleted slot can just reappear on a second device. Add per-slot delete
-// tombstones if that becomes a real annoyance.
+// DELETE TOMBSTONES: deleting a slot writes a dated tombstone to iCloud (and
+// removes the cloud save). Reconcile treats a delete as an EVENT that competes
+// on recency with saves — so a delete that's newer than every save wins (the
+// slot stays gone on all devices, no resurrection), but starting a NEW game in
+// that slot afterward produces a save newer than the tombstone, which correctly
+// wins. Data is only ever removed when a delete is genuinely the most-recent
+// action for that slot.
 extension GameStore {
     private static var kvs: NSUbiquitousKeyValueStore { .default }
     private static func cloudKey(_ slot: Int) -> String { "savegame_slot_\(slot)" }
+    private static func tombKey(_ slot: Int) -> String { "savegame_slot_\(slot)_deleted" }
 
-    /// Which copy is authoritative for a slot, given both `savedAtEpoch`s.
-    /// Newest wins; a present save beats a missing one. Pure + unit-tested.
-    enum SyncWinner: Equatable { case local, cloud, equal, neither }
-    static func resolve(localEpoch: Double?, cloudEpoch: Double?) -> SyncWinner {
-        switch (localEpoch, cloudEpoch) {
-        case (nil, nil):            return .neither
-        case (_?, nil):             return .local
-        case (nil, _?):             return .cloud
-        case let (l?, c?):          return l > c ? .local : (c > l ? .cloud : .equal)
+    /// The reconcile decision for one slot, given the local save's epoch, the
+    /// cloud save's epoch, and any delete-tombstone epoch. Pure + unit-tested.
+    /// The most-recent EVENT wins: a save (adopt/push the newest) or a delete
+    /// (remove local). Ties/no-ops do nothing.
+    enum SyncAction: Equatable { case none, adoptCloud, pushLocal, deleteLocal }
+    static func reconcileAction(localEpoch: Double?, cloudSaveEpoch: Double?,
+                                tombstoneEpoch: Double?) -> SyncAction {
+        let newestSave = [localEpoch, cloudSaveEpoch].compactMap { $0 }.max()
+        // A delete only wins if it's strictly newer than every known save.
+        if let t = tombstoneEpoch, newestSave == nil || t > newestSave! {
+            return .deleteLocal
+        }
+        // Otherwise a save is the newest event — adopt/push whichever is newer.
+        switch (localEpoch, cloudSaveEpoch) {
+        case (nil, nil):   return .none
+        case (_?, nil):    return .pushLocal
+        case (nil, _?):    return .adoptCloud
+        case let (l?, c?): return c > l ? .adoptCloud : (l > c ? .pushLocal : .none)
         }
     }
 
@@ -285,27 +296,37 @@ extension GameStore {
 
     private static func mirrorToCloud(_ data: Data, slot: Int) {
         kvs.set(data, forKey: cloudKey(slot))
+        // A fresh save supersedes any prior deletion of this slot.
+        kvs.removeObject(forKey: tombKey(slot))
         kvs.synchronize()
     }
-    private static func cloudRemove(slot: Int) {
+    private static func cloudDelete(slot: Int) {
         kvs.removeObject(forKey: cloudKey(slot))
+        kvs.set(Date().timeIntervalSince1970, forKey: tombKey(slot))
         kvs.synchronize()
     }
 
-    /// Reconcile every slot between local files and iCloud (newest wins), so the
-    /// local store the app reads is always the freshest across the player's
-    /// devices. Cheap — a few small file reads against the KVS local cache.
+    /// Reconcile every slot between local files and iCloud, so the local store
+    /// the app reads is always the freshest across the player's devices (a save
+    /// or a delete — whichever happened most recently, anywhere, wins). Cheap —
+    /// a few small file reads against the KVS local cache.
     static func reconcileCloud() {
         kvs.synchronize()
         for slot in 0..<slotCount {
             let localData = try? Data(contentsOf: url(slot))
             let cloudData = kvs.data(forKey: cloudKey(slot))
-            switch resolve(localEpoch: epoch(of: localData), cloudEpoch: epoch(of: cloudData)) {
-            case .cloud:
+            let tomb = kvs.object(forKey: tombKey(slot)) as? Double
+            switch reconcileAction(localEpoch: epoch(of: localData),
+                                   cloudSaveEpoch: epoch(of: cloudData),
+                                   tombstoneEpoch: tomb) {
+            case .adoptCloud:
                 if let cloudData { try? cloudData.write(to: url(slot), options: .atomic) }
-            case .local:
+            case .pushLocal:
                 if let localData { kvs.set(localData, forKey: cloudKey(slot)) }
-            case .equal, .neither:
+            case .deleteLocal:
+                try? FileManager.default.removeItem(at: url(slot))
+                kvs.removeObject(forKey: cloudKey(slot))   // clear any stale cloud save
+            case .none:
                 break
             }
         }
