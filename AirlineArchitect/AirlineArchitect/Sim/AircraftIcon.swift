@@ -26,6 +26,7 @@ struct AircraftIcon {
 
     /// Precomputed once (static) — parsing the paths per frame would be wasteful.
     static let byBodyType: [BodyType: AircraftIcon] = [
+        .turboprop:       AircraftIcon(pathData: regionalJetPath, viewBoxWidth: 80, viewBoxHeight: 80, targetLength: 8.5),
         .widebody4Engine: AircraftIcon(pathData: widebody4Path, viewBoxWidth: 151, viewBoxHeight: 150, targetLength: 19.9),
         .widebody2Engine: AircraftIcon(pathData: widebody2Path, viewBoxWidth: 163, viewBoxHeight: 150, targetLength: 17.1),
         .narrowbody:      AircraftIcon(pathData: narrowbodyPath, viewBoxWidth: 109, viewBoxHeight: 100, targetLength: 12.5),

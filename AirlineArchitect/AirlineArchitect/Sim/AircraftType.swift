@@ -14,6 +14,7 @@ import Foundation
 /// Drives gate-fee tier, render scale, icon tier, AND (Phase 5) the operating-
 /// cost stage length + average fare per seat. Changing a case ripples widely.
 enum BodyType: String {
+    case turboprop
     case regionalJet
     case narrowbody
     case widebody2Engine
@@ -22,6 +23,7 @@ enum BodyType: String {
     /// On-map render length in points (prototype targetLengths, +15%).
     var iconLength: CGFloat {
         switch self {
+        case .turboprop:       return 8.5
         case .regionalJet:     return 9.9
         case .narrowbody:      return 12.5
         case .widebody2Engine: return 17.1
@@ -35,6 +37,7 @@ enum BodyType: String {
     /// assume each type's typical real mission length, so this must match.
     var operatingCostBlockMinutes: Int {
         switch self {
+        case .turboprop:       return 55    // ~55 min — short island/regional hops
         case .regionalJet:     return 75    // ~1.25 hr
         case .narrowbody:      return 120   // ~2 hr
         case .widebody2Engine: return 480   // ~8 hr
@@ -48,6 +51,7 @@ enum BodyType: String {
     /// not the aircraft) — kept only as a reference / calibration anchor.
     var avgFarePerSeat: Double {
         switch self {
+        case .turboprop:       return 150
         case .narrowbody:      return 214
         case .regionalJet:     return 165
         case .widebody2Engine: return 608
@@ -61,6 +65,7 @@ enum BodyType: String {
     /// network.
     var minRunwayFt: Int {
         switch self {
+        case .turboprop:       return 3400   // short-field capable (Beech 1900 class)
         case .regionalJet:     return 5000
         case .narrowbody:      return 6800
         case .widebody2Engine: return 8000
@@ -72,6 +77,7 @@ enum BodyType: String {
     /// operating cost). Bigger jets cruise a touch faster.
     var cruiseNMPerMin: Double {
         switch self {
+        case .turboprop:       return 4.6   // ~275 kt
         case .regionalJet:     return 6.8   // ~410 kt
         case .narrowbody:      return 7.5   // ~450 kt
         case .widebody2Engine: return 8.3   // ~500 kt
@@ -139,6 +145,7 @@ struct AircraftType: Identifiable {
         "E170": 2150, "E175": 2200, "E190": 2450, "E195": 2300,
         "CRJ900": 1550, "CRJ1000": 1650,
         "ERJ135": 1750, "ERJ140": 1630, "ERJ145": 1550,
+        "B1900": 1000, "AT46": 840, "D328": 900,
     ]
 
     /// Fixed MONTHLY lease payment: 0.8% of purchase price (LEASE_MONTHLY_RATE
@@ -194,6 +201,11 @@ struct AircraftType: Identifiable {
         .init(id: "ERJ145",  name: "Embraer ERJ145", seats: 50, family: "ERJ_FAMILY", bodyType: .regionalJet, weight: 2, mlwLbs: 43430, costPerHour: 2200, purchasePrice: 20_000_000, expectedLifespanCycles: 50000),
         // COMAC ARJ21 removed per designer direction (illustration unavailable;
         // few carriers fly it, none in the US-market roster).
+        // Turboprop tier (designer added Figma side-view art). Short-field
+        // capable; unlocks small regional/island airports jets can't use.
+        .init(id: "B1900", name: "Beechcraft 1900D", seats: 19, family: "B1900_FAMILY", bodyType: .turboprop, weight: 6, mlwLbs: 16765, costPerHour: 1600, purchasePrice: 2_500_000,  expectedLifespanCycles: 30000),
+        .init(id: "AT46",  name: "ATR 42-600",       seats: 48, family: "ATR42_FAMILY", bodyType: .turboprop, weight: 10, mlwLbs: 40345, costPerHour: 2000, purchasePrice: 18_000_000, expectedLifespanCycles: 70000),
+        .init(id: "D328",  name: "Dornier 328-110",  seats: 33, family: "D328_FAMILY",  bodyType: .turboprop, weight: 3, mlwLbs: 30401, costPerHour: 1800, purchasePrice: 4_000_000,  expectedLifespanCycles: 35000),
     ]
 
     static let weightTotal: Int = all.reduce(0) { $0 + $1.weight }

@@ -112,6 +112,31 @@ one contradicts the design thesis.)
 
 ## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 30 / 15)
 
+- **TURBOPROP TIER — ADDED (designer supplied Figma side-view art for three).
+  34 types now (was 31).** A brand-new `BodyType.turboprop` (the first
+  non-jet body-type) with three types: **Beechcraft 1900D** (`B1900`, 19 seats,
+  $2.5M — out of production, cheap used), **ATR 42-600** (`AT46`, 48 seats,
+  $18M — in production, the EIS-class workhorse), **Dornier 328-110** (`D328`,
+  33 seats, $4M). Each is its OWN crew family (`B1900_FAMILY` / `ATR42_FAMILY`
+  / `D328_FAMILY` — real distinct type ratings; FAMILY_LABELS + CREW_FAMILY_INFO
+  hand-updated). The POINT of the tier is `BodyType.turboprop.minRunwayFt =
+  3400` — low enough to serve short regional/island fields jets can't (EIS
+  4,642 ft is now serviceable), but **St. Barths (SBH 2,119 ft) and Saba stay
+  honestly unservable** — they need a Twin-Otter-class STOL type nobody added.
+  All the derived BodyType switches got a turboprop case (iconLength 8.5,
+  block-minutes 55, fare $150, cruise 4.6 nm/min ≈ 275 kt); `usesWidebodyGateFee`
+  is false so they pay the narrowbody gate tier. **Map icon is a PLACEHOLDER** —
+  reuses the regionalJet top-down silhouette (no turboprop glyph exists); the
+  side-view Marketplace/Fleet art is real (Resources/Illustrations/{B1900,AT46,
+  D328}.png, normalized to the 1024px-wide fleet-art format). Not in any
+  competitor roster's `types` list → background traffic resolves them via the
+  Independent Operator fallback (realistic — regional turboprops = small
+  operators). Verified 29/29 headless (types resolve, families labeled, runway
+  gating serves EIS but blocks SBH, buyable + in-range route) + live Marketplace
+  (Beech 1900D + Dornier 328 render with correct specs, buy/lease/used rows,
+  auto-generated used listings).
+
+
 - **Fleet size**: 31 distinct playable aircraft types (native-app era).
   Running history: 32 (initial big expansion) -> 31 (Sukhoi Superjet 100
   removed) -> 30 (Bombardier CRJ700 removed — aging out of most real fleets,
