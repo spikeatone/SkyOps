@@ -27,6 +27,8 @@ struct ContentView: View {
     @State private var showLoadMenu = false
     /// Active first-play walkthrough step (nil = not running).
     @State private var tutorialStep: Int?
+    /// Cold-launch splash (route-network reveal). Shown once per process launch.
+    @State private var showSplash = true
     @Environment(\.scenePhase) private var scenePhase
     /// Regular width (iPad, full screen) → sidebar rail; compact (iPhone) → bottom tabs.
     @Environment(\.horizontalSizeClass) private var hSize
@@ -134,6 +136,15 @@ struct ContentView: View {
                     }
                 }
                 .transition(.opacity)
+            }
+        }
+        // Cold-launch splash — the route-network reveal, over everything.
+        // Fades out into whichever screen cold launch shows (load menu / naming).
+        .overlay {
+            if showSplash {
+                SplashView { withAnimation(.easeOut(duration: 0.45)) { showSplash = false } }
+                    .transition(.opacity)
+                    .zIndex(10)
             }
         }
         // Milestone celebrations — glide down from the top, auto-dismiss.

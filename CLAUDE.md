@@ -2961,6 +2961,18 @@ both orientations) incl. the full open-a-route→acquire flow.
   each tick; speed-dependent, acceptable). (5) EASTER EGG — tapping the "NETWORK"
   title zips a ✈️ across the header in an arc (`PlaneFlyBy`, replayed via `.id`).
   Milestone toast verified visually; the rest are standard SwiftUI transitions.
+- **COLD-LAUNCH SPLASH — BUILT (designer request, "route-network reveal"
+  chosen over a Star Wars-style logo fly-in).** `SplashView.swift`: ~2.6s on a
+  brand-navy sky with a faint night grid — four dashed great-circle arcs draw
+  themselves in the game's own colours (climb green / cruise blue / descent
+  amber / competitor purple; the ArcShape reuses the in-game 12%-of-distance
+  bulge proportion), destination endpoints pulse like the route-open ripple,
+  then the logo badge springs in at the naming screen's badge position (soft
+  crossfade handoff) with a "Build the sky." tagline — WORDING IS MINE, not
+  designer-supplied; swap the string if wanted. Tap anywhere skips; Reduce
+  Motion collapses it to a static network + calm logo fade. Shown once per
+  process launch (ContentView `showSplash`, zIndex 10 over the load menu /
+  naming screen). Verified via timed simulator frame captures.
 - **HAPTICS + SUBTLE SFX — BUILT (native app; designer request, extends the
   delight layer).** `Feedback.swift` (UIKit/AVFoundation, VIEW layer only — the
   Sim layer stays framework-free for the headless harness, so every trigger is a
