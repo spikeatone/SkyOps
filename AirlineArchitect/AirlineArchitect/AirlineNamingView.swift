@@ -163,7 +163,7 @@ struct AirlineNamingView: View {
                 // Home region — the designer's seven start choices (the map
                 // frames here on launch; the player can still fly anywhere).
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("WHICH REGION DO YOU WANT TO START IN?")
+                    Text("CHOOSE YOUR FOUNDING REGION")
                         .font(.karla(12, .semibold))
                         .foregroundStyle(labelColor)
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 8),
