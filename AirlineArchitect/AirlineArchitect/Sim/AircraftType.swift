@@ -111,6 +111,14 @@ struct AircraftType: Identifiable {
     let costPerHour: Int
     let purchasePrice: Int
     let expectedLifespanCycles: Int
+    /// Per-type runway minimum override (ft). nil = use the body-type default.
+    /// The Dash 8-200 sets this low (our shortest-field STOL type — reaches
+    /// St. Barths, which the other turboprops can't).
+    var minRunwayFtOverride: Int? = nil
+
+    /// Shortest runway this specific type can use — its override if set,
+    /// otherwise the body-type tier default. The route-runway gate reads this.
+    var minRunwayFt: Int { minRunwayFtOverride ?? bodyType.minRunwayFt }
 
     /// Operating cost per sim-minute (1 tick). Ported: round(costPerHour / 60).
     var holdCostPerTick: Int { Int((Double(costPerHour) / 60).rounded()) }
@@ -145,7 +153,7 @@ struct AircraftType: Identifiable {
         "E170": 2150, "E175": 2200, "E190": 2450, "E195": 2300,
         "CRJ900": 1550, "CRJ1000": 1650,
         "ERJ135": 1750, "ERJ140": 1630, "ERJ145": 1550,
-        "B1900": 1000, "AT46": 840, "D328": 900,
+        "B1900": 1000, "AT46": 840, "D328": 900, "DH8B": 1100,
     ]
 
     /// Fixed MONTHLY lease payment: 0.8% of purchase price (LEASE_MONTHLY_RATE
@@ -206,6 +214,7 @@ struct AircraftType: Identifiable {
         .init(id: "B1900", name: "Beechcraft 1900D", seats: 19, family: "B1900_FAMILY", bodyType: .turboprop, weight: 6, mlwLbs: 16765, costPerHour: 1600, purchasePrice: 2_500_000,  expectedLifespanCycles: 30000),
         .init(id: "AT46",  name: "ATR 42-600",       seats: 48, family: "ATR42_FAMILY", bodyType: .turboprop, weight: 10, mlwLbs: 40345, costPerHour: 2000, purchasePrice: 18_000_000, expectedLifespanCycles: 70000),
         .init(id: "D328",  name: "Dornier 328-110",  seats: 33, family: "D328_FAMILY",  bodyType: .turboprop, weight: 3, mlwLbs: 30401, costPerHour: 1800, purchasePrice: 4_000_000,  expectedLifespanCycles: 35000),
+        .init(id: "DH8B",  name: "De Havilland Dash 8-200", seats: 39, family: "DASH8_FAMILY", bodyType: .turboprop, weight: 5, mlwLbs: 33900, costPerHour: 1900, purchasePrice: 4_500_000, expectedLifespanCycles: 40000, minRunwayFtOverride: 2000),
     ]
 
     static let weightTotal: Int = all.reduce(0) { $0 + $1.weight }

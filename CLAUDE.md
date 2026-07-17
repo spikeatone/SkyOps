@@ -112,23 +112,36 @@ one contradicts the design thesis.)
 
 ## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 30 / 15)
 
-- **TURBOPROP TIER — ADDED (designer supplied Figma side-view art for three).
-  34 types now (was 31).** A brand-new `BodyType.turboprop` (the first
-  non-jet body-type) with three types: **Beechcraft 1900D** (`B1900`, 19 seats,
+- **TURBOPROP TIER — ADDED (designer supplied Figma side-view art). 35 types
+  now (was 31).** A brand-new `BodyType.turboprop` (the first non-jet
+  body-type) with FOUR types: **Beechcraft 1900D** (`B1900`, 19 seats,
   $2.5M — out of production, cheap used), **ATR 42-600** (`AT46`, 48 seats,
   $18M — in production, the EIS-class workhorse), **Dornier 328-110** (`D328`,
-  33 seats, $4M). Each is its OWN crew family (`B1900_FAMILY` / `ATR42_FAMILY`
-  / `D328_FAMILY` — real distinct type ratings; FAMILY_LABELS + CREW_FAMILY_INFO
-  hand-updated). The POINT of the tier is `BodyType.turboprop.minRunwayFt =
-  3400` — low enough to serve short regional/island fields jets can't (EIS
-  4,642 ft is now serviceable), but **St. Barths (SBH 2,119 ft) and Saba stay
-  honestly unservable** — they need a Twin-Otter-class STOL type nobody added.
+  33 seats, $4M), and **De Havilland Dash 8-200** (`DH8B` — its real ICAO
+  type code — 39 seats, $4.5M, the designer's Twin-Otter stand-in). Each is its
+  OWN crew family (`B1900_FAMILY` / `ATR42_FAMILY` / `D328_FAMILY` /
+  `DASH8_FAMILY` — real distinct type ratings; FAMILY_LABELS + CREW_FAMILY_INFO
+  hand-updated). The tier default `BodyType.turboprop.minRunwayFt = 3400` serves
+  short regional/island fields jets can't (EIS 4,642 ft). **The Dash 8 is the
+  SHORTEST-FIELD aircraft** via a new per-type override
+  (`AircraftType.minRunwayFtOverride`, read by the runway gate as
+  `type.minRunwayFt`): `DH8B` = 2,000 ft, so it's the ONLY type that can serve
+  **St. Barths (SBH 2,119 ft)** — the shortest field in the game. (Real Dash 8-200
+  needs ~3,000 ft; 2,000 is a deliberate gameplay stretch since it's the
+  Twin-Otter/DHC-6 stand-in the designer couldn't source. A true DHC-6 would go
+  lower still.) The other three turboprops keep the 3,400 default, so SBH is a
+  genuine Dash-8-exclusive unlock.
   All the derived BodyType switches got a turboprop case (iconLength 8.5,
   block-minutes 55, fare $150, cruise 4.6 nm/min ≈ 275 kt); `usesWidebodyGateFee`
   is false so they pay the narrowbody gate tier. **Map icon is a PLACEHOLDER** —
   reuses the regionalJet top-down silhouette (no turboprop glyph exists); the
   side-view Marketplace/Fleet art is real (Resources/Illustrations/{B1900,AT46,
-  D328}.png, normalized to the 1024px-wide fleet-art format). Not in any
+  D328,DH8B}.png). **FIGMA-EXPORT GOTCHA (bit us once):** `download_assets`'s
+  `export` PNG bakes in the frame's GRAY BACKGROUND (opaque) — the aircraft art
+  shipped with a gray box the first time. The fix: use the `rawImages` entry
+  instead (the transparent source fill, `raw_image_1`, already 1024px-wide and
+  alpha-0). For any future Figma illustration pull, grab the RAW image, not the
+  node export. Not in any
   competitor roster's `types` list → background traffic resolves them via the
   Independent Operator fallback (realistic — regional turboprops = small
   operators). Verified 29/29 headless (types resolve, families labeled, runway

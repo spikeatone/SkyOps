@@ -996,7 +996,7 @@ final class Simulation {
     func routeBlock(for ac: Aircraft, from origin: Airport, to dest: Airport) -> RouteBlock? {
         let nm = Int(origin.greatCircleNM(to: dest).rounded())
         if nm > ac.type.rangeNM { return .range(nm) }
-        let minRw = ac.type.bodyType.minRunwayFt
+        let minRw = ac.type.minRunwayFt   // per-type (Dash 8 STOL override) or tier default
         if let rw = origin.info?.longestRunwayFt, rw < minRw { return .runway(origin.code) }
         if let rw = dest.info?.longestRunwayFt, rw < minRw { return .runway(dest.code) }
         return nil

@@ -43,7 +43,7 @@ let FAMILY_LABELS: [String: String] = [
     "B747": "B747", "A380": "A380", "A340": "A340",
     "E170_FAMILY": "E170/175", "E190_FAMILY": "E190/195",
     "CRJ_FAMILY": "CRJ", "ERJ_FAMILY": "ERJ",
-    "B1900_FAMILY": "1900", "ATR42_FAMILY": "ATR 42", "D328_FAMILY": "Do 328",
+    "B1900_FAMILY": "1900", "ATR42_FAMILY": "ATR 42", "D328_FAMILY": "Do 328", "DASH8_FAMILY": "Dash 8",
 ]
 
 /// Crew-card display: a full family name + the type-rating coverage line (Crews
@@ -67,4 +67,5 @@ let CREW_FAMILY_INFO: [String: (name: String, coverage: String)] = [
     "B1900_FAMILY": ("Beechcraft 1900", "Covers Beechcraft 1900D"),
     "ATR42_FAMILY": ("ATR 42", "Covers ATR 42-600"),
     "D328_FAMILY":  ("Dornier 328", "Covers Dornier 328-110"),
+    "DASH8_FAMILY": ("De Havilland Dash 8", "Covers Dash 8-200"),
 ]
