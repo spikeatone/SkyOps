@@ -170,7 +170,7 @@ struct AirlineNamingView: View {
                         .foregroundStyle(labelColor)
                         .frame(width: 360, alignment: .leading)
                     RegionCarousel(region: $region)
-                        .frame(maxWidth: 480)
+                        .frame(maxWidth: 560)
                     Text("Your starting map focuses here — you can still fly anywhere.")
                         .font(.karla(12))
                         .foregroundStyle(subtitleColor.opacity(0.85))

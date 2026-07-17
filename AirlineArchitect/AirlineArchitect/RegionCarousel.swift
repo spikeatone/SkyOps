@@ -23,29 +23,37 @@ struct RegionCarousel: View {
     private var nameColor: Color  { isDark ? .white : Color(red: 0x1E/255, green: 0x29/255, blue: 0x3B/255) }
     private var statColor: Color  { isDark ? Color.white.opacity(0.55) : Color(red: 0x64/255, green: 0x74/255, blue: 0x8B/255) }
 
+    /// Fixed card width; whatever container width is left over becomes the
+    /// neighbor peek — so the wider the screen, the more of the adjacent
+    /// cards' actual content (silhouette included) shows at the margins.
+    private let cardWidth: CGFloat = 340
+
     var body: some View {
         VStack(spacing: 10) {
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 12) {
-                    ForEach(Airline.PlayerRegion.allCases, id: \.self) { r in
-                        RegionCard(region: r, bg: cardBG, border: cardBorder,
-                                   nameColor: nameColor, statColor: statColor)
-                            .containerRelativeFrame(.horizontal)
-                            // Neighbors peek scaled-down + dimmed — reads as a deck.
-                            .scrollTransition(axis: .horizontal) { content, phase in
-                                content
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.92)
-                                    .opacity(phase.isIdentity ? 1 : 0.55)
-                            }
+            GeometryReader { geo in
+                let margin = max(20, (geo.size.width - cardWidth) / 2)
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: 10) {
+                        ForEach(Airline.PlayerRegion.allCases, id: \.self) { r in
+                            RegionCard(region: r, bg: cardBG, border: cardBorder,
+                                       nameColor: nameColor, statColor: statColor)
+                                .frame(width: cardWidth)
+                                // Neighbors peek scaled-down + dimmed — reads as a deck.
+                                .scrollTransition(axis: .horizontal) { content, phase in
+                                    content
+                                        .scaleEffect(phase.isIdentity ? 1 : 0.92)
+                                        .opacity(phase.isIdentity ? 1 : 0.55)
+                                }
+                        }
                     }
+                    .scrollTargetLayout()
                 }
-                .scrollTargetLayout()
+                .contentMargins(.horizontal, margin, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollIndicators(.hidden)
+                .scrollPosition(id: Binding(get: { Optional(region) },
+                                            set: { if let r = $0 { region = r } }))
             }
-            .contentMargins(.horizontal, 44, for: .scrollContent)
-            .scrollTargetBehavior(.viewAligned)
-            .scrollIndicators(.hidden)
-            .scrollPosition(id: Binding(get: { Optional(region) },
-                                        set: { if let r = $0 { region = r } }))
             .frame(height: 168)
 
             // Page dots — the active dot stretches and takes the region's map hue.
@@ -61,7 +69,9 @@ struct RegionCarousel: View {
     }
 }
 
-/// One region card: silhouette + name + real network stats.
+/// One region card: silhouette + name + real network stats. The card wears a
+/// faint wash of its region's map hue — so the neighbors peeking at the
+/// margins read as distinctly-colored cards even from a narrow sliver.
 private struct RegionCard: View {
     let region: Airline.PlayerRegion
     let bg: Color, border: Color, nameColor: Color, statColor: Color
@@ -85,8 +95,10 @@ private struct RegionCard: View {
         }
         .frame(maxWidth: .infinity)
         .background(bg)
+        .background(region.mapTint.opacity(0.10))
         .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(border, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 8)
+            .stroke(region.mapTint.opacity(0.45), lineWidth: 1))
     }
 }
 
