@@ -111,11 +111,11 @@ struct AirlineNamingView: View {
                             .onSubmit(launch)
                         if name.isEmpty && !fieldFocused {
                             Rectangle().fill(hex(0x0EA5E9))
-                                .frame(width: 2, height: 24)
+                                .frame(width: 2, height: 20)
                                 .opacity(cursorOn ? 1 : 0)
                         }
                     }
-                    .frame(height: 56)
+                    .frame(height: 44)
                     .padding(.horizontal, 16)
                     .background(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
@@ -147,7 +147,7 @@ struct AirlineNamingView: View {
                             Text("e.g. ZQ").font(.karla(16)).foregroundStyle(hex(0x94A3B8))
                         }
                     }
-                    .frame(height: 56)
+                    .frame(height: 44)
                     .padding(.horizontal, 16)
                     .background(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
