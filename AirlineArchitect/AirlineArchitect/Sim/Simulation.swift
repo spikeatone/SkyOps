@@ -22,6 +22,12 @@ final class Simulation {
     static let baseTickMs: Double = 250
 
     private(set) var tick: Int = 0
+    /// Throttled UI heartbeat: mirrors `tick` but only advances a few times a
+    /// second regardless of sim speed. List/HUD views (Ops/Fleet/Finance/Crews)
+    /// observe THIS instead of `tick`, so scrolling a long list doesn't fight a
+    /// per-frame full-body re-eval when the sim is running at 10×/25×. The map
+    /// keeps reading `tick` for smooth per-tick aircraft motion.
+    private(set) var displayTick: Int = 0
     private(set) var airports: [Airport] = []
     private(set) var aircraft: [Aircraft] = []
 
@@ -1067,6 +1073,30 @@ final class Simulation {
     func routeStaffed(_ r: Route) -> Bool { aircraft.contains { $0.purchased && $0.assignedRouteId == r.id } }
     /// Open routes with no aircraft yet (accepted an offer, still need a plane).
     var pendingRoutes: [Route] { playerRoutes.filter { !routeStaffed($0) } }
+
+    /// Why a pending route hasn't been auto-staffed yet, in one short player-
+    /// facing phrase (nil once staffed). `assignSpareToPendingRoutes` assigns
+    /// the first idle spare that clears the route every tick — so a route that's
+    /// STILL pending means either there's no idle spare, or every spare is
+    /// physically blocked (range, then runway). Surfaced in the Ops incentive
+    /// box so "Awaiting aircraft" isn't a mystery.
+    func pendingStaffingReason(_ r: Route) -> String? {
+        guard !routeStaffed(r), let o = airport(r.originCode), let d = airport(r.destCode) else { return nil }
+        let nm = Int(o.greatCircleNM(to: d).rounded())
+        let spares = idleSpares
+        if spares.isEmpty { return "No idle aircraft — buy or free one" }
+        // A spare exists but none could be assigned → all are blocked. If none
+        // even has the range, that's the wall; otherwise a runway is too short.
+        if (spares.map { $0.type.rangeNM }.max() ?? 0) < nm {
+            return "No spare has the range — needs ~\(nm.formatted()) nm"
+        }
+        for s in spares {
+            if case .runway(let code) = routeBlock(for: s, from: o, to: d) {
+                return "\(code) runway too short for your spare"
+            }
+        }
+        return "No spare can fly this route"
+    }
     /// Open routes that received an airport incentive (for the Ops box).
     var incentedRoutes: [Route] { playerRoutes.filter { $0.hasIncentive } }
 
@@ -2849,6 +2879,7 @@ final class Simulation {
     /// draws. Cancelling the surrounding Task (view disappears) ends it.
     func run() async {
         var last = ContinuousClock.now
+        var lastDisplay = ContinuousClock.now
         var accumulatorMs: Double = 0
 
         while !Task.isCancelled {
@@ -2876,6 +2907,14 @@ final class Simulation {
                 advanceTick()
                 accumulatorMs -= intervalMs
                 ticksThisWake += 1
+            }
+
+            // Throttle the UI heartbeat to ~5×/sec so list/HUD views observing
+            // `displayTick` don't re-evaluate their whole body every sim-tick
+            // (which made scrolling/tapping laggy at high speed on iPad).
+            if displayTick != tick, now - lastDisplay >= .milliseconds(200) {
+                displayTick = tick
+                lastDisplay = now
             }
         }
     }

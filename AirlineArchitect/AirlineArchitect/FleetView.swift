@@ -67,7 +67,7 @@ struct FleetView: View {
         // so live statuses/counts refresh as aircraft fly. The owned fleet is
         // small, so a per-tick body re-eval is cheap (unlike the 250-acircraft
         // Canvas).
-        let _ = sim.tick
+        let _ = sim.displayTick   // throttled UI heartbeat (not raw tick) — keeps scrolling smooth
         let owned = sim.aircraft.filter { $0.purchased }.sorted { $0.tail < $1.tail }
         ZStack {
             bg.ignoresSafeArea()

@@ -136,7 +136,7 @@ struct CrewsView: View {
                 }
             }
             // Labor-action alert (a #9 event has sidelined crew in this family)
-            if let expiry = sim.laborActionExpiryByFamily[fam], expiry > sim.tick {
+            if let expiry = sim.laborActionExpiryByFamily[fam], expiry > sim.displayTick {
                 laborAlertBox(pool.filter { $0.status == .sidelined }.count, expiry)
             }
             // Action box
@@ -165,7 +165,7 @@ struct CrewsView: View {
 
     /// Red "N sidelined; labor action — D days left" box (Figma crew alert box).
     private func laborAlertBox(_ sidelined: Int, _ expiry: Int) -> some View {
-        let daysLeft = max(1, (expiry - sim.tick + 1439) / 1440)
+        let daysLeft = max(1, (expiry - sim.displayTick + 1439) / 1440)
         let red = isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000)
         return HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 14)).foregroundStyle(red)

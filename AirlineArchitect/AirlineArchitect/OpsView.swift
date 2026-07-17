@@ -39,7 +39,7 @@ struct OpsView: View {
     private let eventOrange = Color(skyHex: 0xFF8C00)
 
     var body: some View {
-        let _ = sim.tick
+        let _ = sim.displayTick   // throttled UI heartbeat (not raw tick) — keeps scrolling smooth
         ZStack {
             bg.ignoresSafeArea()
             VStack(spacing: 16) {
@@ -148,6 +148,12 @@ struct OpsView: View {
                         }
                         Text(pendingStatus(r, pending: pending))
                             .font(.karla(12)).foregroundStyle(pending ? Color(skyHex: 0xFFB700) : Sky.coreGreen)
+                        // Explain WHY a pending route hasn't been staffed (e.g.
+                        // no spare has the range) so it isn't a silent mystery.
+                        if pending, let reason = sim.pendingStaffingReason(r) {
+                            Text(reason).font(.karla(11)).foregroundStyle(secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     Spacer(minLength: 8)
                     VStack(alignment: .trailing, spacing: 2) {
@@ -168,7 +174,7 @@ struct OpsView: View {
     private func pendingStatus(_ r: Route, pending: Bool) -> String {
         guard pending else { return "In service" }
         if let dl = r.fulfillByTick {
-            let daysLeft = max(0, (dl - sim.tick) / 1440)
+            let daysLeft = max(0, (dl - sim.displayTick) / 1440)
             return "Awaiting aircraft · \(daysLeft)d left to staff"
         }
         return "Awaiting aircraft — acquire one in range"

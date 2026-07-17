@@ -57,7 +57,7 @@ struct FinanceView: View {
     }
 
     var body: some View {
-        let _ = sim.tick   // live totals refresh every tick
+        let _ = sim.displayTick   // throttled UI heartbeat — keeps scrolling smooth
         ZStack {
             bg.ignoresSafeArea()
             VStack(spacing: 12) {
