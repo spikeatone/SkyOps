@@ -54,7 +54,7 @@ struct RegionCarousel: View {
                 .scrollPosition(id: Binding(get: { Optional(region) },
                                             set: { if let r = $0 { region = r } }))
             }
-            .frame(height: 168)
+            .frame(height: 158)
 
             // Page dots — the active dot stretches and takes the region's map hue.
             HStack(spacing: 6) {
@@ -81,8 +81,8 @@ private struct RegionCard: View {
         VStack(spacing: 6) {
             RegionSilhouette(layers: region.silhouetteLayers)
                 .frame(maxWidth: .infinity)
-                .frame(height: 84)
-                .padding(.top, 12)
+                .frame(height: 78)
+                .padding(.top, 10)
             Text(region.label)
                 .font(.karla(19, .heavy))
                 .foregroundStyle(nameColor)

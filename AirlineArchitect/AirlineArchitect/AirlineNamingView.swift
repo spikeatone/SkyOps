@@ -60,8 +60,8 @@ struct AirlineNamingView: View {
             background.ignoresSafeArea()
             // Scrolls on smaller iPhones now that the region picker adds height.
             ScrollView(showsIndicators: false) {
-            VStack(spacing: 18) {
-                Spacer().frame(height: 4)
+            VStack(spacing: 14) {
+                Spacer().frame(height: 0)
 
                 // Logo badge — gradient circle with the winged mark + wordmark.
                 ZStack {
