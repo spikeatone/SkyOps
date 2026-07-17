@@ -25,6 +25,8 @@ struct ContentView: View {
     @State private var currentSlot: Int?
     /// Showing the load / slot-picker menu (cold launch with saves, or QUIT).
     @State private var showLoadMenu = false
+    /// Bumped when iCloud merges a save from another device, to rebuild the menu.
+    @State private var cloudGen = 0
     /// Active first-play walkthrough step (nil = not running).
     @State private var tutorialStep: Int?
     /// Cold-launch splash (route-network reveal). Shown once per process launch.
@@ -47,14 +49,20 @@ struct ContentView: View {
         .task(id: gameID) { await sim.run() }
         // Load + observe the Pro entitlement from RevenueCat.
         .task { await store.start() }
-        // On cold launch, show the load menu if any saved game exists; otherwise
-        // fall through to the naming screen for a fresh airline in slot 0.
+        // On cold launch, pull the newest saves down from iCloud (so a game
+        // saved on another device on the same Apple ID is already present),
+        // then show the load menu if any saved game exists; otherwise fall
+        // through to the naming screen for a fresh airline in slot 0.
         .onAppear {
+            GameStore.reconcileCloud()
             if currentSlot == nil, sim.playerAirlineName == nil, GameStore.anySave {
                 showLoadMenu = true
                 sim.isPaused = true
             }
         }
+        // Keep syncing while running: if another device saves a slot, merge it
+        // and refresh the load menu (rebuild it so it re-reads the slots).
+        .task { GameStore.observeCloudChanges { cloudGen += 1 } }
         // Autosave to the current slot whenever the app leaves the foreground —
         // and pause the sim: time away from the app must not become sim time.
         // Returning to the foreground unpauses only if we're actually in a game
@@ -75,6 +83,7 @@ struct ContentView: View {
             // Load / slot-picker menu — takes precedence over naming.
             if showLoadMenu {
                 SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) })
+                    .id(cloudGen)   // rebuild (re-read slots) when iCloud merges a change
                     .transition(.opacity)
             } else if sim.playerAirlineName == nil {
                 // First-launch: name the airline before anything else.

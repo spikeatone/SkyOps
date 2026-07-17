@@ -208,6 +208,7 @@ enum GameStore {
         do {
             let data = try JSONEncoder().encode(snap)
             try data.write(to: url(slot), options: .atomic)
+            mirrorToCloud(data, slot: slot)   // keep the player's other devices in sync
         } catch { /* a failed save shouldn't crash the game */ }
     }
 
@@ -219,7 +220,10 @@ enum GameStore {
         return snap
     }
 
-    static func clear(slot: Int) { try? FileManager.default.removeItem(at: url(slot)) }
+    static func clear(slot: Int) {
+        try? FileManager.default.removeItem(at: url(slot))
+        cloudRemove(slot: slot)
+    }
 
     /// Summaries for every slot (nil where empty), for the load menu.
     static func slotInfos() -> [SlotInfo?] {
@@ -231,6 +235,92 @@ enum GameStore {
             return SlotInfo(index: slot, airlineName: name, day: s.tick / 1440,
                             cash: s.playerBalance, fleet: s.aircraft.count,
                             routes: s.routes.count, savedAtEpoch: s.savedAtEpoch)
+        }
+    }
+}
+
+// MARK: - iCloud sync (key-value store, keyed to the device's Apple ID)
+//
+// The local Documents files stay the source of truth the app reads/writes
+// (offline-first — everything keeps working with no iCloud account). On top of
+// that, each slot is mirrored into the iCloud key-value store, which Apple syncs
+// across every device signed into the SAME Apple ID. On launch (and whenever
+// another device changes a slot while we're running) we RECONCILE: for each
+// slot, the copy with the newer `savedAtEpoch` wins and is written into the
+// local file — so "save on the iPad, pick up on the iPhone" just works.
+//
+// Data is tiny (a save is ~1–7 KB; 3 slots ≈ a few KB) — far under KVS's 1 MB
+// limit. KVS is best-effort/eventually-consistent (syncs within seconds–minutes,
+// not instantly); that's fine for turn-based save handoff.
+//
+// KNOWN v1 LIMITATION (no tombstones): deleting a slot clears it here AND in
+// iCloud, but if the OTHER device still holds that slot locally and hasn't
+// synced, its next reconcile sees "local present / cloud absent" and re-pushes,
+// resurrecting the save. Data is never lost (the safe failure direction); a
+// deleted slot can just reappear on a second device. Add per-slot delete
+// tombstones if that becomes a real annoyance.
+extension GameStore {
+    private static var kvs: NSUbiquitousKeyValueStore { .default }
+    private static func cloudKey(_ slot: Int) -> String { "savegame_slot_\(slot)" }
+
+    /// Which copy is authoritative for a slot, given both `savedAtEpoch`s.
+    /// Newest wins; a present save beats a missing one. Pure + unit-tested.
+    enum SyncWinner: Equatable { case local, cloud, equal, neither }
+    static func resolve(localEpoch: Double?, cloudEpoch: Double?) -> SyncWinner {
+        switch (localEpoch, cloudEpoch) {
+        case (nil, nil):            return .neither
+        case (_?, nil):             return .local
+        case (nil, _?):             return .cloud
+        case let (l?, c?):          return l > c ? .local : (c > l ? .cloud : .equal)
+        }
+    }
+
+    /// `savedAtEpoch` of an encoded snapshot, or nil if it isn't a valid save.
+    private static func epoch(of data: Data?) -> Double? {
+        guard let data,
+              let s = try? JSONDecoder().decode(GameSnapshot.self, from: data),
+              s.playerAirlineName != nil else { return nil }
+        return s.savedAtEpoch
+    }
+
+    private static func mirrorToCloud(_ data: Data, slot: Int) {
+        kvs.set(data, forKey: cloudKey(slot))
+        kvs.synchronize()
+    }
+    private static func cloudRemove(slot: Int) {
+        kvs.removeObject(forKey: cloudKey(slot))
+        kvs.synchronize()
+    }
+
+    /// Reconcile every slot between local files and iCloud (newest wins), so the
+    /// local store the app reads is always the freshest across the player's
+    /// devices. Cheap — a few small file reads against the KVS local cache.
+    static func reconcileCloud() {
+        kvs.synchronize()
+        for slot in 0..<slotCount {
+            let localData = try? Data(contentsOf: url(slot))
+            let cloudData = kvs.data(forKey: cloudKey(slot))
+            switch resolve(localEpoch: epoch(of: localData), cloudEpoch: epoch(of: cloudData)) {
+            case .cloud:
+                if let cloudData { try? cloudData.write(to: url(slot), options: .atomic) }
+            case .local:
+                if let localData { kvs.set(localData, forKey: cloudKey(slot)) }
+            case .equal, .neither:
+                break
+            }
+        }
+        kvs.synchronize()
+    }
+
+    /// Register for iCloud external-change notifications (another device saved a
+    /// slot while we're running). Reconciles, then calls `onChange` so the UI —
+    /// e.g. the load menu — can refresh. Call once at launch.
+    static func observeCloudChanges(_ onChange: @escaping () -> Void) {
+        NotificationCenter.default.addObserver(
+            forName: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: kvs, queue: .main) { _ in
+                reconcileCloud()
+                onChange()
         }
     }
 }

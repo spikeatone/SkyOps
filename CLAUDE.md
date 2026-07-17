@@ -2563,6 +2563,48 @@ where numbers are involved.
   longer read for gating. Verified live (set the seen flag true → walkthrough
   still appears on a new airline).
 
+## Decided — iCloud save sync (cross-device, per Apple ID)
+
+- **BUILT — saves sync across a player's own devices via iCloud key-value
+  store (`NSUbiquitousKeyValueStore`), keyed to the device's Apple ID.**
+  Player idea: continue the same game on iPhone ↔ iPad. Chosen approach
+  (over CloudKit / Game Center `GKSavedGame`) for simplicity: our saves
+  are tiny Codable JSON (~1–7 KB × 3 slots), far under KVS's 1 MB cap, and
+  there's NO in-app login — it piggybacks on whatever Apple ID is signed
+  into the device's iCloud (zero account system to build).
+- **Offline-first: local Documents files stay the source of truth the app
+  reads/writes** (everything works with no iCloud account — verified: the
+  simulator has none, and the app launches straight to the load menu with
+  the local save intact, no crash). iCloud is a MIRROR layer on top:
+  `GameStore.save` also writes the slot to KVS; `clear` removes it.
+- **Reconcile = newest-wins per slot.** `GameStore.resolve(localEpoch:
+  cloudEpoch:)` is a PURE, unit-tested function (7/7 headless): newer
+  `savedAtEpoch` wins, a present save beats a missing one, equal ties are
+  a no-op. `reconcileCloud()` runs at cold launch (ContentView `.onAppear`,
+  BEFORE the `anySave` check so a save made on another device already shows
+  in the menu) and on `NSUbiquitousKeyValueStore.didChangeExternallyNotification`
+  (another device saved while this one is running → merge + rebuild the
+  load menu via a `cloudGen` `.id` bump). Every `GameSnapshot` already
+  stamped `savedAtEpoch`, so conflict resolution was almost free.
+- **Entitlement**: `com.apple.developer.ubiquity-kvstore-identifier` =
+  `$(TeamIdentifierPrefix)$(CFBundleIdentifier)` in the (previously empty)
+  entitlements file. **MANUAL STEP THE DESIGNER MUST DO ONCE (I can't):**
+  enable the **iCloud → Key-value storage** capability in Xcode → Signing
+  & Capabilities. Simulator builds sign fine without it (ad-hoc), but a
+  DEVICE build / TestFlight ARCHIVE will fail code-signing on the
+  entitlement until the App ID / provisioning profile includes iCloud.
+- **KNOWN v1 LIMITATION (no tombstones), documented in Persistence.swift:**
+  deleting a slot clears local + iCloud, but if the OTHER device still
+  holds that slot locally and hasn't synced, its next reconcile sees
+  "local present / cloud absent" and re-pushes — resurrecting the save.
+  Data is never LOST (the safe failure direction); a deleted slot can just
+  reappear on a second device. Add per-slot delete tombstones if it annoys.
+- **VERIFICATION CAVEAT: the real iPhone↔iPad handoff needs two physical
+  devices on the same Apple ID** — the Simulator can't exercise real iCloud
+  sync. Verified here: the pure merge logic (7/7 headless) + offline-first
+  no-crash launch. The designer confirms the actual cross-device sync on
+  real hardware.
+
 ## Decided — iPad Adaptation (native app; universal, one codebase)
 
 Designer wanted a genuinely iPad-DESIGNED experience, not a stretched phone
