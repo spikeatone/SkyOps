@@ -2577,10 +2577,13 @@ where numbers are involved.
   simulator has none, and the app launches straight to the load menu with
   the local save intact, no crash). iCloud is a MIRROR layer on top:
   `GameStore.save` also writes the slot to KVS; `clear` removes it.
-- **Reconcile = newest-wins per slot.** `GameStore.resolve(localEpoch:
-  cloudEpoch:)` is a PURE, unit-tested function (7/7 headless): newer
-  `savedAtEpoch` wins, a present save beats a missing one, equal ties are
-  a no-op. `reconcileCloud()` runs at cold launch (ContentView `.onAppear`,
+- **Reconcile = most-recent-EVENT-wins per slot (save OR delete).**
+  `GameStore.reconcileAction(localEpoch:cloudSaveEpoch:tombstoneEpoch:)` is a
+  PURE, unit-tested function (14/14 headless) returning
+  `.adoptCloud/.pushLocal/.deleteLocal/.none`: the newest `savedAtEpoch` save
+  wins UNLESS a delete-tombstone is strictly newer than every save (then the
+  slot is removed). Ties favor the save (keep data — safe direction).
+  `reconcileCloud()` runs at cold launch (ContentView `.onAppear`,
   BEFORE the `anySave` check so a save made on another device already shows
   in the menu) and on `NSUbiquitousKeyValueStore.didChangeExternallyNotification`
   (another device saved while this one is running → merge + rebuild the
@@ -2593,12 +2596,14 @@ where numbers are involved.
   & Capabilities. Simulator builds sign fine without it (ad-hoc), but a
   DEVICE build / TestFlight ARCHIVE will fail code-signing on the
   entitlement until the App ID / provisioning profile includes iCloud.
-- **KNOWN v1 LIMITATION (no tombstones), documented in Persistence.swift:**
-  deleting a slot clears local + iCloud, but if the OTHER device still
-  holds that slot locally and hasn't synced, its next reconcile sees
-  "local present / cloud absent" and re-pushes — resurrecting the save.
-  Data is never LOST (the safe failure direction); a deleted slot can just
-  reappear on a second device. Add per-slot delete tombstones if it annoys.
+- **DELETE TOMBSTONES (resurrection fixed).** Deleting a slot removes the
+  cloud save AND writes a dated tombstone (`savegame_slot_N_deleted` = epoch)
+  to iCloud. Reconcile treats a delete as an event competing on recency with
+  saves, so a delete newer than every save removes the slot on all devices
+  (no resurrection), while starting a NEW game in that slot writes a save
+  newer than the tombstone that correctly wins (`mirrorToCloud` also clears
+  the stale tombstone on save). Data is only removed when a delete is
+  genuinely the most-recent action for the slot.
 - **VERIFICATION CAVEAT: the real iPhone↔iPad handoff needs two physical
   devices on the same Apple ID** — the Simulator can't exercise real iCloud
   sync. Verified here: the pure merge logic (7/7 headless) + offline-first
