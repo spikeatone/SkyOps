@@ -112,6 +112,44 @@ one contradicts the design thesis.)
 
 ## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 30 / 15)
 
+- **TURBOPROP TIER — ADDED (designer supplied Figma side-view art). 35 types
+  now (was 31).** A brand-new `BodyType.turboprop` (the first non-jet
+  body-type) with FOUR types: **Beechcraft 1900D** (`B1900`, 19 seats,
+  $2.5M — out of production, cheap used), **ATR 42-600** (`AT46`, 48 seats,
+  $18M — in production, the EIS-class workhorse), **Dornier 328-110** (`D328`,
+  33 seats, $4M), and **De Havilland Dash 8-200** (`DH8B` — its real ICAO
+  type code — 39 seats, $4.5M, the designer's Twin-Otter stand-in). Each is its
+  OWN crew family (`B1900_FAMILY` / `ATR42_FAMILY` / `D328_FAMILY` /
+  `DASH8_FAMILY` — real distinct type ratings; FAMILY_LABELS + CREW_FAMILY_INFO
+  hand-updated). The tier default `BodyType.turboprop.minRunwayFt = 3400` serves
+  short regional/island fields jets can't (EIS 4,642 ft). **The Dash 8 is the
+  SHORTEST-FIELD aircraft** via a new per-type override
+  (`AircraftType.minRunwayFtOverride`, read by the runway gate as
+  `type.minRunwayFt`): `DH8B` = 2,000 ft, so it's the ONLY type that can serve
+  **St. Barths (SBH 2,119 ft)** — the shortest field in the game. (Real Dash 8-200
+  needs ~3,000 ft; 2,000 is a deliberate gameplay stretch since it's the
+  Twin-Otter/DHC-6 stand-in the designer couldn't source. A true DHC-6 would go
+  lower still.) The other three turboprops keep the 3,400 default, so SBH is a
+  genuine Dash-8-exclusive unlock.
+  All the derived BodyType switches got a turboprop case (iconLength 8.5,
+  block-minutes 55, fare $150, cruise 4.6 nm/min ≈ 275 kt); `usesWidebodyGateFee`
+  is false so they pay the narrowbody gate tier. **Map icon is a PLACEHOLDER** —
+  reuses the regionalJet top-down silhouette (no turboprop glyph exists); the
+  side-view Marketplace/Fleet art is real (Resources/Illustrations/{B1900,AT46,
+  D328,DH8B}.png). **FIGMA-EXPORT GOTCHA (bit us once):** `download_assets`'s
+  `export` PNG bakes in the frame's GRAY BACKGROUND (opaque) — the aircraft art
+  shipped with a gray box the first time. The fix: use the `rawImages` entry
+  instead (the transparent source fill, `raw_image_1`, already 1024px-wide and
+  alpha-0). For any future Figma illustration pull, grab the RAW image, not the
+  node export. Not in any
+  competitor roster's `types` list → background traffic resolves them via the
+  Independent Operator fallback (realistic — regional turboprops = small
+  operators). Verified 29/29 headless (types resolve, families labeled, runway
+  gating serves EIS but blocks SBH, buyable + in-range route) + live Marketplace
+  (Beech 1900D + Dornier 328 render with correct specs, buy/lease/used rows,
+  auto-generated used listings).
+
+
 - **Fleet size**: 31 distinct playable aircraft types (native-app era).
   Running history: 32 (initial big expansion) -> 31 (Sukhoi Superjet 100
   removed) -> 30 (Bombardier CRJ700 removed — aging out of most real fleets,
@@ -2396,7 +2434,39 @@ where numbers are involved.
   updates live (FleetView reads `sim.tick`; the check is upfront-only, matching
   `leaseAircraft`) — a button that looked stuck was the cash DISPLAY rounding
   ("$2.1M" covers $2.05–2.14M) sitting just under the exact $2.1M upfront.
+  - **EARLY PAY-OFF — ADDED (designer request).** A loan can now be retired
+    early, and the action ONLY appears when the player has the cash to settle it
+    in full (no partial payments, no unaffordable button). `payOffLoan(id)` /
+    `canPayOffLoan(loan)` / `earlyPayoffCost(loan)` on Simulation: cost = the
+    loan's full `remainingPrincipal` (no future interest — paying early saves
+    every remaining interest payment; no penalty, a deliberately player-friendly
+    choice). The payment counts as `totalDebtService` so the Finance cash
+    invariant (`…−debtService…`) holds EXACTLY unchanged (playerBalance drops by
+    the same amount debtService rises). UI: a green **PAY OFF** button on each
+    active-loan row in the FINANCING card, rendered only when `canPayOffLoan` is
+    true (FinanceView already reads `sim.tick`, so it appears live the moment
+    cash crosses the balance). No new accumulators, no persistence change — an
+    early payoff just removes the loan and bumps the existing debtService total.
 
+- **ROUTE OPPORTUNITIES ARE TAPPABLE → one-tap open (Ops → map preview).**
+  Each Route Opportunity row is now a button (chevron + "tap one to preview it
+  on the map" hint). Tapping one calls `sim.suggestRoute(from:to:)` — sets
+  `pendingSuggestion` (a `RouteSuggestion`, survives the tab switch because it
+  lives on the sim) and frames the camera on both endpoints (`frameRoute`,
+  same fit math as `applyHomeFraming`) — then ContentView switches to the
+  Network tab. NetworkView's `.onAppear`/`.onChange(pendingSuggestion)` adopts
+  it by driving the EXISTING `routeMode = .confirm(o,d)` flow, so opening/buying
+  reuses all the normal machinery (openConfirmedRoute + the no-spare→Acquire
+  branch + handleBought auto-open). MapView.drawSuggestion renders a marching
+  amber DASHED arc between the pair (the in-game FlightPath curve) with
+  continuously PULSING endpoints (tick-driven loop). The RouteConfirmPanel
+  gained `openTitle`/`cancelTitle`/`subtitle` params: for a suggestion it reads
+  "Open This Route" / "Don't Open" with a "Suggested market · ~N pax/day"
+  subtitle. "Open This Route" → openConfirmedRoute + clearSuggestion; "Don't
+  Open" → clearSuggestion + `onReturnToOps` (→ Ops tab). Verified live on iPad:
+  tap FLL↔CLE → framed map + dashed line + pulse → Don't Open returned to Ops;
+  tap CMH↔NLU with an in-range spare → Open This Route opened it (green player
+  route drawn, panel dismissed, Ops event logged).
 - **ROUTE OPPORTUNITIES finder — DONE (Ops tab; "underserved markets").**
   `Simulation.topRouteOpportunities(perClass:)` surfaces high-demand city pairs the
   player doesn't serve, using the demand model (the truth of profitability here,
@@ -2706,6 +2776,21 @@ both orientations) incl. the full open-a-route→acquire flow.
   convention) — extract-time shift, don't "fix" the data. Basemap.json ~80KB →
   254KB. Verified live: Central America start shows the full Caribbean arc with
   airports on land; oceania start shows Tahiti under PPT.
+  - **AMENDMENT (designer request): Canary Islands moved europe→AFRICA, Azores
+    stays europe.** The islands were originally lumped `Canary/Azores→europe`
+    (basemap key) purely because both were "sliced from Spain/Portugal" — but
+    the Canaries sit off the Moroccan coast and belong in the Africa region.
+    Three coordinated changes: (1) the 7 Canary rings (lat ~27-29, lon ~-18…-13)
+    were moved from the `europe` to the `africa` key in Basemap.json (europe
+    93→86, africa 81→88 rings) so they render in the Africa AMBER hue #FFB700
+    (was europe purple #A561FF); the 9 Azores rings (lat ~37-39.7) stay in
+    `europe`/purple. (2) `LPA` (Gran Canaria) moved `europeCodes`→`africaCodes`
+    in Airline.swift, so its background carrier draws from the Africa roster;
+    `PDL` (Ponta Delgada, Azores) stays europe. (3) Binter Canarias (code NT,
+    E195 — the Canaries' real carrier) moved europeRoster→africaRoster to follow
+    LPA; Azores Airlines (S4) stays europe. Identifying the rings is trivial by
+    coordinate range (they're the last 16 rings appended to europe) — see the
+    one-off Python filter in git history if this needs redoing.
 - **Competitive-Traffic slider split into its OWN box; DEV toggles compiled out
   of Release (designer request).** The old `devControls` container mixed the
   player-facing TRAFFIC slider with the Pro(DEV)/Demand(DEV) toggles — so

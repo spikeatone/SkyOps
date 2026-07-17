@@ -19,6 +19,9 @@ struct OpsView: View {
     var onQuit: () -> Void = {}
     /// Jump to an airport on the Network map (tap a mappable Ops event).
     var onShowAirport: (String) -> Void = { _ in }
+    /// Tap a Route Opportunity → preview it on the map (dashed line + pulse)
+    /// with Open This Route / Don't Open.
+    var onPreviewRoute: (Simulation.RouteOpportunity) -> Void = { _ in }
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     /// Cached so the finder isn't recomputed on every tick — it only changes when
@@ -263,7 +266,7 @@ struct OpsView: View {
     private var opportunitiesGroup: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Route Opportunities").font(.karla(20, .heavy)).foregroundStyle(primary)
-            Text("Underserved markets you don't fly yet — ranked by estimated daily demand.")
+            Text("Underserved markets you don't fly yet — tap one to preview it on the map.")
                 .font(.karla(12)).foregroundStyle(secondary)
                 .fixedSize(horizontal: false, vertical: true)
             if opportunities.isEmpty {
@@ -271,26 +274,33 @@ struct OpsView: View {
                     .padding(.vertical, 4)
             } else {
                 ForEach(opportunities) { opp in
-                    HStack(alignment: .center) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) {
-                                Text(opp.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
-                                Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(secondary)
-                                Text(opp.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                    Button { onPreviewRoute(opp) } label: {
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(opp.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(secondary)
+                                    Text(opp.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                                }
+                                Text("\(opp.originCity) – \(opp.destCity)")
+                                    .font(.karla(12)).foregroundStyle(secondary).lineLimit(1)
                             }
-                            Text("\(opp.originCity) – \(opp.destCity)")
-                                .font(.karla(12)).foregroundStyle(secondary).lineLimit(1)
+                            Spacer(minLength: 8)
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("~\(opp.demandPerDay.formatted())/day")
+                                    .font(.karla(15, .bold)).foregroundStyle(Sky.coreGreen)
+                                Text("\(opp.distanceNM.formatted()) nm · \(opp.suggested)")
+                                    .font(.karla(12)).foregroundStyle(secondary)
+                            }
+                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(secondary.opacity(0.7))
+                                .padding(.leading, 2)
                         }
-                        Spacer(minLength: 8)
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("~\(opp.demandPerDay.formatted())/day")
-                                .font(.karla(15, .bold)).foregroundStyle(Sky.coreGreen)
-                            Text("\(opp.distanceNM.formatted()) nm · \(opp.suggested)")
-                                .font(.karla(12)).foregroundStyle(secondary)
-                        }
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.vertical, 4)
+                    .pressable()
                 }
             }
         }

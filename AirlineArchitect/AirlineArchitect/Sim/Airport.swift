@@ -341,8 +341,9 @@ final class Airport: Identifiable {
         .init(code: "ZAG", lat: 45.7429, lon: 16.0688,  landingFeePerKlb: 4.00,  gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 4.0),
         .init(code: "SOF", lat: 42.6952, lon: 23.4062,  landingFeePerKlb: 4.00,  gateFeeNarrowbody: 340, gateFeeWidebody: 720,  groundStopsPerMonth: 4.0),
         .init(code: "SJJ", lat: 43.8246, lon: 18.3315,  landingFeePerKlb: 3.60,  gateFeeNarrowbody: 320, gateFeeWidebody: 680,  groundStopsPerMonth: 4.0),
-        // Atlantic islands (Spanish Canaries / Portuguese Azores) — lone dots
-        // (110m basemap drops islands this small), Europe carrier region.
+        // Atlantic islands — lone dots (110m basemap drops islands this small).
+        // LPA (Canary Islands) sits off the Moroccan coast → Africa carrier region
+        // + Africa map hue; PDL (Azores) is Portuguese Atlantic → Europe region/hue.
         .init(code: "LPA", lat: 27.9319, lon: -15.3866, landingFeePerKlb: 4.50,  gateFeeNarrowbody: 360, gateFeeWidebody: 820,  groundStopsPerMonth: 2.0),
         .init(code: "PDL", lat: 37.7412, lon: -25.6979, landingFeePerKlb: 3.80,  gateFeeNarrowbody: 330, gateFeeWidebody: 700,  groundStopsPerMonth: 4.0),
         .init(code: "LED", lat: 59.8003, lon: 30.2625,  landingFeePerKlb: 4.80,  gateFeeNarrowbody: 380, gateFeeWidebody: 840,  groundStopsPerMonth: 6.5),

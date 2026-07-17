@@ -43,6 +43,8 @@ struct NetworkView: View {
     var onSave: () -> Void = {}
     /// Save + return to the load menu (QUIT button).
     var onQuit: () -> Void = {}
+    /// "Don't Open" on a previewed Ops route suggestion → back to the Ops tab.
+    var onReturnToOps: () -> Void = {}
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     @Environment(\.horizontalSizeClass) private var hSize
@@ -130,6 +132,19 @@ struct NetworkView: View {
         .padding(.horizontal, 16)
         .padding(.top, 6)
         .background((isDark ? Sky.darkBG : Color.white).ignoresSafeArea())
+        // A route suggestion tapped in Ops arrives via sim.pendingSuggestion
+        // (it survives the tab switch). Drive the existing .confirm flow with
+        // it, so opening/buying reuses all the normal machinery; the panel
+        // relabels its buttons and the map draws the dashed preview.
+        .onAppear { adoptSuggestionIfAny() }
+        .onChange(of: sim.pendingSuggestion) { _, _ in adoptSuggestionIfAny() }
+    }
+
+    /// If Ops queued a route suggestion, enter the confirm step on it.
+    private func adoptSuggestionIfAny() {
+        guard let sug = sim.pendingSuggestion else { return }
+        panel = .none
+        routeMode = .confirm(sug.origin, sug.dest)
     }
 
     /// The route flow's confirm step (step 3) — the one that docks into the rail.
@@ -536,9 +551,20 @@ struct NetworkView: View {
         case .confirm(let o, let d):
             if let origin = sim.airports.first(where: { $0.code == o }),
                let dest = sim.airports.first(where: { $0.code == d }) {
-                RouteConfirmPanel(sim: sim, origin: origin, dest: dest,
-                                  onOpen: { openConfirmedRoute(origin, dest) },
-                                  onCancel: { routeMode = .off })
+                // From an Ops suggestion → "Open This Route" / "Don't Open"
+                // (Don't Open returns to Ops). From the manual pick flow →
+                // the normal "Open route" / "Abandon".
+                let fromSuggestion = sim.pendingSuggestion != nil
+                RouteConfirmPanel(
+                    sim: sim, origin: origin, dest: dest,
+                    onOpen: { openConfirmedRoute(origin, dest) },
+                    onCancel: {
+                        if fromSuggestion { sim.clearSuggestion(); routeMode = .off; onReturnToOps() }
+                        else { routeMode = .off }
+                    },
+                    openTitle: fromSuggestion ? "Open This Route" : "Open route",
+                    cancelTitle: fromSuggestion ? "Don't Open" : "Abandon",
+                    subtitle: fromSuggestion ? "Suggested market · ~\(sim.routeDailyDemand(origin, dest).formatted()) pax/day" : nil)
             }
         }
     }
@@ -609,6 +635,7 @@ struct NetworkView: View {
             Feedback.routeOpened(airline: sim.playerAirlineName, announce: announce)
             showFlash("Route \(origin.code) ↔ \(dest.code) opened — \(spare.tail) assigned")
             routeMode = .off; panel = .none
+            sim.clearSuggestion()
         case .insufficientFunds(let c): showFlash("Need $\(c.formatted()) to open this route")
         case .alreadyOpen:  showFlash("That route is already open")
         case .sameAirport:  showFlash("Pick two different airports")
