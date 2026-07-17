@@ -37,6 +37,39 @@ struct FleetView: View {
     @State private var fleetFilter: FleetStatus?
     enum Segment: Hashable { case myFleet, marketplace }
 
+    /// Marketplace category filter (nil = all) + sort, to quickly narrow the
+    /// list to the class/spec a route needs.
+    @State private var marketCategory: MarketCategory?
+    @State private var marketSort: MarketSort = .price
+    @State private var sortAsc = true
+    /// My Fleet only: filter by ownership (bought outright vs leased).
+    @State private var ownership: OwnershipFilter = .all
+    enum OwnershipFilter: Hashable {
+        case all, owned, leased
+        var label: String { switch self { case .all: return "All"; case .owned: return "Owned"; case .leased: return "Leased" } }
+        func matches(_ ac: Aircraft) -> Bool {
+            switch self { case .all: return true; case .owned: return !ac.isLeased; case .leased: return ac.isLeased }
+        }
+    }
+    enum MarketCategory: Hashable {
+        case turboprop, regional, narrow, wide
+        var label: String {
+            switch self {
+            case .turboprop: return "Turbo"; case .regional: return "RJ"
+            case .narrow:    return "Narrow"; case .wide: return "Wide"
+            }
+        }
+        func matches(_ b: BodyType) -> Bool {
+            switch self {
+            case .turboprop: return b == .turboprop
+            case .regional:  return b == .regionalJet
+            case .narrow:    return b == .narrowbody
+            case .wide:      return b == .widebody2Engine || b == .widebody4Engine
+            }
+        }
+    }
+    enum MarketSort { case price, seats, range }
+
     // MARK: Theme tokens (light Figma / dark Sky)
     private var bg: Color        { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
     private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
@@ -184,7 +217,9 @@ struct FleetView: View {
 
     private func segButton(_ title: String, _ seg: Segment) -> some View {
         let active = segment == seg
-        return Button { segment = seg } label: {
+        // Switching My Fleet ↔ Marketplace resets the category/sort so each
+        // starts fresh (avoids e.g. a "Wide" market filter hiding your fleet).
+        return Button { segment = seg; marketCategory = nil; marketSort = .price; sortAsc = true; ownership = .all } label: {
             Text(title)
                 .font(.karla(14, .semibold))
                 .foregroundStyle(active ? (isDark ? .white : secondary) : secondary)
@@ -244,17 +279,30 @@ struct FleetView: View {
                 }
                 .frame(maxWidth: .infinity).padding(.top, 40)
             } else {
-                let shown = fleetFilter == nil ? owned : owned.filter { status($0) == fleetFilter }
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        if shown.isEmpty, let f = fleetFilter {
-                            Text("No aircraft currently \(filterLabel(f)).")
-                                .font(.karla(14)).foregroundStyle(secondary)
-                                .frame(maxWidth: .infinity).padding(.top, 24)
-                        }
-                        ForEach(shown) { fleetCard($0, selected: $0.id == selectedID) }
+                let statusFiltered = fleetFilter == nil ? owned : owned.filter { status($0) == fleetFilter }
+                let shown = applyCategorySort(statusFiltered)
+                VStack(spacing: 8) {
+                    // Examine capabilities: filter by class + ownership, sort by
+                    // seats/range.
+                    categoryPillRow
+                    HStack(spacing: 8) {
+                        ownershipPills
+                        Spacer(minLength: 8)
+                        sortRow(showPrice: false)
                     }
-                    .padding(.bottom, 8)
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            if shown.isEmpty {
+                                Text(fleetFilter != nil
+                                     ? "No aircraft currently \(filterLabel(fleetFilter!))."
+                                     : "No aircraft match these filters.")
+                                    .font(.karla(14)).foregroundStyle(secondary)
+                                    .frame(maxWidth: .infinity).padding(.top, 24)
+                            }
+                            ForEach(shown) { fleetCard($0, selected: $0.id == selectedID) }
+                        }
+                        .padding(.bottom, 8)
+                    }
                 }
             }
         }
@@ -370,15 +418,144 @@ struct FleetView: View {
         }
     }
 
+    // MARK: Category filter + sort (shared by Marketplace and My Fleet)
+
+    private func categoryTypeCount(_ c: MarketCategory) -> Int {
+        AircraftType.all.filter { c.matches($0.bodyType) }.count
+    }
+    /// Marketplace types after the category filter + the chosen sort.
+    private var marketTypes: [AircraftType] {
+        var t = AircraftType.all
+        if let c = marketCategory { t = t.filter { c.matches($0.bodyType) } }
+        switch marketSort {
+        case .price: t.sort { sortAsc ? $0.purchasePrice < $1.purchasePrice : $0.purchasePrice > $1.purchasePrice }
+        case .seats: t.sort { sortAsc ? $0.seats < $1.seats : $0.seats > $1.seats }
+        case .range: t.sort { sortAsc ? $0.rangeNM < $1.rangeNM : $0.rangeNM > $1.rangeNM }
+        }
+        return t
+    }
+    /// Owned aircraft after the category filter + sort (My Fleet). Price sort
+    /// isn't offered for owned, so it falls back to tail order.
+    private func applyCategorySort(_ owned: [Aircraft]) -> [Aircraft] {
+        var a = owned.filter { ownership.matches($0) }
+        if let c = marketCategory { a = a.filter { c.matches($0.type.bodyType) } }
+        switch marketSort {
+        case .seats: a.sort { sortAsc ? $0.type.seats < $1.type.seats : $0.type.seats > $1.type.seats }
+        case .range: a.sort { sortAsc ? $0.type.rangeNM < $1.type.rangeNM : $0.type.rangeNM > $1.type.rangeNM }
+        case .price: a.sort { $0.tail < $1.tail }
+        }
+        return a
+    }
+
+    /// Box-style category filter row (matches the fleet status boxes): a count
+    /// per class, tap to filter, tap again / All to clear.
+    private var categoryBoxRow: some View {
+        HStack(spacing: 4) {
+            categoryBox("All", nil, AircraftType.all.count)
+            categoryBox("Turbo", .turboprop, categoryTypeCount(.turboprop))
+            categoryBox("RJ", .regional, categoryTypeCount(.regional))
+            categoryBox("Narrow", .narrow, categoryTypeCount(.narrow))
+            categoryBox("Wide", .wide, categoryTypeCount(.wide))
+        }
+        .padding(4).background(segBG).clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+    private func categoryBox(_ label: String, _ cat: MarketCategory?, _ count: Int) -> some View {
+        let selected = marketCategory == cat
+        return VStack(spacing: 2) {
+            Text(label).font(.karla(12)).foregroundStyle(statusLabel).lineLimit(1).minimumScaleFactor(0.65)
+            Text("\(count)").font(.karla(18, .heavy)).foregroundStyle(primary)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 8)
+        .background(statusBoxBG).clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(selected ? Sky.brightBlue : .clear, lineWidth: 2))
+        .contentShape(Rectangle())
+        .onTapGesture { withAnimation(Motion.glide) { marketCategory = selected ? nil : cat } }
+    }
+
+    /// Compact category pills — for My Fleet (which already has the status boxes,
+    /// so a second box row would be too heavy).
+    private var categoryPillRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                categoryPill("All", nil)
+                categoryPill("Turbo", .turboprop); categoryPill("RJ", .regional)
+                categoryPill("Narrow", .narrow); categoryPill("Wide", .wide)
+            }
+        }
+    }
+    private func categoryPill(_ label: String, _ cat: MarketCategory?) -> some View {
+        let selected = marketCategory == cat
+        return Button { withAnimation(Motion.glide) { marketCategory = selected ? nil : cat } } label: {
+            Text(label).font(.karla(13, .medium))
+                .foregroundStyle(selected ? .white : statusLabel)
+                .padding(.horizontal, 12).padding(.vertical, 5)
+                .background(selected ? Sky.brightBlue : statusBoxBG)
+                .clipShape(Capsule())
+        }.buttonStyle(.plain)
+    }
+
+    /// Ownership filter pills (My Fleet): All / Owned / Leased.
+    private var ownershipPills: some View {
+        HStack(spacing: 6) {
+            ownershipPill(.all); ownershipPill(.owned); ownershipPill(.leased)
+        }
+    }
+    private func ownershipPill(_ o: OwnershipFilter) -> some View {
+        let selected = ownership == o
+        return Button { withAnimation(Motion.glide) { ownership = o } } label: {
+            Text(o.label).font(.karla(13, .medium))
+                .foregroundStyle(selected ? .white : statusLabel)
+                .padding(.horizontal, 11).padding(.vertical, 5)
+                .background(selected ? Sky.coreGreen : statusBoxBG)
+                .clipShape(Capsule())
+        }.buttonStyle(.plain)
+    }
+
+    /// Sort pills — tap to select (with a sensible default direction), tap the
+    /// active one again to flip the arrow.
+    private func sortRow(showPrice: Bool) -> some View {
+        HStack(spacing: 6) {
+            Text("Sort").font(.karla(13)).foregroundStyle(statusLabel)
+            if showPrice { sortPill("Price", .price) }
+            sortPill("Seats", .seats)
+            sortPill("Range", .range)
+            Spacer(minLength: 0)
+        }
+    }
+    private func sortPill(_ label: String, _ s: MarketSort) -> some View {
+        let active = marketSort == s
+        return Button {
+            withAnimation(Motion.glide) {
+                if active { sortAsc.toggle() } else { marketSort = s; sortAsc = (s == .price) }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text(label).font(.karla(13, .medium))
+                if active { Image(systemName: sortAsc ? "arrow.up" : "arrow.down").font(.system(size: 9, weight: .bold)) }
+            }
+            .foregroundStyle(active ? .white : statusLabel)
+            .padding(.horizontal, 11).padding(.vertical, 5)
+            .background(active ? Sky.brightBlue : statusBoxBG)
+            .clipShape(Capsule())
+        }.buttonStyle(.plain)
+    }
+
     // MARK: Marketplace — buy new / lease new / buy used per type (Figma 5:6501).
     // Reuses the sim's real purchase functions; live affordability from balance.
     private var marketplacePlaceholder: some View {
-        let types = AircraftType.all.sorted { $0.purchasePrice < $1.purchasePrice }
-        return ScrollView {
-            LazyVStack(spacing: 16) {
-                ForEach(types) { marketplaceCard($0) }
+        VStack(spacing: 10) {
+            categoryBoxRow
+            sortRow(showPrice: true)
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    if marketTypes.isEmpty {
+                        Text("No aircraft in this category.").font(.karla(14)).foregroundStyle(secondary)
+                            .frame(maxWidth: .infinity).padding(.top, 24)
+                    }
+                    ForEach(marketTypes) { marketplaceCard($0) }
+                }
+                .padding(.bottom, 8)
             }
-            .padding(.bottom, 8)
         }
     }
 
