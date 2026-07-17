@@ -265,7 +265,10 @@ struct NetworkView: View {
                 // Reserve the speed/dev bars' space even when hidden so the layout
                 // doesn't shift when the overlays toggle.
                 speedBar.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
-                devControls.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
+                trafficBox.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
+                #if DEBUG
+                devToggles.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
+                #endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(8)
@@ -415,11 +418,23 @@ struct NetworkView: View {
         }
     }
 
-    /// DEV controls (Competitive Traffic + Pro toggle) in a themed container so
-    /// they don't get lost on the white light map.
-    private var devControls: some View {
+    /// Competitive-traffic slider in its OWN themed box — this is the
+    /// player-facing control, so it ships in every build and sits snug under
+    /// the speed bar (designer request: no dev-box gap in the player version).
+    private var trafficBox: some View {
+        trafficBar
+            .padding(.vertical, 8).padding(.horizontal, 4)
+            .background(barBG)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
+            .shadow(color: barShadow, radius: 3, y: 1)
+    }
+
+    /// DEV-only toggles (Pro / Demand) in their own box — compiled OUT of
+    /// Release builds entirely (#if DEBUG at the call site), so TestFlight
+    /// players never see them.
+    private var devToggles: some View {
         VStack(spacing: 8) {
-            trafficBar
             devProToggle
             devDemandToggle
         }

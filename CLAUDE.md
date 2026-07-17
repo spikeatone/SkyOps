@@ -2683,6 +2683,31 @@ both orientations) incl. the full open-a-route→acquire flow.
   data error. Verified 75/75 headless + live (Central America start now frames
   the whole Caribbean; the label declutterer fans the Lesser Antilles cluster
   automatically).
+- **ISLAND BASEMAP GEOMETRY — ADDED (designer-reported: Caribbean airports sat
+  on empty ocean).** The original Natural Earth 110m extraction drops small
+  islands, so every island-airport group lacked land: the whole Caribbean
+  (Cuba/Bahamas/Hispaniola/Jamaica/PR + the full Lesser Antilles arc down to
+  Trinidad, incl. Aruba/Curaçao/Bonaire and Guadeloupe/Martinique sliced from
+  FRANCE's multipolygon), Maldives, Seychelles, Mauritius, Tahiti/Society
+  Islands, Guam, Canary Islands + Azores (sliced from Spain/Portugal), and —
+  found while fixing — FRENCH GUIANA (part of France, so the South America
+  extraction had a real coastline gap). Sources: NE 50m for big islands, NE 10m
+  for small ones; rings APPENDED to the EXISTING Basemap.json region keys
+  (caribbean→centralAmerica, MLE→asia, SEZ/MRU→africa, Tahiti→australia,
+  GUM→nation, Canary/Azores→europe) so ZERO Swift changes were needed — each
+  group inherits its region's map hue automatically. KEY SUBTLETY: Tahiti's
+  rings are stored at lon+360 (matching PPT's +210° stored-longitude wrap
+  convention) — extract-time shift, don't "fix" the data. Basemap.json ~80KB →
+  254KB. Verified live: Central America start shows the full Caribbean arc with
+  airports on land; oceania start shows Tahiti under PPT.
+- **Competitive-Traffic slider split into its OWN box; DEV toggles compiled out
+  of Release (designer request).** The old `devControls` container mixed the
+  player-facing TRAFFIC slider with the Pro(DEV)/Demand(DEV) toggles — so
+  TestFlight players saw dev switches, and hiding them would have left a gap.
+  Now `trafficBox` (slider alone, ships everywhere, sits snug under the speed
+  bar) + `devToggles` (Pro/Demand, wrapped in `#if DEBUG` at the call site —
+  absent from Release builds entirely, not just hidden). Verified in a real
+  Release-configuration build.
 - **GameKit (leaderboards/achievements) — still DEFERRED, reaffirmed this
   session.** Designer's friend suggested it; decision was to skip for now (it's a
   no-architectural-risk bolt-on). If revisited: rank on EFFICIENCY not
