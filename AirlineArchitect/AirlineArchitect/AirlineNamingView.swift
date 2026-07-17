@@ -60,27 +60,27 @@ struct AirlineNamingView: View {
             background.ignoresSafeArea()
             // Scrolls on smaller iPhones now that the region picker adds height.
             ScrollView(showsIndicators: false) {
-            VStack(spacing: 24) {
-                Spacer().frame(height: 8)
+            VStack(spacing: 18) {
+                Spacer().frame(height: 4)
 
                 // Logo badge — gradient circle with the winged mark + wordmark.
                 ZStack {
                     Circle().fill(LinearGradient(colors: badgeGradient, startPoint: .top, endPoint: .bottom))
-                    VStack(spacing: 8) {
-                        AppLogo().frame(width: 117, height: 95)
-                        // Two-line wordmark. Figma is Karla Light 25 with a
-                        // 20pt line-height; Karla's natural height at 25 is
-                        // ~29.2, so a −9 pitch tightens it to match.
-                        VStack(spacing: -9) {
+                    VStack(spacing: 6) {
+                        AppLogo().frame(width: 88, height: 71)
+                        // Two-line wordmark (Figma is Karla Light; scaled with
+                        // the smaller badge — designer asked the whole start
+                        // page to fit unscrolled on iPhone).
+                        VStack(spacing: -7) {
                             Text("Airline")
                             Text("Architect")
                         }
-                        .font(.karla(25, .light))
+                        .font(.karla(19, .light))
                         .foregroundStyle(.white)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 6)
                 }
-                .frame(width: 200, height: 200)
+                .frame(width: 150, height: 150)
 
                 // Welcome copy.
                 VStack(spacing: 4) {

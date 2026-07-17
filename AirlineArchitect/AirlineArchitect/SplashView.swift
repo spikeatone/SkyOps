@@ -78,18 +78,18 @@ struct SplashView: View {
                         Circle().fill(LinearGradient(colors: [Color(skyHex: 0x4E67A1), Color(skyHex: 0x0C1A42)],
                                                      startPoint: .top, endPoint: .bottom))
                             .shadow(color: .black.opacity(0.5), radius: 18, y: 6)
-                        VStack(spacing: 8) {
-                            AppLogo().frame(width: 117, height: 95)
-                            VStack(spacing: -9) {
+                        VStack(spacing: 6) {
+                            AppLogo().frame(width: 88, height: 71)
+                            VStack(spacing: -7) {
                                 Text("Airline")
                                 Text("Architect")
                             }
-                            .font(.karla(25, .light))
+                            .font(.karla(19, .light))
                             .foregroundStyle(.white)
                         }
-                        .padding(.top, 8)
+                        .padding(.top, 6)
                     }
-                    .frame(width: 200, height: 200)
+                    .frame(width: 150, height: 150)
                     .scaleEffect(logoIn ? 1 : 1.25)
                     .opacity(logoIn ? 1 : 0)
 
@@ -121,26 +121,29 @@ struct SplashView: View {
         return p
     }
 
-    /// The choreography. Arcs stagger in over ~1.5s, the logo lands at ~1.2s,
-    /// and the whole thing hands off at ~2.6s.
+    /// Global tempo — 1.25 = 20% slower than the first cut (designer request).
+    private let tempo = 1.25
+
+    /// The choreography. Arcs stagger in over ~1.9s, the logo lands at ~1.4s,
+    /// and the whole thing hands off at ~3.3s.
     private func run() {
         guard !reduceMotion else {
             // Reduce Motion: no flight paths racing around — just a calm fade.
             arcProgress = [1, 1, 1, 1]
             withAnimation(.easeOut(duration: 0.6)) { logoIn = true; wordmarkIn = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { finish() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { finish() }
             return
         }
         for i in 0..<Self.arcs.count {
-            let start = 0.15 + Double(i) * 0.22
-            let draw = 0.85
+            let start = (0.15 + Double(i) * 0.22) * tempo
+            let draw = 0.85 * tempo
             withAnimation(.easeInOut(duration: draw).delay(start)) { arcProgress[i] = 1 }
             // Destination pulse fires as the arc completes.
-            withAnimation(.easeOut(duration: 0.7).delay(start + draw)) { pulse[i] = true }
+            withAnimation(.easeOut(duration: 0.7 * tempo).delay(start + draw)) { pulse[i] = true }
         }
-        withAnimation(.spring(response: 0.7, dampingFraction: 0.8).delay(1.1)) { logoIn = true }
-        withAnimation(.easeOut(duration: 0.5).delay(1.6)) { wordmarkIn = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) { finish() }
+        withAnimation(.spring(response: 0.7 * tempo, dampingFraction: 0.8).delay(1.1 * tempo)) { logoIn = true }
+        withAnimation(.easeOut(duration: 0.5 * tempo).delay(1.6 * tempo)) { wordmarkIn = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.6 * tempo) { finish() }
     }
 
     private func finish() {
