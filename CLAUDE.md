@@ -2583,10 +2583,13 @@ both orientations) incl. the full open-a-route→acquire flow.
 
 ## Decided — Release Candidate & QA pass
 
-- **The app is being treated as a RELEASE CANDIDATE (universal iPhone + iPad,
-  build 18 on TestFlight as of this work).** Build history this stretch: 12–14
+- **The app is being treated as a RELEASE CANDIDATE (universal iPhone + iPad;
+  build 20 = RC2).** Build history this stretch: 12–14
   (pre-iPad polish), 15 (cash precision + "need $X more" hint), 16 (iPad
-  adaptation), 17 (portrait Fleet slide transition), 18 (map-flinch fix). Each
+  adaptation), 17 (portrait Fleet slide transition), 18 (map-flinch fix, RC1),
+  19 (Hubs & Clubs + region selection + leisure destinations + playtest fixes
+  — archived but superseded before upload), 20 (RC2: build 19 content + the
+  founding-region card carousel on the naming screen). Each
   TestFlight cut = bump `CURRENT_PROJECT_VERSION` (6 configs) → archive →
   Organizer → the DESIGNER does the credentialed Distribute/upload (Claude opens
   the Organizer but can't upload).
