@@ -85,10 +85,12 @@ final class Route: Identifiable {
     /// The player's share of this route's demand given the competition on it and
     /// the airline's reputation. Uncontested = 1.0. Each rival takes a slice, but
     /// a strong reputation lets the airline hold more of the market.
-    func competitionShare(reputation: Double) -> Double {
+    /// `shareFloor` defaults to the base 0.2; a club at either endpoint raises
+    /// it to 0.35 (loyal flyers don't defect — the caller passes the floor).
+    func competitionShare(reputation: Double, shareFloor: Double = 0.2) -> Double {
         guard competitionLevel > 0 else { return 1.0 }
         let factor = 0.6 - 0.3 * (reputation / 100)   // rep 100 → 0.30, rep 0 → 0.60
-        return max(0.2, 1.0 / (1.0 + Double(competitionLevel) * factor))
+        return max(shareFloor, 1.0 / (1.0 + Double(competitionLevel) * factor))
     }
     /// Signed demand impact of competition for the Ops box, given reputation.
     func competitionPercent(reputation: Double) -> Int {

@@ -45,6 +45,13 @@ struct GameSnapshot: Codable {
     // Home region (player's start-region choice; nil in pre-region saves → NA)
     var homeRegion: String?
 
+    // Hubs & Clubs (nil in pre-hub saves)
+    var hubs: [String: Simulation.Hub]? = nil
+    var rivalHubs: [String: String]? = nil
+    var totalHubSpend: Int? = nil
+    var totalHubLabor: Int? = nil
+    var totalClubRent: Int? = nil
+
     // Camera
     var cameraZoom = 1.0
     var cameraCenterX = 0.0
@@ -117,6 +124,7 @@ struct FinanceSave: Codable {
     var tick, revenue, fees, operatingCost, leaseCost, insurance, maintenance: Int
     var acquisition, routeSpend, hedgeSpend, saleProceeds, offerIncome, flights, cash, netWorth: Int
     var loanProceeds = 0, debtService = 0
+    var hubSpend: Int? = nil, hubLabor: Int? = nil, clubRent: Int? = nil
 }
 
 struct LoanSave: Codable {

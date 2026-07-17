@@ -49,7 +49,13 @@ final class Simulation {
         func others(_ code: String) -> Int {
             playerRoutes.filter { ($0.originCode == code || $0.destCode == code) && $0.id != excludingRouteId }.count
         }
-        return 1 + min(Simulation.hubBonusCap, Simulation.hubBonusRate * Double(others(originCode) + others(destCode)))
+        // A declared, OPERATING hub amplifies the per-spoke connection bonus at
+        // its endpoint (8% → 12%); the +80% cap deliberately does NOT rise
+        // (anti-money-printer, see HUBS_AND_CLUBS_SPEC.md).
+        func bonus(_ code: String) -> Double {
+            (hubOperating(code) ? Simulation.hubBonusRateHub : Simulation.hubBonusRate) * Double(others(code))
+        }
+        return 1 + min(Simulation.hubBonusCap, bonus(originCode) + bonus(destCode))
     }
     /// The hub bonus a PROSPECTIVE new route would get, as a whole percent (UI).
     func hubBonusPercent(originCode: String, destCode: String) -> Int {
@@ -78,9 +84,27 @@ final class Simulation {
     }
 
     private func pairKey(_ a: String, _ b: String) -> String { a < b ? "\(a)|\(b)" : "\(b)|\(a)" }
-    private func suggestedClass(demand: Int) -> String {
-        switch demand { case ..<180: return "Regional jet"; case ..<560: return "Narrowbody"; default: return "Widebody" }
+    private func suggestedClass(demand: Int, distanceNM: Int = 0) -> String {
+        // Demand sizes the tier; distance can only bump it UP — a suggested class
+        // must actually be able to FLY the route (a playtest shot showed EWR↔Hilo
+        // at 4,235nm tagged "Regional jet", which nothing in that tier can fly).
+        let byDemand: String
+        switch demand { case ..<180: byDemand = "Regional jet"; case ..<560: byDemand = "Narrowbody"; default: byDemand = "Widebody" }
+        if byDemand == "Regional jet", distanceNM > Self.tierMaxRange["Regional jet", default: .max] {
+            return distanceNM > Self.tierMaxRange["Narrowbody", default: .max] ? "Widebody" : "Narrowbody"
+        }
+        if byDemand == "Narrowbody", distanceNM > Self.tierMaxRange["Narrowbody", default: .max] { return "Widebody" }
+        return byDemand
     }
+    /// Longest range available in each suggestion tier, from the real fleet data.
+    private static let tierMaxRange: [String: Int] = {
+        func maxRange(_ types: [BodyType]) -> Int {
+            AircraftType.all.filter { types.contains($0.bodyType) }.map(\.rangeNM).max() ?? .max
+        }
+        return ["Regional jet": maxRange([.regionalJet]),
+                "Narrowbody": maxRange([.narrowbody]),
+                "Widebody": maxRange([.widebody2Engine, .widebody4Engine])]
+    }()
 
     /// Top unserved city pairs, within the player's home region (CONUS). Returns
     /// a SPREAD across fleet tiers (top `perClass` regional / narrowbody /
@@ -97,11 +121,12 @@ final class Simulation {
                 let a = cands[i], b = cands[j]
                 if served.contains(pairKey(a.code, b.code)) { continue }
                 let demand = routeDailyDemand(a, b)
+                let nm = Int(a.greatCircleNM(to: b).rounded())
                 all.append(RouteOpportunity(
                     id: "\(a.code)-\(b.code)", originCode: a.code, destCode: b.code,
                     originCity: a.info?.city ?? a.code, destCity: b.info?.city ?? b.code,
-                    demandPerDay: demand, distanceNM: Int(a.greatCircleNM(to: b).rounded()),
-                    suggested: suggestedClass(demand: demand)))
+                    demandPerDay: demand, distanceNM: nm,
+                    suggested: suggestedClass(demand: demand, distanceNM: nm)))
             }
         }
         // A few of each tier, actionable-first (regional → narrowbody → widebody).
@@ -146,8 +171,194 @@ final class Simulation {
         }
     }
 
-    private func dingReputation(_ amount: Double) { reputation = max(0, reputation - amount) }
+    /// Clubs raise the reputation FLOOR (loyal flyers forgive) — they never ADD
+    /// points, so ops stay the only thing that moves the score up. 40 + 5/club,
+    /// capped at 60. No clubs = no floor.
+    var reputationFloor: Double {
+        let clubs = operatingClubCount
+        return clubs > 0 ? min(60, 40 + 5 * Double(clubs)) : 0
+    }
+    private func dingReputation(_ amount: Double) { reputation = max(reputationFloor, reputation - amount) }
     private func recoverReputation(_ amount: Double) { reputation = min(100, reputation + amount) }
+
+    // MARK: - Hubs & Clubs (designer-reviewed spec: HUBS_AND_CLUBS_SPEC.md)
+
+    struct Hub: Codable {
+        var establishedTick: Int
+        var hasClub = false
+        var clubOpenedTick: Int? = nil
+    }
+
+    /// Player hubs by airport code. Status (operating vs UNDERSTAFFED) is
+    /// COMPUTED from live route count — drop below 5 routes and benefits
+    /// suspend while the labor bill keeps running (the overextension trap).
+    private(set) var hubs: [String: Hub] = [:]
+    /// Airports where the player SOLD a hub to a rival — permanent for the
+    /// save: +50% competitor entry pressure there and the player can never
+    /// re-hub it (the rival holds the gates). code → rival airline name.
+    private(set) var rivalHubs: [String: String] = [:]
+    private(set) var totalHubSpend = 0    // hub establishment + club build-out (capital-out)
+    private(set) var totalHubLabor = 0    // hub ground-staff bills (overhead)
+    private(set) var totalClubRent = 0    // club rent bills (overhead)
+    private var nextHubBillTick = 0
+
+    // All DESIGNED pacing (spec'd, tunable).
+    static let hubMinRoutes = 5
+    static let hubBonusRateHub = 0.15          // amplified per-spoke demand rate (base 0.08)
+    static let hubGateFeeDiscount = 0.65       // −35% gate fees at the hub
+    static let hubLandingFeeDiscount = 0.80    // −20% landing fees at the hub
+    static let hubRepairTimeFactor = 0.75      // MX base: standard AOG repair 25% faster
+    static let hubRepairCostFactor = 0.80      // MX base: repairs 20% cheaper
+    static let hubCrewRestFactor = 0.80        // crew base: rest completes 20% faster
+    static let hubFortressEntryFactor = 0.5    // fortress: −50% competitor entry on hub routes
+    static let rivalHubEntryFactor = 1.5       // sold hub: +50% competitor entry there
+    static let hubFareMultiplier = 1.03        // +3% yield on hub routes (connection revenue)
+    static let clubFareMultiplier = 1.04       // +4% further yield at the club (premium loyalty)
+    static let clubCompetitionShareFloor = 0.35 // loyal flyers don't defect (base floor 0.2)
+    static let clubFFRFareHit = 0.02           // FFR surge bites +2%/club (redemption liability)
+    static let hubOfferDailyProbHealthy = 0.015
+    static let hubOfferDailyProbUnderstaffed = 0.08   // vultures circle a struggling hub
+    static let hubSalePctHealthy = 0.60
+    static let hubSalePctUnderstaffed = 0.35
+
+    /// Player routes anchored at this airport (either endpoint).
+    func routesAt(_ code: String) -> Int {
+        playerRoutes.filter { $0.originCode == code || $0.destCode == code }.count
+    }
+    /// CREATE A HUB unlocks at 5 routes; a rival-held airport can never be re-hubbed.
+    func hubEligible(_ code: String) -> Bool {
+        hubs[code] == nil && rivalHubs[code] == nil && routesAt(code) >= Simulation.hubMinRoutes
+    }
+    func hubOperating(_ code: String) -> Bool {
+        hubs[code] != nil && routesAt(code) >= Simulation.hubMinRoutes
+    }
+    func hubUnderstaffed(_ code: String) -> Bool {
+        hubs[code] != nil && routesAt(code) < Simulation.hubMinRoutes
+    }
+    /// Club benefits require the hub to be OPERATING (suspend with it).
+    func clubOperating(_ code: String) -> Bool {
+        (hubs[code]?.hasClub ?? false) && hubOperating(code)
+    }
+    var operatingClubCount: Int { hubs.keys.filter { clubOperating($0) }.count }
+    /// Auto-named per designer: "{Airline name} Club".
+    var clubName: String { "\(playerAirlineName ?? "Airline") Club" }
+    private func routeTouchesOperatingHub(_ a: String, _ b: String) -> Bool {
+        hubOperating(a) || hubOperating(b)
+    }
+
+    // Costs — anchored to the airport's real size (annual passengers).
+    // Costs retuned after the mandatory balance A/B (see HUBS_AND_CLUBS_SPEC.md
+    // status): the original spec numbers made the hub a pure value-sink — on an
+    // identical network, establishing one cost −41% net worth over 3 sim-years
+    // (capital crowd-out compounds). The hub is identity infrastructure + the
+    // club's prerequisite, priced accordingly; the club is the earner.
+    func hubEstablishCost(_ ap: Airport) -> Int {
+        let paxM = Double(ap.info?.annualPassengers ?? 1_000_000) / 1_000_000
+        return min(8_000_000, max(2_000_000, Int((1_500_000 + 60_000 * paxM).rounded())))
+    }
+    func hubMonthlyLabor(_ code: String) -> Int { 25_000 + 8_000 * routesAt(code) }
+    func clubBuildCost(_ ap: Airport) -> Int {
+        let paxM = Double(ap.info?.annualPassengers ?? 1_000_000) / 1_000_000
+        return min(5_000_000, Int((1_000_000 + 40_000 * paxM).rounded()))
+    }
+    func clubMonthlyRent(_ ap: Airport) -> Int {
+        let paxM = Double(ap.info?.annualPassengers ?? 1_000_000) / 1_000_000
+        return Int((20_000 + 800 * paxM).rounded())
+    }
+
+    @discardableResult
+    func establishHub(at code: String) -> Bool {
+        guard hubEligible(code), let ap = airport(code) else { return false }
+        let cost = hubEstablishCost(ap)
+        guard playerBalance >= cost else { return false }
+        if hubs.isEmpty { nextHubBillTick = tick + Simulation.ticksPerMonth }
+        playerBalance -= cost
+        totalHubSpend += cost
+        hubs[code] = Hub(establishedTick: tick)
+        logOps(.structural, "Hub established at \(code)",
+               "\(playerAirlineName ?? "Your airline") invested \(dollars(cost)) in a new hub", airportCode: code)
+        return true
+    }
+
+    @discardableResult
+    func buildClub(at code: String) -> Bool {
+        guard var hub = hubs[code], !hub.hasClub, hubOperating(code), let ap = airport(code) else { return false }
+        let cost = clubBuildCost(ap)
+        guard playerBalance >= cost else { return false }
+        playerBalance -= cost
+        totalHubSpend += cost
+        hub.hasClub = true
+        hub.clubOpenedTick = tick
+        hubs[code] = hub
+        logOps(.structural, "\(clubName) opens at \(code)",
+               "Premium lounge built for \(dollars(cost)) — loyalty starts here", airportCode: code)
+        return true
+    }
+
+    /// Walking away recovers NOTHING (designer decision) — the only way to
+    /// recoup a hub is a rival's buyout offer.
+    func decommissionHub(at code: String) {
+        guard hubs[code] != nil else { return }
+        hubs[code] = nil
+        logOps(.structural, "Hub decommissioned", "\(code) hub closed — the build-out is written off", airportCode: code)
+    }
+
+    /// Monthly hub labor + club rent, on the same recurring-billing cadence as
+    /// insurance/leases. Bills even when UNDERSTAFFED (deliberate).
+    private func tickHubBilling() {
+        guard !hubs.isEmpty, tick >= nextHubBillTick else { return }
+        nextHubBillTick = tick + Simulation.ticksPerMonth
+        for (code, hub) in hubs {
+            let labor = hubMonthlyLabor(code)
+            playerBalance -= labor
+            totalHubLabor += labor
+            if hub.hasClub, let ap = airport(code) {
+                let rent = clubMonthlyRent(ap)
+                playerBalance -= rent
+                totalClubRent += rent
+            }
+        }
+    }
+
+    /// A rival occasionally bids for a player hub (blue Offer card). Noticeably
+    /// more often when the hub is UNDERSTAFFED — exactly when the cash tempts.
+    private func tickHubOffers() {
+        guard !hubs.isEmpty,
+              !decisionQueue.contains(where: { $0.kind == .hubOffer }) else { return }
+        for code in hubs.keys.shuffled() {
+            let p = hubUnderstaffed(code) ? Simulation.hubOfferDailyProbUnderstaffed
+                                          : Simulation.hubOfferDailyProbHealthy
+            guard Double.random(in: 0..<1) < p, let ap = airport(code) else { continue }
+            let pct = hubUnderstaffed(code) ? Simulation.hubSalePctUnderstaffed
+                                            : Simulation.hubSalePctHealthy
+            let price = Int((Double(hubEstablishCost(ap)) * pct).rounded())
+            let rival = competitorName(excluding: [])
+            decisionQueue.append(Decision(id: "hubOffer_\(code)_\(tick)", kind: .hubOffer, aircraft: nil,
+                                          hubOffer: HubOffer(airportCode: code, rival: rival, price: price)))
+            break
+        }
+    }
+
+    /// Accepting arms the rival PERMANENTLY at that airport (+50% entry
+    /// pressure, purple hub badge, no re-hubbing) and closes any club with it.
+    func resolveHubSale(_ decision: Decision, accept: Bool) {
+        defer { decisionQueue.removeAll { $0.id == decision.id } }
+        guard accept, let offer = decision.hubOffer, hubs[offer.airportCode] != nil else {
+            if let o = decision.hubOffer {
+                logOps(.market, "Hub offer declined", "\(o.rival)'s bid for the \(o.airportCode) hub was turned down")
+            }
+            return
+        }
+        playerBalance += offer.price
+        totalOfferIncome += offer.price
+        hubs[offer.airportCode] = nil          // club (if any) closes with the sale
+        rivalHubs[offer.airportCode] = offer.rival
+        logOps(.structural, "Hub SOLD to \(offer.rival)",
+               "\(offer.airportCode) is now a \(offer.rival) hub — \(dollars(offer.price)) banked, gates gone for good",
+               airportCode: offer.airportCode)
+    }
+
+    private func dollars(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
 
     // MARK: - Route competition (rival carriers reacting to the player)
 
@@ -172,7 +383,12 @@ final class Simulation {
                 // High reputation deters entrants (a well-liked incumbent is hard
                 // to unseat): rep 100 → half the base rate, rep 0 → full rate.
                 let deter = 0.5 + 0.5 * (reputation / 100)
-                if Double.random(in: 0..<1) < Simulation.competitorEntryDailyProbability * (1.5 - deter) {
+                var entryRate = Simulation.competitorEntryDailyProbability * (1.5 - deter)
+                // Fortress hub: −50% entry on routes touching the player's
+                // operating hub. A SOLD hub is the mirror: +50% entry there.
+                if routeTouchesOperatingHub(r.originCode, r.destCode) { entryRate *= Simulation.hubFortressEntryFactor }
+                if rivalHubs[r.originCode] != nil || rivalHubs[r.destCode] != nil { entryRate *= Simulation.rivalHubEntryFactor }
+                if Double.random(in: 0..<1) < entryRate {
                     let name = competitorName(excluding: r.competitors)
                     r.competitionLevel += 1
                     r.competitors.append(name)
@@ -725,8 +941,10 @@ final class Simulation {
     func routeOpeningCost(_ origin: Airport, _ dest: Airport) -> Int {
         var cost = Double(Simulation.routeBaseCost)
                  + Double(origin.gateFeeNarrowbody + dest.gateFeeNarrowbody) * Double(Simulation.routeCostPerGateFeeUnit)
-        if origin.slotsAvailable <= 0 { cost += Double(Simulation.routeSlotPurchasePremium) }
-        if dest.slotsAvailable <= 0 { cost += Double(Simulation.routeSlotPurchasePremium) }
+        // Slot-buyout premium is WAIVED at the player's own operating hub
+        // (you hold the gates there).
+        if origin.slotsAvailable <= 0, !hubOperating(origin.code) { cost += Double(Simulation.routeSlotPurchasePremium) }
+        if dest.slotsAvailable <= 0, !hubOperating(dest.code) { cost += Double(Simulation.routeSlotPurchasePremium) }
         if Airport.isLeisure(origin.code) || Airport.isLeisure(dest.code) {
             cost *= Simulation.leisureOpeningCostMultiplier
         }
@@ -796,6 +1014,13 @@ final class Simulation {
         let cost = subsidized ? 0 : routeOpeningCost(origin, dest)
         guard playerBalance >= cost else { return .insufficientFunds(cost) }
         let r = createRoute(from: origin, to: dest, cost: cost)
+        // Surfacing: the moment an airport reaches hub eligibility, say so.
+        for code in [origin.code, dest.code]
+        where routesAt(code) == Simulation.hubMinRoutes && hubs[code] == nil && rivalHubs[code] == nil {
+            logOps(.structural, "\(code) reached hub eligibility",
+                   "\(Simulation.hubMinRoutes) routes now use \(code) — you can establish a hub (tap the airport)",
+                   airportCode: code)
+        }
         assign(ac, to: r, origin: origin, dest: dest)
         return .success
     }
@@ -1284,7 +1509,11 @@ final class Simulation {
         if let id = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == id }) {
             if crew.dutyTicks >= Crew.maxDutyTicks {
                 crew.status = .resting
-                crew.restTicksLeft = Crew.restTicks
+                // Crew base: rest at the player's operating hub completes 20%
+                // faster (crew facilities live there).
+                let atHub = routeTouchesOperatingHub(ac.origin.code, ac.dest.code)
+                crew.restTicksLeft = atHub ? Int((Double(Crew.restTicks) * Simulation.hubCrewRestFactor).rounded())
+                                           : Crew.restTicks
             } else {
                 crew.status = .available
             }
@@ -1302,7 +1531,7 @@ final class Simulation {
     // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
 
     struct Decision: Identifiable {
-        enum Kind { case aog, crew, sell, offer, training, airportOffer }
+        enum Kind { case aog, crew, sell, offer, training, airportOffer, hubOffer }
         let id: String
         let kind: Kind
         /// The subject aircraft (aog / crew / sell). nil for the others.
@@ -1313,6 +1542,15 @@ final class Simulation {
         var trainingFamily: String? = nil
         /// An airport recruiting the player to open a route (`.airportOffer` only).
         var pitch: AirportPitch? = nil
+        /// A rival bidding to buy one of the player's hubs (`.hubOffer` only).
+        var hubOffer: HubOffer? = nil
+    }
+
+    /// A rival's bid for a player hub — the ONLY way to recoup hub capital.
+    struct HubOffer {
+        let airportCode: String
+        let rival: String
+        let price: Int
     }
 
     /// An airport recruiting the player to open a new route to it — waived
@@ -1363,7 +1601,8 @@ final class Simulation {
     /// any active #12 maintenance-cost inflation (repair costs only).
     func resolveAOGExpedite(_ decision: Decision) {
         let age = decision.aircraft?.maintenanceAgeMultiplier ?? 1
-        chargeDecisionCost(Int((15_000 * maintCostMultiplier * age).rounded()))
+        let atHubX = decision.aircraft.map { routeTouchesOperatingHub($0.origin.code, $0.dest.code) } ?? false
+        chargeDecisionCost(Int((15_000 * maintCostMultiplier * age * (atHubX ? Simulation.hubRepairCostFactor : 1)).rounded()))
         decision.aircraft?.maint = false
         decisionQueue.removeAll { $0.id == decision.id }
     }
@@ -1372,8 +1611,13 @@ final class Simulation {
     /// stays held until it completes. Cost scaled by #12 maintenance inflation.
     func resolveAOGStandard(_ decision: Decision) {
         let age = decision.aircraft?.maintenanceAgeMultiplier ?? 1
-        chargeDecisionCost(Int((3_000 * maintCostMultiplier * age).rounded()))
-        decision.aircraft?.aogAutoClearTick = tick + 180
+        // MX base: repairs at/near the player's operating hub run 25% faster
+        // and 20% cheaper (the hub hosts your maintenance facilities).
+        let atHub = decision.aircraft.map { routeTouchesOperatingHub($0.origin.code, $0.dest.code) } ?? false
+        let costFactor = atHub ? Simulation.hubRepairCostFactor : 1
+        let timer = atHub ? Int((180 * Simulation.hubRepairTimeFactor).rounded()) : 180
+        chargeDecisionCost(Int((3_000 * maintCostMultiplier * age * costFactor).rounded()))
+        decision.aircraft?.aogAutoClearTick = tick + timer
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
@@ -1522,6 +1766,8 @@ final class Simulation {
         tickOfferFulfillment()
         // Rival carriers entering / leaving the player's markets.
         tickCompetition()
+        // A rival occasionally bids to buy one of the player's hubs.
+        tickHubOffers()
 
         // Clear an expired fare war so a new one can start.
         if fareWarRouteId != nil, tick >= fareWarExpiryTick { fareWarRouteId = nil }
@@ -1970,6 +2216,7 @@ final class Simulation {
         let acquisition, routeSpend, hedgeSpend: Int
         let saleProceeds, offerIncome, flights: Int
         let loanProceeds, debtService: Int
+        var hubSpend = 0, hubLabor = 0, clubRent = 0
         let cash, netWorth: Int
     }
     private(set) var financeSnapshots: [FinanceSnapshot] = []
@@ -1981,6 +2228,7 @@ final class Simulation {
                         hedgeSpend: totalHedgeSpend, saleProceeds: totalSaleProceeds,
                         offerIncome: totalOfferIncome, flights: totalFlightsFlown,
                         loanProceeds: totalLoanProceeds, debtService: totalDebtService,
+                        hubSpend: totalHubSpend, hubLabor: totalHubLabor, clubRent: totalClubRent,
                         cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
     }
 
@@ -2000,6 +2248,23 @@ final class Simulation {
         if Airport.isLeisure(ac.origin.code) || Airport.isLeisure(ac.dest.code) {
             fareMult *= Simulation.leisureFareMultiplier
         }
+        // Hub yield: connecting itineraries through an operating hub earn a
+        // small fare premium (+3%, player only, once per leg) — the hub's one
+        // scaling revenue benefit, sized by the balance A/B so the hub roughly
+        // pays for itself without printing.
+        if ac.purchased, routeTouchesOperatingHub(ac.origin.code, ac.dest.code) {
+            fareMult *= Simulation.hubFareMultiplier
+        }
+        // Club yield: business travelers pay up for the lounge (+4% on top of
+        // the hub's +3%, player only, no double-dip — a route touching two club
+        // airports gets it once).
+        if ac.purchased, clubOperating(ac.origin.code) || clubOperating(ac.dest.code) {
+            fareMult *= Simulation.clubFareMultiplier
+            // Loyalty's liability: an FFR Redemption Surge bites harder per club.
+            if currentEvent.id == "FFR_SURGE" {
+                fareMult *= (1 - Simulation.clubFFRFareHit * Double(operatingClubCount))
+            }
+        }
         let farePerSeat = avgFare * fareMult * (0.9 + Double.random(in: 0..<0.2))  // ±10%
         // Load factor: with the demand model ON (prototype), it's an OUTCOME of
         // this route's passenger demand vs. this aircraft's seats — so a widebody
@@ -2018,7 +2283,9 @@ final class Simulation {
                 // specific route split what's left of the market.
                 effDemand *= reputationDemandMultiplier
                 if let rid = ac.assignedRouteId, let r = playerRoutes.first(where: { $0.id == rid }) {
-                    effDemand *= r.competitionShare(reputation: reputation)
+                    let floor = clubOperating(r.originCode) || clubOperating(r.destCode)
+                        ? Simulation.clubCompetitionShareFloor : 0.2
+                    effDemand *= r.competitionShare(reputation: reputation, shareFloor: floor)
                 }
             }
             let base = Demand.loadFactor(seats: ac.type.seats, dailyOneWay: effDemand)
@@ -2037,8 +2304,14 @@ final class Simulation {
     /// Ported from computeLegEconomics(): weight-based landing fee, body-type
     /// gate fee, per-bodyType stage-length operating cost × event multiplier.
     func legEconomics(for ac: Aircraft) -> LegEconomics {
-        let landingFee = Int((ac.dest.landingFeePerKlb * (Double(ac.type.mlwLbs) / 1000)).rounded())
-        let gateFee = Int(ac.type.bodyType.usesWidebodyGateFee ? ac.dest.gateFeeWidebody : ac.dest.gateFeeNarrowbody)
+        // Negotiated volume rates at the player's own OPERATING hub: −10%
+        // landing / −20% gate (the real signatory-rate analog). Player only —
+        // background traffic keeps full-rate fees (they're not displayed anyway).
+        let hubFees = ac.purchased && hubOperating(ac.dest.code)
+        let landingDiscount = hubFees ? Simulation.hubLandingFeeDiscount : 1
+        let gateDiscount = hubFees ? Simulation.hubGateFeeDiscount : 1
+        let landingFee = Int((ac.dest.landingFeePerKlb * (Double(ac.type.mlwLbs) / 1000) * landingDiscount).rounded())
+        let gateFee = Int((Double(ac.type.bodyType.usesWidebodyGateFee ? ac.dest.gateFeeWidebody : ac.dest.gateFeeNarrowbody) * gateDiscount).rounded())
         // Base stage-length operating cost + any accrued hold burn (a held
         // flight keeps burning money at the gate — booked as cost, so revenue
         // stays = pax × fare and never goes negative). Net is identical to the
@@ -2243,6 +2516,8 @@ final class Simulation {
         if ownedCount >= 1 { celebrate("first_aircraft", "airplane", "First jet purchased!", "Your fleet has its first aircraft.") }
         if totalFlightsFlown >= 1 { celebrate("first_flight", "airplane.departure", "First flight complete!", "Wheels up — welcome to the skies.") }
         if totalFlightsFlown >= 1000 { celebrate("flights_1k", "trophy.fill", "1,000 flights flown", "The network is humming.") }
+        if !hubs.isEmpty { celebrate("first_hub", "building.2.crop.circle", "First hub established!", "Your fortress takes shape.") }
+        if hubs.values.contains(where: { $0.hasClub }) { celebrate("first_club", "cup.and.saucer.fill", "First club opened!", "Loyalty has a lounge now.") }
         // Net-worth ladder. Gated on owning at least one aircraft so nothing
         // fires before the player has deployed any capital (net worth == the $20M
         // starting stake). The lowest tier ($30M) is real growth above the start.
@@ -2290,6 +2565,11 @@ final class Simulation {
         s.stressTestCount = stressTestCount
         s.cameraZoom = cameraZoom; s.cameraCenterX = cameraCenter.x; s.cameraCenterY = cameraCenter.y
         s.homeRegion = homeRegion.rawValue
+        s.hubs = hubs
+        s.rivalHubs = rivalHubs
+        s.totalHubSpend = totalHubSpend
+        s.totalHubLabor = totalHubLabor
+        s.totalClubRent = totalClubRent
         s.aircraft = aircraft.filter { $0.purchased }.map { ac in
             AircraftSave(tail: ac.tail, typeId: ac.type.id, originCode: ac.origin.code, destCode: ac.dest.code,
                          stateIndex: ac.stateIndex, stateTick: ac.stateTick, cyclesAccrued: ac.cyclesAccrued,
@@ -2309,7 +2589,8 @@ final class Simulation {
                         acquisition: f.acquisition, routeSpend: f.routeSpend, hedgeSpend: f.hedgeSpend,
                         saleProceeds: f.saleProceeds, offerIncome: f.offerIncome, flights: f.flights,
                         cash: f.cash, netWorth: f.netWorth,
-                        loanProceeds: f.loanProceeds, debtService: f.debtService)
+                        loanProceeds: f.loanProceeds, debtService: f.debtService,
+                        hubSpend: f.hubSpend, hubLabor: f.hubLabor, clubRent: f.clubRent)
         }
         return s
     }
@@ -2359,6 +2640,12 @@ final class Simulation {
         // Home region BEFORE camera: sets homeFrame without clobbering the
         // restored camera (userAdjustedCamera goes true right after).
         homeRegion = s.homeRegion.flatMap { Airline.PlayerRegion(rawValue: $0) } ?? .northAmerica
+        hubs = s.hubs ?? [:]
+        rivalHubs = s.rivalHubs ?? [:]
+        totalHubSpend = s.totalHubSpend ?? 0
+        totalHubLabor = s.totalHubLabor ?? 0
+        totalClubRent = s.totalClubRent ?? 0
+        nextHubBillTick = s.tick + Simulation.ticksPerMonth   // re-seed like insurance
         homeFrame = Simulation.frame(for: homeRegion, airports: airports)
         cameraZoom = s.cameraZoom; cameraCenter = CGPoint(x: s.cameraCenterX, y: s.cameraCenterY)
         userAdjustedCamera = true   // don't auto-reframe over the restored camera
@@ -2396,6 +2683,7 @@ final class Simulation {
                             acquisition: f.acquisition, routeSpend: f.routeSpend, hedgeSpend: f.hedgeSpend,
                             saleProceeds: f.saleProceeds, offerIncome: f.offerIncome, flights: f.flights,
                             loanProceeds: f.loanProceeds, debtService: f.debtService,
+                            hubSpend: f.hubSpend ?? 0, hubLabor: f.hubLabor ?? 0, clubRent: f.clubRent ?? 0,
                             cash: f.cash, netWorth: f.netWorth)
         }
         if financeSnapshots.isEmpty { financeSnapshots = [financeSnapshotNow()] }
@@ -2436,6 +2724,7 @@ final class Simulation {
         tickLeaseBilling()
         tickInsuranceBilling()
         tickLoanBilling()
+        tickHubBilling()
         tickUsedMarketReplenishment()
         tickSolvency()
         assignSpareToPendingRoutes()   // staff any offer-opened routes with an in-range spare

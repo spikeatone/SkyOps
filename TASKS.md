@@ -62,8 +62,18 @@ Queued (bigger, not started):
       reality (turboprop future hook). Verified 75/75 headless (uniqueness,
       regions, exact ×1.75, revenue + invariant, runway blocks, Central
       America start spans the Caribbean) + live map check.
-- [ ] HUBS & CLUBS — spec'd and designer-reviewed, see
-      `HUBS_AND_CLUBS_SPEC.md`. Build phased H1→H4 when called.
+- [x] HUBS & CLUBS — BUILT (all phases, one pass; spec:
+      `HUBS_AND_CLUBS_SPEC.md`). Sim core (Hub struct, eligibility at 5
+      routes, establish/club costs from real airport pax, monthly labor +
+      rent billing, UNDERSTAFFED suspension, $0 decommission, rival
+      buyout offer -> permanent rival hub), all economic hooks (12%/spoke
+      demand at the hub, fee discounts, MX/crew-rest bases, fortress
+      -50% / rival +50% competitor entry, club +6% yield + rep floor +
+      share floor + FFR liability, slot-premium waiver), persistence
+      (optional fields, legacy-safe), and 5 UI surfaces (airport-card
+      actions, map badges, Ops box, Finance rows, Alerts offer card).
+      Verified: 70/70 hub suite + 3,100/3,100 economy regression + 9
+      visual fixtures + autopilot balance A/B (see CLAUDE.md).
 
 ## In progress
 

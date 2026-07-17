@@ -45,6 +45,7 @@ struct OpsView: View {
                     VStack(spacing: 16) {
                         if !sim.decisionQueue.isEmpty { needsAttentionGroup }
                         if !sim.incentedRoutes.isEmpty { incentivesGroup }
+                        if !sim.hubs.isEmpty || !sim.rivalHubs.isEmpty { hubsGroup }
                         reputationGroup
                         competitionGroup
                         opportunitiesGroup
@@ -74,6 +75,60 @@ struct OpsView: View {
     }
 
     // MARK: Airport Incentives (from accepted route offers)
+    /// Hubs & Clubs status box — each hub's health, monthly bills, and any
+    /// airports lost to a rival (the purple monuments).
+    private var hubsGroup: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Hubs & Clubs").font(.karla(20, .heavy)).foregroundStyle(primary)
+            ForEach(sim.hubs.keys.sorted(), id: \.self) { code in
+                let operating = sim.hubOperating(code)
+                let hasClub = sim.hubs[code]?.hasClub == true
+                let labor = sim.hubMonthlyLabor(code)
+                let rent = hasClub ? (sim.airport(code).map { sim.clubMonthlyRent($0) } ?? 0) : 0
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "building.2.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(operating ? Color(skyHex: 0xFFC73B) : Color(skyHex: 0xFFB700).opacity(0.6))
+                            Text(code).font(.karla(16, .heavy)).foregroundStyle(primary)
+                            if hasClub {
+                                Image(systemName: "cup.and.saucer.fill").font(.system(size: 11))
+                                    .foregroundStyle(Color(skyHex: 0x6E43A6))
+                            }
+                        }
+                        Text(operating ? (hasClub ? "Operating · \(sim.clubName)" : "Operating")
+                                       : "UNDERSTAFFED — \(sim.routesAt(code))/\(Simulation.hubMinRoutes) routes (benefits suspended, bills continue)")
+                            .font(.karla(12))
+                            .foregroundStyle(operating ? Sky.coreGreen : Color(skyHex: 0xFFB700))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 8)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("−\(compact(labor))/mo labor").font(.karla(13, .bold)).foregroundStyle(secondary)
+                        if hasClub { Text("−\(compact(rent))/mo rent").font(.karla(12)).foregroundStyle(secondary) }
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            ForEach(sim.rivalHubs.keys.sorted(), id: \.self) { code in
+                HStack(spacing: 6) {
+                    Image(systemName: "building.2.fill").font(.system(size: 12)).foregroundStyle(Color(skyHex: 0xD767FF))
+                    Text(code).font(.karla(16, .heavy)).foregroundStyle(primary)
+                    Text("sold to \(sim.rivalHubs[code] ?? "a rival") — their fortress now")
+                        .font(.karla(12)).foregroundStyle(Color(skyHex: 0xD767FF))
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 2)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
     private var incentivesGroup: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Airport Incentives").font(.karla(20, .heavy)).foregroundStyle(primary)

@@ -198,6 +198,18 @@ struct NeedsAttentionCard: View {
                     ("Decline", { sim.resolveAirportOfferDecline(d) }),
                 ])
         }
+        if d.kind == .hubOffer, let h = d.hubOffer {
+            let understaffed = sim.hubUnderstaffed(h.airportCode)
+            return AlertModel(
+                accent: accentBlue, icon: "building.2.fill", category: "Hub buyout offer",
+                title: "\(h.rival) wants your \(h.airportCode) hub",
+                subtitle: "\(money(h.price)) offered\(understaffed ? " for the understaffed hub" : "")."
+                    + " Selling is permanent: \(h.airportCode) becomes a \(h.rival) hub — stronger rival pressure there, and you can never re-hub it. Any club closes with it.",
+                buttons: [
+                    ("Sell · +\(compactMoney(h.price))", { Feedback.impact(.medium); sim.resolveHubSale(d, accept: true) }),
+                    ("Decline", { sim.resolveHubSale(d, accept: false) }),
+                ])
+        }
         let ac = d.aircraft!   // aog / crew / sell always carry an aircraft
         switch d.kind {
         case .aog:
@@ -256,6 +268,10 @@ struct NeedsAttentionCard: View {
             return AlertModel(accent: accentBlue, icon: "megaphone.fill",
                               category: "Route offer", title: "Route offer", subtitle: "",
                               buttons: [("Decline", { sim.resolveAirportOfferDecline(d) })])
+        case .hubOffer:   // handled by the early return above; unreachable
+            return AlertModel(accent: accentBlue, icon: "building.2.fill",
+                              category: "Hub buyout offer", title: "Hub offer", subtitle: "",
+                              buttons: [("Decline", { sim.resolveHubSale(d, accept: false) })])
         }
     }
 

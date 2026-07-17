@@ -2690,6 +2690,116 @@ both orientations) incl. the full open-a-route→acquire flow.
   gameplay telemetry — for that, a privacy-first SDK (TelemetryDeck) is the right
   tool, and the headless balance-sim is better still for PRE-launch tuning.
 
+## Decided — Hubs & Clubs (built to the designer-reviewed spec)
+
+- **The full mechanic from `HUBS_AND_CLUBS_SPEC.md` is BUILT (native app) —
+  sim core, every economic hook, persistence, and 5 UI surfaces, in one
+  pass.** Player idea (from real United Clubs membership): establish HUBS
+  (unlocks at 5 routes touching an airport) and build CLUBS/lounges at
+  operating hubs. Designer's guardrail, verbatim intent: hub+club must NOT
+  be a money printer.
+- **Sim core** (Simulation.swift, "Hubs & Clubs" MARK): `Hub` struct
+  (Codable) in `hubs: [code: Hub]`; `rivalHubs: [code: rivalName]`;
+  status is COMPUTED from live route count — `hubOperating` (≥5 routes),
+  `hubUnderstaffed` (<5: benefits suspend, bills continue — the
+  overextension trap). Costs anchor to the airport's REAL
+  `annualPassengers`, RETUNED DOWN from the spec draft by the mandatory
+  balance A/B (see the Balance bullet below — the draft numbers made the
+  hub a pure value-sink): establish `$1.5M + $60k×paxM` (floor $2M, cap
+  $8M), labor `$25k + $8k×routes`/mo, club build `$1M + $40k×paxM` (cap
+  $5M), rent `$20k + $0.8k×paxM`/mo. Monthly billing rides the same
+  recurring cadence as insurance/leases (`tickHubBilling`,
+  `nextHubBillTick`). Decommission returns $0 (designer decision); the
+  ONLY way to recoup is a rival's buyout offer (`tickHubOffers`, daily —
+  1.5%/day healthy at 60% of establish cost, 8%/day at 35% when
+  UNDERSTAFFED, vultures circling). Selling is PERMANENT: the airport
+  becomes a rival hub (+50% competitor entry there, can never re-hub it,
+  club closes). Blue `.hubOffer` decision card (`HubOffer` payload,
+  aircraft-nil pattern like `.offer`).
+- **Economic hooks (final, post-A/B values)**: demand 15%/spoke at an
+  operating hub vs 8% base, SAME +80% cap (`hubDemandMultiplier` — NOTE:
+  on a 10+ spoke network the BASE rate already saturates the cap, so this
+  lever is worth ~nothing at scale; that finding is why the hub carries a
+  fare lever now, see below); HUB FARE +3% on hub-touching routes
+  (`hubFareMultiplier`, in `rollRevenue` — the hub's one benefit that
+  scales with operation size; a deliberate AMENDMENT to the spec's strict
+  lever separation, sized so the hub roughly pays for itself); fees at
+  the hub −20% landing / −35% gate (`legEconomics`, player only); MX
+  base: AOG standard repair 135 ticks (−25%) and repairs −20% at
+  hub-touching routes (both resolvers); crew rest ×0.8 when released on a
+  hub route; fortress: −50% competitor entry on hub-touching routes, +50%
+  at sold (rival) hubs (`tickCompetition`); slot-buyout premium WAIVED at
+  your operating hub (`routeOpeningCost`). Club (requires operating hub):
+  +4% fare on top of the hub's +3% (`clubFareMultiplier` — the SPLIT
+  total ≈7.1% is LOWER than the spec draft's club-only 6→8% experiments),
+  reputation FLOOR `40 + 5×clubs` cap 60 (`reputationFloor`, dings clamp
+  to it), competition share floor 0.35 vs 0.2
+  (`Route.competitionShare(reputation:shareFloor:)`), and an FFR-surge
+  liability −2%/club on fares (redemption exposure). Milestones:
+  `first_hub` + `first_club`.
+- **Persistence**: `hubs`/`rivalHubs`/`totalHubSpend`/`totalHubLabor`/
+  `totalClubRent` as OPTIONAL GameSnapshot fields (nil-safe for pre-hub
+  saves — the established pattern), FinanceSave gains optional
+  hubSpend/hubLabor/clubRent; restore re-seeds `nextHubBillTick`. The
+  master Finance cash invariant now includes `− totalHubSpend −
+  totalHubLabor − totalClubRent` — extended in the regression harness the
+  same session (any future harness must include these three terms).
+- **UI surfaces**: airport card (`AirportInfoCard`, sim passed in) —
+  eligibility progress ("Hub eligibility n/5 routes"), CREATE A HUB /
+  BUILD CLUB actions with real costs, gold "Your hub — operating" or red
+  "UNDERSTAFFED (n/5 routes)" status + labor/rent rows, purple rival-hub
+  notice; map badges in `MapView.drawAirports` — gold double ring
+  (operating), dim single ring (understaffed), purple ring `#D767FF`
+  (rival hub); Ops "Hubs & Clubs" box (per-hub status/bills + rival
+  entries); Finance rows ("Hub operations" + "Club rent" in overhead,
+  "Hubs & clubs built" in capital); Alerts modal hub-offer card
+  (Sell·+$X / Decline) with the permanence warning.
+- **Verification (all clean)**: 70/70 headless hub/club suite (lifecycle,
+  exact cost formulas, billing, suspension-and-revert, sale/decommission,
+  persistence round-trip incl. legacy saves, AOG-at-hub timer 135 +
+  −20% cost, invariant at every step) — the suite drives the REAL player
+  API only (buys used jets + takes loans to fund it; `playerBalance` is
+  private(set), which is by design); 3,100/3,100 economy regression
+  (every-action invariant, 20 games × 3 sim-years, forced bankruptcy);
+  9 visual fixtures on the iPad simulator (all five surfaces, operating +
+  understaffed + pre-hub states, exact on-screen numbers verified against
+  the formulas — Finance showed "Hubs & clubs built −$4,715,000" = OKC's
+  $3M floor + $1.715M club exactly).
+- **Balance A/B (the spec's mandatory pre-ship gate) — PASSED, after
+  real iteration that changed BOTH the harness and the game's numbers.**
+  Autopilot plays 36 sim-months per game: competent, strategy-neutral
+  daily decision handling + weekly expansion (cheapest-effective USED jet,
+  up-gauged by projected filled-seats-per-$M so the hub's demand bonus can
+  actually convert to gauge — without up-gauging the bonus dies against
+  the 0.92 LF cap on small jets and the A/B is meaningless). The DECISIVE
+  test is the ISOLATION A/B — the SAME DEN-spoke network with vs without
+  the hub (the spec's original sprawl-vs-hub framing conflates the hub
+  mechanic's value with the PORTFOLIO cost of concentrating at one
+  airport, which is a real strategic tradeoff the game keeps). FINAL
+  (6 seeds/arm, 36mo): hub marginal value **+0.7%**, hub+club **−3.7%**,
+  with the defensive perks visible (rivals-on-routes roughly HALVED,
+  reputation pinned at 100) — not a printer, not a trap, resilience +
+  identity as specced. History that got here: the spec-draft numbers
+  measured **−41%** (hub) — a pure value-sink, because early capital
+  compounds ~3-4× over 3 years and the draft hub had no benefit that
+  scales (its demand bonus saturates at the +80% cap the BASE network
+  effect already reaches at 10+ spokes). Fix: cheaper hub (see Costs),
+  deeper fee discounts, and a +3%/+4% hub/club SPLIT of a REDUCED total
+  fare premium. Also: three successive AUTOPILOT bugs produced false
+  readings first (hub arm never establishing because jets ate the cash;
+  sprawl's pair pool bled dry by a diagnostic that consumed a pair per
+  check; nearest-first spokes flying cheap short legs) — when an A/B looks
+  wildly out of band, audit the autopilot before touching game numbers.
+  The separate sprawl-vs-hub strategy A/B still shows concentration
+  trailing a cherry-picked national network (portfolio effect, working as
+  intended); the harness lives at the session scratchpad's `ab.swift`.
+- **A pre-existing flaw found DURING hub verification, fixed in the same
+  pass**: Route Opportunities could suggest a class that can't fly the
+  route (playtest fixture showed EWR↔Hilo, 4,235nm, tagged "Regional
+  jet"). `suggestedClass(demand:distanceNM:)` now bumps the tier UP until
+  the tier's real max range (computed from `AircraftType.all`) covers the
+  distance.
+
 ## Open / not yet decided
 
 - Xcode project shell doesn't exist yet — needs creating in Xcode itself on

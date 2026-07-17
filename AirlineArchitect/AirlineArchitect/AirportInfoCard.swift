@@ -11,6 +11,9 @@ import SwiftUI
 
 struct AirportInfoCard: View {
     let airport: Airport
+    /// Optional sim: when present, the card gains the Hubs & Clubs section
+    /// (status, CREATE A HUB / BUILD CLUB actions, eligibility progress).
+    var sim: Simulation? = nil
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     private var cardBG: Color     { isDark ? Sky.navBarDark.opacity(0.9) : Color.white.opacity(0.96) }
@@ -65,6 +68,8 @@ struct AirportInfoCard: View {
                 Text("Detailed stats coming soon.")
                     .font(.karla(12)).foregroundStyle(labelColor).padding(.top, 2)
             }
+
+            if let sim { hubSection(sim) }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -73,6 +78,65 @@ struct AirportInfoCard: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
+
+    // MARK: Hubs & Clubs (see HUBS_AND_CLUBS_SPEC.md)
+    @ViewBuilder private func hubSection(_ sim: Simulation) -> some View {
+        let code = airport.code
+        let gold = Color(skyHex: 0xFFC73B)
+        Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
+        if let rival = sim.rivalHubs[code] {
+            HStack(spacing: 6) {
+                Image(systemName: "building.2.fill").font(.system(size: 12))
+                Text("\(rival) hub — they hold the gates here")
+                    .font(.karla(13, .bold)).lineLimit(2).minimumScaleFactor(0.7)
+            }
+            .foregroundStyle(Color(skyHex: 0xD767FF))
+        } else if sim.hubs[code] != nil {
+            let operating = sim.hubOperating(code)
+            HStack(spacing: 6) {
+                Image(systemName: "building.2.fill").font(.system(size: 12)).foregroundStyle(gold)
+                Text(operating ? "Your hub — operating" : "Your hub — UNDERSTAFFED (\(sim.routesAt(code))/\(Simulation.hubMinRoutes) routes)")
+                    .font(.karla(13, .bold))
+                    .foregroundStyle(operating ? gold : Color(skyHex: 0xFF9292))
+                    .lineLimit(2).minimumScaleFactor(0.7)
+            }
+            row("Hub labor", "\(money(sim.hubMonthlyLabor(code)))/mo")
+            if sim.hubs[code]?.hasClub == true {
+                row(sim.clubName, "\(money(sim.clubMonthlyRent(airport)))/mo rent")
+            } else if operating {
+                actionButton("BUILD \(sim.clubName.uppercased()) — \(money(sim.clubBuildCost(airport)))",
+                             enabled: sim.playerBalance >= sim.clubBuildCost(airport)) {
+                    Feedback.impact(.medium)
+                    sim.buildClub(at: code)
+                }
+            }
+        } else if sim.hubEligible(code) {
+            actionButton("CREATE A HUB — \(money(sim.hubEstablishCost(airport)))",
+                         enabled: sim.playerBalance >= sim.hubEstablishCost(airport)) {
+                Feedback.impact(.medium)
+                sim.establishHub(at: code)
+            }
+            Text("Then \(money(sim.hubMonthlyLabor(code)))/mo ground staff. Benefits suspend below \(Simulation.hubMinRoutes) routes.")
+                .font(.karla(11)).foregroundStyle(labelColor)
+        } else if sim.routesAt(code) > 0 {
+            row("Hub eligibility", "\(sim.routesAt(code))/\(Simulation.hubMinRoutes) routes")
+        }
+    }
+
+    private func actionButton(_ label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.karla(13, .bold)).foregroundStyle(.white)
+                .lineLimit(1).minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity).frame(height: 34)
+                .background(enabled ? Color(skyHex: 0x497AA5) : Color(skyHex: 0xC9C9C9))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+    }
+
+    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
 
     private func row(_ label: String, _ value: String) -> some View {
         HStack {

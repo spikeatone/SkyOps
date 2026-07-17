@@ -1,8 +1,26 @@
 # Hubs & Clubs — Design Spec (for designer review)
 
-Status: **DRAFT — not built.** Nothing here is committed to code yet. Every number
-below is DESIGNED pacing (tunable), not sourced — flagged per the project's usual
-convention. Real-world anchors are noted where they exist.
+Status: **BUILT & BALANCE-VERIFIED** (all phases in one pass; see CLAUDE.md
+"Decided — Hubs & Clubs" for the implementation map). Numbers below are the
+ORIGINAL DRAFT values — the mandatory balance A/B (§Balance Guardrails #6)
+RETUNED them before ship, because the draft hub measured as a pure value-sink
+(−41% net worth on an identical network over 3 sim-years — early capital
+compounds, and the draft hub had no benefit that scales past the +80% demand
+cap). Final shipped values (Simulation.swift is the source of truth):
+
+- Establish: `$1.5M + $60k×paxM` (floor $2M, cap $8M) · Labor: `$25k + $8k×routes`/mo
+- Club build: `$1M + $40k×paxM` (cap $5M) · Rent: `$20k + $0.8k×paxM`/mo
+- Hub: demand 15%/spoke (same +80% cap) · fees −20% landing/−35% gate ·
+  **+3% fare on hub routes** (an amendment: the hub needed one scaling revenue
+  benefit; sized to break-even) · MX/crew/fortress/slot-waiver as specced
+- Club: **+4% fare** (split total ≈7.1%, LOWER than the draft's 6%→8%
+  experiments) · rep floor / share floor / FFR liability as specced
+
+Balance verdict (isolation A/B, same network with vs without, 6 seeds × 36
+sim-months): hub marginal value **+0.7%**, hub+club **−3.7%**, rivals-on-routes
+roughly halved, reputation stable — not a printer, not a trap. The
+sprawl-vs-hub STRATEGY comparison still favors a cherry-picked national
+network; that's the portfolio cost of concentration, kept as a real tradeoff.
 
 ---
 

@@ -267,6 +267,7 @@ struct FinanceView: View {
                 acquisition: sim.totalAcquisitionSpend, routeSpend: sim.totalRouteSpend, hedgeSpend: sim.totalHedgeSpend,
                 saleProceeds: sim.totalSaleProceeds, offerIncome: sim.totalOfferIncome, flights: sim.totalFlightsFlown,
                 loanProceeds: sim.totalLoanProceeds, debtService: sim.totalDebtService,
+                hubSpend: sim.totalHubSpend, hubLabor: sim.totalHubLabor, clubRent: sim.totalClubRent,
                 cashStart: Simulation.startingCapital, cashEnd: sim.playerBalance, isTotal: true)
         case .thisMonth:
             return delta(from: s.last, toLive: true)
@@ -296,6 +297,9 @@ struct FinanceView: View {
             flights: d(sim.totalFlightsFlown, \.flights),
             loanProceeds: d(sim.totalLoanProceeds, \.loanProceeds),
             debtService: d(sim.totalDebtService, \.debtService),
+            hubSpend: d(sim.totalHubSpend, \.hubSpend),
+            hubLabor: d(sim.totalHubLabor, \.hubLabor),
+            clubRent: d(sim.totalClubRent, \.clubRent),
             cashStart: base?.cash ?? Simulation.startingCapital,
             cashEnd: toLive ? sim.playerBalance : (end?.cash ?? sim.playerBalance),
             isTotal: false)
@@ -328,9 +332,12 @@ struct FinanceView: View {
                 ledgerRow("Lease payments", f.leaseCost, sign: .minus)
                 ledgerRow("Insurance premiums", f.insurance, sign: .minus)
                 ledgerRow("Maintenance & crew", f.maintenance, sign: .minus)
+                ledgerRow("Hub operations", f.hubLabor, sign: .minus)
+                ledgerRow("Club rent", f.clubRent, sign: .minus)
                 Divider().overlay(cardBorder.opacity(0.5))
                 ledgerRow("Aircraft acquisition", f.acquisition, sign: .minus)
                 ledgerRow("Route openings", f.routeSpend, sign: .minus)
+                ledgerRow("Hubs & clubs built", f.hubSpend, sign: .minus)
                 ledgerRow("Fuel hedges", f.hedgeSpend, sign: .minus)
                 ledgerRow("Debt service", f.debtService, sign: .minus)
                 Divider().overlay(cardBorder.opacity(0.5))
@@ -481,11 +488,12 @@ struct PeriodFigures {
     var acquisition, routeSpend, hedgeSpend: Int
     var saleProceeds, offerIncome, flights: Int
     var loanProceeds = 0, debtService = 0
+    var hubSpend = 0, hubLabor = 0, clubRent = 0
     var cashStart, cashEnd: Int
     var isTotal: Bool
     var operatingProfit: Int { revenue - fees - operatingCost }
-    var overhead: Int { leaseCost + insurance + maintenance + debtService }
-    var capitalOut: Int { acquisition + routeSpend + hedgeSpend }
+    var overhead: Int { leaseCost + insurance + maintenance + debtService + hubLabor + clubRent }
+    var capitalOut: Int { acquisition + routeSpend + hedgeSpend + hubSpend }
     var capitalIn: Int { saleProceeds + offerIncome + loanProceeds }
 }
 

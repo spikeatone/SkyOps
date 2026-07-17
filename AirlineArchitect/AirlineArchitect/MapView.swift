@@ -184,6 +184,33 @@ struct MapView: View {
         ctx.fill(dots, with: .color(climbColor.opacity(0.85)))
         ctx.stroke(stopped, with: .color(heldColor.opacity(0.9)), lineWidth: 1.5)
 
+        // Hub badges — the identity-on-the-map payoff. Player hubs: a gold
+        // double ring (dimmed amber when UNDERSTAFFED). Sold hubs: the rival's
+        // purple ring, a permanent monument to that decision.
+        if !sim.hubs.isEmpty || !sim.rivalHubs.isEmpty {
+            let gold = Color(skyHex: 0xFFC73B)
+            var hubInner = Path(), hubOuter = Path(), understaffed = Path(), rival = Path()
+            for ap in sim.airports {
+                let p = ap.screen
+                if sim.hubs[ap.code] != nil {
+                    let r1 = r + 3.5, r2 = r + 6.5
+                    if sim.hubOperating(ap.code) {
+                        hubInner.addEllipse(in: CGRect(x: p.x - r1, y: p.y - r1, width: r1 * 2, height: r1 * 2))
+                        hubOuter.addEllipse(in: CGRect(x: p.x - r2, y: p.y - r2, width: r2 * 2, height: r2 * 2))
+                    } else {
+                        understaffed.addEllipse(in: CGRect(x: p.x - r1, y: p.y - r1, width: r1 * 2, height: r1 * 2))
+                    }
+                } else if sim.rivalHubs[ap.code] != nil {
+                    let r1 = r + 4.5
+                    rival.addEllipse(in: CGRect(x: p.x - r1, y: p.y - r1, width: r1 * 2, height: r1 * 2))
+                }
+            }
+            ctx.stroke(hubInner, with: .color(gold), lineWidth: 1.8)
+            ctx.stroke(hubOuter, with: .color(gold.opacity(0.55)), lineWidth: 1.2)
+            ctx.stroke(understaffed, with: .color(gold.opacity(0.45)), lineWidth: 1.8)
+            ctx.stroke(rival, with: .color(Color(skyHex: 0xD767FF).opacity(0.9)), lineWidth: 1.8)
+        }
+
         // Route-picker selection rings (amber).
         if !highlightCodes.isEmpty {
             var rings = Path()

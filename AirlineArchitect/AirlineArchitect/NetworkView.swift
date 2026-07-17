@@ -171,7 +171,7 @@ struct NetworkView: View {
                 } else if let ac = selected {
                     AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { withAnimation(Motion.glide) { selectedID = nil } }
                 } else if let ap = selectedAirport {
-                    AirportInfoCard(airport: ap)
+                    AirportInfoCard(airport: ap, sim: sim)
                 }
                 Spacer(minLength: 0)
             }
@@ -312,7 +312,7 @@ struct NetworkView: View {
                 AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { withAnimation(Motion.glide) { selectedID = nil } }
                     .transition(rise)
             } else if let ap = selectedAirport {
-                AirportInfoCard(airport: ap).transition(rise)
+                AirportInfoCard(airport: ap, sim: sim).transition(rise)
             }
             // Alerts (AOG / crew / sell) live in the bell's Alerts modal, not here.
         }
