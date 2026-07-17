@@ -2188,6 +2188,33 @@ final class Simulation {
         return true
     }
 
+    /// Cost to retire a loan today: its full remaining balance (no future
+    /// interest — paying early saves every remaining interest payment).
+    func earlyPayoffCost(_ loan: Loan) -> Int { Int(loan.remainingPrincipal.rounded()) }
+
+    /// True only when the player has the cash on hand to settle this loan in
+    /// full right now — the pay-off action only surfaces when this is true.
+    func canPayOffLoan(_ loan: Loan) -> Bool {
+        let cost = earlyPayoffCost(loan)
+        return cost > 0 && playerBalance >= cost
+    }
+
+    /// Pay off a loan early: settle the outstanding balance now, saving all
+    /// future interest. Counts as debt service so the Finance cash invariant
+    /// (…− debtService…) holds exactly.
+    @discardableResult
+    func payOffLoan(_ loanId: Int) -> Bool {
+        guard let idx = loans.firstIndex(where: { $0.id == loanId }) else { return false }
+        let cost = earlyPayoffCost(loans[idx])
+        guard cost > 0, playerBalance >= cost else { return false }
+        playerBalance -= cost
+        totalDebtService += cost
+        loans.remove(at: idx)
+        logOps(.structural, "Loan paid off early",
+               "$\(cost.formatted()) settled in full · no more interest")
+        return true
+    }
+
     /// Monthly debt service: interest on the remaining balance + a slice of
     /// principal; a final short payment retires the loan.
     private func tickLoanBilling() {

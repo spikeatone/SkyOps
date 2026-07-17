@@ -384,11 +384,25 @@ struct FinanceView: View {
                         Text("\(compactMoney(sim.monthlyDebtService))/mo").font(.karla(14, .bold)).foregroundStyle(red)
                     }
                     ForEach(sim.loans) { loan in
-                        HStack {
+                        HStack(spacing: 8) {
                             Text("\(compactMoney(loan.originalPrincipal)) loan").font(.karla(12, .semibold)).foregroundStyle(primary)
                             Spacer()
                             Text("\(compactMoney(Int(loan.remainingPrincipal.rounded()))) left")
                                 .font(.karla(12)).foregroundStyle(secondary)
+                            // The pay-off action only appears once the player has
+                            // the cash on hand to settle the whole balance — no
+                            // partial payments, no unaffordable button.
+                            if sim.canPayOffLoan(loan) {
+                                Button {
+                                    if sim.payOffLoan(loan.id) { Feedback.success() }
+                                } label: {
+                                    Text("PAY OFF").font(.karla(11, .bold)).foregroundStyle(.white)
+                                        .padding(.horizontal, 9).frame(height: 24)
+                                        .background(Sky.coreGreen)
+                                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                     Divider().overlay(cardBorder.opacity(0.5))

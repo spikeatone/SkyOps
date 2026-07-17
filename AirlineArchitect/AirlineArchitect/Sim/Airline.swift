@@ -178,7 +178,7 @@ struct Airline {
         .init(name: "Belavia",           code: "B2", weight: 3,  types: ["B737800","E195"]),
         .init(name: "Croatia Airlines",  code: "OU", weight: 3,  types: ["A319","A320","A320NEO"]),
         .init(name: "Bulgaria Air",      code: "FB", weight: 3,  types: ["A319","A320","A320NEO","E190"]),
-        .init(name: "Binter Canarias",   code: "NT", weight: 3,  types: ["E195"]),
+        // Azores (PDL) stays in the Europe region — Portuguese Atlantic islands.
         .init(name: "Azores Airlines",   code: "S4", weight: 2,  types: ["A320","A320NEO","A321NEO"]),
         // Regional-brand liveries (E-Jet / CRJ feed)
         .init(name: "Lufthansa CityLine", code: "CL", weight: 4, types: ["E190","E195","CRJ900"]),
@@ -207,6 +207,9 @@ struct Airline {
         .init(name: "TAAG Angola Airlines", code: "DT", weight: 3, types: ["B737700","B773"]),
         .init(name: "ASKY Airlines",       code: "KP", weight: 3,  types: ["B737700","B737800"]),
         .init(name: "Air Tanzania",        code: "TC", weight: 3,  types: ["A220300","B788"]),
+        // Binter Canarias serves the Canary Islands (LPA) — off the Moroccan
+        // coast, in the Africa carrier region (moved here with LPA).
+        .init(name: "Binter Canarias",     code: "NT", weight: 3,  types: ["E195"]),
     ]
 
     // Asia = East + Southeast + South Asia. The Middle East is a SEPARATE region
@@ -308,12 +311,15 @@ struct Airline {
         "LHR","IST","CDG","AMS","MAD","FRA","BCN","FCO","SVO","LGW","MUC","SAW","LIS","DUB","PMI","ORY","MAN","STN","DME","CPH",
         "MXP","ATH","AYT","VIE","OSL","BRU","ARN","LED","BER","ZRH","DUS","AGP","VCE","OTP","GVA","HAM","NCE","NAP","EDI","PRG",
         "KEF","VKO","BRS","OPO","BGY","ALC","HEL",
-        "WAW","BUD","BTS","BEG","KBP","RIX","VNO","TLL","MSQ","ZAG","SOF","SJJ","LPA","PDL",
+        "WAW","BUD","BTS","BEG","KBP","RIX","VNO","TLL","MSQ","ZAG","SOF","SJJ","PDL",
     ]
     static let africaCodes: Set<String> = [
         "CAI","JNB","ADD","CMN","CPT","HRG","NBO","RAK","LOS","ALG","TUN","DUR","ABJ","ACC","ABV","DSS","SSH","MRU","RBA","KGL",
         "EBB","LAD","DAR","AGA","TNG","SEZ",
         "ZNZ","FIH","MPM","HRE","MIR","TNR","DJE","BFN","LUN","LBV","KAN","CKY","PLZ","EDL","BSK","SID","DZA",
+        // Canary Islands ride the Africa carrier region (Binter Canarias) and
+        // render in the Africa hue — they sit off the Moroccan coast, not in Europe.
+        "LPA",
     ]
     // Asia = East + Southeast + South Asia (Middle East is separate, below).
     static let asiaCodes: Set<String> = [

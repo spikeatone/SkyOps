@@ -2396,6 +2396,19 @@ where numbers are involved.
   updates live (FleetView reads `sim.tick`; the check is upfront-only, matching
   `leaseAircraft`) — a button that looked stuck was the cash DISPLAY rounding
   ("$2.1M" covers $2.05–2.14M) sitting just under the exact $2.1M upfront.
+  - **EARLY PAY-OFF — ADDED (designer request).** A loan can now be retired
+    early, and the action ONLY appears when the player has the cash to settle it
+    in full (no partial payments, no unaffordable button). `payOffLoan(id)` /
+    `canPayOffLoan(loan)` / `earlyPayoffCost(loan)` on Simulation: cost = the
+    loan's full `remainingPrincipal` (no future interest — paying early saves
+    every remaining interest payment; no penalty, a deliberately player-friendly
+    choice). The payment counts as `totalDebtService` so the Finance cash
+    invariant (`…−debtService…`) holds EXACTLY unchanged (playerBalance drops by
+    the same amount debtService rises). UI: a green **PAY OFF** button on each
+    active-loan row in the FINANCING card, rendered only when `canPayOffLoan` is
+    true (FinanceView already reads `sim.tick`, so it appears live the moment
+    cash crosses the balance). No new accumulators, no persistence change — an
+    early payoff just removes the loan and bumps the existing debtService total.
 
 - **ROUTE OPPORTUNITIES finder — DONE (Ops tab; "underserved markets").**
   `Simulation.topRouteOpportunities(perClass:)` surfaces high-demand city pairs the
@@ -2706,6 +2719,21 @@ both orientations) incl. the full open-a-route→acquire flow.
   convention) — extract-time shift, don't "fix" the data. Basemap.json ~80KB →
   254KB. Verified live: Central America start shows the full Caribbean arc with
   airports on land; oceania start shows Tahiti under PPT.
+  - **AMENDMENT (designer request): Canary Islands moved europe→AFRICA, Azores
+    stays europe.** The islands were originally lumped `Canary/Azores→europe`
+    (basemap key) purely because both were "sliced from Spain/Portugal" — but
+    the Canaries sit off the Moroccan coast and belong in the Africa region.
+    Three coordinated changes: (1) the 7 Canary rings (lat ~27-29, lon ~-18…-13)
+    were moved from the `europe` to the `africa` key in Basemap.json (europe
+    93→86, africa 81→88 rings) so they render in the Africa AMBER hue #FFB700
+    (was europe purple #A561FF); the 9 Azores rings (lat ~37-39.7) stay in
+    `europe`/purple. (2) `LPA` (Gran Canaria) moved `europeCodes`→`africaCodes`
+    in Airline.swift, so its background carrier draws from the Africa roster;
+    `PDL` (Ponta Delgada, Azores) stays europe. (3) Binter Canarias (code NT,
+    E195 — the Canaries' real carrier) moved europeRoster→africaRoster to follow
+    LPA; Azores Airlines (S4) stays europe. Identifying the rings is trivial by
+    coordinate range (they're the last 16 rings appended to europe) — see the
+    one-off Python filter in git history if this needs redoing.
 - **Competitive-Traffic slider split into its OWN box; DEV toggles compiled out
   of Release (designer request).** The old `devControls` container mixed the
   player-facing TRAFFIC slider with the Pro(DEV)/Demand(DEV) toggles — so
