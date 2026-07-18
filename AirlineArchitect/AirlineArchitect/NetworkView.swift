@@ -145,6 +145,9 @@ struct NetworkView: View {
         // relabels its buttons and the map draws the dashed preview.
         .onAppear { adoptSuggestionIfAny() }
         .onChange(of: sim.pendingSuggestion) { _, _ in adoptSuggestionIfAny() }
+        // Fleet → ASSIGN TO NEW ROUTE arrives as sim.pendingAssignment; start the
+        // pick flow immediately so the tab switch visibly does something.
+        .onChange(of: sim.pendingAssignment?.id) { _, _ in adoptAssignmentIfAny() }
     }
 
     /// True when the iPad side rail actually has something to show — used to
@@ -154,6 +157,17 @@ struct NetworkView: View {
     }
 
     /// If Ops queued a route suggestion, enter the confirm step on it.
+
+    /// Adopt a Fleet "assign this aircraft" intent: jump straight into the
+    /// origin-pick step. Without this the tab switch looked like a no-op.
+    private func adoptAssignmentIfAny() {
+        guard sim.pendingAssignment != nil else { return }
+        panel = .none
+        selectedID = nil
+        selectedAirportCode = nil
+        routeMode = .pickOrigin
+    }
+
     private func adoptSuggestionIfAny() {
         guard let sug = sim.pendingSuggestion else { return }
         panel = .none
@@ -171,8 +185,16 @@ struct NetworkView: View {
     /// The pick-step instruction that floats over the map (nil outside pick steps).
     private var routePickHintText: String? {
         switch routeMode {
-        case .pickOrigin: return "Step One: Tap one of the airports you want in the city pair"
-        case .pickDest:   return "Step Two: Now tap the other airport pair"
+        case .pickOrigin:
+            if let ac = sim.pendingAssignment {
+                return "Assigning \(ac.tail): tap the first airport of the new city pair"
+            }
+            return "Step One: Tap one of the airports you want in the city pair"
+        case .pickDest:
+            if let ac = sim.pendingAssignment {
+                return "Assigning \(ac.tail): now tap the other airport"
+            }
+            return "Step Two: Now tap the other airport pair"
         default:          return nil
         }
     }
@@ -377,6 +399,7 @@ struct NetworkView: View {
             Spacer(minLength: 6)
             barButton("Open Route", active: routeMode != .off) {
                 panel = .none
+                if routeMode != .off { sim.clearAssignment() }
                 if routeMode == .off {
                     // Free tier: block a new route at the cap, show the paywall.
                     guard store.canOpenRoute(sim) else { onUpgrade(store.capMessage(.route)); return }
@@ -581,7 +604,7 @@ struct NetworkView: View {
                     onOpen: { openConfirmedRoute(origin, dest) },
                     onCancel: {
                         if fromSuggestion { sim.clearSuggestion(); routeMode = .off; onReturnToOps() }
-                        else { routeMode = .off }
+                        else { routeMode = .off; sim.clearAssignment() }
                     },
                     openTitle: fromSuggestion ? "Open This Route" : "Open route",
                     cancelTitle: fromSuggestion ? "Don't Open" : "Abandon",
@@ -646,17 +669,24 @@ struct NetworkView: View {
     /// the jet whoosh already played, so we skip the "now boarding" voice to avoid
     /// the two sounds colliding.
     private func openConfirmedRoute(_ origin: Airport, _ dest: Airport, announce: Bool = true) {
-        guard let spare = sim.idleSpares.first else {
+        // A Fleet "assign this aircraft" intent targets ONE specific aircraft —
+        // reassign() moves it even if it's already flying a route (archiving
+        // that one). Otherwise this is a normal open, flown by the first spare.
+        let targeted = sim.pendingAssignment
+        guard let spare = targeted ?? sim.idleSpares.first else {
             showFlash("No spare aircraft — buy one to fly this route")
             panel = .acquire
             return
         }
-        switch sim.openRoute(from: origin, to: dest, using: spare) {
+        let result = targeted != nil
+            ? sim.reassign(spare, from: origin, to: dest)
+            : sim.openRoute(from: origin, to: dest, using: spare)
+        switch result {
         case .success:
             Feedback.routeOpened(airline: sim.playerAirlineName, announce: announce)
             showFlash("Route \(origin.code) ↔ \(dest.code) opened — \(spare.tail) assigned")
             routeMode = .off; panel = .none
-            sim.clearSuggestion()
+            sim.clearSuggestion(); sim.clearAssignment()
         case .insufficientFunds(let c): showFlash("Need $\(c.formatted()) to open this route")
         case .alreadyOpen:  showFlash("That route is already open")
         case .sameAirport:  showFlash("Pick two different airports")

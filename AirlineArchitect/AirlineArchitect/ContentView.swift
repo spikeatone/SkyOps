@@ -507,7 +507,10 @@ struct RouteConfirmPanel: View {
 
     var body: some View {
         let cost = sim.routeOpeningCost(origin, dest)
-        let spare = sim.idleSpares.first
+        // The aircraft that will actually fly this route: the one the player
+        // picked in Fleet (ASSIGN TO NEW ROUTE) if any, else the first spare.
+        // Projected load, range and runway checks must reflect THAT aircraft.
+        let spare = sim.pendingAssignment ?? sim.idleSpares.first
         let slotsOK = origin.slotsAvailable > 0 && dest.slotsAvailable > 0
         let affordable = sim.playerBalance >= cost
         VStack(alignment: .leading, spacing: 8) {
@@ -545,6 +548,12 @@ struct RouteConfirmPanel: View {
             let cap = capability(spare)
             infoRow("Aircraft check", cap.text, cap.ok ? green : red)
             infoRow("Opening cost", "$\(cost.formatted())", affordable ? green : red)
+            // Reassigning an aircraft that's already flying closes the route it
+            // leaves — say so BEFORE the player commits, not after.
+            if let ac = sim.pendingAssignment, let rid = ac.assignedRouteId,
+               let old = sim.playerRoutes.first(where: { $0.id == rid }) {
+                infoRow("Leaves", "\(old.originCode)–\(old.destCode) · that route closes", red)
+            }
 
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
 

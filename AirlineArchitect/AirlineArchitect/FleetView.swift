@@ -119,7 +119,7 @@ struct FleetView: View {
                         // style. Keyed on detailID only, so rotation stays instant.
                         FleetDetailView(sim: sim, aircraft: ac,
                                         onBack: { detailID = nil },
-                                        onAssignRoute: { detailID = nil; tab = 0 },
+                                        onAssignRoute: { sim.beginAssignment(ac); detailID = nil; tab = 0 },
                                         onSold: { detailID = nil },
                                         onBell: onBell)
                             .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -168,7 +168,7 @@ struct FleetView: View {
                     if let ac = detailAC {
                         FleetDetailView(sim: sim, aircraft: ac,
                                         onBack: {},
-                                        onAssignRoute: { tab = 0 },
+                                        onAssignRoute: { sim.beginAssignment(ac); tab = 0 },
                                         onSold: { detailID = nil },
                                         onBell: onBell,
                                         embedded: true)

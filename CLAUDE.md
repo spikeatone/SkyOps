@@ -1059,6 +1059,43 @@ one contradicts the design thesis.)
   until the Phase A/B foundation (this section) could be felt in actual
   play first.
 
+- **AIRCRAFT REASSIGNMENT — BUILT (tester-reported: "ASSIGN TO NEW ROUTE doesn't
+  work").** The button was a bare tab switch (`{ detailID = nil; tab = 0 }`) with
+  THREE defects: (1) no follow-through — it never started the route flow, so the
+  Network tab looked identical to a normal tab tap; (2) wrong aircraft — even if
+  the player then tapped Open Route themselves, `openConfirmedRoute` assigned
+  `idleSpares.first`, NOT the aircraft they'd tapped (with several spares you got
+  a different tail); (3) impossible for a routed aircraft — `openRoute` guards
+  `assignedRouteId == nil`, so an aircraft already flying could never be
+  assigned, which is the case a tester is most likely to try.
+  The fix, per designer direction ("build true reassignment"):
+  `Simulation.reassign(_:from:to:)` moves ANY owned aircraft (idle spare or
+  currently flying) onto a brand-new route. `openRoute` keeps its
+  spare-only guard and both now share `openRouteCore(…detaching:)`, so the
+  cost/range/runway/duplicate checks and hub-eligibility logging can't drift
+  between the two paths. **The route the aircraft LEAVES is archived** (moved to
+  `closedPlayerRoutes` with `closedTick`, full P&L history intact, both slots
+  freed, pending slot-offer cards cleared) — the same teardown selling uses, via
+  a shared `detachFromRoute`. Chosen over leaving it PENDING because a pending
+  route with no way to close it would hold its slots forever. **Detach happens
+  BEFORE `createRoute`**, so reassigning onto a route that reuses an old endpoint
+  gets that slot back instead of being blocked by its own aircraft (verified).
+  A failed reassign (out of range, already-open, unaffordable) is INERT — it
+  returns before detaching, so the existing route survives.
+  UI: `Simulation.pendingAssignment` (transient, not persisted) carries the tapped
+  aircraft across the tab switch; NetworkView adopts it exactly like
+  `pendingSuggestion` (`adoptAssignmentIfAny` → `routeMode = .pickOrigin`), the
+  pick hint names the tail ("Assigning N1ZR: tap the first airport…"), the confirm
+  panel's projected-load/range/runway checks read THAT aircraft rather than a
+  spare, and it shows a red "Leaves ORD–DFW · that route closes" row so the
+  consequence is visible BEFORE committing. The intent is cleared on success and
+  on every exit from the flow.
+  KNOWN SIMPLIFICATION: reassigning an aircraft that's mid-flight repositions it
+  to the new route's origin as PARKED (same as any fresh assignment) rather than
+  finishing the current leg. Verified 23/23 headless (archival, slot accounting
+  incl. the shared-endpoint case, inert failures, no aircraft left pointing at a
+  closed route) plus live in the Simulator.
+
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
 - **Airport positions are real**, not hand-placed. Each airport carries

@@ -1045,9 +1045,44 @@ final class Simulation {
     /// incentive) waives the opening cost entirely. Ported from openRoute().
     @discardableResult
     func openRoute(from origin: Airport, to dest: Airport, using ac: Aircraft, subsidized: Bool = false) -> OpenRouteResult {
+        guard ac.purchased, ac.assignedRouteId == nil else { return .noSpare }
+        return openRouteCore(from: origin, to: dest, using: ac, subsidized: subsidized)
+    }
+
+    /// Move an owned aircraft onto a BRAND-NEW route, whether it is currently an
+    /// idle spare or already flying something. If it is already on a route, that
+    /// route is archived first (full P&L history preserved, slots freed) — the
+    /// same teardown selling uses — so the player is trading one route for
+    /// another, not silently accumulating an unstaffed one.
+    ///
+    /// Detaching happens BEFORE the new route is created, so a reassignment that
+    /// reuses one of the old endpoints gets that slot back rather than being
+    /// blocked by its own aircraft.
+    @discardableResult
+    func reassign(_ ac: Aircraft, from origin: Airport, to dest: Airport) -> OpenRouteResult {
+        guard ac.purchased else { return .noSpare }
+        return openRouteCore(from: origin, to: dest, using: ac, subsidized: false, detaching: true)
+    }
+
+    /// Archive the aircraft's current route (if any) and free it up. Mirrors the
+    /// route half of `liquidate` — the aircraft itself is kept.
+    private func detachFromRoute(_ ac: Aircraft) {
+        guard let id = ac.assignedRouteId,
+              let idx = playerRoutes.firstIndex(where: { $0.id == id }) else { return }
+        ac.assignedRouteId = nil
+        let r = playerRoutes.remove(at: idx)
+        r.closedTick = tick
+        closedPlayerRoutes.append(r)
+        decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == id }
+        airports.first { $0.code == r.originCode }?.slotsAvailable += 1
+        airports.first { $0.code == r.destCode }?.slotsAvailable += 1
+        logOps(.structural, "Route closed", "\(r.originCode) ↔︎ \(r.destCode) — \(ac.tail) reassigned")
+    }
+
+    private func openRouteCore(from origin: Airport, to dest: Airport, using ac: Aircraft,
+                               subsidized: Bool, detaching: Bool = false) -> OpenRouteResult {
         if origin === dest { return .sameAirport }
         if route(between: origin.code, dest.code) != nil { return .alreadyOpen }
-        guard ac.purchased, ac.assignedRouteId == nil else { return .noSpare }
         switch routeBlock(for: ac, from: origin, to: dest) {
         case .range:  return .outOfRange
         case .runway(let code): return .runwayTooShort(code)
@@ -1055,6 +1090,7 @@ final class Simulation {
         }
         let cost = subsidized ? 0 : routeOpeningCost(origin, dest)
         guard playerBalance >= cost else { return .insufficientFunds(cost) }
+        if detaching { detachFromRoute(ac) }
         let r = createRoute(from: origin, to: dest, cost: cost)
         // Surfacing: the moment an airport reaches hub eligibility, say so.
         for code in [origin.code, dest.code]
@@ -1073,6 +1109,16 @@ final class Simulation {
     func routeStaffed(_ r: Route) -> Bool { aircraft.contains { $0.purchased && $0.assignedRouteId == r.id } }
     /// Open routes with no aircraft yet (accepted an offer, still need a plane).
     var pendingRoutes: [Route] { playerRoutes.filter { !routeStaffed($0) } }
+
+    // MARK: Assignment intent (Fleet → "ASSIGN TO NEW ROUTE")
+
+    /// The aircraft the player tapped ASSIGN TO NEW ROUTE on, carried across the
+    /// tab switch into the Network route-pick flow so the route they draw is
+    /// flown by THAT aircraft — not by whichever spare happens to be first.
+    /// Transient (not persisted); cleared when the flow ends.
+    var pendingAssignment: Aircraft?
+    func beginAssignment(_ ac: Aircraft) { pendingAssignment = ac }
+    func clearAssignment() { pendingAssignment = nil }
 
     /// Why a pending route hasn't been auto-staffed yet, in one short player-
     /// facing phrase (nil once staffed). `assignSpareToPendingRoutes` assigns
