@@ -2757,6 +2757,28 @@ both orientations) incl. the full open-a-route→acquire flow.
      /themes. (A "empty detail pane" scare in the Fleet split was a rotation
      transient, not a bug — the split's `detailAC` defaults to the first owned
      aircraft.)
+- **APP STORE SCREENSHOT HARNESS (recreate, don't reinvent).** 40 shots (20
+  iPhone + 20 iPad, 10 light + 10 dark each) are driven by
+  `scratchpad/capture.sh`: it boots both simulators, installs the Debug build,
+  and for each of 10 named shots relaunches the app with `SIMCTL_CHILD_SHOT=<name>`
+  then `simctl io screenshot`s into the designer's Desktop folders. The app side
+  is a set of **TEMPSHOT blocks that are deliberately NOT committed** — grep
+  `TEMPSHOT` and strip them all before any real commit. They are: a `#if DEBUG`
+  `devSetBalance` on Simulation (playerBalance is `private(set)`); a
+  `seedForShot(_:)` in ContentView's `.onAppear` that names the airline, buys a
+  flagship fleet, opens real long-haul routes, HIRES CREW, runs ~62k ticks, then
+  clears `maint` and picks the tab; and small `SHOT`-driven defaults in FleetView
+  (segment/category/detail + a `ScrollViewReader` that scrolls Marketplace to
+  the 787). Hard-won details: (a) **hire 3+ crew per owned family** — a bundled
+  single crew leaves aircraft sitting in rest holds, which shows as GROUNDED with
+  ~24 cycles instead of FLYING with ~150; (b) **clear `ac.maint` then tick again**
+  so nothing reads GROUNDED red in a marketing shot; (c) the tail code must not
+  collide with a real IATA code or `nameAirline` silently falls back to the
+  default (`MQ` = Envoy, rejected; `MR` is free); (d) **gate the `devToggles` row
+  on `SHOT`** — Pro/Demand (DEV) are `#if DEBUG` so they're absent from Release,
+  but the screenshot build IS Debug, and they appeared in the first pass; (e)
+  allow ~16s per shot (the seed's tick loop is slow), and dismiss `celebrations`
+  or a milestone toast lands over the UI.
 - **Screenshot/verification gotchas for the Simulator (recurring this session):**
   (a) `xcrun simctl io … screenshot` captures the RAW framebuffer, so LANDSCAPE
   comes out rotated 90°/180° — `sips -r 90` or `-r 270` to view upright (the app
