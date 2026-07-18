@@ -552,7 +552,10 @@ struct RouteConfirmPanel: View {
             // leaves — say so BEFORE the player commits, not after.
             if let ac = sim.pendingAssignment, let rid = ac.assignedRouteId,
                let old = sim.playerRoutes.first(where: { $0.id == rid }) {
-                infoRow("Leaves", "\(old.originCode)–\(old.destCode) · that route closes", red)
+                let flying = sim.isEnRoute(ac)
+                infoRow("Leaves",
+                        flying ? "\(old.originCode)–\(old.destCode) · closes after this leg"
+                               : "\(old.originCode)–\(old.destCode) · that route closes", red)
             }
 
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)

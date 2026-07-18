@@ -1090,11 +1090,27 @@ one contradicts the design thesis.)
   spare, and it shows a red "Leaves ORD–DFW · that route closes" row so the
   consequence is visible BEFORE committing. The intent is cleared on success and
   on every exit from the flow.
-  KNOWN SIMPLIFICATION: reassigning an aircraft that's mid-flight repositions it
-  to the new route's origin as PARKED (same as any fresh assignment) rather than
-  finishing the current leg. Verified 23/23 headless (archival, slot accounting
-  incl. the shared-endpoint case, inert failures, no aircraft left pointing at a
-  closed route) plus live in the Simulator.
+  **DEFERRED WHEN AIRBORNE (designer: "I'd rather the jet complete the leg it's
+  flying first. Real world.")** — an initial version repositioned a mid-flight
+  aircraft to the new origin as PARKED, i.e. it teleported. Now `reassign` checks
+  `isEnRoute(ac)` (assigned AND not parked): if airborne it creates + PAYS FOR the
+  new route immediately but sets `ac.pendingRouteId` and leaves the aircraft on its
+  current route; `completePendingReassignment` runs at `.legCompleted` (after
+  `settleLeg`, so the leg's revenue is still booked to the OLD route) and only then
+  detaches/archives and assigns. An IDLE spare still moves instantly — no pointless
+  delay. Two non-obvious consequences handled: `assignSpareToPendingRoutes` skips
+  routes reserved by a pending move (otherwise a newly-bought spare STEALS the
+  route the airborne aircraft is heading to — this is tested), and
+  `pendingRouteId` is PERSISTED (optional field on AircraftSave, back-compatible)
+  so a save/load mid-move doesn't strand the aircraft. Surfaced in the UI: the
+  confirm panel reads "closes after this leg", the flash says "moves over after it
+  lands at X", and the Fleet detail shows an amber "Moves to PDX–SEA after landing
+  at BOS" line. If the reserved route disappears before arrival (e.g. a slot
+  buyback), the pending move is dropped rather than crashing.
+  Verified 41/41 headless (archival, slot accounting incl. the shared-endpoint
+  case, inert failures, no aircraft pointing at a closed route, no teleport, the
+  route-stealing guard, completion on arrival, immediate move for idle spares, and
+  a save/load round-trip of a pending move) plus live in the Simulator.
 
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 

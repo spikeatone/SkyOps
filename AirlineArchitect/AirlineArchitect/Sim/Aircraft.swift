@@ -76,6 +76,11 @@ final class Aircraft: Identifiable {
     // with no `assignedRouteId` is a SPARE — it sits idle until routed.
     var purchased: Bool = false
     var assignedRouteId: Int?
+    /// A reassignment the player has committed to but which hasn't taken effect
+    /// yet: the aircraft is airborne, so it finishes the leg it's flying and
+    /// moves to this route on arrival (real-world behaviour — an aircraft in the
+    /// air doesn't teleport to a new route). nil = nothing pending.
+    var pendingRouteId: Int?
     var sellOfferDismissed = false
 
     // Leasing (Phase 5). A leased aircraft is still `purchased: true` (real

@@ -1064,6 +1064,33 @@ final class Simulation {
         return openRouteCore(from: origin, to: dest, using: ac, subsidized: false, detaching: true)
     }
 
+    /// True if `ac` is airborne / mid-turn rather than sitting at a gate, i.e. a
+    /// reassignment must wait for it to finish the leg it's flying.
+    func isEnRoute(_ ac: Aircraft) -> Bool {
+        ac.assignedRouteId != nil && ac.stateIndex != FlightState.parked.rawValue
+    }
+
+    /// The route an aircraft is moving to once it lands (for the Fleet card).
+    func pendingRoute(for ac: Aircraft) -> Route? {
+        guard let id = ac.pendingRouteId else { return nil }
+        return playerRoutes.first { $0.id == id }
+    }
+
+    /// Complete a deferred reassignment: called when the aircraft reaches a gate.
+    /// Archives the route it just left and puts it on the one the player chose.
+    private func completePendingReassignment(_ ac: Aircraft) {
+        guard let id = ac.pendingRouteId else { return }
+        guard let r = playerRoutes.first(where: { $0.id == id }),
+              let o = airport(r.originCode), let d = airport(r.destCode) else {
+            ac.pendingRouteId = nil   // route vanished (e.g. slot buyback) — drop it
+            return
+        }
+        ac.pendingRouteId = nil
+        detachFromRoute(ac)
+        assign(ac, to: r, origin: o, dest: d)
+        logOps(.structural, "Aircraft reassigned", "\(ac.tail) → \(r.originCode) ↔\u{FE0E} \(r.destCode)")
+    }
+
     /// Archive the aircraft's current route (if any) and free it up. Mirrors the
     /// route half of `liquidate` — the aircraft itself is kept.
     private func detachFromRoute(_ ac: Aircraft) {
@@ -1090,7 +1117,11 @@ final class Simulation {
         }
         let cost = subsidized ? 0 : routeOpeningCost(origin, dest)
         guard playerBalance >= cost else { return .insufficientFunds(cost) }
-        if detaching { detachFromRoute(ac) }
+        // An aircraft that's already airborne finishes its leg first (real-world
+        // behaviour): create + pay for the new route now, but leave the old one
+        // flying until it lands, then swap in completePendingReassignment().
+        let defer_ = detaching && isEnRoute(ac)
+        if detaching && !defer_ { detachFromRoute(ac) }
         let r = createRoute(from: origin, to: dest, cost: cost)
         // Surfacing: the moment an airport reaches hub eligibility, say so.
         for code in [origin.code, dest.code]
@@ -1099,7 +1130,13 @@ final class Simulation {
                    "\(Simulation.hubMinRoutes) routes now use \(code) — you can establish a hub (tap the airport)",
                    airportCode: code)
         }
-        assign(ac, to: r, origin: origin, dest: dest)
+        if defer_ {
+            ac.pendingRouteId = r.id
+            logOps(.structural, "Reassignment scheduled",
+                   "\(ac.tail) moves to \(origin.code) ↔\u{FE0E} \(dest.code) after it lands at \(ac.dest.code)")
+        } else {
+            assign(ac, to: r, origin: origin, dest: dest)
+        }
         return .success
     }
 
@@ -1151,7 +1188,10 @@ final class Simulation {
     /// puts it on that route. Runs per tick, early-returning when no spare exists.
     private func assignSpareToPendingRoutes() {
         guard !idleSpares.isEmpty else { return }
-        for r in playerRoutes where !routeStaffed(r) {
+        // Skip routes already reserved by a deferred reassignment — that route
+        // belongs to an aircraft still finishing its current leg.
+        for r in playerRoutes where !routeStaffed(r)
+            && !aircraft.contains(where: { $0.pendingRouteId == r.id }) {
             guard let o = airport(r.originCode), let d = airport(r.destCode) else { continue }
             if let spare = idleSpares.first(where: { routeBlock(for: $0, from: o, to: d) == nil }) {
                 assign(spare, to: r, origin: o, dest: d)
@@ -2712,7 +2752,8 @@ final class Simulation {
         s.aircraft = aircraft.filter { $0.purchased }.map { ac in
             AircraftSave(tail: ac.tail, typeId: ac.type.id, originCode: ac.origin.code, destCode: ac.dest.code,
                          stateIndex: ac.stateIndex, stateTick: ac.stateTick, cyclesAccrued: ac.cyclesAccrued,
-                         assignedRouteId: ac.assignedRouteId, sellOfferDismissed: ac.sellOfferDismissed,
+                         assignedRouteId: ac.assignedRouteId, pendingRouteId: ac.pendingRouteId,
+                         sellOfferDismissed: ac.sellOfferDismissed,
                          isLeased: ac.isLeased, leaseAccrued: ac.leaseAccrued, maint: ac.maint,
                          aogAutoClearTick: ac.aogAutoClearTick, crewId: ac.crewId)
         }
@@ -2809,6 +2850,7 @@ final class Simulation {
             let ac = Aircraft(tail: a.tail, type: type, origin: o, dest: d, stateIndex: a.stateIndex,
                               cyclesAccrued: a.cyclesAccrued, purchased: true)
             ac.stateTick = a.stateTick; ac.assignedRouteId = a.assignedRouteId
+            ac.pendingRouteId = a.pendingRouteId
             ac.sellOfferDismissed = a.sellOfferDismissed; ac.isLeased = a.isLeased; ac.leaseAccrued = a.leaseAccrued
             ac.maint = a.maint; ac.aogAutoClearTick = a.aogAutoClearTick; ac.crewId = a.crewId
             rollRevenue(for: ac)
@@ -2882,7 +2924,10 @@ final class Simulation {
                 // route (advance already swapped origin/dest).
                 if !ac.purchased { (ac.origin, ac.dest) = backgroundLeg(for: ac.homeRegion ?? .us, type: ac.type) }
                 rollRevenue(for: ac)
-            case .legCompleted:        settleLeg(ac)
+            case .legCompleted:
+                settleLeg(ac)
+                // It has landed and settled — now honour any deferred move.
+                if ac.pendingRouteId != nil { completePendingReassignment(ac) }
             case nil:                  break
             }
             // A booked aircraft still burns money while stuck at the gate

@@ -77,6 +77,8 @@ struct AircraftSave: Codable {
     var stateTick: Int
     var cyclesAccrued: Int
     var assignedRouteId: Int?
+    /// Optional for back-compat with saves written before reassignment existed.
+    var pendingRouteId: Int?
     var sellOfferDismissed: Bool
     var isLeased: Bool
     var leaseAccrued: Double

@@ -684,7 +684,11 @@ struct NetworkView: View {
         switch result {
         case .success:
             Feedback.routeOpened(airline: sim.playerAirlineName, announce: announce)
-            showFlash("Route \(origin.code) ↔ \(dest.code) opened — \(spare.tail) assigned")
+            if spare.pendingRouteId != nil {
+                showFlash("\(origin.code) ↔ \(dest.code) opened — \(spare.tail) moves over after it lands at \(spare.dest.code)")
+            } else {
+                showFlash("Route \(origin.code) ↔ \(dest.code) opened — \(spare.tail) assigned")
+            }
             routeMode = .off; panel = .none
             sim.clearSuggestion(); sim.clearAssignment()
         case .insufficientFunds(let c): showFlash("Need $\(c.formatted()) to open this route")

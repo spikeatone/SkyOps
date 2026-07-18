@@ -39,6 +39,8 @@ struct FleetDetailView: View {
     private let green = Sky.coreGreen
     // Red reads too dark on the dark theme — use the On-Dark red there.
     private var red: Color { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
+    /// Pending-reassignment notice — the app's existing attention amber.
+    private var amber: Color { Color(skyHex: 0xFFAB44) }
 
     var body: some View {
         let _ = sim.tick   // keep status/progress live
@@ -131,6 +133,17 @@ struct FleetDetailView: View {
                 labeled("ETA", eta.map(etaString) ?? (aircraft.isIdleSpare ? "—" : "At gate"), trailing: true)
             }
             progressBar(prog, planeTip: !aircraft.isIdleSpare)
+            // Deferred reassignment: the aircraft finishes the leg it's flying
+            // before moving, so say where it's going and that it's not there yet.
+            if let next = sim.pendingRoute(for: aircraft) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                        .font(.system(size: 12)).foregroundStyle(amber)
+                    Text("Moves to \(next.originCode)–\(next.destCode) after landing at \(aircraft.dest.code)")
+                        .font(.karla(13, .medium)).foregroundStyle(amber)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
         }
     }
 
