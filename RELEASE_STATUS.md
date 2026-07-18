@@ -1,4 +1,4 @@
-# RELEASE STATUS — App Store submission, v1.0 (build 26)
+# RELEASE STATUS — App Store submission, v1.0 (build 27)
 
 Snapshot of the 1.0 App Store submission as of **18 July 2026**. Written so a
 future session (or a remote session with no conversation history) can pick this
@@ -9,17 +9,29 @@ Update it as items land, and delete it once 1.0 is live and this is history.
 
 ## The binary
 
-- **Build 26** (`CURRENT_PROJECT_VERSION = 26`, marketing version `1.0`),
-  commit "Bump build number to 26 for TestFlight".
-- Archived to `~/Library/Developer/Xcode/Archives/2026-07-18/AA-build26.xcarchive`
-  and **uploaded to App Store Connect** by the designer.
+**SUBMITTED — 1.0 (build 27) is "Waiting for Review" as of 18 July 2026.**
+
+- **Build 27** (`CURRENT_PROJECT_VERSION = 27`, marketing version `1.0`).
+  Archived to `~/Library/Developer/Xcode/Archives/2026-07-18/AA-build27.xcarchive`,
+  uploaded, and attached to the 1.0 submission.
+- **27 replaced 26 after 1.0 had already been submitted.** Swapping a build once
+  a version is "Waiting for Review" requires "remove this version from review"
+  first (the banner on the version page says so), then changing the build and
+  re-submitting — which forfeits the queue position. Done deliberately: 26
+  shipped with the broken ASSIGN TO NEW ROUTE button a tester had reported, and
+  launching 1.0 with a known-broken control was judged worse than a day's delay.
+  Worth knowing for next time: removing a version from review can also drop the
+  subscriptions out of the submission — they survived here, but CHECK the draft
+  still lists 4 items before re-submitting.
+- Build 26 (archived at `AA-build26.xcarchive`) is superseded — do not upload it.
 - Verified before archiving: `strings` on the Release binary returns **0**
   occurrences of "Pro (DEV)" / "Demand (DEV)" — the DEV toggles are `#if DEBUG`
   and genuinely absent from Release.
-- 26 was cut specifically so the binary MATCHES the screenshots: it is the first
-  build containing the splash jet icons, the Fleet/Marketplace filter + sort
-  redesign, and the iPad-landscape map fix. **Do not submit build 25 with these
-  screenshots** — its Fleet screen has no filter UI.
+- 26 was cut so the binary MATCHES the screenshots: it was the first build with
+  the splash jet icons, the Fleet/Marketplace filter + sort redesign, and the
+  iPad-landscape map fix. 27 adds the aircraft-reassignment fix on top (see
+  CLAUDE.md). The screenshots remain accurate for 27 — reassignment changed
+  behaviour, not any screen that was captured.
 
 ## Screenshots
 
@@ -86,8 +98,7 @@ whatever is in ASC — treat ASC as the source of truth for this one.
 
 ## Subscriptions
 
-Group **Airline Architect Pro** (ID 22234194), both products in "Prepare for
-Submission":
+Group **Airline Architect Pro** (ID 22234194); both products submitted with 1.0:
 
 | Level | Reference | Product ID | Duration | Price (intended) |
 |---|---|---|---|---|
@@ -110,7 +121,7 @@ Submission":
 ## ASC checklist
 
 Done:
-- [x] Build 26 uploaded and attached to iOS App Version 1.0
+- [x] Build 27 uploaded and attached to iOS App Version 1.0 (26 swapped out)
 - [x] Description, keywords, promotional text, Support URL, copyright
 - [x] **App Privacy** — questionnaire published as "Data Not Collected"
 - [x] **Privacy Policy URL** added (App Privacy page → Privacy Policy → Edit;
@@ -120,16 +131,19 @@ Done:
 - [x] App version added to the submission → draft shows **4 items**
       (iOS App 1.0, the group, and Subscriptions (2)), warnings cleared
 
-Outstanding at time of writing:
-- [ ] **Screenshots uploaded** — were 0 of 10; use Media Manager → iPhone 6.9"
-      and iPad 13" (the default drop zone offers 6.5", which the 1320×2868 files
-      will not fit)
-- [ ] **Reviewer notes** pasted into App Review Information → Notes (full text
-      below)
-- [ ] **Pricing and Availability** set to Free
-- [ ] Choose **"Manually release this version"** so launch timing is controlled
-- [ ] Uncheck **"Displayed"** on the App Store Promotion row (see below)
-- [ ] Submit
+- [x] **Screenshots uploaded** (the panel labels the slot 6.5" but reports
+      "Using 6.9" Display" — the 1320×2868 set was accepted)
+- [x] **Reviewer notes** pasted into App Review Information → Notes
+- [x] **Submitted** — 1.0 (27) + both subscriptions + the group, 4 items
+
+Still to confirm / do:
+- [ ] **"Manually release this version"** — set it if it isn't already, so an
+      overnight approval doesn't auto-launch the app
+- [ ] Uncheck **"Displayed"** on the App Store Promotion row (cosmetic; see below)
+- [ ] **After approval: run a real sandbox purchase on a device.** The purchase
+      path has never been exercised end-to-end — RevenueCat only returns real
+      products once the subscriptions are approved. This is the last place a
+      surprise can hide.
 
 ## Reviewer notes (paste into App Review Information → Notes; 2,361 chars)
 
@@ -206,6 +220,14 @@ feature (subscriptions purchasable from the App Store product page), which needs
 it**, and there is no approved binary yet either way. It has zero effect on
 in-app purchasing — just leave promotion off. If it is ever wanted, RevenueCat
 exposes a delegate hook and the change is localized to `Store.swift`.
+
+## Fixed since the screenshots (in build 27)
+
+- **ASSIGN TO NEW ROUTE** was reported by a tester as not working. It had three
+  defects (no follow-through, wrong aircraft, impossible for an aircraft already
+  flying) and is now real reassignment, with an airborne aircraft finishing its
+  current leg before moving. Full detail in CLAUDE.md; 41/41 headless plus live
+  verification.
 
 ## Known open items (not blocking submission)
 
