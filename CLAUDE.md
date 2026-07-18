@@ -3298,6 +3298,14 @@ both orientations) incl. the full open-a-route→acquire flow.
   never confirmed to actually exist in the repo — flagged once early in
   this project's history, never independently verified since. Check it.
 
+## Release status (1.0 / build 26) — see `RELEASE_STATUS.md`
+
+The live App Store submission state (build 26, screenshots, store metadata,
+reviewer notes, the support/privacy site, the subscription products, and the
+remaining ASC checklist) lives in **`RELEASE_STATUS.md`** at the repo root, not
+here. A session picking up the launch should read that file — it's written to be
+understood cold, with no conversation history. Delete it once 1.0 is live.
+
 ## Working agreement for future sessions
 
 1. Read this file. Read `TASKS.md` for what's actually in flight.
