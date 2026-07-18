@@ -2655,8 +2655,20 @@ both orientations) incl. the full open-a-route→acquire flow.
   `Spacer`. Verified end-to-end: open route with no spare → rail swaps from the
   confirm panel to Acquire (route stays pending) → buy → route auto-opens with
   the jet assigned and flying, balance deducted, rail dismisses.
-  - **The rail's 380pt width is RESERVED PERMANENTLY (designer decision), even
-    when nothing is docked** — the `sidePanelColumn` is always in the HStack at
+  - **SUPERSEDED (designer, on seeing it in play): the rail no longer reserves
+    space when idle — the map now fills the full landscape width.** The reserved
+    gutter read as "the map didn't expand" after rotating. The flinch it existed
+    to prevent is now solved a better way: the MAP is always laid out at the FULL
+    available width and the card simply shows a narrower window onto it when a
+    panel docks (`mapCard(mapWidth:cardWidth:)` — map at `full`, card clipped to
+    `full − 390`). So docking CLIPS the map's right edge instead of resizing it,
+    which means the world-scale never recomputes and the map never rescales.
+    Verified on the iPad simulator: LAX sits at the identical x/scale idle vs
+    docked. The control/speed bars are attached AFTER the card frame, so they
+    size to the VISIBLE width and never get clipped. `hasSidePanel(_:)` decides
+    whether anything is docked. The ORIGINAL note, for history:
+  - **(Historical) The rail's 380pt width was RESERVED PERMANENTLY, even
+    when nothing was docked** — the `sidePanelColumn` is always in the HStack at
     `.frame(width: 380)`, empty (page background) when idle. This was a real QA
     finding (independent code review during the RC pass): docking a panel used
     to NARROW the map card, which recomputes the map's `worldScale` (=

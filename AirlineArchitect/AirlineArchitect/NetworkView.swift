@@ -106,17 +106,24 @@ struct NetworkView: View {
                 let wide = geo.size.width > geo.size.height
                 Group {
                     if isPad && wide {
+                        // The map is ALWAYS laid out at the full available width;
+                        // when a panel docks we simply show a narrower window onto
+                        // it (clipped at the right) rather than resizing the map.
+                        // That keeps the whole screen usable when idle AND avoids
+                        // the old "flinch" — narrowing the card used to recompute
+                        // the map's world-scale and visibly rescale the whole map.
+                        let docked = hasSidePanel(selected)
+                        let full = geo.size.width
+                        let cardW = docked ? max(320, full - 390) : full
                         HStack(alignment: .top, spacing: 10) {
-                            mapCard(selected: selected, sideDocked: true)
-                            // The rail's width is reserved PERMANENTLY — even when
-                            // nothing is docked the 380pt gutter stays. Otherwise
-                            // docking a panel narrows the map card, which recomputes
-                            // the map's world-scale and makes the whole map visibly
-                            // "flinch". The gutter just sits empty (page background)
-                            // when idle; its CONTENT fades in/out.
-                            sidePanelColumn(selected: selected)
-                                .frame(width: 380)
-                                .frame(maxHeight: .infinity, alignment: .top)
+                            mapCard(selected: selected, sideDocked: true,
+                                    mapWidth: full, cardWidth: cardW)
+                            if docked {
+                                sidePanelColumn(selected: selected)
+                                    .frame(width: 380)
+                                    .frame(maxHeight: .infinity, alignment: .top)
+                                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                            }
                         }
                         .animation(Motion.glide, value: panel)
                         .animation(Motion.glide, value: routeMode)
@@ -138,6 +145,12 @@ struct NetworkView: View {
         // relabels its buttons and the map draws the dashed preview.
         .onAppear { adoptSuggestionIfAny() }
         .onChange(of: sim.pendingSuggestion) { _, _ in adoptSuggestionIfAny() }
+    }
+
+    /// True when the iPad side rail actually has something to show — used to
+    /// collapse the rail (and give the map the full width) when idle.
+    private func hasSidePanel(_ selected: Aircraft?) -> Bool {
+        panel != .none || isRouteConfirm || selected != nil || selectedAirport != nil
     }
 
     /// If Ops queued a route suggestion, enter the confirm step on it.
@@ -236,12 +249,20 @@ struct NetworkView: View {
 
     // MARK: - Map card + overlays
 
-    private func mapCard(selected: Aircraft?, sideDocked: Bool) -> some View {
-        ZStack {
+    /// `mapWidth` lays the MAP out at a fixed width (the full landscape width)
+    /// while `cardWidth` constrains the visible card — so docking a panel clips
+    /// the map's right edge instead of rescaling it. Both nil = fill naturally.
+    /// The bars are attached AFTER the card frame, so they always size to the
+    /// visible width and never get clipped.
+    private func mapCard(selected: Aircraft?, sideDocked: Bool,
+                         mapWidth: CGFloat? = nil, cardWidth: CGFloat? = nil) -> some View {
+        ZStack(alignment: .leading) {
             MapView(sim: sim, tick: sim.tick,
                     cameraZoom: sim.cameraZoom, cameraCenter: sim.cameraCenter,
                     selectedID: selected?.id, highlightCodes: routeHighlights)
+                .frame(width: mapWidth)
         }
+        .frame(width: cardWidth, alignment: .leading)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(Sky.onDarkStroke.opacity(0.5), lineWidth: 1))
         // The Canvas fills this card, so the card's local space IS the Canvas
