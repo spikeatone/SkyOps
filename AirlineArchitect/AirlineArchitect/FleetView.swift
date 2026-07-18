@@ -40,8 +40,8 @@ struct FleetView: View {
     /// Marketplace category filter (nil = all) + sort, to quickly narrow the
     /// list to the class/spec a route needs.
     @State private var marketCategory: MarketCategory?
-    @State private var marketSort: MarketSort = .price
-    @State private var sortAsc = true
+    @State private var marketSort: MarketSort = .seats
+    @State private var sortAsc = false
     /// My Fleet only: filter by ownership (bought outright vs leased).
     @State private var ownership: OwnershipFilter = .all
     enum OwnershipFilter: Hashable {
@@ -219,7 +219,13 @@ struct FleetView: View {
         let active = segment == seg
         // Switching My Fleet ↔ Marketplace resets the category/sort so each
         // starts fresh (avoids e.g. a "Wide" market filter hiding your fleet).
-        return Button { segment = seg; marketCategory = nil; marketSort = .price; sortAsc = true; ownership = .all } label: {
+        return Button {
+            segment = seg; marketCategory = nil; ownership = .all
+            // Marketplace defaults to cheapest-first; My Fleet has no Price
+            // option, so it defaults to biggest-first by seats.
+            marketSort = (seg == .marketplace) ? .price : .seats
+            sortAsc = (seg == .marketplace)
+        } label: {
             Text(title)
                 .font(.karla(14, .semibold))
                 .foregroundStyle(active ? (isDark ? .white : secondary) : secondary)
@@ -286,9 +292,9 @@ struct FleetView: View {
                     // seats/range.
                     categoryPillRow
                     HStack(spacing: 8) {
-                        ownershipPills
+                        ownershipMenu
                         Spacer(minLength: 8)
-                        sortRow(showPrice: false)
+                        sortMenu(showPrice: false)
                     }
                     ScrollView {
                         LazyVStack(spacing: 16) {
@@ -486,7 +492,7 @@ struct FleetView: View {
     private func categoryPill(_ label: String, _ cat: MarketCategory?) -> some View {
         let selected = marketCategory == cat
         return Button { withAnimation(Motion.glide) { marketCategory = selected ? nil : cat } } label: {
-            Text(label).font(.karla(13, .medium))
+            Text(label).font(.karla(13, .medium)).lineLimit(1).fixedSize()
                 .foregroundStyle(selected ? .white : statusLabel)
                 .padding(.horizontal, 12).padding(.vertical, 5)
                 .background(selected ? Sky.brightBlue : statusBoxBG)
@@ -494,50 +500,54 @@ struct FleetView: View {
         }.buttonStyle(.plain)
     }
 
-    /// Ownership filter pills (My Fleet): All / Owned / Leased.
-    private var ownershipPills: some View {
-        HStack(spacing: 6) {
-            ownershipPill(.all); ownershipPill(.owned); ownershipPill(.leased)
+    /// A compact labeled dropdown — deliberately styled UNLIKE the filter pills
+    /// (rounded rect + caret + a "Label:" prefix) so sorting is never mistaken
+    /// for another filter chip.
+    private func menuControl(_ title: String, _ value: String) -> some View {
+        HStack(spacing: 4) {
+            Text("\(title):").font(.karla(12)).foregroundStyle(statusLabel)
+            Text(value).font(.karla(13, .semibold)).foregroundStyle(primary)
+            Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
+                .foregroundStyle(statusLabel)
         }
-    }
-    private func ownershipPill(_ o: OwnershipFilter) -> some View {
-        let selected = ownership == o
-        return Button { withAnimation(Motion.glide) { ownership = o } } label: {
-            Text(o.label).font(.karla(13, .medium))
-                .foregroundStyle(selected ? .white : statusLabel)
-                .padding(.horizontal, 11).padding(.vertical, 5)
-                .background(selected ? Sky.coreGreen : statusBoxBG)
-                .clipShape(Capsule())
-        }.buttonStyle(.plain)
+        .lineLimit(1).fixedSize()
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(statusBoxBG)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(cardBorder, lineWidth: 1))
     }
 
-    /// Sort pills — tap to select (with a sensible default direction), tap the
-    /// active one again to flip the arrow.
-    private func sortRow(showPrice: Bool) -> some View {
-        HStack(spacing: 6) {
-            Text("Sort").font(.karla(13)).foregroundStyle(statusLabel)
-            if showPrice { sortPill("Price", .price) }
-            sortPill("Seats", .seats)
-            sortPill("Range", .range)
-            Spacer(minLength: 0)
-        }
+    /// My Fleet: ownership is a filter (a dropdown, since it's 3 exclusive
+    /// options) and sort is its own control — no more ambiguous pill soup.
+    private var ownershipMenu: some View {
+        Menu {
+            Picker("Show", selection: $ownership) {
+                Text("All aircraft").tag(OwnershipFilter.all)
+                Text("Owned").tag(OwnershipFilter.owned)
+                Text("Leased").tag(OwnershipFilter.leased)
+            }
+        } label: { menuControl("Show", ownership.label) }
     }
-    private func sortPill(_ label: String, _ s: MarketSort) -> some View {
-        let active = marketSort == s
-        return Button {
-            withAnimation(Motion.glide) {
-                if active { sortAsc.toggle() } else { marketSort = s; sortAsc = (s == .price) }
+
+    private var sortValueLabel: String {
+        let name: String
+        switch marketSort {
+        case .price: name = "Price"; case .seats: name = "Seats"; case .range: name = "Range"
+        }
+        return "\(name) \(sortAsc ? "↑" : "↓")"
+    }
+    private func sortMenu(showPrice: Bool) -> some View {
+        Menu {
+            Picker("Sort by", selection: $marketSort) {
+                if showPrice { Text("Price").tag(MarketSort.price) }
+                Text("Seats").tag(MarketSort.seats)
+                Text("Range").tag(MarketSort.range)
             }
-        } label: {
-            HStack(spacing: 3) {
-                Text(label).font(.karla(13, .medium))
-                if active { Image(systemName: sortAsc ? "arrow.up" : "arrow.down").font(.system(size: 9, weight: .bold)) }
+            Picker("Order", selection: $sortAsc) {
+                Text("Low to high").tag(true)
+                Text("High to low").tag(false)
             }
-            .foregroundStyle(active ? .white : statusLabel)
-            .padding(.horizontal, 11).padding(.vertical, 5)
-            .background(active ? Sky.brightBlue : statusBoxBG)
-            .clipShape(Capsule())
-        }.buttonStyle(.plain)
+        } label: { menuControl("Sort", sortValueLabel) }
     }
 
     // MARK: Marketplace — buy new / lease new / buy used per type (Figma 5:6501).
@@ -545,7 +555,7 @@ struct FleetView: View {
     private var marketplacePlaceholder: some View {
         VStack(spacing: 10) {
             categoryBoxRow
-            sortRow(showPrice: true)
+            HStack { sortMenu(showPrice: true); Spacer(minLength: 0) }
             ScrollView {
                 LazyVStack(spacing: 16) {
                     if marketTypes.isEmpty {
