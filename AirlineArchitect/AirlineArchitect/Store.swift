@@ -41,6 +41,18 @@ final class Store {
     /// Purchase-flow UI state (paywall reads these).
     var purchasing = false
     var purchaseError: String?
+    /// Non-error feedback from a completed restore. A restore that finds no
+    /// entitlement SUCCEEDS at the StoreKit level — it just returns customer
+    /// info with nothing active — so without this the paywall said nothing at
+    /// all and the button read as broken. Neutral copy, not an error.
+    var restoreNotice: String?
+
+    /// Clear stale feedback before a new purchase/restore attempt, so a message
+    /// from a previous attempt can't be mistaken for the result of this one.
+    private func clearFeedback() {
+        purchaseError = nil
+        restoreNotice = nil
+    }
 
     // MARK: - Free-tier caps (ignored entirely when isPro)
 
@@ -130,6 +142,7 @@ final class Store {
     }
 
     func purchase(planID: String) async {
+        clearFeedback()
         guard let pkg = package(for: planID) else {
             purchaseError = "That plan isn’t available right now. Check back once billing is set up."
             return
@@ -145,10 +158,21 @@ final class Store {
     }
 
     func restore() async {
+        clearFeedback()
         purchasing = true
         defer { purchasing = false }
-        do { apply(try await Purchases.shared.restorePurchases()) }
-        catch { purchaseError = (error as NSError).localizedDescription }
+        do {
+            apply(try await Purchases.shared.restorePurchases())
+            // A restore with nothing to restore is a SUCCESS, not a failure —
+            // say so plainly instead of leaving the player staring at silence.
+            // When it DID restore, isPro flips and the paywall dismisses, which
+            // is its own confirmation.
+            if !isPro {
+                restoreNotice = "No previous purchase found on this Apple Account. If you subscribed with a different account, sign in to that one in Settings and try again."
+            }
+        } catch {
+            purchaseError = (error as NSError).localizedDescription
+        }
     }
     #else
     // STUB — no package present. Flips the local flag so the gating experience
@@ -156,7 +180,13 @@ final class Store {
     static func configure() {}
     func start() async {}
     func refresh() async {}
-    func purchase(planID: String) async { isPro = true }
-    func restore() async {}
+    func purchase(planID: String) async { clearFeedback(); isPro = true }
+    func restore() async {
+        clearFeedback()
+        // Mirrors the real path: nothing to restore against a local stub.
+        if !isPro {
+            restoreNotice = "No previous purchase found on this Apple Account. If you subscribed with a different account, sign in to that one in Settings and try again."
+        }
+    }
     #endif
 }

@@ -231,9 +231,18 @@ exposes a delegate hook and the change is localized to `Store.swift`.
 
 ## Known open items (not blocking submission)
 
-- **Restore Purchases shows no message when there is nothing to restore.** A
-  real customer reinstalling would tap it and see silence. A fix was offered and
-  not yet actioned — worth doing in a 1.0.1.
+- ~~**Restore Purchases shows no message when there is nothing to restore.**~~
+  **FIXED in the working tree (not yet in a build) — queued for 1.0.1.** Root
+  cause: a restore that finds no entitlement SUCCEEDS at the StoreKit level, so
+  `restore()` called `apply(info)` (setting `isPro = false`), threw nothing, and
+  the paywall's `if store.isPro` guard meant nothing closed and nothing was
+  said. Now `Store.restoreNotice` carries neutral copy ("No previous purchase
+  found on this Apple Account…") rendered in secondary text below the button —
+  deliberately NOT the red error style, because it isn't a failure. Fixed in the
+  same pass: `purchaseError`/`restoreNotice` are cleared at the start of every
+  purchase/restore, so a stale message from a previous attempt can no longer be
+  read as the result of the current one. Verified live against the REAL
+  RevenueCat path in both themes.
 - The paywall's "There was a problem with the App Store" error seen during
   testing is expected until the subscriptions are approved; it is StoreKit's own
   string, not our bug. Re-verify with a **sandbox purchase on a real device**

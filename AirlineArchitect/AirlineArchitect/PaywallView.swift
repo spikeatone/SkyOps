@@ -134,6 +134,12 @@ struct PaywallView: View {
                         .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                 }
 
+                // A restore that found nothing isn't an error — neutral colour.
+                if let notice = store.restoreNotice {
+                    Text(notice).font(.karla(11)).foregroundStyle(secondary)
+                        .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                }
+
                 Text("Subscriptions auto-renew until cancelled. Manage or cancel anytime in Settings. Payment is charged to your Apple Account.")
                     .font(.karla(10)).foregroundStyle(secondary.opacity(0.8))
                     .multilineTextAlignment(.center)
