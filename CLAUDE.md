@@ -2719,7 +2719,9 @@ both orientations) incl. the full open-a-route→acquire flow.
   merged via PR #1), 24 (iCloud cross-device save sync with delete tombstones +
   the iCloud Key-value-storage capability now enabled/provisioned, iPad
   responsiveness fix — throttled UI heartbeat, pending-route staffing reason in
-  the Ops incentive box). Each
+  the Ops incentive box), 25 (Marketplace category filter (box-style, per-class
+  type counts) + Price/Seats/Range sort; My Fleet category + Owned/Leased +
+  Seats/Range filters). Each
   TestFlight cut = bump `CURRENT_PROJECT_VERSION` (6 configs) → archive →
   Organizer → the DESIGNER does the credentialed Distribute/upload (Claude opens
   the Organizer but can't upload).
