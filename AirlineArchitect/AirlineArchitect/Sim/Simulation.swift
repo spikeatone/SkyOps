@@ -758,6 +758,38 @@ final class Simulation {
         // Full-shift start: $20M, zero aircraft, zero routes. The FLEET buttons
         // are a DEV stress-test control (spawn background/non-owned traffic).
         financeSnapshots = [financeSnapshotNow()]   // launch baseline (tick 0, $20M)
+        competitorSeed = UInt64.random(in: 1...UInt64.max)
+        rebuildCompetitorIntel()
+    }
+
+    // MARK: - Competitor intelligence (scouting)
+
+    /// Per-game seed for competitor profiles. Persisted; the profiles themselves
+    /// are NOT (they regenerate exactly from this, keeping saves small and
+    /// stopping a player re-rolling a carrier's books by quitting).
+    private(set) var competitorSeed: UInt64 = 1
+    private(set) var competitorProfiles: [CompetitorProfile] = []
+
+    func rebuildCompetitorIntel() {
+        competitorProfiles = CompetitorIntel.generateAll(seed: competitorSeed, airports: airports)
+    }
+
+    /// Carriers in regions the player actually touches — their home region plus
+    /// anywhere they've opened a route. Scouting is intentionally scoped to the
+    /// market the player competes in rather than all 140+ carriers.
+    var relevantCompetitors: [CompetitorProfile] {
+        var regions = Set(homeRegion.gameRegions.map { CompetitorIntel.regionLabel($0) })
+        for r in playerRoutes + closedPlayerRoutes {
+            regions.insert(CompetitorIntel.regionLabel(Airline.region(r.originCode)))
+            regions.insert(CompetitorIntel.regionLabel(Airline.region(r.destCode)))
+        }
+        return competitorProfiles.filter { regions.contains($0.region) }
+    }
+
+    /// Carriers currently contesting one of the player's open routes — the ones
+    /// a player has a live reason to study.
+    var rivalsOnMyRoutes: Set<String> {
+        Set(playerRoutes.flatMap(\.competitors))
     }
 
     // MARK: - Ownership economy (Phase 5)
@@ -2744,6 +2776,7 @@ final class Simulation {
         s.stressTestCount = stressTestCount
         s.cameraZoom = cameraZoom; s.cameraCenterX = cameraCenter.x; s.cameraCenterY = cameraCenter.y
         s.homeRegion = homeRegion.rawValue
+        s.competitorSeed = competitorSeed
         s.hubs = hubs
         s.rivalHubs = rivalHubs
         s.totalHubSpend = totalHubSpend
@@ -2820,6 +2853,8 @@ final class Simulation {
         // Home region BEFORE camera: sets homeFrame without clobbering the
         // restored camera (userAdjustedCamera goes true right after).
         homeRegion = s.homeRegion.flatMap { Airline.PlayerRegion(rawValue: $0) } ?? .northAmerica
+        competitorSeed = s.competitorSeed ?? UInt64.random(in: 1...UInt64.max)
+        rebuildCompetitorIntel()
         hubs = s.hubs ?? [:]
         rivalHubs = s.rivalHubs ?? [:]
         totalHubSpend = s.totalHubSpend ?? 0

@@ -29,6 +29,7 @@ struct FinanceView: View {
 
     enum Period: String, CaseIterable { case total = "Total", thisMonth = "This month", lastMonth = "Last month" }
     @State private var period: Period = .total
+    @State private var showIntel = false
 
     // Theme tokens (light Figma-family / dark Sky), matched to Crews/Ops.
     private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
@@ -66,6 +67,7 @@ struct FinanceView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         planCard
+                        marketIntelCard
                         if !sim.currentEvent.isNormal { marketBanner }
                         netWorthCard
                         if netWorthSeries.count >= 2 { trendCard }
@@ -85,6 +87,38 @@ struct FinanceView: View {
             .padding(.horizontal, 16)
             .padding(.top, 6)
         }
+        .fullScreenCover(isPresented: $showIntel) {
+            CompetitorIntelView(sim: sim, onClose: { showIntel = false })
+        }
+    }
+
+    // MARK: Market intelligence — entry point to competitor scouting.
+    // Lives in Finance because sizing up a rival carrier is an investment
+    // question. Ungated: public information is public.
+    private var marketIntelCard: some View {
+        Button { showIntel = true } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("MARKET INTELLIGENCE").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                    Text("\(sim.relevantCompetitors.count) carriers in your markets")
+                        .font(.karla(14, .semibold)).foregroundStyle(primary)
+                    if !sim.rivalsOnMyRoutes.isEmpty {
+                        Text("\(sim.rivalsOnMyRoutes.count) contesting your routes")
+                            .font(.karla(11)).foregroundStyle(red)
+                    } else {
+                        Text("Study their fleets, networks, and books")
+                            .font(.karla(11)).foregroundStyle(secondary)
+                    }
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(secondary)
+            }
+            .padding(14)
+            .background(cardBG)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        }.buttonStyle(.plain)
     }
 
     // MARK: Header (matches Crews/Ops)

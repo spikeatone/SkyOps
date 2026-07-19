@@ -1,6 +1,6 @@
 # Competitor Acquisition — Design Spec (for designer review)
 
-Status: **DRAFT — not built.** Numbers below are first-pass and WILL move; the
+Status: **Step 1 (scouting) BUILT & verified. Steps 2–5 not built.** Numbers below are first-pass and WILL move; the
 mandatory balance A/B (§Balance Guardrails) is what settles them, exactly as it
 retuned Hubs & Clubs from a −41% value-sink to +0.7%.
 
@@ -207,8 +207,10 @@ real customers.
 
 Suggested build order (each independently verifiable):
 
-1. Target materialization + scouting UI (no purchase yet — just make rivals real
-   and inspectable). Ships value on its own: the map gains depth.
+1. ~~Target materialization + scouting UI~~ — **DONE.** `Sim/Competitor.swift` +
+   `CompetitorIntelView.swift`, reached from a MARKET INTELLIGENCE card in
+   Finance. Deterministic from one persisted seed; 1278/1278 headless. See
+   CLAUDE.md "Decided — Competitor Acquisition" for the implementation map.
 2. The transaction + inheritance + immediate rival-removal.
 3. The integration burden (crew gaps, seniority, double-coverage, bills).
 4. Consolidation pressure on survivors.
@@ -218,14 +220,13 @@ Suggested build order (each independently verifiable):
 
 ## Decisions needed from the designer
 
-1. **Real named airlines.** Acquiring and permanently erasing "Delta Air Lines"
-   is a different tone from acquiring a fictional carrier, and a different
-   trademark posture than the current factual/background use of real names.
-   Options: keep real names; use fictional targets only; or a middle path where
-   real carriers are acquirable but *rebranded as subsidiaries* rather than
-   erased. **Worth a deliberate call, not a default.**
-2. **Scoutable before offer, or revealed at offer?** (Recommendation: scoutable —
-   see §engineering reality.)
+1. ~~**Real named airlines.**~~ **RESOLVED: keep them.** The trademark concern
+   was over-cautious — text-only reference is already shipping and is the
+   defensible end of the spectrum. Holding: no logos/liveries, no real brands in
+   App Store metadata. Leaning **subsidiary-over-erasure** for fiction reasons
+   (a vanished Delta empties the map), not legal ones.
+2. ~~**Scoutable before offer?**~~ **RESOLVED: scoutable**, and built — see
+   step 1. Scouting is ungated (not behind $1B): public information is public.
 3. **Can an acquisition genuinely ruin a player?** (Recommendation: yes. "Real
    peril" without a real failure state is theatre — and bankruptcy already
    exists.)

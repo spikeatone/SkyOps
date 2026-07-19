@@ -1,0 +1,256 @@
+//
+//  CompetitorIntelView.swift
+//  Airline Architect — scouting the competition
+//
+//  Presented from the Finance tab, because evaluating a rival carrier is an
+//  investment question, not an operations one.
+//
+//  DISCLOSURE PRINCIPLE (designer): show what a public filing would show —
+//  topline performance open to scrutiny, the way a real airline's is. Fleet,
+//  network size, revenue, margin, load factor, service reputation. NOT their
+//  per-route P&L; that's owner's information the player hasn't earned.
+//
+//  Scouting is deliberately NOT gated on the $1B acquisition threshold: public
+//  information is public, it makes the world richer for every player, and it
+//  gives the endgame something visible to aim at.
+//
+
+import SwiftUI
+
+struct CompetitorIntelView: View {
+    var sim: Simulation
+    var onClose: () -> Void
+
+    @Environment(\.colorScheme) private var scheme
+    @State private var selected: CompetitorProfile?
+
+    private var isDark: Bool { scheme == .dark }
+    private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke.opacity(0.6) : Color(skyHex: 0xE6E6E6) }
+    private var titleColor: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x4E67A0) }
+    private var primary: Color    { isDark ? .white : Color(skyHex: 0x1F232D) }
+    private var secondary: Color  { isDark ? Sky.lightBlue.opacity(0.75) : Color(skyHex: 0x64748B) }
+    private var red: Color        { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
+
+    private var carriers: [CompetitorProfile] { sim.relevantCompetitors }
+    private var rivals: Set<String> { sim.rivalsOnMyRoutes }
+
+    var body: some View {
+        ZStack {
+            bg.ignoresSafeArea()
+            VStack(spacing: 12) {
+                header
+                if let sel = selected {
+                    ScrollView { detail(sel).padding(.bottom, 12) }
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            intro
+                            ForEach(carriers) { row($0) }
+                        }
+                        .padding(.bottom, 12)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+        }
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack(alignment: .center) {
+            if selected != nil {
+                Button { selected = nil } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(titleColor)
+                }.buttonStyle(.plain)
+            }
+            Text(selected == nil ? "MARKET INTELLIGENCE" : "CARRIER PROFILE")
+                .font(.karla(22, .bold)).foregroundStyle(titleColor)
+                .lineLimit(1).minimumScaleFactor(0.7)
+            Spacer()
+            Button(action: onClose) {
+                Image(systemName: "xmark.circle.fill").font(.system(size: 24))
+                    .foregroundStyle(secondary.opacity(0.7))
+            }.buttonStyle(.plain)
+        }
+    }
+
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("\(carriers.count) carriers operate in your markets. Figures are public topline disclosures — the same scrutiny your own airline would face.")
+                .font(.karla(12)).foregroundStyle(secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            if !rivals.isEmpty {
+                Text("\(rivals.count) currently contest one of your routes.")
+                    .font(.karla(12, .semibold)).foregroundStyle(red)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    // MARK: List row
+
+    private func row(_ p: CompetitorProfile) -> some View {
+        Button { selected = p } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(p.name).font(.karla(15, .bold)).foregroundStyle(primary)
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                    if !p.code.isEmpty {
+                        Text(p.code).font(.karla(11, .bold)).foregroundStyle(secondary)
+                    }
+                    Spacer(minLength: 4)
+                    if rivals.contains(p.name) { chip("CONTESTING YOU", red) }
+                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(secondary.opacity(0.7))
+                }
+                HStack(spacing: 14) {
+                    stat("Fleet", "\(p.fleetSize)")
+                    stat("Routes", "\(p.routeCount)")
+                    stat("Revenue", compactMoney(Int(p.annualRevenue)) + "/yr")
+                    stat("Margin", marginLabel(p), p.operatingMargin < 0 ? red : Sky.coreGreen)
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardBG)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        }.buttonStyle(.plain)
+    }
+
+    // MARK: Detail
+
+    private func detail(_ p: CompetitorProfile) -> some View {
+        VStack(spacing: 14) {
+            // Identity
+            box {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(p.name).font(.karla(20, .bold)).foregroundStyle(primary)
+                            .lineLimit(2).minimumScaleFactor(0.7)
+                        if !p.code.isEmpty {
+                            Text(p.code).font(.karla(13, .bold)).foregroundStyle(secondary)
+                        }
+                    }
+                    Text(p.region).font(.karla(12)).foregroundStyle(secondary)
+                    HStack(spacing: 8) {
+                        chip(p.trend.rawValue.uppercased(), trendColor(p.trend))
+                        if rivals.contains(p.name) { chip("CONTESTING YOU", red) }
+                    }.padding(.top, 2)
+                }
+            }
+
+            // Topline financials
+            box {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("TOPLINE PERFORMANCE").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                    line("Annual revenue", compactMoney(Int(p.annualRevenue)))
+                    line("Operating margin", marginLabel(p),
+                         p.operatingMargin < 0 ? red : Sky.coreGreen)
+                    line("Operating profit", compactMoney(Int(p.annualOperatingProfit)),
+                         p.annualOperatingProfit < 0 ? red : Sky.coreGreen)
+                    line("Load factor", String(format: "%.0f%%", p.loadFactor * 100))
+                    line("Service score", String(format: "%.0f / 100", p.serviceScore))
+                }
+            }
+
+            // Fleet
+            box {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("FLEET").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                    line("Aircraft", "\(p.fleetSize)")
+                    line("Average age", p.averageFleetAgeLabel)
+                    ForEach(p.fleetByType.sorted { $0.value > $1.value }, id: \.key) { id, n in
+                        if let t = AircraftType.all.first(where: { $0.id == id }) {
+                            HStack {
+                                Text(t.name).font(.karla(12)).foregroundStyle(secondary)
+                                    .lineLimit(1).minimumScaleFactor(0.8)
+                                Spacer()
+                                Text("\(n)").font(.karla(12, .semibold)).foregroundStyle(primary)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Network
+            box {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("NETWORK").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                    line("Routes", "\(p.routeCount)")
+                    line("Cities served", "\(p.citiesServed)")
+                    line("Hubs", p.hubCodes.joined(separator: " · "))
+                }
+            }
+
+            // Valuation — the bridge to acquisition (1.1)
+            box {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("ESTIMATED VALUE").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                    Text(compactMoney(Int(p.estimatedValue)))
+                        .font(.karla(26, .heavy)).foregroundStyle(primary)
+                    Text("Depreciated fleet value plus goodwill on operating profit. A carrier losing money is worth less than its metal.")
+                        .font(.karla(11)).foregroundStyle(secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    // MARK: Bits
+
+    private func box<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        content()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(cardBG)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    private func line(_ label: String, _ value: String, _ tint: Color? = nil) -> some View {
+        HStack {
+            Text(label).font(.karla(13)).foregroundStyle(secondary)
+            Spacer()
+            Text(value).font(.karla(14, .semibold)).foregroundStyle(tint ?? primary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+        }
+    }
+
+    private func stat(_ label: String, _ value: String, _ tint: Color? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label).font(.karla(10)).foregroundStyle(secondary.opacity(0.9))
+            Text(value).font(.karla(12, .semibold)).foregroundStyle(tint ?? primary)
+                .lineLimit(1).minimumScaleFactor(0.8)
+        }
+    }
+
+    private func chip(_ text: String, _ tint: Color) -> some View {
+        Text(text).font(.karla(9, .bold)).foregroundStyle(tint)
+            .padding(.horizontal, 6).padding(.vertical, 3)
+            .background(tint.opacity(0.15))
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+    }
+
+    private func marginLabel(_ p: CompetitorProfile) -> String {
+        String(format: "%@%.1f%%", p.operatingMargin < 0 ? "−" : "+", abs(p.operatingMargin) * 100)
+    }
+
+    private func trendColor(_ t: CompetitorProfile.Trend) -> Color {
+        switch t {
+        case .growing:   return Sky.coreGreen
+        case .stable:    return secondary
+        case .shrinking: return red
+        }
+    }
+}

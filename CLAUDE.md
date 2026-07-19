@@ -2990,6 +2990,83 @@ both orientations) incl. the full open-a-route→acquire flow.
   gameplay telemetry — for that, a privacy-first SDK (TelemetryDeck) is the right
   tool, and the headless balance-sim is better still for PRE-launch tuning.
 
+## Decided — Competitor Acquisition (1.1; step 1 of 5 BUILT)
+
+Full design in **`ACQUISITIONS_SPEC.md`**. Prompted by testers reporting the
+game goes flat past **$1B net worth** — a new route moves net worth by a
+fraction of a percent, so the reward curve dies.
+
+- **The feature is deliberately an INTEGRATION CHALLENGE, not an asset
+  purchase.** Designer's framing: untangling double-covered routes, crew
+  seniority fights, and inherited inefficiency should introduce *real peril*.
+  Calibration target: a well-managed acquisition pays back in **24–36
+  sim-months**; a passively-held one **never does**. That gap IS the feature —
+  if the A/B ever shows passive holding also paying back inside 36 months, the
+  numbers are wrong. Rejected alternative: "spend $X, receive planes" is the
+  verb that already stopped being rewarding, at a bigger number.
+- **INVERTED GUARDRAIL vs Hubs & Clubs — do not copy that one here.** Hubs
+  measured "rivals on player routes roughly halved" as a SUCCESS. For
+  acquisitions the identical measurement is a **FAILURE**: eating competitors
+  removes the late-game pressure that makes the endgame interesting. Every
+  completed acquisition must make SURVIVORS more aggressive (a multiplier on
+  `competitorEntryDailyProbability`). Winning must not mean less game.
+- **Real airline names: KEPT.** The trademark concern was raised and then
+  explicitly walked back as over-cautious — text-only reference is already
+  shipping and is the defensible end of the spectrum. Holding: no logos or
+  liveries, and no real brands in App Store metadata (why Boeing/Airbus are
+  excluded from the keywords). Designer leans **subsidiary-over-erasure** — an
+  acquired carrier keeps flying under the player's ownership — for FICTION
+  reasons (a vanished Delta empties the map), not legal ones.
+
+### Step 1 — competitor scouting: BUILT
+
+- **`Sim/Competitor.swift`**: `CompetitorProfile` (fleet + composition + age,
+  routes/cities/hubs, revenue/margin/load factor/service score, trend,
+  `estimatedValue`) and `CompetitorIntel.generateAll(seed:airports:)`. 140
+  profiles from the 142-entry roster (2 skipped: the Independent Operator
+  fallback + a cross-roster duplicate).
+- **DISCLOSURE PRINCIPLE (designer):** a profile shows what a PUBLIC FILING
+  would show — real airlines' topline performance is open to scrutiny. Never
+  per-route P&L. That boundary deliberately leaves due diligence as a later
+  layer that reveals what the topline hides.
+- **Numbers derive from REAL game data**, not invented: the airline's real
+  `types`, real `AircraftType` seats/prices/weights, the real
+  `FareModel.farePerSeat`, and its real region's airports. Fleets are GAME-scale
+  (4–60), not real-world scale — a real major flies ~900 aircraft, which would
+  price an acquisition beyond any reachable net worth. Roster `weight` (market
+  share) drives relative size.
+- **Determinism via ONE persisted field.** `Simulation.competitorSeed`
+  (`GameSnapshot.competitorSeed`, optional → legacy saves roll a fresh seed and
+  simply gain a market). Profiles are NOT persisted — they regenerate exactly
+  from the seed, which keeps saves small AND stops a player re-rolling a
+  carrier's books by quitting without saving.
+- **A real bug the determinism check caught (inspection would not have):**
+  summing revenue/fleet-value by iterating `fleetByType` — a Dictionary — made
+  the last bits of the result vary between two generations from the SAME seed,
+  because Dictionary iteration order isn't stable across instances and float
+  addition isn't associative. 44 of 140 profiles differed. Both loops now
+  iterate `.sorted(by: key)`. **Any future derived-from-seed value must sum in a
+  sorted order** or the regenerate-on-load guarantee silently breaks.
+- **`CompetitorIntelView.swift`**, presented from FINANCE (evaluating a rival is
+  an investment question) via a MARKET INTELLIGENCE card. List → carrier detail.
+  **Scouting is deliberately UNGATED** — it isn't behind the $1B threshold:
+  public information is public, it enriches the world for every player, and it
+  gives the endgame something visible to aim at.
+- `Simulation.relevantCompetitors` scopes the list to the player's home region
+  plus anywhere they've opened a route (~25 carriers on a US start, not 140);
+  `rivalsOnMyRoutes` drives the red CONTESTING YOU chip.
+- **CONSEQUENCE WORTH KNOWING: roster `types` data is now PLAYER-VISIBLE.**
+  Previously `Airline.types` only decided which livery a background aircraft
+  wore — invisible. The carrier profile now itemizes a fleet ("Airbus A320 ×12,
+  Boeing 737 MAX 8 ×9"), so any roster inaccuracy is directly readable by a
+  player who knows airlines. Spot-check `types` when touching the roster.
+- Verified **1278/1278 headless** (`swiftc -O` on the real `Sim/*.swift` +
+  `Persistence.swift`): bit-exact determinism, seed round-trip, legacy-save
+  load, per-profile sanity across all 140, valuation reachability at the $1B
+  gate (min ~$80M · median ~$730M · max ~$5B — a real ladder), lossmaking and
+  shrinking carriers both present, region scoping. Plus live in the Simulator,
+  both themes.
+
 ## Decided — Hubs & Clubs (built to the designer-reviewed spec)
 
 - **The full mechanic from `HUBS_AND_CLUBS_SPEC.md` is BUILT (native app) —

@@ -45,6 +45,10 @@ struct GameSnapshot: Codable {
     // Home region (player's start-region choice; nil in pre-region saves → NA)
     var homeRegion: String?
 
+    // Competitor-intel seed (nil in pre-1.1 saves → a fresh seed is rolled, so
+    // an existing game simply gains a competitor market on first load).
+    var competitorSeed: UInt64?
+
     // Hubs & Clubs (nil in pre-hub saves)
     var hubs: [String: Simulation.Hub]? = nil
     var rivalHubs: [String: String]? = nil
