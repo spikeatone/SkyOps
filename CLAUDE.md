@@ -3069,6 +3069,31 @@ be crewed to ~2.2/aircraft or they're structurally loss-making and the control
 flattens; and measure NET WORTH not cash, because cash payback penalises
 reinvestment. The sweep binary takes seeds as argv and runs 6-way in parallel.
 
+### Step 4 — TWO-STAGE DUE DILIGENCE: BUILT (23/23 headless + live)
+
+Designer's framing: what you can see depends on how far into the deal you are.
+
+- **`CompetitorProfile.fleetManifest(seed:)`** derives the real per-aircraft ages
+  deterministically, and **`inheritFleet` now uses it** — so stage-2 books are
+  exactly the fleet inherited (verified airframe-for-airframe). Ages are no
+  longer rolled at acquisition time.
+- **Stage 1** (free): wide renewal band, "LIKELY needing renewal", ESTIMATE chip,
+  cross-region warning. Sees only the published AVERAGE age, so it cannot know
+  the spread — that gap IS the uncertainty and is not to be "fixed".
+- **Stage 2** (`openBooks`, 0.4% of estimated value, min $250k, persisted): tight
+  band from the manifest, exact aged count, VERIFIED chip. Can reveal a bill
+  WORSE than the estimate.
+- **Scenarios** calibrated from the 12-seed sweep's per-aircraft rates
+  (`perAircraftManagedMonthly` 290k / `perAircraftPassiveMonthly` 112k, BEFORE
+  age drag), scaled by age drag and region fit. Cross-region → "never breaks
+  even" in every scenario, which surfaces the systematic trap.
+- **RENEWAL IS CAPITAL REQUIRED, NOT A SCENARIO DEDUCTION.** An early version
+  subtracted it and made every deal unpayable: renewal is an asset swap (sell
+  old, buy new), roughly net-worth neutral, and the calibration rates already
+  include a renewing operator. Don't re-add it.
+- Projections skew OPTIMISTIC vs the sweep's medians — deliberate, as real deal
+  models do.
+
 ### Step 3 — the mechanics
 
 Mechanics are complete and verified (27/27 headless). The first measured

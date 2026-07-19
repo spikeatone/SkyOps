@@ -226,3 +226,127 @@ extension Simulation {
         return nil
     }
 }
+
+// MARK: - Due diligence (two stages)
+//
+// DESIGNER'S FRAMING: acquisitions mirror real deal-making, where what you can
+// see depends on how far into the process you are.
+//
+//   STAGE 1 "sniffing around" (pre-NDA) — public info only. Thin, estimated,
+//   enough to decide what's worth pursuing. Free.
+//   STAGE 2 "open the kimono" (post-NDA) — the real books. Per-aircraft ages, a
+//   firm renewal bill, actual network overlap. Costs money, so choosing WHICH
+//   targets to diligence is itself a decision.
+//
+// ⚠️ PROJECTIONS ARE DELIBERATELY NOT IRON-CLAD (designer, explicit). Real
+// projections are best guesses reality diverges from; that divergence is the
+// feature. Stage 1 reads only the carrier's AVERAGE fleet age, so it cannot see
+// the spread; stage 2 reads the real manifest. Do not "fix" the gap.
+
+/// One modelled outcome. Payback is in years; `nil` means it never pays back.
+struct AcquisitionScenario: Equatable {
+    let label: String
+    let annualContribution: Double
+    let paybackYears: Double?
+}
+
+/// What due diligence tells the player. Bands are WIDE at stage 1 and tight at
+/// stage 2 — the difference between the two is what the player is buying.
+struct AcquisitionProjection: Equatable {
+    let stage: Int                     // 1 = pre-NDA estimate, 2 = real books
+    let askingPrice: Int
+    let economicCost: Int              // price − assets received: the real cost
+    let renewalCostLow: Int            // fleet replacement exposure
+    let renewalCostHigh: Int
+    let agedAircraft: Int              // airframes past the renewal threshold
+    let sameRegion: Bool
+    let scenarios: [AcquisitionScenario]
+}
+
+extension Simulation {
+
+    /// Aircraft past this share of design life are renewal candidates — the
+    /// measured point where the quadratic maintenance/AOG escalators start
+    /// eating an acquisition alive.
+    static let renewalThreshold = 0.85
+
+    /// Per-aircraft monthly value creation, CALIBRATED FROM THE 12-SEED SWEEP:
+    /// managed play produced a median $9.69M/month on ~46-aircraft carriers
+    /// (~$0.21M each), passive $3.74M (~$0.08M each). These are the honest
+    /// anchors for a projection — a heuristic, which is what a projection IS.
+    /// NOTE these are BEFORE the age drag below, and they ALREADY INCLUDE the
+    /// cost of renewing the fleet — the sweep's managed arm renewed every 6
+    /// months and still produced this. Renewal must therefore NOT be subtracted
+    /// again from a scenario (an early version did, which made every deal look
+    /// unpayable); it is surfaced separately as the CAPITAL the player must
+    /// commit, which is what the designer asked to see.
+    static let perAircraftManagedMonthly = 290_000.0
+    static let perAircraftPassiveMonthly = 112_000.0
+    /// Cross-region acquisitions were value-DESTROYING in every sweep seed:
+    /// an out-of-region carrier's hubs and routes sit outside the player's
+    /// network, so there's no overlap to rationalise and no connecting traffic.
+    static let crossRegionContributionFactor = -0.35
+
+    /// Cost to replace the worn-out portion of a carrier's fleet.
+    /// Stage 1 estimates from the AVERAGE age (wide, because the spread is
+    /// unknown); stage 2 counts the real manifest.
+    func renewalExposure(for p: CompetitorProfile, stage: Int) -> (low: Int, high: Int, aged: Int) {
+        if stage >= 2 {
+            let manifest = p.fleetManifest(seed: competitorSeed)
+            let worn = manifest.filter { $0.ageFraction > Simulation.renewalThreshold }
+            let bill = worn.reduce(0.0) { $0 + Double($1.type.purchasePrice) }
+            // Still a small band: replacement timing and prices move.
+            return (Int(bill * 0.92), Int(bill * 1.08), worn.count)
+        }
+        // Stage 1: infer the worn share analytically from the average age and the
+        // known 0.6–1.35 spread, then band it WIDE.
+        let avg = p.fleetAgeFraction
+        let lo = avg * 0.6, hi = avg * 1.35
+        let wornShare: Double = hi <= Simulation.renewalThreshold ? 0.0
+            : (lo >= Simulation.renewalThreshold ? 1.0
+               : (hi - Simulation.renewalThreshold) / max(0.0001, hi - lo))
+        let aged = Int((Double(p.fleetSize) * wornShare).rounded())
+        let avgPrice = p.fleetLiquidationValue / max(1.0, Double(p.fleetSize)) /
+                       max(0.05, 1.0 - p.fleetAgeFraction)
+        let bill = Double(aged) * avgPrice
+        return (Int(bill * 0.55), Int(bill * 1.6), aged)   // deliberately wide
+    }
+
+    /// Build the projection the player actually reads.
+    func projection(for p: CompetitorProfile, stage: Int) -> AcquisitionProjection {
+        let price = askingPrice(for: p)
+        // Economic cost = price minus what the fleet is actually worth to you.
+        let cost = max(1, price - Int(p.fleetLiquidationValue))
+        let renewal = renewalExposure(for: p, stage: stage)
+
+        let homeRegions = Set(homeRegion.gameRegions.map { CompetitorIntel.regionLabel($0) })
+        let sameRegion = homeRegions.contains(p.region)
+
+        // Age drags contribution: an old fleet earns less and breaks more.
+        let ageDrag = max(0.45, 1.0 - p.fleetAgeFraction * 0.55)
+        let regionFactor = sameRegion ? 1.0 : Simulation.crossRegionContributionFactor
+        let base = Double(p.fleetSize) * Simulation.perAircraftManagedMonthly * ageDrag * regionFactor
+        let passive = Double(p.fleetSize) * Simulation.perAircraftPassiveMonthly * ageDrag * regionFactor
+
+        // Stage 1 bands are wide (thin information); stage 2 tightens them.
+        let band = stage >= 2 ? 0.18 : 0.45
+        func scenario(_ label: String, _ monthly: Double) -> AcquisitionScenario {
+            // Renewal is NOT deducted here: it's an asset swap (sell old, buy
+            // new) that's roughly net-worth neutral, and the calibration rates
+            // already include a renewing operator. It's reported separately as
+            // the capital requirement instead.
+            let annual = monthly * 12
+            let years: Double? = annual > 0 ? Double(cost) / annual : nil
+            return AcquisitionScenario(label: label, annualContribution: annual, paybackYears: years)
+        }
+        return AcquisitionProjection(
+            stage: stage, askingPrice: price, economicCost: cost,
+            renewalCostLow: renewal.low, renewalCostHigh: renewal.high, agedAircraft: renewal.aged,
+            sameRegion: sameRegion,
+            scenarios: [
+                scenario("Struggling", passive * (1 - band)),
+                scenario("Expected",   (base + passive) / 2),
+                scenario("Well run",   base * (1 + band)),
+            ])
+    }
+}

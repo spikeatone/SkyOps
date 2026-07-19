@@ -55,6 +55,8 @@ struct GameSnapshot: Codable {
     var activeIntegration: Integration? = nil
     var totalIntegrationSpend: Int? = nil
     var totalSenioritySpend: Int? = nil
+    var diligencedCarriers: [String]? = nil
+    var totalDiligenceSpend: Int? = nil
 
     // Hubs & Clubs (nil in pre-hub saves)
     var hubs: [String: Simulation.Hub]? = nil

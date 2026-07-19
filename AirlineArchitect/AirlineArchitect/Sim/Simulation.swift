@@ -786,6 +786,35 @@ final class Simulation {
     private(set) var subsidiaries: [Subsidiary] = []
     /// Capital-out accumulator for the Finance cash invariant.
     private(set) var totalAcquisitionPrice = 0
+    /// Carriers whose books the player has opened (stage-2 due diligence).
+    /// Persisted — paying to diligence a target shouldn't evaporate on reload.
+    private(set) var diligencedCarriers: Set<String> = []
+
+    private func compactMoneySim(_ v: Int) -> String {
+        v >= 1_000_000 ? String(format: "$%.1fM", Double(v)/1e6) : "$\(v)"
+    }
+
+    /// Cost to open a carrier's books: scales with the size of the business, so
+    /// diligencing every target is deliberately not free.
+    func diligenceCost(for p: CompetitorProfile) -> Int {
+        max(250_000, Int(p.estimatedValue * 0.004))
+    }
+    func hasDiligenced(_ id: String) -> Bool { diligencedCarriers.contains(id) }
+    func diligenceStage(_ id: String) -> Int { diligencedCarriers.contains(id) ? 2 : 1 }
+
+    /// Pay to open the books. One-off, permanent for that carrier.
+    @discardableResult
+    func openBooks(on p: CompetitorProfile) -> Bool {
+        let cost = diligenceCost(for: p)
+        guard !diligencedCarriers.contains(p.id), playerBalance >= cost else { return false }
+        playerBalance -= cost
+        totalDiligenceSpend += cost
+        diligencedCarriers.insert(p.id)
+        logOps(.market, "Due diligence: \(p.name)", "Books opened for \(compactMoneySim(cost)).")
+        return true
+    }
+    private(set) var totalDiligenceSpend = 0
+
     /// The live integration, if any. THIS is the feature — see Acquisition.swift.
     private(set) var activeIntegration: Integration?
     /// Overhead accumulators for the Finance cash invariant.
@@ -936,16 +965,16 @@ final class Simulation {
     private func inheritFleet(from p: CompetitorProfile) -> [Aircraft] {
         var made: [Aircraft] = []
         let bases = airports.filter { p.hubCodes.contains($0.code) }
-        for (typeID, count) in p.fleetByType.sorted(by: { $0.key < $1.key }) {
-            guard let type = AircraftType.all.first(where: { $0.id == typeID }) else { continue }
-            for _ in 0..<count {
+        // The DETERMINISTIC manifest — the same airframes stage-2 due diligence
+        // showed. Ages are no longer rolled here, so the books the player paid to
+        // open are exactly the fleet they receive.
+        for entry in p.fleetManifest(seed: competitorSeed) {
+            let type = entry.type
+            do {
                 guard let base = bases.randomElement() ?? homeBaseAirports.randomElement() else { continue }
                 let tail = "N\(nextTailNum)\(p.code.isEmpty ? playerTailCode : p.code)"
                 nextTailNum += 1
-                // Spread ages around the carrier's stated average — a real fleet
-                // is mixed, not uniformly at the mean.
-                let cycles = Int(Double(type.expectedLifespanCycles) * p.fleetAgeFraction
-                                 * Double.random(in: 0.6...1.35))
+                let cycles = Int(Double(type.expectedLifespanCycles) * entry.ageFraction)
                 let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
                                   stateIndex: FlightState.parked.rawValue,
                                   cyclesAccrued: max(0, min(cycles, type.expectedLifespanCycles)),
@@ -2779,7 +2808,7 @@ final class Simulation {
                         loanProceeds: totalLoanProceeds, debtService: totalDebtService,
                         hubSpend: totalHubSpend, hubLabor: totalHubLabor, clubRent: totalClubRent,
                         airlineAcquisition: totalAcquisitionPrice,
-                        integrationSpend: totalIntegrationSpend + totalSenioritySpend,
+                        integrationSpend: totalIntegrationSpend + totalSenioritySpend + totalDiligenceSpend,
                         cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
     }
 
@@ -3124,6 +3153,8 @@ final class Simulation {
         s.subsidiaries = subsidiaries
         s.totalAcquisitionPrice = totalAcquisitionPrice
         s.activeIntegration = activeIntegration
+        s.diligencedCarriers = Array(diligencedCarriers)
+        s.totalDiligenceSpend = totalDiligenceSpend
         s.totalIntegrationSpend = totalIntegrationSpend
         s.totalSenioritySpend = totalSenioritySpend
         s.hubs = hubs
@@ -3214,6 +3245,8 @@ final class Simulation {
         subsidiaries = s.subsidiaries ?? []
         totalAcquisitionPrice = s.totalAcquisitionPrice ?? 0
         activeIntegration = s.activeIntegration
+        diligencedCarriers = Set(s.diligencedCarriers ?? [])
+        totalDiligenceSpend = s.totalDiligenceSpend ?? 0
         totalIntegrationSpend = s.totalIntegrationSpend ?? 0
         totalSenioritySpend = s.totalSenioritySpend ?? 0
         hubs = s.hubs ?? [:]

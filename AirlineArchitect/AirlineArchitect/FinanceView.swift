@@ -303,7 +303,7 @@ struct FinanceView: View {
                 loanProceeds: sim.totalLoanProceeds, debtService: sim.totalDebtService,
                 hubSpend: sim.totalHubSpend, hubLabor: sim.totalHubLabor, clubRent: sim.totalClubRent,
                 airlineAcquisition: sim.totalAcquisitionPrice,
-                integrationSpend: sim.totalIntegrationSpend + sim.totalSenioritySpend,
+                integrationSpend: sim.totalIntegrationSpend + sim.totalSenioritySpend + sim.totalDiligenceSpend,
                 cashStart: Simulation.startingCapital, cashEnd: sim.playerBalance, isTotal: true)
         case .thisMonth:
             return delta(from: s.last, toLive: true)
@@ -337,7 +337,7 @@ struct FinanceView: View {
             hubLabor: d(sim.totalHubLabor, \.hubLabor),
             clubRent: d(sim.totalClubRent, \.clubRent),
             airlineAcquisition: d(sim.totalAcquisitionPrice, \.airlineAcquisition),
-            integrationSpend: d(sim.totalIntegrationSpend + sim.totalSenioritySpend, \.integrationSpend),
+            integrationSpend: d(sim.totalIntegrationSpend + sim.totalSenioritySpend + sim.totalDiligenceSpend, \.integrationSpend),
             cashStart: base?.cash ?? Simulation.startingCapital,
             cashEnd: toLive ? sim.playerBalance : (end?.cash ?? sim.playerBalance),
             isTotal: false)

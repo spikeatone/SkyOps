@@ -74,6 +74,27 @@ struct CompetitorProfile: Identifiable, Equatable {
     let fleetLiquidationValue: Double
 
     var annualOperatingProfit: Double { annualRevenue * operatingMargin }
+
+    /// The ACTUAL aircraft this carrier owns: one entry per airframe, with its
+    /// real age. Derived deterministically from the world seed, so what stage-2
+    /// due diligence reveals is EXACTLY what inheritance hands over — the books
+    /// can't lie, and the player can't re-roll them by quitting.
+    ///
+    /// Stage 1 only ever sees `fleetAgeFraction` (the average), so a pre-NDA
+    /// estimate is genuinely uncertain about the SPREAD. That divergence is the
+    /// feature (designer: projections must not be iron-clad) — don't "fix" it.
+    func fleetManifest(seed: UInt64) -> [(type: AircraftType, ageFraction: Double)] {
+        var rng = SeededRNG(seed: seed &+ CompetitorIntel.manifestSalt(id))
+        var out: [(AircraftType, Double)] = []
+        for (typeID, count) in fleetByType.sorted(by: { $0.key < $1.key }) {
+            guard let t = AircraftType.all.first(where: { $0.id == typeID }) else { continue }
+            for _ in 0..<count {
+                let age = min(1.0, max(0.0, fleetAgeFraction * Double.random(in: 0.6...1.35, using: &rng)))
+                out.append((t, age))
+            }
+        }
+        return out
+    }
     var averageFleetAgeLabel: String {
         switch fleetAgeFraction {
         case ..<0.30: return "Young"
@@ -229,11 +250,14 @@ enum CompetitorIntel {
 
     /// Order-independent, platform-stable hash. `String.hashValue` is seeded per
     /// process and would give a different world on every launch.
-    private static func stableHash(_ s: String) -> UInt64 {
+    static func stableHash(_ s: String) -> UInt64 {
         var h: UInt64 = 0xcbf2_9ce4_8422_2325
         for b in s.utf8 { h = (h ^ UInt64(b)) &* 0x1000_0000_01b3 }
         return h
     }
+
+    /// Salt so the manifest draw is independent of the profile draw.
+    static func manifestSalt(_ id: String) -> UInt64 { stableHash("manifest:" + id) }
 
     static func regionLabel(_ r: Airline.Region) -> String {
         switch r {

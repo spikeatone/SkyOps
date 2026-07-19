@@ -1,8 +1,9 @@
 # Competitor Acquisition — Design Spec (for designer review)
 
-Status: **Steps 1–3 BUILT & verified (27/27 + 51/51 headless). NOT SHIPPABLE —
-the first economic measurement FAILS the calibration target and needs a designer
-call before tuning. See §MEASURED ECONOMICS below.** Numbers below are first-pass and WILL move; the
+Status: **Steps 1–4 BUILT & verified (51 + 27 + 23 headless, plus a 12-seed
+balance sweep). Payback target MET: 5.8 years managed / 13.5 passive.** Remaining:
+consolidation pressure on survivors (step 4 of the original order) and the final
+multi-seed re-confirmation after any further tuning. Numbers below are first-pass and WILL move; the
 mandatory balance A/B (§Balance Guardrails) is what settles them, exactly as it
 retuned Hubs & Clubs from a −41% value-sink to +0.7%.
 
@@ -143,7 +144,35 @@ and profits — pure arbitrage.
 
 ---
 
-## TWO-STAGE DUE DILIGENCE (designer design — not yet built)
+## TWO-STAGE DUE DILIGENCE — BUILT (23/23 headless + live)
+
+Implemented as designed. Key mechanic: `CompetitorProfile.fleetManifest(seed:)`
+derives the ACTUAL per-aircraft ages deterministically from the world seed, and
+**inheritance now uses that same manifest** — so what stage 2 shows is exactly
+what the player receives (verified: inherited ages match the books airframe for
+airframe). Stage 1 sees only the published AVERAGE age, so it cannot know the
+spread; that gap is the uncertainty, and it is real rather than decorative.
+
+- **Stage 1 (free, every profile):** wide renewal band (a measured example spanned
+  $241.6M–$702.9M), "aircraft LIKELY needing renewal", ESTIMATE chip, and the
+  cross-region warning as a headline risk.
+- **Stage 2 (`openBooks`, costs 0.4% of estimated value, min $250k, persisted):**
+  tight band from the real manifest ($707.5M–$830.5M in a measured example),
+  exact aged count, VERIFIED chip. Opening the books can reveal a bill WORSE than
+  the estimate — which is the point.
+- **Scenarios** (Struggling / Expected / Well run) are calibrated from the
+  12-seed sweep's per-aircraft rates, scaled by fleet age drag and region fit.
+  Cross-region deals correctly report "never breaks even" in every scenario.
+- **Renewal is reported as CAPITAL REQUIRED, not deducted from the scenarios.** An
+  early version subtracted it and made every deal look unpayable — it's an asset
+  swap (sell old, buy new) that's roughly net-worth neutral, and the calibration
+  rates already include a renewing operator. Double-counting it was a real bug.
+- Diligence spend joins the Finance overhead line and the cash invariant.
+
+**Known and deliberate:** projections skew OPTIMISTIC relative to the sweep's
+measured medians. Real deal models do too. Leave it.
+
+## TWO-STAGE DUE DILIGENCE — original design notes
 
 Designer's framing: acquisitions should mirror real deal-making, where what you
 can see depends on how far into the process you are.

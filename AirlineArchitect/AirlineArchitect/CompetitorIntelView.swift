@@ -224,7 +224,86 @@ struct CompetitorIntelView: View {
                 }
             }
 
+            diligenceBox(p)
             acquisitionBox(p)
+        }
+    }
+
+    // MARK: Due diligence (two stages)
+
+    @ViewBuilder
+    private func diligenceBox(_ p: CompetitorProfile) -> some View {
+        let stage = sim.diligenceStage(p.id)
+        let proj = sim.projection(for: p, stage: stage)
+        let cost = sim.diligenceCost(for: p)
+        box {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(stage >= 2 ? "DUE DILIGENCE — FULL BOOKS" : "DUE DILIGENCE — PRELIMINARY")
+                        .font(.karla(12, .bold)).foregroundStyle(titleColor)
+                    Spacer()
+                    chip(stage >= 2 ? "VERIFIED" : "ESTIMATE", stage >= 2 ? Sky.coreGreen : secondary)
+                }
+                Text(stage >= 2
+                     ? "Their books are open. These are the actual airframes and the real renewal bill."
+                     : "Public filings only — the same thin picture a buyer has before an NDA. Ranges are wide because the fleet's age SPREAD isn't disclosed.")
+                    .font(.karla(11)).foregroundStyle(secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // Headline risk: region fit — the systematic trap.
+                if !proj.sameRegion {
+                    Text("⚠︎ Outside your regions. Their hubs and routes don't connect to your network — no overlap to rationalise, no connecting traffic. These rarely pay back.")
+                        .font(.karla(11, .semibold)).foregroundStyle(red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                line("Real cost of the deal", compactMoney(proj.economicCost))
+                line("Fleet value (metal)", compactMoney(Int(p.fleetLiquidationValue)))
+                line(stage >= 2 ? "Aircraft needing renewal" : "Aircraft likely needing renewal",
+                     "\(proj.agedAircraft) of \(p.fleetSize)",
+                     proj.agedAircraft > p.fleetSize / 3 ? red : primary)
+                line("Renewal capital",
+                     proj.renewalCostHigh == 0 ? "None near-term"
+                     : "\(compactMoney(proj.renewalCostLow)) – \(compactMoney(proj.renewalCostHigh))")
+
+                Divider().overlay(cardBorder).padding(.vertical, 2)
+                Text("SCENARIOS").font(.karla(11, .bold)).foregroundStyle(titleColor)
+                ForEach(proj.scenarios, id: \.label) { sc in
+                    HStack {
+                        Text(sc.label).font(.karla(12)).foregroundStyle(secondary)
+                        Spacer()
+                        Text(sc.paybackYears.map { String(format: "%.1f yrs to break even", $0) }
+                             ?? "never breaks even")
+                            .font(.karla(12, .semibold))
+                            .foregroundStyle(sc.paybackYears == nil ? red
+                                             : (sc.paybackYears! <= 10 ? Sky.coreGreen : primary))
+                    }
+                }
+                Text(stage >= 2
+                     ? "Projections remain estimates — how it actually goes depends on how you run it."
+                     : "Best guesses from public numbers. Open their books for a firmer picture.")
+                    .font(.karla(10)).foregroundStyle(secondary.opacity(0.9))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if stage < 2 {
+                    Button {
+                        if sim.openBooks(on: p) { Feedback.success() }
+                    } label: {
+                        Text(sim.playerBalance >= cost
+                             ? "Open their books · \(compactMoney(cost))"
+                             : "Need \(compactMoney(cost)) to open their books")
+                            .font(.karla(13, .bold))
+                            .foregroundStyle(sim.playerBalance >= cost ? .white : secondary)
+                            .frame(maxWidth: .infinity).frame(height: 42)
+                            .background(sim.playerBalance >= cost ? Sky.brightBlue : Color.clear)
+                            .overlay(RoundedRectangle(cornerRadius: 4)
+                                .stroke(sim.playerBalance >= cost ? .clear : cardBorder, lineWidth: 1))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(sim.playerBalance < cost)
+                }
+            }
         }
     }
 
