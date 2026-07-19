@@ -182,14 +182,27 @@ carriers:
 | Expected | 7.0 yrs | 8.8 yrs | — |
 | Struggling | 12.5 yrs | 15.8 yrs | 13.5 (passive) |
 
-**What stage 2 now reveals is CARRIER QUALITY, not a narrower band.**
-`carrierQuality(id:seed:)` is a deterministic per-carrier factor in 0.55–1.25,
-centred slightly BELOW 1.0 — the average acquisition is unexciting. Stage 1 must
-assume 1.0 (a buyer without the books has no better guess); stage 2 learns the
-truth, which is why stage-2 medians run WORSE than stage-1. Opening the books
-disappoints at least as often as it delights, and that asymmetry is asserted in
-the suite. No in-region carrier is hopeless, so a viable route to profitability
-always exists.
+**What stage 2 reveals is CARRIER QUALITY, split 60/40 public/private.**
+`carrierQuality(for:seed:)` is deterministic per carrier in 0.55–1.25. It is NOT
+a bare random draw (an earlier version was, uncorrelated with the public signals
+at −0.14, which made diligence a lottery). 60% tracks the PUBLIC story — margin
+and service score, the same signals that drive `askingPrice` through goodwill —
+and 40% is a PRIVATE residual only stage 2 can read.
+
+- **A better carrier genuinely costs more.** Publicly strong carriers price at
+  ~1.6–2.2× their fleet metal (goodwill on top); loss-making ones sit at the
+  1.25× floor with zero goodwill. Measured correlation(public quality, real
+  quality) = **0.88** — the market is efficient on what everyone can see.
+- **Stage 1 already prices in the public half** (`publicQualityEstimate`) — it is
+  not blind, it just can't see the private residual, so it assumes an average
+  one. Stage 2 learns the real residual, moving the picture DOWN about as often
+  as UP (the residual is symmetric because the public half is already in the
+  price). The suite asserts diligence is neither systematically rosy nor grim.
+- No in-region carrier is hopeless in the expected case, so a viable route always
+  exists.
+
+Struggling / Expected / Well run are three OUTCOMES for the same carrier
+depending on how it's run post-acquisition — not three carriers for sale.
 
 ## TWO-STAGE DUE DILIGENCE — original design notes
 

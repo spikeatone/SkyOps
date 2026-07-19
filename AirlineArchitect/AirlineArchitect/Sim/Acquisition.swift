@@ -283,13 +283,44 @@ extension Simulation {
     static let perAircraftManagedMonthly = 290_000.0
     static let perAircraftPassiveMonthly = 112_000.0
     /// How much better or worse a specific carrier is than the generic average —
-    /// deterministic per carrier, and ONLY visible at stage 2. Stage 1 has to
-    /// assume the average, which is exactly what a buyer without the books does.
-    /// Centred slightly BELOW 1.0: the average acquisition is unexciting, and a
-    /// projection that assumes otherwise is the rosiness the designer objected to.
-    static func carrierQuality(_ id: String, seed: UInt64) -> Double {
-        var rng = SeededRNG(seed: seed &+ CompetitorIntel.stableHash("quality:" + id))
-        return Double.random(in: 0.55...1.25, using: &rng)
+    /// deterministic per carrier, and only fully visible at stage 2. Centred
+    /// slightly BELOW 1.0: the average acquisition is unexciting.
+    ///
+    /// SPLIT 60/40 between the PUBLIC story and a PRIVATE residual:
+    ///
+    ///  - The public part tracks margin and service score, which are also what
+    ///    drive `askingPrice` through goodwill. So a carrier that looks good
+    ///    costs more AND is usually genuinely better — the market is roughly
+    ///    efficient on what everybody can see.
+    ///  - The private residual is the ~40% nobody can read from a filing. THAT is
+    ///    what stage-2 diligence actually buys, and it's why a cheap struggling
+    ///    carrier is occasionally a turnaround gem and an expensive darling is
+    ///    occasionally overpriced.
+    ///
+    /// Before this split the factor was a bare random draw, uncorrelated with the
+    /// public signals (measured: −0.139 against margin), which made diligence a
+    /// lottery rather than an investigation.
+    /// NOTE: takes the PROFILE deliberately. An earlier convenience overload
+    /// omitted it and silently assumed an average public score, which returned a
+    /// quality uncorrelated with the carrier's real signals — a trap for any
+    /// caller that reached for the shorter name.
+    static func carrierQuality(for p: CompetitorProfile, seed: UInt64) -> Double {
+        var rng = SeededRNG(seed: seed &+ CompetitorIntel.stableHash("quality:" + p.id))
+        let residual = Double.random(in: 0...1, using: &rng)
+        return 0.55 + 0.70 * (0.6 * publicQualityScore(for: p) + 0.4 * residual)
+    }
+
+    /// What stage 1 can infer about quality from public filings alone — the
+    /// public half, with the private residual assumed average.
+    static func publicQualityEstimate(for p: CompetitorProfile) -> Double {
+        0.55 + 0.70 * (0.6 * publicQualityScore(for: p) + 0.4 * 0.5)
+    }
+
+    /// The 0…1 quality signal a filing DOES disclose: margin, then service.
+    static func publicQualityScore(for p: CompetitorProfile) -> Double {
+        let marginScore = min(1, max(0, (p.operatingMargin + 0.08) / 0.24))
+        let serviceScore = min(1, max(0, (p.serviceScore - 45) / 47))
+        return 0.6 * marginScore + 0.4 * serviceScore
     }
 
     /// Cross-region acquisitions were value-DESTROYING in every sweep seed:
@@ -338,7 +369,12 @@ extension Simulation {
         // Stage 1 must assume an average carrier; stage 2 learns what this one is
         // actually worth — which can be WORSE than the assumption, not just
         // better. That is where a projection earns the right to disappoint.
-        let quality = stage >= 2 ? Simulation.carrierQuality(p.id, seed: competitorSeed) : 1.0
+        // Stage 1 can already read the PUBLIC half of quality (it's in the
+        // filing); what it cannot see is the private residual, so it assumes an
+        // average one. Stage 2 learns the real residual.
+        let quality = stage >= 2
+            ? Simulation.carrierQuality(for: p, seed: competitorSeed)
+            : Simulation.publicQualityEstimate(for: p)
         let common = Double(p.fleetSize) * ageDrag * regionFactor * quality
         let base = common * Simulation.perAircraftManagedMonthly
         let passive = common * Simulation.perAircraftPassiveMonthly

@@ -3097,12 +3097,17 @@ Designer's framing: what you can see depends on how far into the deal you are.
   measurements now: Well run = managed rate, Struggling = passive rate, Expected
   = midpoint. Medians land at 4.8/7.0/12.5 (stage 1) and 6.1/8.8/15.8 (stage 2)
   against sweep references of 5.8 managed / 13.5 passive.
-- **Stage 2 reveals CARRIER QUALITY, not a narrower band.**
-  `carrierQuality(id:seed:)` is deterministic per carrier, 0.55–1.25, centred
-  slightly BELOW 1.0 (the average deal is unexciting). Stage 1 must assume 1.0;
-  stage 2 learns the truth, so stage-2 medians run WORSE than stage-1 — opening
-  the books disappoints at least as often as it delights, which the suite
-  asserts. No in-region carrier is hopeless: a viable route always exists.
+- **Carrier quality is SPLIT 60/40 public/private, so a better carrier costs
+  more.** `carrierQuality(for:seed:)` (takes the PROFILE — an earlier convenience
+  overload that omitted it silently assumed average and was removed as a trap):
+  60% tracks margin + service (the public story that also drives `askingPrice`
+  via goodwill), 40% is a private residual only stage 2 reads. Correlation of
+  public quality with real quality = **0.88** (was −0.14 when it was a bare
+  random draw — diligence was a lottery). Publicly strong carriers price at
+  ~1.6–2.2× fleet metal; loss-makers sit at the 1.25× floor. Stage 1 reads the
+  public half (`publicQualityEstimate`); stage 2 learns the residual, which
+  moves the picture down about as often as up. A viable in-region route always
+  exists.
 
 ### Step 3 — the mechanics
 
