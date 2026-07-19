@@ -85,6 +85,41 @@ blind, which undercuts the whole "informed peril" framing.
 
 ---
 
+## Ownership model: SUBSIDIARY, not absorption (DECIDED)
+
+**Designer's call:** you own the airline, and **it keeps flying under its own
+flag.** An acquired carrier is not erased and not repainted — it becomes a
+subsidiary operating under the player's ownership, the way real acquisitions
+run for years before (or instead of) a brand merge.
+
+This is a fiction decision that happens to serve the hardest guardrail in this
+spec: **the map never empties.** Every livery the player buys stays in the sky.
+Consolidation removes a *competitor*, not a *carrier*.
+
+Consequences that follow from it, and must be decided together:
+
+- **Inherited tails keep their original code.** A Delta aircraft stays `N123DL`
+  rather than being renumbered to the player's 2-letter code. Free, and it makes
+  ownership legible in the Fleet list at a glance.
+- **Map colour needs a third state.** Today: owned = flight-phase colours,
+  competitor = constant `#D767FF`, held = red (shared). A subsidiary is *yours*
+  but flies its own flag, and currently has no way to read as either. Options:
+  player phase-colours with a subsidiary marker; or a dedicated subsidiary hue
+  that reads as "yours, but not mainline." **Designer call.**
+- **Reputation blends only PARTIALLY.** The spec's original full blend is wrong
+  under this model: a subsidiary's bad service shouldn't instantly tank the
+  mainline score. A weighted, partial blend is both more realistic and gives the
+  player a reason to *invest in fixing* what they bought rather than just
+  enduring it.
+- **Subsidiaries stay in MARKET INTELLIGENCE, flagged as owned.** The scouting
+  list quietly becomes a portfolio view — you keep watching the books of the
+  airline you now own, which is exactly how a holding company sees it.
+- **Double-coverage still bites.** Separate flags don't spare the player the
+  rationalization problem; real merged carriers cut overlapping routes
+  regardless of brand. The integration burden is unchanged.
+
+---
+
 ## What the player inherits
 
 Generated per target, scaled by roster `weight` (American 21 → large; a regional

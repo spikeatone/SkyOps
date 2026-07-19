@@ -3014,9 +3014,26 @@ fraction of a percent, so the reward curve dies.
   explicitly walked back as over-cautious — text-only reference is already
   shipping and is the defensible end of the spectrum. Holding: no logos or
   liveries, and no real brands in App Store metadata (why Boeing/Airbus are
-  excluded from the keywords). Designer leans **subsidiary-over-erasure** — an
-  acquired carrier keeps flying under the player's ownership — for FICTION
-  reasons (a vanished Delta empties the map), not legal ones.
+  excluded from the keywords).
+- **OWNERSHIP MODEL — SUBSIDIARY, DECIDED (designer): "you now own the airline
+  and it keeps FLYING under their original flag."** An acquired carrier is never
+  erased or repainted; it operates as a subsidiary under player ownership. This
+  is a fiction call that directly serves the hardest guardrail above — **the map
+  never empties**, because consolidation removes a *competitor*, not a *carrier*.
+  Consequences (see `ACQUISITIONS_SPEC.md` for the full list): inherited tails
+  KEEP their original airline code (a Delta jet stays `N123DL`, not renumbered
+  to the player's 2-letter code); the map needs a THIRD aircraft colour state
+  (owned-mainline vs owned-subsidiary vs competitor — a subsidiary is yours but
+  flies its own flag, and today's two states can't express that); reputation
+  blends only PARTIALLY (a full blend would let a bought carrier's bad service
+  instantly tank the mainline score — partial is both more realistic and gives
+  the player a reason to invest in fixing it); and subsidiaries STAY in Market
+  Intelligence flagged as owned, which quietly turns the scouting list into a
+  portfolio view.
+- **Game-appropriate scaling is a stated PRINCIPLE, not a shortcut** (designer,
+  on the competitor financials): scaling fleets/revenue to the game's own economy
+  "reinforces that this is a game" rather than importing real-world financials.
+  Apply the same instinct to acquisition prices and integration costs.
 
 ### Step 1 — competitor scouting: BUILT
 
