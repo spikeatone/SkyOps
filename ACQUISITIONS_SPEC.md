@@ -10,62 +10,84 @@ Target release: **1.1**, not 1.0.1 (see §Scope & Sequencing).
 
 ---
 
-## MEASURED ECONOMICS (first run, steps 1–3 complete) — FAILS THE TARGET
+## MEASURED ECONOMICS — target REDEFINED, three real bugs found, not yet closed
 
-Three arms from an IDENTICAL restored starting state (same competitor seed, same
-8-aircraft/8-route mainline, ~$6B cash), 36 sim-months, 1 seed — indicative, not
-the step-5 A/B. All three bought the same carrier (Delta, 47 aircraft, $2,701M).
+**Designer's call on the ambiguity: model real M&A. Full capital payback in
+5–10 years — a shrewd player pushes for the low end, a first-timer may struggle
+to break even at 10.** That replaces the earlier 24–36 month reading.
 
-| Month | Control | Passive | Managed | Passive vs ctrl | Managed vs ctrl |
-|---|---|---|---|---|---|
-| 0 | $6,018M | $5,400M | $5,578M | −$619M | −$440M |
-| 12 | $6,011M | $5,172M | $5,063M | −$838M | −$948M |
-| 24 | $6,005M | $5,051M | $4,821M | −$954M | −$1,184M |
-| 36 | $5,999M | $5,014M | $4,781M | −$984M | −$1,217M |
+Measured with 3 arms (control / acquire-and-hold / acquire-and-manage) restored
+from ONE shared `GameSnapshot`, so every arm faces the same competitor market and
+buys the same carrier. **Payback is measured on CASH, not net worth** — you spend
+cash, so the question is when you get it back; net worth double-counts the
+inherited fleet at month 0 and then penalises its depreciation.
 
-**Neither arm ever pays back, and MANAGED LOSES TO PASSIVE** — the exact inverse
-of the design intent. Diagnosis, from the component arithmetic:
+### Where it stands (latest run, ~46-aircraft target at $3,394M)
 
-1. **The integration bill dominates.** 1.5%/month × 18 months = **27% of the
-   purchase price** ($729M on a $2,701M deal) — roughly three-quarters of the
-   entire passive shortfall. The spec's "1.5% for 18 months" was never
-   multiplied out.
-2. **The seniority settlement is nearly pure cost.** Managed's extra loss vs
-   passive ($233M) ≈ the settlement itself ($216M, 8% of price). Ending the
-   dispute early returns far less than it costs, so the "manage it well" lever
-   is actively punishing.
-3. **Overlap relief is worth too little to matter.** 7 double-covered pairs out
-   of ~55 routes, with a shallow 0.70→0.92 band, so rationalizing barely moves
-   revenue — it can't fund the settlement.
-4. **The deeper constraint (pre-existing, documented in CLAUDE.md):** real
-   aircraft prices against this game's per-leg profit and LOCKED ~6-hour flight
-   cycle (2 legs/day vs a real ~6) mean *individual aircraft* take ~8 years to
-   pay back. **An airline priced at its fleet's value therefore cannot pay back
-   in 24–36 months** — not with any integration tuning. The control arm is
-   itself flat, so the baseline operation barely compounds at this scale.
+| Month | Passive cash gap | Managed cash gap |
+|---|---|---|
+| 0 | −$3,394M | −$3,394M |
+| 6 | −$3,156M | −$3,179M |
+| 12 | **−$3,042M** | −$3,144M |
+| 24 | −$3,097M | −$3,199M |
+| 42 | −$3,132M | −$3,227M |
 
-### The designer call this needs
+**The first 12 months work: the gap closes at ~$29M/month — a ~10-year payback
+pace, inside the designer's window.** Then it stalls and slowly reverses.
 
-"A well-managed acquisition could start to pay off in 24–36 months" has two
-readings, and they demand different fixes:
+**Diagnosis of the reversal:** the inherited fleet ages. Aircraft arrive at ~0.5
+of design life (some past it) and accrue cycles at 2 legs/day, so the quadratic
+escalators bite — `maintenanceAgeMultiplier` 1+0.4·age² and especially
+`aogAgeMultiplier` 1+3·age² (4×+ at design life). A bought airline harvests good
+months and then decays into a money pit. That is a GOOD dynamic — it makes fleet
+renewal the real post-merger job — but nothing in the managed arm does it yet.
 
-- **(A) Turns accretive** — the acquired operation stops dragging and starts
-  contributing positive monthly cash by month 24–36, while full capital payback
-  stays long (5–10 years, as real airline M&A actually is). Achievable by
-  cutting the integration bill and settlement hard. **Recommended.**
-- **(B) Full capital payback** — net worth catches the no-acquisition control
-  within 36 months. Requires either pricing acquisitions well below fleet value
-  or a large synergy bonus on acquired routes.
+### THE CLOSING LEVER (next step, not yet built)
 
-⚠️ **(B) carries a hard constraint: the price must ALWAYS exceed the fleet's
-in-game resale value.** If it doesn't, the player buys a carrier and immediately
-liquidates its fleet for a profit — a pure arbitrage printer, the worst failure
-mode available. Any discount-to-book approach has to be checked against
-`fleetMarketValue`, not just eyeballed.
+**Fleet renewal as a fourth management action.** The managed autopilot currently
+retires only junk that is already *unassigned*, which is almost none. It must
+sell/replace inherited aircraft past ~0.85 of life on a rolling basis. That is
+what should separate a 5-year shrewd outcome from a 10-year struggling one — and
+it is exactly the skill the designer described.
 
-Regardless of A or B, two things must change: the settlement has to return more
-than it costs, and the overlap band has to be deep enough that rationalizing is
-worth doing. Otherwise the skill expression stays inverted.
+### Three methodology bugs found (each produced a confident WRONG answer)
+
+1. **Arms bought different carriers.** Every `Simulation` rolls its own
+   `competitorSeed`. Arms must restore from one shared snapshot.
+2. **Rationalization moved 0 routes** — it filtered for unserved AIRPORTS, which
+   finds nothing once an inherited network covers the country. Must filter PAIRS.
+3. **Both arms were under-crewed** (1 bundled crew per aircraft; the sim needs
+   ~2.1). An under-crewed airline is structurally loss-making, so the control was
+   flat and every comparison was meaningless.
+
+### Two real GAME bugs the measurement exposed
+
+1. **Inherited routes ignored economics.** Aircraft were assigned to any route
+   they could *physically* fly, putting widebodies on short domestic hops where
+   they lose enormous money (an A380 is −$63k at 300nm). FIXED: inheritance now
+   matches each aircraft to a stage length it is built for, and refuses a
+   badly-mismatched pairing outright.
+2. **Inherited spokes were uniform-random**, giving the network a tail of dead
+   markets. FIXED: spokes are drawn weighted by real airport traffic.
+
+### Retuned since the first measurement
+
+- Integration bill **1.5% → 0.4%/month** (was 27% of the purchase price over 18
+  months, ~¾ of the entire loss — the spec never multiplied it out).
+- Seniority settlement **8% → 2.5%** (was nearly pure cost, which inverted the
+  skill expression and made managed lose to passive).
+
+### Still open
+
+- The 5–10 year payback is **not yet demonstrated end-to-end** — only the first
+  12 months are on pace. Fleet renewal is the missing lever.
+- **The projection/scenario mechanic the designer asked for should be built ONLY
+  once these numbers settle** — projections calibrated against an economy that is
+  still moving would be confidently wrong, which is worse than absent.
+
+⚠️ **Repricing constraint stands:** any price must ALWAYS exceed the fleet's
+in-game `fleetMarketValue`, or the player buys a carrier, liquidates its fleet,
+and profits — pure arbitrage.
 
 ---
 

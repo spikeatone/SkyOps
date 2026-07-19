@@ -993,17 +993,32 @@ final class Simulation {
                 playerRoutes.contains { $0.subsidiaryCode == nil &&
                     ($0.originCode == ap.code || $0.destCode == ap.code) } }
             let useContested = !contested.isEmpty && Double.random(in: 0..<1) < 0.45
-            guard let spoke = (useContested ? contested : pool).randomElement(),
-                  hub.code != spoke.code else { continue }
+            // A real airline flies where the demand is. Draw the spoke weighted
+            // by airport traffic rather than uniformly — uniform selection gave
+            // the inherited network a tail of dead markets and made every
+            // acquisition value-destructive regardless of tuning.
+            let candidates = (useContested ? contested : pool).filter { $0.code != hub.code }
+            guard let spoke = weightedByTraffic(candidates) else { continue }
             // Overlap with the player's existing network is ALLOWED and is the
             // point (step 3's double-coverage problem) — but only once per pair,
             // so an inherited network can't stack three deep on one city pair.
             if playerRoutes.contains(where: { $0.subsidiaryCode == p.id &&
                 (($0.originCode == hub.code && $0.destCode == spoke.code) ||
                  ($0.originCode == spoke.code && $0.destCode == hub.code)) }) { continue }
-            // The aircraft must physically be able to fly it.
-            guard let idx = spares.firstIndex(where: { routeBlock(for: $0, from: hub, to: spoke) == nil })
+            // Match aircraft to route ECONOMICALLY, not merely physically. Taking
+            // the first aircraft that *can* fly a leg puts widebodies on short
+            // domestic hops, where they lose enormous money (an A380 is −$63k at
+            // 300nm — see CLAUDE.md), which made every inherited network
+            // structurally loss-making no matter how the integration was tuned.
+            // A real airline flies each type at the stage length it's built for.
+            let nm = hub.greatCircleNM(to: spoke)
+            guard let idx = spares.indices
+                .filter({ routeBlock(for: spares[$0], from: hub, to: spoke) == nil })
+                .min(by: { stageMismatch(spares[$0], nm) < stageMismatch(spares[$1], nm) })
             else { continue }
+            // Refuse a badly-mismatched pairing outright rather than book a
+            // guaranteed loss-maker; another spoke will suit this aircraft.
+            guard stageMismatch(spares[idx], nm) < 2.2 else { continue }
             let ac = spares.remove(at: idx)
 
             if hub.slotsAvailable > 0 { hub.slotsAvailable -= 1 }
@@ -1022,6 +1037,34 @@ final class Simulation {
             opened += 1
         }
         return opened
+    }
+
+    /// How badly a leg length suits an aircraft type, as a ratio around the
+    /// stage length that type is built for (1.0 = perfect). Used to keep
+    /// inherited widebodies off short domestic hops.
+    private func stageMismatch(_ ac: Aircraft, _ nm: Double) -> Double {
+        let ideal: Double
+        switch ac.type.bodyType {
+        case .turboprop:       ideal = 250
+        case .regionalJet:     ideal = 450
+        case .narrowbody:      ideal = 900
+        case .widebody2Engine: ideal = 3_400
+        case .widebody4Engine: ideal = 4_200
+        }
+        return max(nm, 1) / ideal > 1 ? max(nm, 1) / ideal : ideal / max(nm, 1)
+    }
+
+    /// Pick an airport with probability proportional to its annual passengers.
+    private func weightedByTraffic(_ pool: [Airport]) -> Airport? {
+        guard !pool.isEmpty else { return nil }
+        let weights = pool.map { max(1.0, Double($0.info?.annualPassengers ?? 1_000_000)) }
+        let total = weights.reduce(0, +)
+        var roll = Double.random(in: 0..<total)
+        for (i, w) in weights.enumerated() {
+            roll -= w
+            if roll < 0 { return pool[i] }
+        }
+        return pool.last
     }
 
     /// Their hubs become yours — unless you already hub there, in which case

@@ -86,12 +86,17 @@ extension Simulation {
     /// deconfliction eases the overlap penalty.
     static let integrationMonths = 18
     /// Monthly integration bill as a fraction of the price paid — systems,
-    /// repainting, training. The drag that makes payback look like the real thing.
-    static let integrationBillRate = 0.015
+    /// repainting, training. RETUNED from the spec draft's 0.015: that worked out
+    /// to 27% of the purchase price over 18 months and accounted for ~¾ of the
+    /// measured loss. 0.004 → ~7% of price, which is the real-world order for
+    /// merger integration costs.
+    static let integrationBillRate = 0.004
     /// Seniority dispute duration if never settled.
     static let seniorityDisputeMonths = 9
-    /// One-off settlement cost as a fraction of the price paid.
-    static let senioritySettlementRate = 0.08
+    /// One-off settlement cost as a fraction of the price paid. RETUNED from
+    /// 0.08: at that level the settlement was nearly pure cost and MANAGED play
+    /// lost to PASSIVE, inverting the skill expression.
+    static let senioritySettlementRate = 0.025
     /// Fraction of a disputed family's crew sidelined while it runs.
     static let senioritySidelinedFraction = 0.35
     /// Reputation hit the moment a deal closes (passengers feel the disruption).
