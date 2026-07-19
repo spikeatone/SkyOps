@@ -282,6 +282,16 @@ extension Simulation {
     /// commit, which is what the designer asked to see.
     static let perAircraftManagedMonthly = 290_000.0
     static let perAircraftPassiveMonthly = 112_000.0
+    /// How much better or worse a specific carrier is than the generic average —
+    /// deterministic per carrier, and ONLY visible at stage 2. Stage 1 has to
+    /// assume the average, which is exactly what a buyer without the books does.
+    /// Centred slightly BELOW 1.0: the average acquisition is unexciting, and a
+    /// projection that assumes otherwise is the rosiness the designer objected to.
+    static func carrierQuality(_ id: String, seed: UInt64) -> Double {
+        var rng = SeededRNG(seed: seed &+ CompetitorIntel.stableHash("quality:" + id))
+        return Double.random(in: 0.55...1.25, using: &rng)
+    }
+
     /// Cross-region acquisitions were value-DESTROYING in every sweep seed:
     /// an out-of-region carrier's hubs and routes sit outside the player's
     /// network, so there's no overlap to rationalise and no connecting traffic.
@@ -325,11 +335,14 @@ extension Simulation {
         // Age drags contribution: an old fleet earns less and breaks more.
         let ageDrag = max(0.45, 1.0 - p.fleetAgeFraction * 0.55)
         let regionFactor = sameRegion ? 1.0 : Simulation.crossRegionContributionFactor
-        let base = Double(p.fleetSize) * Simulation.perAircraftManagedMonthly * ageDrag * regionFactor
-        let passive = Double(p.fleetSize) * Simulation.perAircraftPassiveMonthly * ageDrag * regionFactor
+        // Stage 1 must assume an average carrier; stage 2 learns what this one is
+        // actually worth — which can be WORSE than the assumption, not just
+        // better. That is where a projection earns the right to disappoint.
+        let quality = stage >= 2 ? Simulation.carrierQuality(p.id, seed: competitorSeed) : 1.0
+        let common = Double(p.fleetSize) * ageDrag * regionFactor * quality
+        let base = common * Simulation.perAircraftManagedMonthly
+        let passive = common * Simulation.perAircraftPassiveMonthly
 
-        // Stage 1 bands are wide (thin information); stage 2 tightens them.
-        let band = stage >= 2 ? 0.18 : 0.45
         func scenario(_ label: String, _ monthly: Double) -> AcquisitionScenario {
             // Renewal is NOT deducted here: it's an asset swap (sell old, buy
             // new) that's roughly net-worth neutral, and the calibration rates
@@ -343,10 +356,15 @@ extension Simulation {
             stage: stage, askingPrice: price, economicCost: cost,
             renewalCostLow: renewal.low, renewalCostHigh: renewal.high, agedAircraft: renewal.aged,
             sameRegion: sameRegion,
+            // ANCHORED ON THE MEASURED SWEEP, not inflated around it. "Well run"
+            // IS the managed median and "Struggling" IS the passive median — an
+            // earlier version multiplied these out to base×1.45 and passive×0.55,
+            // which put the best case 45% above anything the sweep ever produced
+            // and made every projection read rosy.
             scenarios: [
-                scenario("Struggling", passive * (1 - band)),
+                scenario("Struggling", passive),
                 scenario("Expected",   (base + passive) / 2),
-                scenario("Well run",   base * (1 + band)),
+                scenario("Well run",   base),
             ])
     }
 }

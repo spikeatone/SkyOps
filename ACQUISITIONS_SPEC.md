@@ -169,8 +169,27 @@ spread; that gap is the uncertainty, and it is real rather than decorative.
   rates already include a renewing operator. Double-counting it was a real bug.
 - Diligence spend joins the Finance overhead line and the cash invariant.
 
-**Known and deliberate:** projections skew OPTIMISTIC relative to the sweep's
-measured medians. Real deal models do too. Leave it.
+**Scenarios are CENTRED on the sweep (designer: "not always rosy").** An earlier
+version computed `well-run = base × 1.45` and `struggling = passive × 0.55`,
+putting the best case 45% above anything the sweep ever produced. Now the
+anchors ARE the measurements: "Well run" = the managed rate, "Struggling" = the
+passive rate, "Expected" = the midpoint. Measured medians across in-region
+carriers:
+
+| Scenario | Stage 1 | Stage 2 | Sweep reference |
+|---|---|---|---|
+| Well run | 4.8 yrs | 6.1 yrs | 5.8 (managed) |
+| Expected | 7.0 yrs | 8.8 yrs | — |
+| Struggling | 12.5 yrs | 15.8 yrs | 13.5 (passive) |
+
+**What stage 2 now reveals is CARRIER QUALITY, not a narrower band.**
+`carrierQuality(id:seed:)` is a deterministic per-carrier factor in 0.55–1.25,
+centred slightly BELOW 1.0 — the average acquisition is unexciting. Stage 1 must
+assume 1.0 (a buyer without the books has no better guess); stage 2 learns the
+truth, which is why stage-2 medians run WORSE than stage-1. Opening the books
+disappoints at least as often as it delights, and that asymmetry is asserted in
+the suite. No in-region carrier is hopeless, so a viable route to profitability
+always exists.
 
 ## TWO-STAGE DUE DILIGENCE — original design notes
 

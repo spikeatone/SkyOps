@@ -3091,8 +3091,18 @@ Designer's framing: what you can see depends on how far into the deal you are.
   subtracted it and made every deal unpayable: renewal is an asset swap (sell
   old, buy new), roughly net-worth neutral, and the calibration rates already
   include a renewing operator. Don't re-add it.
-- Projections skew OPTIMISTIC vs the sweep's medians — deliberate, as real deal
-  models do.
+- **Scenarios are CENTRED on the sweep, not inflated around it** (designer: "not
+  always rosy"). An earlier version used `base × 1.45` / `passive × 0.55`, which
+  put the best case 45% above anything measured. The anchors ARE the
+  measurements now: Well run = managed rate, Struggling = passive rate, Expected
+  = midpoint. Medians land at 4.8/7.0/12.5 (stage 1) and 6.1/8.8/15.8 (stage 2)
+  against sweep references of 5.8 managed / 13.5 passive.
+- **Stage 2 reveals CARRIER QUALITY, not a narrower band.**
+  `carrierQuality(id:seed:)` is deterministic per carrier, 0.55–1.25, centred
+  slightly BELOW 1.0 (the average deal is unexciting). Stage 1 must assume 1.0;
+  stage 2 learns the truth, so stage-2 medians run WORSE than stage-1 — opening
+  the books disappoints at least as often as it delights, which the suite
+  asserts. No in-region carrier is hopeless: a viable route always exists.
 
 ### Step 3 — the mechanics
 
