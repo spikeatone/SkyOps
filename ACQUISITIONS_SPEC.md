@@ -157,11 +157,42 @@ costs, running months not days. Reuses `.sidelined` /
 settle it early — a real lever, expensive, and the clearest "manage it well"
 skill expression in the whole feature.
 
-**3. Double-covered routes.** Where both airlines flew the same city pair, the
-player now **competes with themselves**: the pair's demand splits across both
-routes until one is closed. This is the untangling the designer asked for — it
-demands a real audit of the combined network, and rationalizing it is the single
-biggest lever on whether payback lands at 24 months or never.
+**3. Double-covered routes — DECAYING TOWARD A FLOOR, not flat (DECIDED).**
+Where both airlines flew the same city pair, the player **competes with
+themselves**: the pair's demand splits across both routes.
+
+Designer's refinement, and it's real: merged carriers recover much of that lost
+efficiency over time, as schedules are deconflicted and connections coordinated.
+A permanent flat penalty would be wrong.
+
+But a penalty that decays purely on a TIMER breaks the feature — the player can
+simply wait it out, which turns the untangling into a passive countdown and
+directly violates the "passive holding never pays back" target.
+
+**Resolution — split it the way reality splits it:**
+
+- **Schedule optimization is automatic.** Deconflicting departure banks and
+  coordinating connections is integration-team work that genuinely happens on its
+  own. This is the decay, and it should be substantial: the overlap penalty
+  starts severe and eases over the merger period (~18–24 months).
+- **Overcapacity is not.** Two aircraft actually flying the same city pair split
+  that pair's demand, and no amount of schedule work fixes it. So the decay
+  asymptotes to a **FLOOR** that time never crosses.
+- **The floor clears only through a real network decision** — closing one of the
+  pair, or reassigning its aircraft to an uncontested market.
+
+Net shape: the curve improves on its own (so a fresh acquisition doesn't feel
+hopeless) but plateaus short of healthy (so passive holding never reaches
+payback). The player feels the integration team working *and* still has to make
+the hard capacity calls.
+
+**The FLOOR DEPTH is the load-bearing number for the balance A/B.** Too shallow
+and passive holding pays back inside 36 months — the feature is a printer. Too
+deep and the decay is cosmetic. Sweep it explicitly; do not eyeball it.
+
+Optional lever, flagged not decided: let the player FUND faster integration to
+accelerate the decay (the same shape as the seniority settlement). Real, but it
+may be one lever too many — decide after the A/B.
 
 **4. Reputation hit at close**, recovering slowly — the disruption passengers
 actually feel. Feeds demand through the existing multiplier.
