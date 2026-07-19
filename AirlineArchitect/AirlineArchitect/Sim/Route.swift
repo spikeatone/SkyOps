@@ -71,6 +71,8 @@ final class Route: Identifiable {
     // names them for display; count drives the share split.
     var competitionLevel: Int = 0
     var competitors: [String] = []
+    /// Non-nil when this route came with an acquired subsidiary.
+    var subsidiaryCode: String?
 
     // Airport incentive (from an accepted route offer): the signing bonus banked
     // and the opening cost that was waived — both for the Ops incentives display.

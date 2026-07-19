@@ -49,6 +49,10 @@ struct GameSnapshot: Codable {
     // an existing game simply gains a competitor market on first load).
     var competitorSeed: UInt64?
 
+    // Acquisitions (nil in pre-acquisition saves)
+    var subsidiaries: [Subsidiary]? = nil
+    var totalAcquisitionPrice: Int? = nil
+
     // Hubs & Clubs (nil in pre-hub saves)
     var hubs: [String: Simulation.Hub]? = nil
     var rivalHubs: [String: String]? = nil
@@ -89,6 +93,8 @@ struct AircraftSave: Codable {
     var maint: Bool
     var aogAutoClearTick: Int?
     var crewId: Int?
+    /// Non-nil for an aircraft inherited with an acquired subsidiary.
+    var subsidiaryCode: String? = nil
 }
 
 struct RouteSave: Codable {
@@ -106,6 +112,8 @@ struct RouteSave: Codable {
     var incentiveBonus: Int = 0
     var incentiveWaived: Int = 0
     var fulfillByTick: Int? = nil
+    /// Non-nil for a route that came with an acquired subsidiary.
+    var subsidiaryCode: String? = nil
     var history: [FlightRecordSave]
     var assignmentHistory: [RouteAssignmentSave]
 }
@@ -131,6 +139,7 @@ struct FinanceSave: Codable {
     var acquisition, routeSpend, hedgeSpend, saleProceeds, offerIncome, flights, cash, netWorth: Int
     var loanProceeds = 0, debtService = 0
     var hubSpend: Int? = nil, hubLabor: Int? = nil, clubRent: Int? = nil
+    var airlineAcquisition: Int? = nil
 }
 
 struct LoanSave: Codable {

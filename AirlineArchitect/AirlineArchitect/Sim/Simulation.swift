@@ -762,6 +762,168 @@ final class Simulation {
         rebuildCompetitorIntel()
     }
 
+    // MARK: - Competitor acquisition (step 2: transaction + inheritance)
+    //
+    // Types, gate, and pricing live in Acquisition.swift; the mutating work is
+    // here because the state it touches is private(set) to this file.
+    //
+    // ⚠️ NOT SHIPPABLE WITHOUT STEP 3 (the integration burden). As it stands an
+    // acquisition is pure upside, which is the design the spec rejects.
+
+    #if DEBUG
+    /// TEST HOOK — reaching the $1B acquisition gate through the real economy
+    /// takes sim-years, which no headless suite can afford. Injections are
+    /// TRACKED so the Finance cash invariant can account for them explicitly
+    /// rather than being quietly excused. DEBUG-only: absent from Release.
+    private(set) var devInjectedCash = 0
+    func devInjectCash(_ amount: Int) {
+        playerBalance += amount
+        devInjectedCash += amount
+    }
+    #endif
+
+    /// Airlines the player has bought. Each keeps flying under its own flag.
+    private(set) var subsidiaries: [Subsidiary] = []
+    /// Capital-out accumulator for the Finance cash invariant.
+    private(set) var totalAcquisitionPrice = 0
+
+    @discardableResult
+    func acquire(_ p: CompetitorProfile) -> Bool {
+        guard acquisitionBlock(for: p) == nil else { return false }
+        let price = askingPrice(for: p)
+
+        playerBalance -= price
+        totalAcquisitionPrice += price
+
+        let fleet = inheritFleet(from: p)
+        let routes = inheritRoutes(from: p, using: fleet)
+        inheritHubs(from: p)
+        removeAsRival(p)
+        blendReputation(with: p)
+
+        subsidiaries.append(Subsidiary(code: p.id, name: p.name, region: p.region,
+                                       acquiredTick: tick, pricePaid: price,
+                                       serviceScoreAtAcquisition: p.serviceScore,
+                                       fleetInherited: fleet.count, routesInherited: routes))
+
+        logOps(.structural, "Acquired \(p.name)",
+               "\(fleet.count) aircraft and \(routes) routes join your group — \(p.name) keeps flying under its own flag.")
+        celebrate("acq_\(p.id)", "building.2.fill", "\(p.name) acquired",
+                  "\(fleet.count) aircraft · \(routes) routes")
+        return true
+    }
+
+    /// Inherited aircraft KEEP THE CARRIER'S OWN TAIL CODE (a Delta jet stays
+    /// N…DL, not renumbered to the player's) — the subsidiary model made visible
+    /// in the Fleet list. They carry that carrier's real age too, so a chunk of
+    /// what you buy is genuinely near end-of-life.
+    private func inheritFleet(from p: CompetitorProfile) -> [Aircraft] {
+        var made: [Aircraft] = []
+        let bases = airports.filter { p.hubCodes.contains($0.code) }
+        for (typeID, count) in p.fleetByType.sorted(by: { $0.key < $1.key }) {
+            guard let type = AircraftType.all.first(where: { $0.id == typeID }) else { continue }
+            for _ in 0..<count {
+                guard let base = bases.randomElement() ?? homeBaseAirports.randomElement() else { continue }
+                let tail = "N\(nextTailNum)\(p.code.isEmpty ? playerTailCode : p.code)"
+                nextTailNum += 1
+                // Spread ages around the carrier's stated average — a real fleet
+                // is mixed, not uniformly at the mean.
+                let cycles = Int(Double(type.expectedLifespanCycles) * p.fleetAgeFraction
+                                 * Double.random(in: 0.6...1.35))
+                let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
+                                  stateIndex: FlightState.parked.rawValue,
+                                  cyclesAccrued: max(0, min(cycles, type.expectedLifespanCycles)),
+                                  purchased: true)
+                ac.subsidiaryCode = p.id
+                ac.airlineName = p.name
+                rollRevenue(for: ac)
+                aircraft.append(ac)
+                made.append(ac)
+                // You acquire the airline's PEOPLE too. The spec's original "no
+                // crew for unfamiliar types" was wrong on realism — a merger's
+                // pain is the SENIORITY fight (step 3), not an absence of crew.
+                // Inheriting crew also avoids an alert flood the moment it closes.
+                grantBundledCrew(type.family)
+            }
+        }
+        return made
+    }
+
+    /// Build the carrier's network as real player routes in its region,
+    /// hub-anchored. Routes cost nothing (they came with the company) but DO
+    /// consume slots — which is what makes an acquisition a genuine land-grab.
+    private func inheritRoutes(from p: CompetitorProfile, using fleet: [Aircraft]) -> Int {
+        let pool = airports.filter { CompetitorIntel.regionLabel(Airline.region($0.code)) == p.region }
+        let hubs = airports.filter { p.hubCodes.contains($0.code) }
+        guard pool.count >= 2, !hubs.isEmpty else { return 0 }
+
+        var opened = 0
+        var spares = fleet
+        // Capped at the aircraft actually inherited: a route with nobody to fly
+        // it is a pending route, and inheriting dozens of those is noise.
+        let target = min(p.routeCount, fleet.count)
+        var attempts = 0
+        while opened < target, attempts < target * 12, !spares.isEmpty {
+            attempts += 1
+            guard let hub = hubs.randomElement(), let spoke = pool.randomElement(),
+                  hub.code != spoke.code else { continue }
+            // Skip pairs already in the player's network. Overlap is step 3's
+            // double-coverage problem — deliberately NOT created here.
+            if playerRoutes.contains(where: {
+                ($0.originCode == hub.code && $0.destCode == spoke.code) ||
+                ($0.originCode == spoke.code && $0.destCode == hub.code) }) { continue }
+            // The aircraft must physically be able to fly it.
+            guard let idx = spares.firstIndex(where: { routeBlock(for: $0, from: hub, to: spoke) == nil })
+            else { continue }
+            let ac = spares.remove(at: idx)
+
+            if hub.slotsAvailable > 0 { hub.slotsAvailable -= 1 }
+            if spoke.slotsAvailable > 0 { spoke.slotsAvailable -= 1 }
+            let r = Route(id: nextRouteId, originCode: hub.code, destCode: spoke.code,
+                          openedTick: tick, openingCost: 0)
+            r.subsidiaryCode = p.id
+            nextRouteId += 1
+            playerRoutes.append(r)
+            r.assignmentHistory.append(RouteAssignment(id: 0, tail: ac.tail,
+                                                       typeName: ac.type.name, assignedTick: tick))
+            ac.assignedRouteId = r.id
+            ac.origin = hub
+            ac.dest = spoke
+            rollRevenue(for: ac)
+            opened += 1
+        }
+        return opened
+    }
+
+    /// Their hubs become yours — unless you already hub there, in which case
+    /// yours stands.
+    private func inheritHubs(from p: CompetitorProfile) {
+        for code in p.hubCodes where hubs[code] == nil {
+            hubs[code] = Hub(establishedTick: tick)
+            rivalHubs[code] = nil   // no longer a rival's — it's in the group now
+        }
+    }
+
+    /// The instant, legible reward: they stop competing with you everywhere.
+    private func removeAsRival(_ p: CompetitorProfile) {
+        for r in playerRoutes {
+            let before = r.competitors.count
+            r.competitors.removeAll { $0 == p.name }
+            r.competitionLevel = max(0, r.competitionLevel - (before - r.competitors.count))
+        }
+    }
+
+    /// PARTIAL blend, weighted by relative size and capped so a subsidiary can
+    /// never swing the mainline score by more than half. Buying a well-run
+    /// carrier helps a little; buying a badly-run one hurts a little and gives
+    /// you something to fix.
+    private func blendReputation(with p: CompetitorProfile) {
+        let mine = Double(max(1, ownedCount - p.fleetSize))
+        let theirs = Double(p.fleetSize)
+        let weight = min(0.5, theirs / (mine + theirs))
+        reputation = reputation * (1 - weight) + p.serviceScore * weight
+    }
+
     // MARK: - Competitor intelligence (scouting)
 
     /// Per-game seed for competitor profiles. Persisted; the profiles themselves
@@ -2428,6 +2590,8 @@ final class Simulation {
         let saleProceeds, offerIncome, flights: Int
         let loanProceeds, debtService: Int
         var hubSpend = 0, hubLabor = 0, clubRent = 0
+        /// Airline acquisitions (buying a competitor outright).
+        var airlineAcquisition = 0
         let cash, netWorth: Int
     }
     private(set) var financeSnapshots: [FinanceSnapshot] = []
@@ -2440,6 +2604,7 @@ final class Simulation {
                         offerIncome: totalOfferIncome, flights: totalFlightsFlown,
                         loanProceeds: totalLoanProceeds, debtService: totalDebtService,
                         hubSpend: totalHubSpend, hubLabor: totalHubLabor, clubRent: totalClubRent,
+                        airlineAcquisition: totalAcquisitionPrice,
                         cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
     }
 
@@ -2777,6 +2942,8 @@ final class Simulation {
         s.cameraZoom = cameraZoom; s.cameraCenterX = cameraCenter.x; s.cameraCenterY = cameraCenter.y
         s.homeRegion = homeRegion.rawValue
         s.competitorSeed = competitorSeed
+        s.subsidiaries = subsidiaries
+        s.totalAcquisitionPrice = totalAcquisitionPrice
         s.hubs = hubs
         s.rivalHubs = rivalHubs
         s.totalHubSpend = totalHubSpend
@@ -2788,7 +2955,8 @@ final class Simulation {
                          assignedRouteId: ac.assignedRouteId, pendingRouteId: ac.pendingRouteId,
                          sellOfferDismissed: ac.sellOfferDismissed,
                          isLeased: ac.isLeased, leaseAccrued: ac.leaseAccrued, maint: ac.maint,
-                         aogAutoClearTick: ac.aogAutoClearTick, crewId: ac.crewId)
+                         aogAutoClearTick: ac.aogAutoClearTick, crewId: ac.crewId,
+                         subsidiaryCode: ac.subsidiaryCode)
         }
         s.routes = playerRoutes.map(routeSave)
         s.closedRoutes = closedPlayerRoutes.map(routeSave)
@@ -2803,7 +2971,8 @@ final class Simulation {
                         saleProceeds: f.saleProceeds, offerIncome: f.offerIncome, flights: f.flights,
                         cash: f.cash, netWorth: f.netWorth,
                         loanProceeds: f.loanProceeds, debtService: f.debtService,
-                        hubSpend: f.hubSpend, hubLabor: f.hubLabor, clubRent: f.clubRent)
+                        hubSpend: f.hubSpend, hubLabor: f.hubLabor, clubRent: f.clubRent,
+                        airlineAcquisition: f.airlineAcquisition)
         }
         return s
     }
@@ -2814,12 +2983,14 @@ final class Simulation {
                   totalLeaseCost: r.totalLeaseCost, closedTick: r.closedTick,
                   competitionLevel: r.competitionLevel, competitors: r.competitors,
                   incentiveBonus: r.incentiveBonus, incentiveWaived: r.incentiveWaived, fulfillByTick: r.fulfillByTick,
+                  subsidiaryCode: r.subsidiaryCode,
                   history: r.history.map { FlightRecordSave(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) },
                   assignmentHistory: r.assignmentHistory.map { RouteAssignmentSave(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) })
     }
     private func restoreRoute(_ s: RouteSave) -> Route {
         let r = Route(id: s.id, originCode: s.originCode, destCode: s.destCode, openedTick: s.openedTick, openingCost: s.openingCost)
         r.cumulativeNet = s.cumulativeNet; r.flights = s.flights; r.totalLeaseCost = s.totalLeaseCost; r.closedTick = s.closedTick
+        r.subsidiaryCode = s.subsidiaryCode
         r.competitionLevel = s.competitionLevel; r.competitors = s.competitors
         r.incentiveBonus = s.incentiveBonus; r.incentiveWaived = s.incentiveWaived; r.fulfillByTick = s.fulfillByTick
         r.history = s.history.map { FlightRecord(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) }
@@ -2855,6 +3026,10 @@ final class Simulation {
         homeRegion = s.homeRegion.flatMap { Airline.PlayerRegion(rawValue: $0) } ?? .northAmerica
         competitorSeed = s.competitorSeed ?? UInt64.random(in: 1...UInt64.max)
         rebuildCompetitorIntel()
+        // Restored BEFORE the fleet, so an inherited aircraft can look up its
+        // subsidiary's name for the tooltip/airline label.
+        subsidiaries = s.subsidiaries ?? []
+        totalAcquisitionPrice = s.totalAcquisitionPrice ?? 0
         hubs = s.hubs ?? [:]
         rivalHubs = s.rivalHubs ?? [:]
         totalHubSpend = s.totalHubSpend ?? 0
@@ -2888,6 +3063,8 @@ final class Simulation {
             ac.pendingRouteId = a.pendingRouteId
             ac.sellOfferDismissed = a.sellOfferDismissed; ac.isLeased = a.isLeased; ac.leaseAccrued = a.leaseAccrued
             ac.maint = a.maint; ac.aogAutoClearTick = a.aogAutoClearTick; ac.crewId = a.crewId
+            ac.subsidiaryCode = a.subsidiaryCode
+            if let code = a.subsidiaryCode { ac.airlineName = subsidiaries.first { $0.code == code }?.name }
             rollRevenue(for: ac)
             aircraft.append(ac)
         }
@@ -2900,6 +3077,7 @@ final class Simulation {
                             saleProceeds: f.saleProceeds, offerIncome: f.offerIncome, flights: f.flights,
                             loanProceeds: f.loanProceeds, debtService: f.debtService,
                             hubSpend: f.hubSpend ?? 0, hubLabor: f.hubLabor ?? 0, clubRent: f.clubRent ?? 0,
+                            airlineAcquisition: f.airlineAcquisition ?? 0,
                             cash: f.cash, netWorth: f.netWorth)
         }
         if financeSnapshots.isEmpty { financeSnapshots = [financeSnapshotNow()] }

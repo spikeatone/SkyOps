@@ -23,6 +23,9 @@ struct CompetitorIntelView: View {
 
     @Environment(\.colorScheme) private var scheme
     @State private var selected: CompetitorProfile?
+    /// Two-tap confirm — an acquisition is permanent and expensive.
+    @State private var confirming: String?
+    @State private var flash: String?
 
     private var isDark: Bool { scheme == .dark }
     private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
@@ -56,7 +59,21 @@ struct CompetitorIntelView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 6)
+
+            if let flash {
+                VStack {
+                    Text(flash).font(.karla(13, .bold)).foregroundStyle(.white)
+                        .padding(.horizontal, 16).padding(.vertical, 10)
+                        .background(Sky.coreGreen)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .padding(.top, 60)
+                    Spacer()
+                }
+                .transition(.opacity)
+                .task { try? await Task.sleep(for: .seconds(2.6)); self.flash = nil }
+            }
         }
+        .animation(Motion.glide, value: flash)
     }
 
     // MARK: Header
@@ -109,7 +126,8 @@ struct CompetitorIntelView: View {
                         Text(p.code).font(.karla(11, .bold)).foregroundStyle(secondary)
                     }
                     Spacer(minLength: 4)
-                    if rivals.contains(p.name) { chip("CONTESTING YOU", red) }
+                    if sim.isSubsidiary(p.id) { chip("YOURS", Sky.coreGreen) }
+                    else if rivals.contains(p.name) { chip("CONTESTING YOU", red) }
                     Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(secondary.opacity(0.7))
                 }
@@ -145,7 +163,8 @@ struct CompetitorIntelView: View {
                     Text(p.region).font(.karla(12)).foregroundStyle(secondary)
                     HStack(spacing: 8) {
                         chip(p.trend.rawValue.uppercased(), trendColor(p.trend))
-                        if rivals.contains(p.name) { chip("CONTESTING YOU", red) }
+                        if sim.isSubsidiary(p.id) { chip("YOUR SUBSIDIARY", Sky.coreGreen) }
+                        else if rivals.contains(p.name) { chip("CONTESTING YOU", red) }
                     }.padding(.top, 2)
                 }
             }
@@ -204,6 +223,90 @@ struct CompetitorIntelView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+
+            acquisitionBox(p)
+        }
+    }
+
+    // MARK: Acquisition
+
+    @ViewBuilder
+    private func acquisitionBox(_ p: CompetitorProfile) -> some View {
+        let block = sim.acquisitionBlock(for: p)
+        let price = sim.askingPrice(for: p)
+        box {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("ACQUISITION").font(.karla(12, .bold)).foregroundStyle(titleColor)
+
+                if sim.isSubsidiary(p.id) {
+                    Text("Part of your group. \(p.name) continues to fly under its own flag.")
+                        .font(.karla(12)).foregroundStyle(Sky.coreGreen)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    line("Asking price", compactMoney(price),
+                         block == nil ? Sky.coreGreen : primary)
+                    Text("Includes a control premium over estimated value. You would inherit their fleet, network, and hubs — and they keep flying under their own flag.")
+                        .font(.karla(11)).foregroundStyle(secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let block {
+                        Text(blockMessage(block)).font(.karla(11, .semibold))
+                            .foregroundStyle(red)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else if confirming == p.id {
+                        Text("This is permanent. \(compactMoney(price)) leaves your balance now.")
+                            .font(.karla(11, .semibold)).foregroundStyle(red)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 10) {
+                            Button {
+                                if sim.acquire(p) {
+                                    Feedback.milestone()
+                                    flash = "\(p.name) is yours."
+                                    selected = sim.relevantCompetitors.first { $0.id == p.id } ?? p
+                                }
+                                confirming = nil
+                            } label: {
+                                Text("Confirm acquisition").font(.karla(13, .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity).frame(height: 40)
+                                    .background(Sky.coreGreen)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                            }.buttonStyle(.plain)
+                            Button { confirming = nil } label: {
+                                Text("Cancel").font(.karla(13, .semibold))
+                                    .foregroundStyle(secondary)
+                                    .frame(maxWidth: .infinity).frame(height: 40)
+                                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+                            }.buttonStyle(.plain)
+                        }
+                    } else {
+                        Button { confirming = p.id } label: {
+                            Text("Make an offer").font(.karla(13, .bold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity).frame(height: 44)
+                                .background(Sky.coreGreen)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }.buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Player-facing copy for a block reason. Lives here, not in the Sim layer,
+    /// which stays framework-free for the headless harness.
+    private func blockMessage(_ b: AcquisitionBlock) -> String {
+        switch b {
+        case .belowNetWorthGate(let needed):
+            return "Acquisitions unlock at $1B net worth — \(compactMoney(needed)) to go."
+        case .alreadyOwned:          return "Already part of your group."
+        case .integrationInProgress(let name):
+            return "You're still integrating \(name). One at a time."
+        case .lifetimeCapReached(let cap):
+            return "You've acquired \(cap) carriers — no regulator will approve another."
+        case .cannotAfford(let needed):
+            return "You need \(compactMoney(needed)) more in cash."
+        case .notInYourMarkets:      return "You don't operate in this carrier's markets."
         }
     }
 

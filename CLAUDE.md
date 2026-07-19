@@ -3035,6 +3035,63 @@ fraction of a percent, so the reward curve dies.
   "reinforces that this is a game" rather than importing real-world financials.
   Apply the same instinct to acquisition prices and integration costs.
 
+### Step 2 — transaction + inheritance: BUILT (NOT SHIPPABLE ALONE)
+
+⚠️ **Step 2 on its own IS the design the spec rejects** — spend money, receive
+assets, pure upside. It reads as a money printer until step 3 (the integration
+burden) lands. Do NOT ship a build with acquisitions enabled and step 3 missing.
+
+- **`Sim/Acquisition.swift`** holds the TYPES + pure read-only logic
+  (`Subsidiary`, `AcquisitionBlock`, gate constants, `askingPrice`,
+  `acquisitionBlock`). The MUTATING core lives in Simulation.swift
+  ("Competitor acquisition" MARK) because everything it touches
+  (`playerBalance`/`aircraft`/`playerRoutes`/`hubs`/crew pools/`reputation`) is
+  `private(set)` to that file — same reason the Hubs & Clubs core lives there.
+- **Gate**: net worth ≥ $1B, carrier must be in `relevantCompetitors`, one
+  integration at a time (inert until step 3), **lifetime cap 3**, price
+  escalation ×1.0/1.4/1.9. `askingPrice` = `estimatedValue × 1.30 × escalation`
+  (control premium — you never buy a company at book).
+- **Inheritance**: fleet (real ages spread around the carrier's stated average,
+  **tails KEEP the carrier's own code** — a Delta jet stays `N…DL`), routes
+  (hub-anchored, in-region, **free but they consume slots**, capped at the
+  aircraft inherited so nothing lands unstaffed, and gated by the real
+  `routeBlock` range/runway check), hubs, and crew.
+- **SPEC AMENDMENT — inherited aircraft come WITH crew.** The spec originally
+  said unfamiliar types arrive with no crew; that's wrong on realism (you
+  acquire the airline's people too) and would flood the alert queue at close.
+  The merger's pain is the SENIORITY fight, which is step 3's job and bites into
+  exactly this inherited pool.
+- **Rival removal** clears the carrier from every `Route.competitors` (demand
+  recovers immediately — the one instant, legible reward); unrelated rivals
+  survive, and `competitionLevel` stays consistent with the list.
+- **Reputation blends PARTIALLY**, weighted by relative fleet size and **capped
+  at 0.5** so a subsidiary can never swing the mainline score by a majority.
+- **Finance invariant EXTENDED** with `− totalAcquisitionPrice` (as
+  `PeriodFigures.airlineAcquisition`, distinct from `acquisition`, which is
+  aircraft purchases). `FinanceSnapshot`/`FinanceSave` carry it too (optional →
+  legacy-safe). **Any future harness must include this term.**
+- **Persistence**: `subsidiaries` + `totalAcquisitionPrice` on GameSnapshot, and
+  `subsidiaryCode` on `AircraftSave`/`RouteSave` — all optional/nil-safe.
+  Subsidiaries restore BEFORE the fleet so an inherited aircraft can resolve its
+  carrier's name.
+- **`#if DEBUG devInjectCash(_:)` is a TEST HOOK** (reaching $1B through the real
+  economy takes sim-years). Injections are TRACKED via `devInjectedCash` so the
+  cash invariant accounts for them explicitly rather than being excused.
+  Verified absent from a real Release binary (`strings` → 0).
+- Verified **51/51 headless** (gate refusal moves no cash, exact price
+  deduction, invariant after acquisition AND after 20k ticks, full-fleet
+  inheritance, tails keep the carrier code, every inherited route flyable by its
+  assigned aircraft and none unstaffed, crew present for every inherited type,
+  hubs transferred, partial-only reputation blend, re-acquire refused, price
+  escalation, rival removal with unrelated rivals surviving, save/load
+  round-trip, legacy-save load) + live in the Simulator (offer state showing
+  $106.0M → $137.9M asking = exactly the 1.30× premium; post-acquisition
+  "continues to fly under its own flag").
+- **A harness lesson worth keeping:** the restore invariant check initially
+  failed, and the fix was to assert the gap equals EXACTLY the untracked test
+  injection rather than to relax the check — which is what proved persistence
+  was actually correct instead of merely passing.
+
 ### Step 1 — competitor scouting: BUILT
 
 - **`Sim/Competitor.swift`**: `CompetitorProfile` (fleet + composition + age,

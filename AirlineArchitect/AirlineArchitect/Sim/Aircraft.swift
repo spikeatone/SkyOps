@@ -49,6 +49,10 @@ final class Aircraft: Identifiable {
     /// (international), so a carrier never wanders outside its real geographic
     /// sphere. nil for the player's own fleet.
     var homeRegion: Airline.Region?
+    /// Non-nil when this aircraft belongs to an acquired SUBSIDIARY rather than
+    /// the player's mainline. It still flies the subsidiary's flag (and keeps
+    /// that carrier's tail code) — see ACQUISITIONS_SPEC.md.
+    var subsidiaryCode: String?
 
     var origin: Airport
     var dest: Airport

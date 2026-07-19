@@ -1,6 +1,6 @@
 # Competitor Acquisition — Design Spec (for designer review)
 
-Status: **Step 1 (scouting) BUILT & verified. Steps 2–5 not built.** Numbers below are first-pass and WILL move; the
+Status: **Steps 1–2 BUILT & verified. Steps 3–5 not built — and step 2 is NOT SHIPPABLE without step 3.** Numbers below are first-pass and WILL move; the
 mandatory balance A/B (§Balance Guardrails) is what settles them, exactly as it
 retuned Hubs & Clubs from a −41% value-sink to +0.7%.
 
@@ -277,7 +277,11 @@ Suggested build order (each independently verifiable):
    `CompetitorIntelView.swift`, reached from a MARKET INTELLIGENCE card in
    Finance. Deterministic from one persisted seed; 1278/1278 headless. See
    CLAUDE.md "Decided — Competitor Acquisition" for the implementation map.
-2. The transaction + inheritance + immediate rival-removal.
+2. ~~The transaction + inheritance + immediate rival-removal.~~ **DONE.**
+   `Sim/Acquisition.swift` + the "Competitor acquisition" MARK in
+   Simulation.swift; 51/51 headless. ⚠️ Pure upside until step 3 lands.
+   AMENDMENT: inherited aircraft come WITH crew (you acquire the airline's
+   people); the merger's pain is the seniority fight, not an absence of crew.
 3. The integration burden (crew gaps, seniority, double-coverage, bills).
 4. Consolidation pressure on survivors.
 5. Balance A/B → retune → ship.
