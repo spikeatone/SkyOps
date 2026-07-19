@@ -3035,6 +3035,48 @@ fraction of a percent, so the reward curve dies.
   "reinforces that this is a game" rather than importing real-world financials.
   Apply the same instinct to acquisition prices and integration costs.
 
+### Step 3 — integration burden: BUILT, but the ECONOMICS FAIL THE TARGET
+
+Mechanics are complete and verified (27/27 headless). The first measured
+economic run **fails the calibration target and needs a designer call before any
+tuning** — full table + diagnosis in `ACQUISITIONS_SPEC.md` §MEASURED ECONOMICS.
+
+- **`Integration`** (Acquisition.swift) + the lifecycle in Simulation.swift:
+  18-month window, monthly bill (1.5% of price), seniority dispute (9 months, or
+  settle for 8%), disputed families, bills paid. `integrationInProgress` is now
+  REAL, so a second acquisition is blocked while one runs.
+- **Seniority dispute** sidelines 35% of each crew family flown by BOTH airlines
+  (reuses `.sidelined`; never yanks crew mid-flight) and is RE-APPLIED each tick,
+  because crew released from a flight return `.available` and the dispute would
+  otherwise drain away. Settling returns every sidelined crew immediately.
+- **Double coverage**: `overlapDemandMultiplier` splits a pair's demand across
+  every player route serving it, × `overlapCoordination`, which eases 0.70→0.92
+  across the integration and then HOLDS AT THE FLOOR. Time never reaches 1.0 —
+  only closing/reassigning one of the pair clears it.
+- **Inherited routes are BIASED (45%) toward airports the player already
+  serves.** Caught by the harness: with purely random hub-anchored generation the
+  first target produced ZERO overlapping pairs and ZERO disputed families, so the
+  entire burden was inert and a player could cherry-pick frictionless targets.
+  You buy a competitor *because* they fly where you fly.
+- **MEASURED RESULT (1 seed, 3 arms from an identical restored state):** neither
+  passive nor managed ever pays back in 36 months, and **MANAGED LOSES TO
+  PASSIVE** — the inverse of the intent. The integration bill is 27% of the
+  purchase price (1.5%/mo × 18mo, never multiplied out in the spec) and accounts
+  for ~¾ of the loss; the settlement (8%) is nearly pure cost; overlap relief is
+  too shallow to fund it. **Underneath all of that: this game's aircraft take
+  ~8 years to pay back individually (real prices vs. the locked ~6-hr cycle), so
+  an airline priced at fleet value cannot pay back in 24–36 months at any
+  integration tuning.**
+- **HARD CONSTRAINT for any repricing:** the price must ALWAYS exceed the fleet's
+  in-game `fleetMarketValue`, or the player buys a carrier and liquidates its
+  fleet at a profit — pure arbitrage, the worst available failure mode.
+- **A/B METHODOLOGY TRAP worth keeping:** the first run was invalid because each
+  `Simulation` rolls its OWN `competitorSeed`, so the arms bought *different*
+  carriers at different prices. Arms must be restored from one shared
+  `GameSnapshot`. A second bug in the same run: the rationalization helper
+  filtered for unserved AIRPORTS, which finds nothing once an inherited network
+  covers the country — it must filter for unserved PAIRS.
+
 ### Step 2 — transaction + inheritance: BUILT (NOT SHIPPABLE ALONE)
 
 ⚠️ **Step 2 on its own IS the design the spec rejects** — spend money, receive

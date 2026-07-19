@@ -52,6 +52,9 @@ struct GameSnapshot: Codable {
     // Acquisitions (nil in pre-acquisition saves)
     var subsidiaries: [Subsidiary]? = nil
     var totalAcquisitionPrice: Int? = nil
+    var activeIntegration: Integration? = nil
+    var totalIntegrationSpend: Int? = nil
+    var totalSenioritySpend: Int? = nil
 
     // Hubs & Clubs (nil in pre-hub saves)
     var hubs: [String: Simulation.Hub]? = nil
@@ -140,6 +143,7 @@ struct FinanceSave: Codable {
     var loanProceeds = 0, debtService = 0
     var hubSpend: Int? = nil, hubLabor: Int? = nil, clubRent: Int? = nil
     var airlineAcquisition: Int? = nil
+    var integrationSpend: Int? = nil
 }
 
 struct LoanSave: Codable {

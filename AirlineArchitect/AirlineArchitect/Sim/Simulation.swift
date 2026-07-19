@@ -786,6 +786,121 @@ final class Simulation {
     private(set) var subsidiaries: [Subsidiary] = []
     /// Capital-out accumulator for the Finance cash invariant.
     private(set) var totalAcquisitionPrice = 0
+    /// The live integration, if any. THIS is the feature — see Acquisition.swift.
+    private(set) var activeIntegration: Integration?
+    /// Overhead accumulators for the Finance cash invariant.
+    private(set) var totalIntegrationSpend = 0
+    private(set) var totalSenioritySpend = 0
+
+    // MARK: Integration lifecycle
+
+    /// Start the merger integration: monthly bills, a seniority dispute across
+    /// the families both airlines fly, and a reputation hit passengers feel.
+    private func beginIntegration(_ p: CompetitorProfile, price: Int) {
+        let months = Simulation.integrationMonths
+        // Families flown by BOTH airlines — the ones with two seniority lists to
+        // merge. A type only the subsidiary flies has nobody to argue with.
+        let mine = Set(aircraft.filter { $0.purchased && $0.subsidiaryCode == nil }.map(\.type.family))
+        let theirs = Set(p.fleetByType.keys.compactMap { id in
+            AircraftType.all.first { $0.id == id }?.family })
+        let disputed = mine.intersection(theirs).sorted()
+
+        var ig = Integration(
+            subsidiaryCode: p.id, subsidiaryName: p.name,
+            startTick: tick, endTick: tick + months * Simulation.ticksPerMonth,
+            monthlyBill: Int(Double(price) * Simulation.integrationBillRate),
+            seniorityExpiryTick: tick + Simulation.seniorityDisputeMonths * Simulation.ticksPerMonth,
+            senioritySettlementCost: Int(Double(price) * Simulation.senioritySettlementRate),
+            disputedFamilies: disputed,
+            nextBillTick: tick + Simulation.ticksPerMonth)
+        if disputed.isEmpty {
+            // Nothing to dispute — no overlapping type ratings.
+            ig.senioritySettlementCost = nil
+            ig.seniorityExpiryTick = tick
+        }
+        activeIntegration = ig
+        applySeniorityDispute()
+
+        reputation = max(0, reputation - Simulation.acquisitionReputationHit)
+        logOps(.disruption, "Integration underway",
+               "\(p.name) integration runs \(months) months. \(disputed.isEmpty ? "No overlapping type ratings." : "Seniority dispute across \(disputed.count) crew families.")")
+    }
+
+    /// Sideline a fraction of each disputed family's crew. Reuses the labor-action
+    /// mechanism, but runs for MONTHS rather than days — merging two seniority
+    /// lists is the most contested part of a real airline merger.
+    private func applySeniorityDispute() {
+        guard let ig = activeIntegration, !ig.isSettled else { return }
+        for family in ig.disputedFamilies {
+            guard var pool = crewPoolsByFamily[family], !pool.isEmpty else { continue }
+            let target = Int((Double(pool.count) * Simulation.senioritySidelinedFraction).rounded())
+            var sidelined = pool.filter { $0.status == .sidelined }.count
+            for i in pool.indices where sidelined < target {
+                // Never yank a crew mid-flight — same rule as the labor action.
+                if pool[i].status == .available || pool[i].status == .resting {
+                    pool[i].status = .sidelined
+                    sidelined += 1
+                }
+            }
+            crewPoolsByFamily[family] = pool
+        }
+    }
+
+    /// Return sidelined crew once the dispute ends (settled or expired).
+    private func endSeniorityDispute(settled: Bool) {
+        guard var ig = activeIntegration else { return }
+        for family in ig.disputedFamilies {
+            guard var pool = crewPoolsByFamily[family] else { continue }
+            for i in pool.indices where pool[i].status == .sidelined { pool[i].status = .available }
+            crewPoolsByFamily[family] = pool
+        }
+        ig.senioritySettlementCost = nil
+        ig.seniorityExpiryTick = tick
+        activeIntegration = ig
+        logOps(.structural, settled ? "Seniority agreement signed" : "Seniority dispute resolved",
+               "\(ig.subsidiaryName) crews are back on the line.")
+    }
+
+    /// Pay to end the seniority dispute now — the clearest "manage it well" lever
+    /// in the feature, and expensive enough to be a real decision.
+    @discardableResult
+    func settleSeniority() -> Bool {
+        guard let ig = activeIntegration, let cost = ig.senioritySettlementCost,
+              playerBalance >= cost else { return false }
+        playerBalance -= cost
+        totalSenioritySpend += cost
+        endSeniorityDispute(settled: true)
+        return true
+    }
+
+    /// Monthly bill + dispute expiry + completion. Called from the tick loop.
+    private func tickIntegration() {
+        guard var ig = activeIntegration else { return }
+
+        if !ig.isSettled, tick >= ig.seniorityExpiryTick {
+            endSeniorityDispute(settled: false)
+            return
+        }
+        // Re-apply sidelining: crew released from a flight return as .available,
+        // so the dispute has to keep its grip rather than draining away.
+        if !ig.isSettled { applySeniorityDispute() }
+
+        if tick >= ig.nextBillTick, tick < ig.endTick {
+            playerBalance -= ig.monthlyBill
+            totalIntegrationSpend += ig.monthlyBill
+            ig.billsPaid += 1
+            ig.nextBillTick += Simulation.ticksPerMonth
+            activeIntegration = ig
+        }
+        if tick >= ig.endTick {
+            if !ig.isSettled { endSeniorityDispute(settled: false) }
+            logOps(.structural, "Integration complete",
+                   "\(ig.subsidiaryName) is fully integrated after \(Simulation.integrationMonths) months.")
+            celebrate("integ_\(ig.subsidiaryCode)", "checkmark.seal.fill",
+                      "\(ig.subsidiaryName) integrated", "The merger is complete")
+            activeIntegration = nil
+        }
+    }
 
     @discardableResult
     func acquire(_ p: CompetitorProfile) -> Bool {
@@ -806,6 +921,7 @@ final class Simulation {
                                        serviceScoreAtAcquisition: p.serviceScore,
                                        fleetInherited: fleet.count, routesInherited: routes))
 
+        beginIntegration(p, price: price)
         logOps(.structural, "Acquired \(p.name)",
                "\(fleet.count) aircraft and \(routes) routes join your group — \(p.name) keeps flying under its own flag.")
         celebrate("acq_\(p.id)", "building.2.fill", "\(p.name) acquired",
@@ -865,13 +981,26 @@ final class Simulation {
         var attempts = 0
         while opened < target, attempts < target * 12, !spares.isEmpty {
             attempts += 1
-            guard let hub = hubs.randomElement(), let spoke = pool.randomElement(),
+            guard let hub = hubs.randomElement() else { continue }
+            // You buy a competitor BECAUSE they fly where you fly. Bias their
+            // network toward airports the player already serves, so double
+            // coverage is a real, expected consequence of the deal rather than a
+            // rare accident — without this the whole integration burden is inert
+            // for most targets and a player can cherry-pick frictionless ones.
+            // (Caught by the step-3 harness: the first target produced ZERO
+            // overlapping pairs and ZERO disputed crew families.)
+            let contested = pool.filter { ap in
+                playerRoutes.contains { $0.subsidiaryCode == nil &&
+                    ($0.originCode == ap.code || $0.destCode == ap.code) } }
+            let useContested = !contested.isEmpty && Double.random(in: 0..<1) < 0.45
+            guard let spoke = (useContested ? contested : pool).randomElement(),
                   hub.code != spoke.code else { continue }
-            // Skip pairs already in the player's network. Overlap is step 3's
-            // double-coverage problem — deliberately NOT created here.
-            if playerRoutes.contains(where: {
-                ($0.originCode == hub.code && $0.destCode == spoke.code) ||
-                ($0.originCode == spoke.code && $0.destCode == hub.code) }) { continue }
+            // Overlap with the player's existing network is ALLOWED and is the
+            // point (step 3's double-coverage problem) — but only once per pair,
+            // so an inherited network can't stack three deep on one city pair.
+            if playerRoutes.contains(where: { $0.subsidiaryCode == p.id &&
+                (($0.originCode == hub.code && $0.destCode == spoke.code) ||
+                 ($0.originCode == spoke.code && $0.destCode == hub.code)) }) { continue }
             // The aircraft must physically be able to fly it.
             guard let idx = spares.firstIndex(where: { routeBlock(for: $0, from: hub, to: spoke) == nil })
             else { continue }
@@ -2592,6 +2721,8 @@ final class Simulation {
         var hubSpend = 0, hubLabor = 0, clubRent = 0
         /// Airline acquisitions (buying a competitor outright).
         var airlineAcquisition = 0
+        /// Merger integration bills + seniority settlement (overhead).
+        var integrationSpend = 0
         let cash, netWorth: Int
     }
     private(set) var financeSnapshots: [FinanceSnapshot] = []
@@ -2605,6 +2736,7 @@ final class Simulation {
                         loanProceeds: totalLoanProceeds, debtService: totalDebtService,
                         hubSpend: totalHubSpend, hubLabor: totalHubLabor, clubRent: totalClubRent,
                         airlineAcquisition: totalAcquisitionPrice,
+                        integrationSpend: totalIntegrationSpend + totalSenioritySpend,
                         cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
     }
 
@@ -2662,6 +2794,10 @@ final class Simulation {
                     let floor = clubOperating(r.originCode) || clubOperating(r.destCode)
                         ? Simulation.clubCompetitionShareFloor : 0.2
                     effDemand *= r.competitionShare(reputation: reputation, shareFloor: floor)
+                    // Double coverage: you compete with YOURSELF on a pair you
+                    // serve twice. Eases over the integration, never to 1.0 —
+                    // only closing/reassigning one of the pair clears it.
+                    effDemand *= overlapDemandMultiplier(for: r)
                 }
             }
             let base = Demand.loadFactor(seats: ac.type.seats, dailyOneWay: effDemand)
@@ -2944,6 +3080,9 @@ final class Simulation {
         s.competitorSeed = competitorSeed
         s.subsidiaries = subsidiaries
         s.totalAcquisitionPrice = totalAcquisitionPrice
+        s.activeIntegration = activeIntegration
+        s.totalIntegrationSpend = totalIntegrationSpend
+        s.totalSenioritySpend = totalSenioritySpend
         s.hubs = hubs
         s.rivalHubs = rivalHubs
         s.totalHubSpend = totalHubSpend
@@ -2972,7 +3111,8 @@ final class Simulation {
                         cash: f.cash, netWorth: f.netWorth,
                         loanProceeds: f.loanProceeds, debtService: f.debtService,
                         hubSpend: f.hubSpend, hubLabor: f.hubLabor, clubRent: f.clubRent,
-                        airlineAcquisition: f.airlineAcquisition)
+                        airlineAcquisition: f.airlineAcquisition,
+                        integrationSpend: f.integrationSpend)
         }
         return s
     }
@@ -3030,6 +3170,9 @@ final class Simulation {
         // subsidiary's name for the tooltip/airline label.
         subsidiaries = s.subsidiaries ?? []
         totalAcquisitionPrice = s.totalAcquisitionPrice ?? 0
+        activeIntegration = s.activeIntegration
+        totalIntegrationSpend = s.totalIntegrationSpend ?? 0
+        totalSenioritySpend = s.totalSenioritySpend ?? 0
         hubs = s.hubs ?? [:]
         rivalHubs = s.rivalHubs ?? [:]
         totalHubSpend = s.totalHubSpend ?? 0
@@ -3078,6 +3221,7 @@ final class Simulation {
                             loanProceeds: f.loanProceeds, debtService: f.debtService,
                             hubSpend: f.hubSpend ?? 0, hubLabor: f.hubLabor ?? 0, clubRent: f.clubRent ?? 0,
                             airlineAcquisition: f.airlineAcquisition ?? 0,
+                            integrationSpend: f.integrationSpend ?? 0,
                             cash: f.cash, netWorth: f.netWorth)
         }
         if financeSnapshots.isEmpty { financeSnapshots = [financeSnapshotNow()] }
@@ -3117,6 +3261,7 @@ final class Simulation {
         tickSlotAvailability()
         tickLeaseBilling()
         tickInsuranceBilling()
+        tickIntegration()
         tickLoanBilling()
         tickHubBilling()
         tickUsedMarketReplenishment()

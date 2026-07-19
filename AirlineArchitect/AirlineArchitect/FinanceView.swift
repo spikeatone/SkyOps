@@ -303,6 +303,7 @@ struct FinanceView: View {
                 loanProceeds: sim.totalLoanProceeds, debtService: sim.totalDebtService,
                 hubSpend: sim.totalHubSpend, hubLabor: sim.totalHubLabor, clubRent: sim.totalClubRent,
                 airlineAcquisition: sim.totalAcquisitionPrice,
+                integrationSpend: sim.totalIntegrationSpend + sim.totalSenioritySpend,
                 cashStart: Simulation.startingCapital, cashEnd: sim.playerBalance, isTotal: true)
         case .thisMonth:
             return delta(from: s.last, toLive: true)
@@ -336,6 +337,7 @@ struct FinanceView: View {
             hubLabor: d(sim.totalHubLabor, \.hubLabor),
             clubRent: d(sim.totalClubRent, \.clubRent),
             airlineAcquisition: d(sim.totalAcquisitionPrice, \.airlineAcquisition),
+            integrationSpend: d(sim.totalIntegrationSpend + sim.totalSenioritySpend, \.integrationSpend),
             cashStart: base?.cash ?? Simulation.startingCapital,
             cashEnd: toLive ? sim.playerBalance : (end?.cash ?? sim.playerBalance),
             isTotal: false)
@@ -542,10 +544,12 @@ struct PeriodFigures {
     /// Buying a competitor airline outright (acquisitions). Distinct from
     /// `acquisition`, which is aircraft purchases.
     var airlineAcquisition = 0
+    /// Merger integration bills + seniority settlement.
+    var integrationSpend = 0
     var cashStart, cashEnd: Int
     var isTotal: Bool
     var operatingProfit: Int { revenue - fees - operatingCost }
-    var overhead: Int { leaseCost + insurance + maintenance + debtService + hubLabor + clubRent }
+    var overhead: Int { leaseCost + insurance + maintenance + debtService + hubLabor + clubRent + integrationSpend }
     var capitalOut: Int { acquisition + routeSpend + hedgeSpend + hubSpend + airlineAcquisition }
     var capitalIn: Int { saleProceeds + offerIncome + loanProceeds }
 }

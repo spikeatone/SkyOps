@@ -1,10 +1,71 @@
 # Competitor Acquisition — Design Spec (for designer review)
 
-Status: **Steps 1–2 BUILT & verified. Steps 3–5 not built — and step 2 is NOT SHIPPABLE without step 3.** Numbers below are first-pass and WILL move; the
+Status: **Steps 1–3 BUILT & verified (27/27 + 51/51 headless). NOT SHIPPABLE —
+the first economic measurement FAILS the calibration target and needs a designer
+call before tuning. See §MEASURED ECONOMICS below.** Numbers below are first-pass and WILL move; the
 mandatory balance A/B (§Balance Guardrails) is what settles them, exactly as it
 retuned Hubs & Clubs from a −41% value-sink to +0.7%.
 
 Target release: **1.1**, not 1.0.1 (see §Scope & Sequencing).
+
+---
+
+## MEASURED ECONOMICS (first run, steps 1–3 complete) — FAILS THE TARGET
+
+Three arms from an IDENTICAL restored starting state (same competitor seed, same
+8-aircraft/8-route mainline, ~$6B cash), 36 sim-months, 1 seed — indicative, not
+the step-5 A/B. All three bought the same carrier (Delta, 47 aircraft, $2,701M).
+
+| Month | Control | Passive | Managed | Passive vs ctrl | Managed vs ctrl |
+|---|---|---|---|---|---|
+| 0 | $6,018M | $5,400M | $5,578M | −$619M | −$440M |
+| 12 | $6,011M | $5,172M | $5,063M | −$838M | −$948M |
+| 24 | $6,005M | $5,051M | $4,821M | −$954M | −$1,184M |
+| 36 | $5,999M | $5,014M | $4,781M | −$984M | −$1,217M |
+
+**Neither arm ever pays back, and MANAGED LOSES TO PASSIVE** — the exact inverse
+of the design intent. Diagnosis, from the component arithmetic:
+
+1. **The integration bill dominates.** 1.5%/month × 18 months = **27% of the
+   purchase price** ($729M on a $2,701M deal) — roughly three-quarters of the
+   entire passive shortfall. The spec's "1.5% for 18 months" was never
+   multiplied out.
+2. **The seniority settlement is nearly pure cost.** Managed's extra loss vs
+   passive ($233M) ≈ the settlement itself ($216M, 8% of price). Ending the
+   dispute early returns far less than it costs, so the "manage it well" lever
+   is actively punishing.
+3. **Overlap relief is worth too little to matter.** 7 double-covered pairs out
+   of ~55 routes, with a shallow 0.70→0.92 band, so rationalizing barely moves
+   revenue — it can't fund the settlement.
+4. **The deeper constraint (pre-existing, documented in CLAUDE.md):** real
+   aircraft prices against this game's per-leg profit and LOCKED ~6-hour flight
+   cycle (2 legs/day vs a real ~6) mean *individual aircraft* take ~8 years to
+   pay back. **An airline priced at its fleet's value therefore cannot pay back
+   in 24–36 months** — not with any integration tuning. The control arm is
+   itself flat, so the baseline operation barely compounds at this scale.
+
+### The designer call this needs
+
+"A well-managed acquisition could start to pay off in 24–36 months" has two
+readings, and they demand different fixes:
+
+- **(A) Turns accretive** — the acquired operation stops dragging and starts
+  contributing positive monthly cash by month 24–36, while full capital payback
+  stays long (5–10 years, as real airline M&A actually is). Achievable by
+  cutting the integration bill and settlement hard. **Recommended.**
+- **(B) Full capital payback** — net worth catches the no-acquisition control
+  within 36 months. Requires either pricing acquisitions well below fleet value
+  or a large synergy bonus on acquired routes.
+
+⚠️ **(B) carries a hard constraint: the price must ALWAYS exceed the fleet's
+in-game resale value.** If it doesn't, the player buys a carrier and immediately
+liquidates its fleet for a profit — a pure arbitrage printer, the worst failure
+mode available. Any discount-to-book approach has to be checked against
+`fleetMarketValue`, not just eyeballed.
+
+Regardless of A or B, two things must change: the settlement has to return more
+than it costs, and the overlap band has to be deep enough that rationalizing is
+worth doing. Otherwise the skill expression stays inverted.
 
 ---
 

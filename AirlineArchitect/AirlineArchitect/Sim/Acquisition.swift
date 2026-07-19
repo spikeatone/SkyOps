@@ -54,7 +54,96 @@ enum AcquisitionBlock: Equatable {
 
 }
 
+/// A live merger integration. The BURDEN, not the purchase — this is what makes
+/// an acquisition a challenge rather than a shopping trip (ACQUISITIONS_SPEC.md
+/// "The integration burden").
+struct Integration: Codable, Equatable {
+    let subsidiaryCode: String
+    let subsidiaryName: String
+    let startTick: Int
+    /// Integration completes here. Overlap cannibalization eases toward its
+    /// floor across this window, and the monthly bill runs until it.
+    let endTick: Int
+    /// Charged monthly until `endTick`.
+    let monthlyBill: Int
+    /// The seniority dispute runs to this tick unless settled early.
+    var seniorityExpiryTick: Int
+    /// One-off cost to end the dispute now. Nil once settled.
+    var senioritySettlementCost: Int?
+    /// Crew families sidelined by the dispute (present in BOTH airlines).
+    var disputedFamilies: [String]
+    var nextBillTick: Int
+    var billsPaid: Int = 0
+
+    var isSettled: Bool { senioritySettlementCost == nil }
+}
+
 extension Simulation {
+
+    // MARK: - Integration constants (DESIGNED pacing; the balance A/B settles them)
+
+    /// How long an integration runs. The window over which schedule
+    /// deconfliction eases the overlap penalty.
+    static let integrationMonths = 18
+    /// Monthly integration bill as a fraction of the price paid — systems,
+    /// repainting, training. The drag that makes payback look like the real thing.
+    static let integrationBillRate = 0.015
+    /// Seniority dispute duration if never settled.
+    static let seniorityDisputeMonths = 9
+    /// One-off settlement cost as a fraction of the price paid.
+    static let senioritySettlementRate = 0.08
+    /// Fraction of a disputed family's crew sidelined while it runs.
+    static let senioritySidelinedFraction = 0.35
+    /// Reputation hit the moment a deal closes (passengers feel the disruption).
+    static let acquisitionReputationHit = 8.0
+
+    // MARK: - Route overlap (double coverage)
+
+    /// Demand coordination on a double-covered pair at the START of an
+    /// integration — schedules are uncoordinated and both routes fly half-empty.
+    static let overlapCoordinationStart = 0.70
+    /// The FLOOR it decays to. Schedule optimization is automatic work an
+    /// integration team really does; OVERCAPACITY is not — two aircraft on one
+    /// pair still split it. So time never reaches 1.0, and the residual only
+    /// clears when the player closes or reassigns one of the pair.
+    /// ⚠️ THIS IS THE LOAD-BEARING BALANCE NUMBER. Too shallow and passive
+    /// holding pays back inside 36 months (a printer); too deep and the decay is
+    /// cosmetic. Sweep it — do not eyeball it.
+    static let overlapCoordinationFloor = 0.92
+
+    /// Demand multiplier for a route, accounting for double coverage.
+    /// 1.0 when the pair is uniquely served.
+    func overlapDemandMultiplier(for route: Route) -> Double {
+        let n = playerRoutes.filter {
+            ($0.originCode == route.originCode && $0.destCode == route.destCode) ||
+            ($0.originCode == route.destCode && $0.destCode == route.originCode)
+        }.count
+        guard n > 1 else { return 1.0 }
+        // Split the pair's demand n ways, then apply coordination — which
+        // improves over the integration window but stops at the floor.
+        return (1.0 / Double(n)) * overlapCoordination
+    }
+
+    /// Eases from `overlapCoordinationStart` to `overlapCoordinationFloor` across
+    /// the active integration, then holds at the floor.
+    var overlapCoordination: Double {
+        guard let ig = activeIntegration else { return Simulation.overlapCoordinationFloor }
+        let span = Double(max(1, ig.endTick - ig.startTick))
+        let progress = min(1.0, max(0.0, Double(tick - ig.startTick) / span))
+        return Simulation.overlapCoordinationStart
+            + (Simulation.overlapCoordinationFloor - Simulation.overlapCoordinationStart) * progress
+    }
+
+    /// City pairs the player serves more than once — the rationalization list.
+    var doubleCoveredPairs: [(String, String, Int)] {
+        var counts: [String: (String, String, Int)] = [:]
+        for r in playerRoutes {
+            let key = [r.originCode, r.destCode].sorted().joined(separator: "-")
+            let existing = counts[key]?.2 ?? 0
+            counts[key] = (r.originCode, r.destCode, existing + 1)
+        }
+        return counts.values.filter { $0.2 > 1 }.sorted { $0.2 > $1.2 }
+    }
 
     // MARK: - Gate constants
 
@@ -74,9 +163,9 @@ extension Simulation {
     var netWorth: Int { playerBalance + fleetMarketValue }
     var acquisitionsUnlocked: Bool { netWorth >= Simulation.acquisitionNetWorthGate }
 
-    /// Step 3 will make this real (an integration runs for N months). Until then
-    /// nothing is ever in progress, so the one-at-a-time rule is inert.
-    var integrationInProgress: Bool { false }
+    /// One integration at a time — the integration IS the content, and stacking
+    /// them would hide it.
+    var integrationInProgress: Bool { activeIntegration != nil }
 
     func isSubsidiary(_ code: String) -> Bool { subsidiaries.contains { $0.code == code } }
 
