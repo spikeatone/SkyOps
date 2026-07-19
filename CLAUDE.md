@@ -3035,7 +3035,41 @@ fraction of a percent, so the reward curve dies.
   "reinforces that this is a game" rather than importing real-world financials.
   Apply the same instinct to acquisition prices and integration costs.
 
-### Step 3 — integration burden: BUILT, but the ECONOMICS FAIL THE TARGET
+### Step 3 — integration burden: BUILT and BALANCE-VERIFIED (12-seed sweep)
+
+**Target met.** 12 seeds × 3 arms, 36 months, arms restored from one shared
+snapshot per seed. Payback on NET WORTH (month-0 drop = price − assets received
+= the deal's true cost). **Passive: $3.74M/mo, 13.5-year payback. Managed:
+$9.69M/mo, 5.8-year payback.** A shrewd operator lands at the low end of the
+designer's 5–10 window; passive holding struggles past 10. The **2.6×
+managed/passive gradient held across every tuning round** — that consistency is
+what says the skill expression is real.
+
+- `acquisitionControlPremium` = **0.25**, SIZED BY THE SWEEP (0.80 → 22.9-year
+  median payback). It is the single constant that sets payback: the deal's true
+  cost is (premium × liquidation value) + goodwill.
+- **Pricing builds on `fleetLiquidationValue`, never `estimatedValue` alone.** A
+  loss-making carrier has NEGATIVE goodwill, which pushed estimatedValue below
+  its own fleet value — the old `estimatedValue × 1.3` priced a carrier BELOW
+  what its aircraft fetch (measured: ~$1,890M of aircraft for $2,051M). Buy,
+  liquidate, profit. The floor is now structural.
+- **⚠️ SYSTEMATIC: cross-region acquisitions ALWAYS fail.** The value-destroying
+  seeds were the same 3 in both arms and all bought Air Canada (Canada carrier,
+  US player) — every same-region target paid back. An out-of-region carrier's
+  hubs and routes sit outside the player's network: no overlap, no hub synergy,
+  no connecting traffic. Realistic and worth KEEPING, but currently an invisible
+  trap — it belongs in stage-1 due diligence as a headline risk (designer's
+  preferred route over gating), not something discovered by losing a billion.
+
+**SWEEP METHODOLOGY — reuse it, and don't repeat these:** single-seed
+measurement is worthless (identical code gave +$23.2M/mo and −$5.6M/mo on
+consecutive runs); arms must share ONE `GameSnapshot` or they buy different
+carriers; rationalisation must filter unserved PAIRS not AIRPORTS; both arms must
+be crewed to ~2.2/aircraft or they're structurally loss-making and the control
+flattens; and measure NET WORTH not cash, because cash payback penalises
+reinvestment. The sweep binary takes seeds as argv and runs 6-way in parallel.
+
+### Step 3 — the mechanics
 
 Mechanics are complete and verified (27/27 headless). The first measured
 economic run **fails the calibration target and needs a designer call before any

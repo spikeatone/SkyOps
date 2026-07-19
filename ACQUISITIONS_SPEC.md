@@ -77,28 +77,65 @@ it is exactly the skill the designer described.
 - Seniority settlement **8% → 2.5%** (was nearly pure cost, which inverted the
   skill expression and made managed lose to passive).
 
-### ⚠️ MEASUREMENT IS NOISE-BOUND — STOP TUNING UNTIL A MULTI-SEED SWEEP EXISTS
+### 12-SEED SWEEP — TARGET MET, and a systematic finding
 
-Two consecutive runs with IDENTICAL code produced managed-play value creation of
-**+$23.2M/month** and **−$5.6M/month**. The only difference was which carrier the
-random seed offered — fleet mix, age draw, region, and route quality vary
-enormously between targets. **Single-seed measurement cannot separate a real
-effect from target variance, so every tuning conclusion drawn from one run is
-unreliable, including the ones above.**
+Run at 12 seeds × 3 arms (control / passive / managed), 36 months, arms restored
+from one shared snapshot per seed so every arm faces the same competitor world.
+Payback measured on NET WORTH (the month-0 drop — price minus assets received —
+is the deal's true economic cost; recovering it means you are as wealthy as if
+you had kept the cash).
 
-Before any further tuning: a sweep of ≥8 seeds per arm, reporting the MEDIAN and
-the spread. That is the same discipline the Hubs & Clubs A/B used (6 seeds/arm),
-and skipping it here has already cost several rounds of confident wrong answers.
+| Arm | Median value created | Median cost | Median payback | Destroys value |
+|---|---|---|---|---|
+| Passive | $3.74M/month | $608M | **13.5 years** | 3/12 |
+| Managed | $9.69M/month | $673M | **5.8 years** | 3/12 |
 
-The pricing fix below is kept regardless — it is structural, not a tuning choice.
+**This is the designer's brief, met:** a shrewd operator lands near the low end
+of 5–10 years; a passive one struggles past 10. The **2.6× managed/passive
+gradient held across every tuning round**, which is what says the skill
+expression is real rather than an artifact.
 
-### Still open
+`acquisitionControlPremium` was sized BY this sweep, not by intuition: at 0.80
+the median cost was $1,551M → 22.9 years managed. At **0.25** it is ~$673M →
+5.8 years. The premium is the single constant that sets payback, because the
+deal's true cost is (premium × liquidation value) + goodwill.
 
-- 5–10 year payback is **not demonstrated**. It needs the multi-seed sweep.
-- Fleet renewal IS built into the managed autopilot and clearly helps on net
-  worth, but its magnitude is inside the noise band.
-- The projection/scenario mechanic should be built once the sweep settles the
-  numbers — see the two-stage design below.
+### ⚠️ SYSTEMATIC FINDING: cross-region acquisitions always fail
+
+The 3 value-destroying seeds in each arm are **the same 3 seeds, and all three
+bought Air Canada** — a Canada-region carrier acquired by a US-region player.
+Every same-region target (Delta, American) paid back. This is not variance:
+
+| Seed | Target | Managed payback |
+|---|---|---|
+| 104, 106, 206 | Air Canada (cross-region) | **never**, all three |
+| 101, 103, 105, 202, 204, 205 | Delta / American (same region) | 1.3 – 4.5 years |
+| 102, 201, 203 | American (same region) | 11.0 – 20.6 years |
+
+Cause: an out-of-region carrier's hubs and routes sit entirely outside the
+player's network, so there is no overlap to rationalise, no hub synergy, and no
+connecting traffic — you inherit a separate airline rather than a bigger one.
+
+**That is realistic and worth KEEPING — but it is currently an invisible trap.**
+Nothing tells the player that buying across regions is structurally different.
+This is precisely what stage-1 due diligence should surface: region fit belongs
+in the scenario as a headline risk, not something a player discovers by losing a
+billion dollars. (Alternative if it should not be a trap at all: gate acquisitions
+to the player's own regions. Designer's call — the diligence route is better,
+because it makes the knowledge the reward.)
+
+### Methodology notes (each of these produced a confident WRONG answer first)
+
+1. **Single-seed measurement is worthless here.** Identical code gave managed
+   +$23.2M/mo and −$5.6M/mo on consecutive runs. Always sweep.
+2. **Arms must share one `GameSnapshot`** — each `Simulation` rolls its own
+   `competitorSeed`, so unseeded arms buy different carriers.
+3. **Rationalisation must filter unserved PAIRS**, not unserved airports.
+4. **Both arms must be crewed to ~2.2/aircraft.** One bundled crew per aircraft
+   is structurally loss-making, which flattens the control and voids every
+   comparison.
+5. **Measure on net worth, not cash** — cash payback penalises reinvestment, so
+   an arm that renews its fleet looks worse while actually building wealth.
 
 ⚠️ **Repricing constraint stands:** any price must ALWAYS exceed the fleet's
 in-game `fleetMarketValue`, or the player buys a carrier, liquidates its fleet,

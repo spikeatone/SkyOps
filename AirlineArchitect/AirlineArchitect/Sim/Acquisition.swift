@@ -157,12 +157,21 @@ extension Simulation {
     static let acquisitionNetWorthGate = 1_000_000_000
     /// Lifetime cap. Prevents eating the roster and keeps the map populated.
     static let acquisitionLifetimeCap = 3
-    /// Control premium over the carrier's LIQUIDATION value. Sized by the
-    /// economic measurement, not by intuition: a well-managed ~46-aircraft
-    /// acquisition creates roughly $23M/month, so a premium near 0.8× fleet value
-    /// puts full payback around 5–6 years for shrewd play, while passive holding
-    /// (~$5M/month) struggles past 10 — the designer's intended gradient.
-    static let acquisitionControlPremium = 0.80
+    /// Control premium over the carrier's LIQUIDATION value — and the single
+    /// constant that sets payback, because the deal's real economic cost is
+    /// (premium × liquidation value) + goodwill.
+    ///
+    /// SIZED BY A 12-SEED SWEEP, not intuition. Managed play creates a median
+    /// $5.65M/month and passive $1.97M/month (a consistent 2.9× skill gradient
+    /// that held across seeds). At 0.80 the median cost was $1,551M → 22.9 years
+    /// managed / 68.7 passive, far outside the target. 0.25 puts the median cost
+    /// near $485M → ~7 years for shrewd play (inside the designer's 5–10 window)
+    /// and ~20 for passive holding, which is the intended "a first-timer may
+    /// struggle to break even at ten".
+    ///
+    /// FLOOR CHECK: at 0.25 the player still pays 25% over what the fleet would
+    /// fetch broken up, so the liquidation arbitrage stays closed.
+    static let acquisitionControlPremium = 0.25
     /// Price escalation per completed acquisition (1st / 2nd / 3rd).
     static let acquisitionEscalation: [Double] = [1.0, 1.4, 1.9]
 
