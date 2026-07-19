@@ -64,9 +64,14 @@ struct CompetitorProfile: Identifiable, Equatable {
     let trend: Trend
 
     /// Estimated enterprise value: depreciated fleet + goodwill on operating
-    /// profit. This is the BASIS the 1.1 acquisition price is built from (which
-    /// adds a control premium on top) — not itself an asking price.
+    /// profit. NOT the asking price.
     let estimatedValue: Double
+    /// What the fleet alone would fetch if broken up — mirrors the game's own
+    /// `sellValue` depreciation. THE PRICE FLOOR: an asking price below this
+    /// would let a player buy a carrier, liquidate it, and profit (pure
+    /// arbitrage). Also the honest due-diligence number — it tells the player how
+    /// much of the price is metal and how much is the business.
+    let fleetLiquidationValue: Double
 
     var annualOperatingProfit: Double { annualRevenue * operatingMargin }
     var averageFleetAgeLabel: String {
@@ -191,7 +196,7 @@ enum CompetitorIntel {
             routeCount: routeCount, citiesServed: citiesServed, hubCodes: hubCodes,
             annualRevenue: annualRevenue, operatingMargin: operatingMargin,
             loadFactor: loadFactor, serviceScore: serviceScore, trend: trend,
-            estimatedValue: estimatedValue)
+            estimatedValue: estimatedValue, fleetLiquidationValue: fleetValue)
     }
 
     // MARK: - Constants & helpers

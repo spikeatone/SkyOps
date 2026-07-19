@@ -157,9 +157,12 @@ extension Simulation {
     static let acquisitionNetWorthGate = 1_000_000_000
     /// Lifetime cap. Prevents eating the roster and keeps the map populated.
     static let acquisitionLifetimeCap = 3
-    /// Control premium over the carrier's estimated value — you never buy a
-    /// company at book.
-    static let acquisitionControlPremium = 0.30
+    /// Control premium over the carrier's LIQUIDATION value. Sized by the
+    /// economic measurement, not by intuition: a well-managed ~46-aircraft
+    /// acquisition creates roughly $23M/month, so a premium near 0.8× fleet value
+    /// puts full payback around 5–6 years for shrewd play, while passive holding
+    /// (~$5M/month) struggles past 10 — the designer's intended gradient.
+    static let acquisitionControlPremium = 0.80
     /// Price escalation per completed acquisition (1st / 2nd / 3rd).
     static let acquisitionEscalation: [Double] = [1.0, 1.4, 1.9]
 
@@ -176,10 +179,22 @@ extension Simulation {
 
     /// The asking price for a carrier: its estimated value plus a control
     /// premium, escalated by how many acquisitions the player has already made.
+    /// Price is built on the fleet's LIQUIDATION value plus any positive
+    /// goodwill, never on `estimatedValue` alone.
+    ///
+    /// ⚠️ WHY: a loss-making carrier has NEGATIVE goodwill, which pushed
+    /// `estimatedValue` below fleet value — so the old
+    /// `estimatedValue × 1.3` could price a carrier BELOW what its aircraft
+    /// fetch, letting the player buy it, liquidate the fleet, and profit. That
+    /// arbitrage was measured, not hypothesised (a $2,051M deal handed over
+    /// ~$1,890M of sellable aircraft). Pricing off liquidation value makes the
+    /// floor structural rather than a number that happens to be large enough.
     func askingPrice(for p: CompetitorProfile) -> Int {
         let escalation = Simulation.acquisitionEscalation[
             min(subsidiaries.count, Simulation.acquisitionEscalation.count - 1)]
-        return Int(p.estimatedValue * (1 + Simulation.acquisitionControlPremium) * escalation)
+        let goodwill = max(0, p.estimatedValue - p.fleetLiquidationValue)
+        let base = p.fleetLiquidationValue * (1 + Simulation.acquisitionControlPremium) + goodwill
+        return Int(base * escalation)
     }
 
     /// Nil when the player can go ahead. Order matters: the most specific and

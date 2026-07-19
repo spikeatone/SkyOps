@@ -77,17 +77,68 @@ it is exactly the skill the designer described.
 - Seniority settlement **8% → 2.5%** (was nearly pure cost, which inverted the
   skill expression and made managed lose to passive).
 
+### ⚠️ MEASUREMENT IS NOISE-BOUND — STOP TUNING UNTIL A MULTI-SEED SWEEP EXISTS
+
+Two consecutive runs with IDENTICAL code produced managed-play value creation of
+**+$23.2M/month** and **−$5.6M/month**. The only difference was which carrier the
+random seed offered — fleet mix, age draw, region, and route quality vary
+enormously between targets. **Single-seed measurement cannot separate a real
+effect from target variance, so every tuning conclusion drawn from one run is
+unreliable, including the ones above.**
+
+Before any further tuning: a sweep of ≥8 seeds per arm, reporting the MEDIAN and
+the spread. That is the same discipline the Hubs & Clubs A/B used (6 seeds/arm),
+and skipping it here has already cost several rounds of confident wrong answers.
+
+The pricing fix below is kept regardless — it is structural, not a tuning choice.
+
 ### Still open
 
-- The 5–10 year payback is **not yet demonstrated end-to-end** — only the first
-  12 months are on pace. Fleet renewal is the missing lever.
-- **The projection/scenario mechanic the designer asked for should be built ONLY
-  once these numbers settle** — projections calibrated against an economy that is
-  still moving would be confidently wrong, which is worse than absent.
+- 5–10 year payback is **not demonstrated**. It needs the multi-seed sweep.
+- Fleet renewal IS built into the managed autopilot and clearly helps on net
+  worth, but its magnitude is inside the noise band.
+- The projection/scenario mechanic should be built once the sweep settles the
+  numbers — see the two-stage design below.
 
 ⚠️ **Repricing constraint stands:** any price must ALWAYS exceed the fleet's
 in-game `fleetMarketValue`, or the player buys a carrier, liquidates its fleet,
 and profits — pure arbitrage.
+
+---
+
+## TWO-STAGE DUE DILIGENCE (designer design — not yet built)
+
+Designer's framing: acquisitions should mirror real deal-making, where what you
+can see depends on how far into the process you are.
+
+**Stage 1 — "sniffing around" (pre-NDA).** Public information only, the same
+thin, estimated numbers a real buyer works from before the books open. Enough to
+decide what is worth pursuing, not enough to be sure. This is what
+`CompetitorProfile` already provides — fleet size, average age BAND, network
+size, topline revenue/margin, service score, an estimated value. The player runs
+**best-guess scenarios** off these: bad / average / good.
+
+**Stage 2 — post-NDA, "open the kimono".** The real books. Per-aircraft ages
+rather than an average band, the actual route-by-route quality, the true
+maintenance exposure, and a firm renewal bill. Gated behind an explicit step
+(and plausibly a cost, or the target's consent), so choosing WHICH targets to
+diligence is itself a decision.
+
+**Projections must NOT be iron-clad (designer, explicit).** Real projections are
+best guesses that reality diverges from — that divergence is the feature, not an
+error to eliminate. The model supports this honestly and for free: a profile
+carries an AVERAGE `fleetAgeFraction`, while the fleet actually inherited is
+generated with a real per-aircraft spread (0.6–1.35× that average). So a stage-1
+estimate is genuinely uncertain, a stage-2 view is much tighter, and neither is a
+guarantee. **Do not "fix" that divergence.**
+
+**Fleet renewal cost belongs in the scenarios (designer).** The measurement
+established why: an acquired fleet harvests good months and then decays, so
+renewal is the real post-merger job. A scenario that omits it is lying to the
+player. Stage 1 should estimate it from the average age band (wide); stage 2
+should compute it from the actual aircraft (tight). `fleetLiquidationValue` is
+already on the profile and is the honest companion number — how much of the
+asking price is metal versus business.
 
 ---
 
