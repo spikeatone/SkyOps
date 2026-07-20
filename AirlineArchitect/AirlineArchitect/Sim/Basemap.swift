@@ -49,8 +49,10 @@ struct Basemap {
 
     /// Project one [lon, lat] pair to unit space.
     private static func project(_ p: [Double]) -> CGPoint {
-        // stored as [lon, lat]
-        GeoProjection.unit(lat: p[1], lon: p[0])
+        // stored as [lon, lat]. Guard the subscripts: a malformed point (a future
+        // Basemap.json edit with a short coord pair) must not crash the map.
+        guard p.count >= 2 else { return .zero }
+        return GeoProjection.unit(lat: p[1], lon: p[0])
     }
 
     private static func load() -> Basemap {

@@ -1833,7 +1833,9 @@ final class Simulation {
     /// A genuinely fresh purchase — 0 cycles, PARKED at a random home-region
     /// base, no route (a spare). Separate from makeAircraft (stress-test).
     private func makePurchasedAircraft(_ type: AircraftType, startingCycles: Int = 0) -> Aircraft {
-        let base = homeBaseAirports.randomElement()!
+        // Defensive: homeBaseAirports falls back to the full list (never empty),
+        // but avoid the force-unwrap entirely — Airport.all is a non-empty static.
+        let base = homeBaseAirports.randomElement() ?? airports.first ?? Airport.all[0]
         let tail = "N\(nextTailNum)\(playerTailCode)"
         nextTailNum += 1
         let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
@@ -3534,12 +3536,21 @@ final class Simulation {
             r.cumulativeNet += econ.net
             if wasShort && r.cumulativeNet >= r.openingCost { celebrateRecoup(r) }
             r.flights += 1
+            // Lifetime running totals (survive the history cap below).
+            r.revenueTotal += econ.revenue
+            r.feesTotal += econ.fees
+            r.opCostTotal += econ.operatingCost
+            r.loadFactorSum += ac.currentLoadFactor
             r.history.append(FlightRecord(
-                id: r.history.count, tick: tick, tail: ac.tail,
+                id: r.flights - 1, tick: tick, tail: ac.tail,   // global 0-based flight index (stable across the cap)
                 revenue: econ.revenue, fees: econ.fees, operatingCost: econ.operatingCost,
                 leaseCostEstimate: econ.leaseCostEstimate, net: econ.net,
                 pax: ac.currentPax, seats: ac.type.seats, loadFactor: ac.currentLoadFactor,
                 cumulativeNet: r.cumulativeNet))
+            // Cap the per-flight log so the save can't grow unbounded.
+            if r.history.count > Route.maxHistory {
+                r.history.removeFirst(r.history.count - Route.maxHistory)
+            }
         }
         // At 80% of expected lifespan, offer a one-time sell decision.
         if !ac.sellOfferDismissed && ac.cyclesAccrued >= Int(Double(ac.type.expectedLifespanCycles) * 0.8) {
@@ -3816,7 +3827,9 @@ final class Simulation {
                   incentiveBonus: r.incentiveBonus, incentiveWaived: r.incentiveWaived, fulfillByTick: r.fulfillByTick,
                   subsidiaryCode: r.subsidiaryCode,
                   history: r.history.map { FlightRecordSave(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) },
-                  assignmentHistory: r.assignmentHistory.map { RouteAssignmentSave(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) })
+                  assignmentHistory: r.assignmentHistory.map { RouteAssignmentSave(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) },
+                  revenueTotal: r.revenueTotal, feesTotal: r.feesTotal,
+                  opCostTotal: r.opCostTotal, loadFactorSum: r.loadFactorSum)
     }
     private func restoreRoute(_ s: RouteSave) -> Route {
         let r = Route(id: s.id, originCode: s.originCode, destCode: s.destCode, openedTick: s.openedTick, openingCost: s.openingCost)
@@ -3824,7 +3837,15 @@ final class Simulation {
         r.subsidiaryCode = s.subsidiaryCode
         r.competitionLevel = s.competitionLevel; r.competitors = s.competitors
         r.incentiveBonus = s.incentiveBonus; r.incentiveWaived = s.incentiveWaived; r.fulfillByTick = s.fulfillByTick
-        r.history = s.history.map { FlightRecord(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) }
+        // Cap the log on load too — protects against a pre-1.1 save whose history
+        // grew unbounded (only the last maxHistory records are kept in memory).
+        r.history = s.history.suffix(Route.maxHistory).map { FlightRecord(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) }
+        // Lifetime totals: use the stored running totals (1.1+), else recompute
+        // from the (then-full) history of a pre-1.1 save.
+        r.revenueTotal = s.revenueTotal ?? s.history.reduce(0) { $0 + $1.revenue }
+        r.feesTotal = s.feesTotal ?? s.history.reduce(0) { $0 + $1.fees }
+        r.opCostTotal = s.opCostTotal ?? s.history.reduce(0) { $0 + $1.operatingCost }
+        r.loadFactorSum = s.loadFactorSum ?? s.history.reduce(0.0) { $0 + $1.loadFactor }
         r.assignmentHistory = s.assignmentHistory.map { RouteAssignment(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) }
         return r
     }

@@ -2101,6 +2101,47 @@ where numbers are involved.
   get the real frame before assuming it's fixed. (Other unruled-out candidates:
   OOM from the wrap-around map's tiled redraw under memory pressure; the
   never-removed `observeCloudChanges` NotificationCenter observer.)
+- **OPEN — LAUNCH CRASH (1.1(28), one tester, "repeatedly on launch") + the
+  hardening pass it triggered.** A tester reported build 28 crashing ON LAUNCH,
+  repeatedly. An exhaustive multi-agent sweep of the whole launch/first-frame/
+  restore path found **NO confirmed in-code trap**: data is clean (35 unique
+  aircraft-type ids, 384 unique airport codes, 19,272 basemap points valid),
+  `restore()` guards every aircraft (`guard let type/o/d … continue`) and all
+  1.1 fields restore via `?? default`, decodes are `try?`, `byCode` uses
+  `uniquingKeysWith`. So a deterministic-for-one-tester crash most likely lives
+  in the **environment layer** — the sweep's top picks: (1) the iCloud KVS
+  entitlement under build 28's FIRST *external*-distribution profile (touched at
+  launch by `reconcileCloud()`); (2) RevenueCat/StoreKit init under that
+  profile. **Neither is confirmable without the tester's symbolicated `.ips`**
+  (ASC → TestFlight → Crashes / Feedback, or their device's Analytics Data) —
+  get it: KVS/entitlement frames → cause 1, RevenueCat/StoreKit frames → cause 2.
+- **SAVE-SIZE HARDENING — DONE (the strongest CODE fit for the launch crash).**
+  Independent of the sweep: `Route.history` was persisted **completely uncapped**
+  — a heavy tester (recall the 182-aircraft one) accumulates a **multi-MB save**,
+  and build 28's cold-launch path decoded whole saves (reconcile ×6, plus
+  `slotInfos()` fully decodes EVERY save just for the menu card) → a plausible
+  launch **watchdog/OOM**, deterministic for heavy users, invisible on the dev
+  machine's small saves. Fixes: (a) **cap `Route.history` to `maxHistory`=60**
+  (oldest dropped, at append/snapshot/restore) and convert its 4 display
+  aggregates (`totalRevenue`/`totalFees`/`totalOperatingCost`/`averageLoadPct`)
+  to STORED running totals (`revenueTotal` etc., incremented in `settleLeg` like
+  `flights`/`cumulativeNet`) so the cap never loses lifetime numbers; FlightRecord
+  `id` is now the GLOBAL flight index (was `history.count`, which would repeat
+  under the cap). Pre-1.1 saves (nil totals + full history) recompute the totals
+  via `?? history.reduce`. (b) **File-size guard** (`maxDecodeBytes`=4MB) in
+  `slotInfos()` + `reconcileCloud()`: an oversized legacy save is NOT parsed on
+  the cold-launch path — use file metadata (size/mtime via `attributesOfItem`,
+  no read) instead; `slotInfos` shows a lightweight "Saved game" placeholder,
+  reconcile uses mtime as the ordering epoch. Loading it re-saves it capped/small
+  (self-heals). NOTE the chart value-input changed `history.count` → `r.flights`
+  (else the capped count re-freezes the Canvas — the documented bug). Verified
+  **18/18 headless** (cap engages, aggregates tie to `cumulativeNet` across all
+  flights incl. dropped, save/load preserves them + stays capped, pre-1.1 recompute,
+  cash invariant holds) + clean live launch. Plus the sweep's two cheap defensive
+  guards: `Basemap.project` (`guard p.count >= 2`) and `makePurchasedAircraft`'s
+  `homeBaseAirports.randomElement()!` → nil-coalesced. STILL a hypothesis for
+  THIS tester until the `.ips` confirms — but the uncapped save was a real latent
+  bug regardless.
 - **Fuel hedging (sim mechanic) — DONE (native app); panel UI lands with the
   NETWORK view.** Ported faithfully from the prototype spec (which had been
   dropped from CLAUDE.md and was re-supplied by the designer). A fuel hedge is

@@ -138,6 +138,12 @@ struct RouteSave: Codable {
     var subsidiaryCode: String? = nil
     var history: [FlightRecordSave]
     var assignmentHistory: [RouteAssignmentSave]
+    // Lifetime running totals (nil in pre-1.1 saves → recomputed from the
+    // then-full history on load). Let the capped history stop bloating the save.
+    var revenueTotal: Int? = nil
+    var feesTotal: Int? = nil
+    var opCostTotal: Int? = nil
+    var loadFactorSum: Double? = nil
 }
 
 struct FlightRecordSave: Codable {
@@ -219,6 +225,19 @@ enum GameStore {
         return dir.appendingPathComponent("savegame_\(slot).json")
     }
 
+    /// Above this, a save is treated as too big to parse on the COLD-LAUNCH path
+    /// (a pre-1.1 unbounded-history save). We then read file metadata instead of
+    /// decoding it, so showing the load menu / reconciling iCloud can never blow
+    /// the launch watchdog or memory. Normal capped saves are well under this.
+    private static let maxDecodeBytes = 4_000_000
+    private static func attrs(_ slot: Int) -> [FileAttributeKey: Any]? {
+        try? FileManager.default.attributesOfItem(atPath: url(slot).path)
+    }
+    private static func fileSize(_ slot: Int) -> Int { (attrs(slot)?[.size] as? Int) ?? 0 }
+    private static func fileModified(_ slot: Int) -> Double {
+        (attrs(slot)?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+    }
+
     /// Migrate a legacy single-file save (from the pre-slot build) into slot 0 once.
     private static func migrateLegacyIfNeeded() {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -270,6 +289,14 @@ enum GameStore {
     static func slotInfos() -> [SlotInfo?] {
         migrateLegacyIfNeeded()
         return (0..<slotCount).map { slot in
+            guard hasSave(slot) else { return nil }
+            // An oversized legacy save (pre-1.1 unbounded history) would be a
+            // launch-menu watchdog/OOM to decode just for a card — show a
+            // lightweight placeholder; loading it re-saves it capped and small.
+            if fileSize(slot) > maxDecodeBytes {
+                return SlotInfo(index: slot, airlineName: "Saved game", day: 0,
+                                cash: 0, fleet: 0, routes: 0, savedAtEpoch: fileModified(slot))
+            }
             guard let data = try? Data(contentsOf: url(slot)),
                   let s = try? JSONDecoder().decode(GameSnapshot.self, from: data),
                   let name = s.playerAirlineName, !s.isBankrupt else { return nil }
@@ -361,10 +388,17 @@ extension GameStore {
     static func reconcileCloud() {
         kvs.synchronize()
         for slot in 0..<slotCount {
-            let localData = try? Data(contentsOf: url(slot))
+            // Don't read/parse an oversized legacy save on the launch path — use
+            // its file mtime as the ordering epoch. (It can't be in iCloud anyway:
+            // the KVS 1 MB limit means such a save was never mirrored, so there's
+            // nothing to push and no local read needed.)
+            let big = fileSize(slot) > maxDecodeBytes
+            let localData = big ? nil : (try? Data(contentsOf: url(slot)))
+            let localEpoch: Double? = big ? (hasSave(slot) ? fileModified(slot) : nil)
+                                          : epoch(of: localData)
             let cloudData = kvs.data(forKey: cloudKey(slot))
             let tomb = kvs.object(forKey: tombKey(slot)) as? Double
-            switch reconcileAction(localEpoch: epoch(of: localData),
+            switch reconcileAction(localEpoch: localEpoch,
                                    cloudSaveEpoch: epoch(of: cloudData),
                                    tombstoneEpoch: tomb) {
             case .adoptCloud:

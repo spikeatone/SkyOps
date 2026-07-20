@@ -754,7 +754,7 @@ struct RoutesPanel: View {
 
     @ViewBuilder private func detail(_ r: Route) -> some View {
         Rectangle().fill(cardBorder).frame(height: 1).padding(.top, 2)
-        RouteProfitChart(route: r, flights: r.history.count)
+        RouteProfitChart(route: r, flights: r.flights)
         VStack(alignment: .leading, spacing: 3) {
             line("Start", Simulation.simDate(fromTick: r.openedTick))
             line("Flights", "\(r.flights)")
@@ -767,7 +767,7 @@ struct RoutesPanel: View {
             line("Avg load", "\(r.averageLoadPct)%")
         }
         if !r.history.isEmpty {
-            Text(r.history.count > 8 ? "RECENT FLIGHTS (last 8 of \(r.history.count))" : "RECENT FLIGHTS")
+            Text(r.flights > 8 ? "RECENT FLIGHTS (last 8 of \(r.flights))" : "RECENT FLIGHTS")
                 .font(.karla(10, .bold)).foregroundStyle(labelColor).padding(.top, 2)
             ForEach(r.history.suffix(8).reversed()) { h in
                 Text("\(Simulation.simDate(fromTick: h.tick)): \(h.pax)/\(h.seats) (\(Int((h.loadFactor*100).rounded()))%) · net \(h.net < 0 ? "−" : "")\(compactMoney(abs(h.net)))")
@@ -840,7 +840,9 @@ struct RouteProfitChart: View {
 
     @ViewBuilder private var caption: some View {
         if let k = recoupFlight, k - 1 < route.history.count {
-            Text("Recouped at flight \(k) · \(Simulation.simDate(fromTick: route.history[k - 1].tick))")
+            // Use the record's GLOBAL flight index (the log is capped to the last
+            // maxHistory, so the positional k isn't the lifetime flight number).
+            Text("Recouped by flight \(route.history[k - 1].id + 1) · \(Simulation.simDate(fromTick: route.history[k - 1].tick))")
                 .font(.system(size: 9, design: .monospaced)).foregroundStyle(mint)
         } else {
             Text("Not yet recouped · \(money(abs(route.netVsOpeningCost))) to break-even")

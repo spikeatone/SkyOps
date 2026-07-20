@@ -58,9 +58,20 @@ final class Route: Identifiable {
     /// (billed by tickLeaseBilling, NOT a flight event) — a real cost against
     /// this route's profitability even when no flight happened at that tick.
     var totalLeaseCost: Int = 0
-    /// Per-flight record (the data a P&L chart needs). Grows unbounded; the
-    /// panel caps only its DISPLAY list, never the aggregate summaries.
+    /// Per-flight record (the data the P&L chart/log needs). CAPPED at
+    /// `maxHistory` (oldest dropped) so a long-running route can't bloat the save
+    /// into a multi-MB file that blows the launch watchdog / memory on load. The
+    /// LIFETIME aggregate summaries below are running totals, so capping the log
+    /// never loses them.
+    static let maxHistory = 60
     var history: [FlightRecord] = []
+    /// Lifetime running totals (independent of the capped history), incremented
+    /// per completed leg in settleLeg. `flights`/`cumulativeNet` above are the
+    /// same pattern; these back the Routes-detail revenue/fees/opcost/avg-load.
+    var revenueTotal = 0
+    var feesTotal = 0
+    var opCostTotal = 0
+    var loadFactorSum: Double = 0
     /// Aircraft assigned to this route over its life.
     var assignmentHistory: [RouteAssignment] = []
     /// Set when the route is archived (its aircraft was sold). nil = open.
@@ -113,12 +124,13 @@ final class Route: Identifiable {
     /// P&L against the establishment cost (negative until recouped).
     var netVsOpeningCost: Int { cumulativeNet - openingCost }
 
-    // Aggregates from the FULL history (never truncated).
-    var totalRevenue: Int { history.reduce(0) { $0 + $1.revenue } }
-    var totalFees: Int { history.reduce(0) { $0 + $1.fees } }
-    var totalOperatingCost: Int { history.reduce(0) { $0 + $1.operatingCost } }
+    // Lifetime aggregates — running totals (the history log is capped, so these
+    // do NOT recompute from it).
+    var totalRevenue: Int { revenueTotal }
+    var totalFees: Int { feesTotal }
+    var totalOperatingCost: Int { opCostTotal }
     var averageLoadPct: Int {
-        guard !history.isEmpty else { return 0 }
-        return Int((100 * history.reduce(0.0) { $0 + $1.loadFactor } / Double(history.count)).rounded())
+        guard flights > 0 else { return 0 }
+        return Int((100 * loadFactorSum / Double(flights)).rounded())
     }
 }
