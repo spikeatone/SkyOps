@@ -63,51 +63,59 @@ struct SaveSlotsView: View {
     }
 
     private func savedRow(_ index: Int, _ info: SlotInfo) -> some View {
-        VStack(spacing: 0) {
-            Button { onLoad(index) } label: {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(info.airlineName).font(.karla(17, .bold)).foregroundStyle(primary)
-                            .lineLimit(1)
-                        Text("Day \(info.day) · \(money(info.cash)) · \(info.fleet) aircraft · \(info.routes) routes")
-                            .font(.karla(12)).foregroundStyle(secondary).lineLimit(1)
-                        Text("Saved \(savedAgo(info.savedAtEpoch))")
-                            .font(.karla(11)).foregroundStyle(secondary.opacity(0.7))
+        // Swipe-left-to-delete (standard iOS pattern) wraps the whole row, plus
+        // the tap affordance below with its enlarged trash icon.
+        SwipeToDeleteContainer(onDelete: { performDelete(index) }) {
+            VStack(spacing: 0) {
+                Button { onLoad(index) } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(info.airlineName).font(.karla(17, .bold)).foregroundStyle(primary)
+                                .lineLimit(1)
+                            Text("Day \(info.day) · \(money(info.cash)) · \(info.fleet) aircraft · \(info.routes) routes")
+                                .font(.karla(12)).foregroundStyle(secondary).lineLimit(1)
+                            Text("Saved \(savedAgo(info.savedAtEpoch))")
+                                .font(.karla(11)).foregroundStyle(secondary.opacity(0.7))
+                        }
+                        Spacer(minLength: 4)
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 26)).foregroundStyle(Sky.brightBlue)
                     }
-                    Spacer(minLength: 4)
-                    Image(systemName: "play.circle.fill")
-                        .font(.system(size: 26)).foregroundStyle(Sky.brightBlue)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(cardBG)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(border, lineWidth: 1))
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(cardBG)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(border, lineWidth: 1))
-            }
-            .buttonStyle(.plain).pressable()
+                .buttonStyle(.plain).pressable()
 
-            // Delete affordance — arm with one tap, confirm with the second.
-            HStack {
-                Spacer()
-                if confirmDelete == index {
-                    Text("Delete this airline?").font(.karla(11)).foregroundStyle(secondary)
-                    Button("Cancel") { confirmDelete = nil }
-                        .font(.karla(11, .semibold)).foregroundStyle(secondary)
-                    Button("Delete") {
-                        onDelete(index); confirmDelete = nil; slots = GameStore.slotInfos()
+                // Tap-delete affordance — arm with one tap, confirm with the second.
+                HStack {
+                    Spacer()
+                    if confirmDelete == index {
+                        Text("Delete this airline?").font(.karla(11)).foregroundStyle(secondary)
+                        Button("Cancel") { confirmDelete = nil }
+                            .font(.karla(11, .semibold)).foregroundStyle(secondary)
+                        Button("Delete") { performDelete(index) }
+                            .font(.karla(11, .bold)).foregroundStyle(Sky.red)
+                    } else {
+                        Button { confirmDelete = index } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "trash").font(.system(size: 15))   // +50% (was 10)
+                                Text("Delete").font(.karla(12))
+                            }.foregroundStyle(secondary.opacity(0.8))
+                        }.buttonStyle(.plain)
                     }
-                    .font(.karla(11, .bold)).foregroundStyle(Sky.red)
-                } else {
-                    Button { confirmDelete = index } label: {
-                        HStack(spacing: 3) {
-                            Image(systemName: "trash").font(.system(size: 10))
-                            Text("Delete").font(.karla(11))
-                        }.foregroundStyle(secondary.opacity(0.8))
-                    }.buttonStyle(.plain)
                 }
+                .padding(.top, 6).padding(.horizontal, 4)
             }
-            .padding(.top, 6).padding(.horizontal, 4)
         }
+    }
+
+    private func performDelete(_ index: Int) {
+        onDelete(index)
+        confirmDelete = nil
+        slots = GameStore.slotInfos()
     }
 
     private func emptyRow(_ index: Int) -> some View {
@@ -143,6 +151,60 @@ struct SaveSlotsView: View {
         if secs < 3600 { return "\(Int(secs / 60))m ago" }
         if secs < 86_400 { return "\(Int(secs / 3600))h ago" }
         return "\(Int(secs / 86_400))d ago"
+    }
+}
+
+/// Swipe-left-to-delete for a saved slot (the standard iOS pattern), added
+/// ALONGSIDE the tap affordance. A partial left-swipe reveals a red delete
+/// button; a full swipe deletes outright; swiping back closes it. Kept as a
+/// self-contained wrapper so the compact centered card design (not a List)
+/// is preserved. The drag uses `minimumDistance` so a plain TAP still reaches
+/// the card's load/delete buttons underneath.
+private struct SwipeToDeleteContainer<Content: View>: View {
+    var revealWidth: CGFloat = 84
+    let onDelete: () -> Void
+    @ViewBuilder var content: Content
+
+    @State private var offset: CGFloat = 0
+    @State private var startOffset: CGFloat = 0
+    @State private var dragging = false
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            Button(role: .destructive, action: triggerDelete) {
+                Image(systemName: "trash.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .buttonStyle(.plain)
+            .frame(width: revealWidth)
+            .background(Sky.red)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .opacity(offset < -2 ? 1 : 0)   // only visible while swiped open
+
+            content
+                .offset(x: offset)
+                .highPriorityGesture(
+                    DragGesture(minimumDistance: 18)
+                        .onChanged { v in
+                            if !dragging { dragging = true; startOffset = offset }
+                            // Clamp between fully-open (+a little overscroll) and closed.
+                            offset = min(0, max(startOffset + v.translation.width, -(revealWidth + 60)))
+                        }
+                        .onEnded { _ in
+                            dragging = false
+                            if offset < -(revealWidth + 25) { triggerDelete() }
+                            else if offset < -revealWidth * 0.5 { withAnimation(.snappy) { offset = -revealWidth } }
+                            else { withAnimation(.snappy) { offset = 0 } }
+                        }
+                )
+        }
+    }
+
+    private func triggerDelete() {
+        withAnimation(.snappy) { offset = 0 }
+        onDelete()
     }
 }
 

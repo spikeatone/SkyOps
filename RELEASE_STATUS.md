@@ -1,9 +1,9 @@
-# RELEASE STATUS — v1.0 (build 27, in review) + v1.1 (build 29, external test)
+# RELEASE STATUS — v1.0 (build 27, in review) + v1.1 (build 30, external test)
 
 Snapshot as of **20 July 2026**. Two things are in flight: **1.0 (build 27)** is
-in App Store review, and **1.1 (build 29)** is being cut for external TestFlight
-testing. (Build 28 was the first external cut; **29 supersedes it** with launch/
-perf fixes below — do not distribute 28.) Written so a future session (or a remote session with no conversation
+in App Store review, and **1.1 (build 30)** is being cut for external TestFlight
+testing. (Build 28 was the first external cut; **build 30 supersedes it** with
+the launch/save + perf fixes below — do not distribute 28 or 29.) Written so a future session (or a remote session with no conversation
 history) can pick this up cold. `CLAUDE.md` holds the technical/design context;
 this file is ONLY the release-and-store state.
 
@@ -11,27 +11,29 @@ Update it as items land, and delete it once both are live and this is history.
 Everything from "## The 1.0 binary" onward is the 1.0 App Store submission
 detail; the 1.1 section immediately below is the current active work.
 
-## 1.1 (build 29) — external test cut (in progress)
+## 1.1 (build 30) — external test cut (in progress)
 
-**Versioning: `MARKETING_VERSION = 1.1`, `CURRENT_PROJECT_VERSION = 29` across
+**Versioning: `MARKETING_VERSION = 1.1`, `CURRENT_PROJECT_VERSION = 30` across
 all 6 configs, pushed to `origin/main`.** This is a TestFlight EXTERNAL-test cut,
 independent of the 1.0 (27) App Store review below — the two tracks don't
 interact. Let 1.0 finish review and release; 1.1 becomes the next App Store
 version afterward.
 
-**New in build 29 (since the build-28 external cut)** — the reason 28 is
+**New in build 30 (since the build-28 external cut)** — the reason 28 is
 superseded:
 - **Launch-crash hardening.** A tester reported build 28 crashing repeatedly on
-  launch. A full sweep found no in-code trap (env-layer suspects: iCloud KVS
-  entitlement / RevenueCat under the external profile — **still needs that
-  tester's `.ips` to confirm**). The real code bug fixed: `Route.history` was
-  persisted UNBOUNDED → a heavy save could watchdog/OOM at launch. Now capped +
-  cold-launch paths don't fully decode oversized legacy saves. 18/18 headless.
+  launch. **An ASC crash report later confirmed it's a crash on SAVE** ("clicked
+  save, it got hung up and then crashed"), on build **27 / 1.0** — the UNBOUNDED
+  `Route.history` being encoded/written on the main thread. So the bug is in 1.0
+  too; the fix (cap `Route.history` + don't fully decode/mirror oversized saves
+  on the cold-launch/save path) only exists in 1.1. 18/18 headless.
 - **iPad responsiveness / re-render churn** (Crews/Fleet/Alerts throttled;
   NetworkView map tick isolated; lighter foreground iCloud reconcile).
 - **Hubs panel** (Network) + per-hub Route-Opportunity drawers.
 - **Route-competition actions** (Ops): fare war / ad campaign / loyalty push.
 - **Ops reorder** + **uniform control-bar font**.
+- **Load-menu delete UX**: enlarged the tap-delete trash icon (+50%) and added
+  swipe-left-to-delete on each saved slot (the standard iOS pattern).
 
 **Headline contents since build 27** (full detail in `CLAUDE.md` + `git log`):
 - **Go Public / IPO** — all 5 steps: stock-price model + IPO + ticker, the
@@ -51,7 +53,7 @@ superseded:
 - **"Aging" label** — American spelling in the competitor fleet-age label.
 
 **Still to do (designer, credentialed — Claude can't do these):**
-- [ ] Archive 1.1 (29) in Xcode → Distribute → App Store Connect upload.
+- [ ] Archive 1.1 (30) in Xcode → Distribute → App Store Connect upload.
 - [ ] Add the build to External Testing in TestFlight; write "What to Test".
 - [ ] Submit for **Beta App Review** — the first build of a NEW version for
       EXTERNAL testers needs it (internal testers don't). TestFlight builds
