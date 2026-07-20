@@ -1177,16 +1177,22 @@ final class Simulation {
         let belowIPO = displaySharePrice < pc.ipoPrice
         let escalation = activistCampaign?.escalation ?? 0
         let poorPerformance = belowIPO || escalation > 0
-        guard poorPerformance else { boardPressure = max(0, boardPressure - 0.20); return }
-
-        // How fast the board moves: it ACCELERATES with dilution (spec — "the
-        // ouster trigger accelerates the more the player dilutes") and with how
-        // far the activist has escalated. At the majority margin it's slow (~a
-        // year of poor performance); near-total dilution, only a few months.
         let dilution = (Simulation.boardControlThreshold - stake) / Simulation.boardControlThreshold  // 0…1
-        let rate = 0.06 + 0.22 * dilution + 0.05 * Double(min(escalation, 4))
+
+        // How fast the board moves:
+        //  • POOR performance below majority → it BUILDS, accelerating with
+        //    dilution (spec — "the ouster trigger accelerates the more you dilute")
+        //    and with activist escalation. Slow at the margin (~a year), a few
+        //    months near-total dilution.
+        //  • GOOD performance mostly protects you — BUT near-total dilution leaves
+        //    almost no protection (spec): below ~15% ownership the board slowly
+        //    sours even when the airline performs; a modest holder decays to safe.
+        //    This is what stops mass secondary offerings being free cash.
+        let rate = poorPerformance
+            ? 0.06 + 0.22 * dilution + 0.05 * Double(min(escalation, 4))
+            : 0.14 * dilution - 0.10
         let was = boardPressure
-        boardPressure = min(1.0, boardPressure + rate)
+        boardPressure = min(1.0, max(0.0, boardPressure + rate))
         if boardPressure >= 1.0 { oustByBoard(); return }
         if was < 0.5, boardPressure >= 0.5 {
             logOps(.market, "\(pc.ticker): the board is restless",

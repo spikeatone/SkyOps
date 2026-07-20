@@ -1,8 +1,10 @@
 # Go Public (IPO) — Design Spec (for designer review)
 
-Status: **Steps 1–4 BUILT & verified (step 1: 30/30 headless + live; steps 2–4:
-78/78 headless cumulative). Step 5 (balance sweep) pending.** All four forks
-locked below.
+Status: **COMPLETE — all 5 steps BUILT & verified** (step 1: 30/30 headless +
+live; steps 2–4: 78/78 headless cumulative; step 5: balance probe validates all
+guarantees). All four forks locked below. **Only remaining gate to a beta cut:
+the live Simulator tap-through** (deferred — the designer was remote on iPad this
+session and couldn't approve Mac Simulator control).
 
 ### Decisions (designer, locked)
 1. **Board severity: TEETH — can oust you.** Sustained poor performance + lost
@@ -252,9 +254,15 @@ accumulators, and any active activist/board campaign state.
    dilution + activist escalation; at 1.0 the board ousts (game over) with an
    "OUSTED" recap (GameOverView.Cause). Majority control = total immunity. A red
    "Board patience" bar in the PUBLIC card makes it visceral.
-5. **Balance pass:** the multi-seed sweep discipline from acquisitions — is equity
-   a real alternative to debt, is the price avoidably survivable, does mismanagement
-   actually cost you? Tune `valuationMultiple`, float ceiling, trigger thresholds.
+5. ~~**Balance pass:** the multi-seed sweep discipline from acquisitions — is
+   equity a real alternative to debt, is the price avoidably survivable, does
+   mismanagement actually cost you?~~ **DONE (`scratchpad/BalanceMain.swift`).**
+   All three confirmed; constants KEPT (valuationMultiple 1.8, gate $500M). Found
+   + fixed a real hole: heavy dilution had to become a slow board risk even when
+   performing, or mass secondaries were free cash (net worth has no public-stake
+   liability). A safe IPO tops out at ~$950M net worth (just under the $1B gate),
+   so growth isn't trivialized. Ouster is avoidable (majority / good performance)
+   and mismanagement is punished (30% stake + sub-IPO price → ousted ~month 7).
 
 Comparable in size to acquisitions or hubs. **Recommend it lands in 1.1 with the
 acquisition work, not 1.0.1.**

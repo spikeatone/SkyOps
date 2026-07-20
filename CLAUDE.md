@@ -3289,7 +3289,7 @@ burden) lands. Do NOT ship a build with acquisitions enabled and step 3 missing.
   shrinking carriers both present, region scoping. Plus live in the Simulator,
   both themes.
 
-## Decided — Go Public / IPO (1.1; steps 1–4 of 5 BUILT)
+## Decided — Go Public / IPO (1.1; ALL 5 steps BUILT — feature COMPLETE)
 
 Full design in **`GO_PUBLIC_SPEC.md`**. A SECOND capital route beside loans
 (designer, mid-flight): list the airline, sell equity for cash, live with a
@@ -3344,9 +3344,10 @@ of a loan — no repayment, but you sell control and gain a permanent audience.
   control-risk tiers, save/load round-trip, legacy-save loads private) + live
   (ticker next to cash, the IPO flow with the dilution warning + live deal
   summary).
-- **NOT SHIPPABLE ALONE:** step 1 is pure upside (raise cash, no downside yet).
-  The pitfalls — dwindling price already emergent, then activists (step 3) and the
-  board (step 4) — are what make it a real tradeoff. Steps 3–5 pending.
+- **(Step 1 was "not shippable alone" — pure upside. Steps 2–5 below add the
+  levers, activists, the board, and the balance pass that make it a real tradeoff.
+  The feature is now COMPLETE; the only gate to a beta cut is the live tap-through,
+  see the Simulator-access note at the end of this section.)**
 
 ### Step 2 — levers (dividends / buybacks / secondary): BUILT (37/37 headless)
 
@@ -3453,11 +3454,42 @@ second game-over path beside bankruptcy).
   recovery by buying back to majority calms the board, pressure persists, and the
   cash invariant holds throughout.
 
-### Simulator access, this session
+### Step 5 — balance pass: DONE (probe validates all guarantees; constants KEPT)
+
+`scratchpad/BalanceMain.swift` (a separate probe binary on the real Sim/*.swift)
+answers the spec's three questions + the dilution self-pricing. **A real balance
+hole was found and fixed here:** the board originally acted only on POOR
+performance, so a well-run but heavily-diluted airline was immune — and since net
+worth carries no liability for the public's stake, mass secondary offerings were
+near-free cash. Fixed by making heavy dilution itself a slow board risk even when
+performing (the `0.14·dilution − 0.10` good-performance term added to
+`tickBoardMonthly` — modest holders decay to safe; below ~15% ownership the board
+slowly sours regardless). Findings (constants VALIDATED, not changed):
+
+- **Equity is a real, distinct route vs debt.** A SAFE IPO (≤50% float, majority
+  kept) raises up to ~$450M cash (≈0.9× net worth — far more than a loan, never
+  repaid) but tops the airline out at ~$950M net worth, JUST UNDER the $1B
+  acquisition gate. Crossing needs real growth or accepting board risk (>50%
+  float) — so going public accelerates the mid-game without making organic growth
+  pointless (the net-worth-interaction concern the spec flagged).
+- **Avoidably survivable:** majority holders and well-run diluted airlines are
+  never ousted (24-mo probe).
+- **Mismanagement costs you:** 30% stake + a sub-IPO price → ousted at month 7,
+  identically across 3 runs (stable vs economic-event randomness), with a
+  multi-month warning window (not instant).
+- **Dilution self-priced:** 10% stake even while performing builds real board
+  pressure (0.22) — selling ~everything isn't free, and you keep almost none of
+  future growth.
+- `valuationMultiple` 1.8 gives sane prices ($25/share at the gate, ~$250 at 10×).
+
+### Simulator access, this session — LIVE TAP-THROUGH STILL PENDING
 The designer is working REMOTE from an iPad, so the `request_access` dialog (which
-appears on the Mac desktop) can't be approved — live tap-through of the PUBLIC
-card / activist / ouster screens is deferred to a Mac session. Steps 2–4 are
-headless-verified only so far (the harness has a proven catch rate here).
+appears on the Mac desktop) can't be approved. The ENTIRE Go Public feature
+(steps 2–5) is headless-verified only — 78/78 lifecycle + the balance probe, on
+the real sim code (a proven catch rate here), plus clean app builds. **Before a
+beta cut, drive it live on the Mac Simulator:** the PUBLIC card levers, an
+activist demand card (comply/refuse), and an ouster → "OUSTED" recap. Reaching it
+needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
 
 ## Decided — Hubs & Clubs (built to the designer-reviewed spec)
 
