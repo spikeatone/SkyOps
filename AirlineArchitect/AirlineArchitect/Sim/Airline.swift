@@ -302,6 +302,10 @@ struct Airline {
         // principle as GUM).
         "NAS","PLS","GCM","EIS","AXA","SXM","SBH","ANU","SKB","DOM",
         "UVF","SVD","GND","BGI","AUA","CUR","BON","POS",
+        // Bermuda is a mid-Atlantic British territory (really US/UK-carrier
+        // served); bucketed with the western-Atlantic leisure islands here for
+        // consistency, and it renders in the same basemap layer.
+        "BDA",
     ]
     static let southAmericaCodes: Set<String> = [
         "BOG","GRU","SCL","LIM","CGH","AEP","GIG","VCP","MDE","BSB","EZE","UIO","SDU","CLO","CNF","CTG","POA","REC","SSA","GYE",

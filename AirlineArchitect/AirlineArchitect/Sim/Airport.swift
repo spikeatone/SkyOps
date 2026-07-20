@@ -69,6 +69,7 @@ final class Airport: Identifiable {
         "MLE", "SEZ", "MRU", "ZNZ",                                   // Indian Ocean
         "NAN", "PPT", "OKA",                                          // South Pacific + Okinawa
         "SID",                                                        // Cape Verde (Sal)
+        "BDA",                                                        // Bermuda (mid-Atlantic)
     ]
     static func isLeisure(_ code: String) -> Bool { leisureCodes.contains(code) }
 
@@ -235,6 +236,9 @@ final class Airport: Identifiable {
         .init(code: "CUR", lat: 12.1889, lon: -68.9598,  landingFeePerKlb: 3.00, gateFeeNarrowbody: 330, gateFeeWidebody: 660, groundStopsPerMonth: 1.5),
         .init(code: "BON", lat: 12.1310, lon: -68.2685,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 300, gateFeeWidebody: 600, groundStopsPerMonth: 1.5),
         .init(code: "POS", lat: 10.5954, lon: -61.3372,  landingFeePerKlb: 2.80, gateFeeNarrowbody: 320, gateFeeWidebody: 640, groundStopsPerMonth: 2.5),
+        // Bermuda (mid-Atlantic leisure) — real single 9,713 ft runway; grouped
+        // with the western-Atlantic leisure islands.
+        .init(code: "BDA", lat: 32.3640, lon: -64.6787,  landingFeePerKlb: 3.20, gateFeeNarrowbody: 340, gateFeeWidebody: 700, groundStopsPerMonth: 2.5),
 
         // South America (top 20)
         .init(code: "BOG", lat: 4.7016,   lon: -74.1469,  landingFeePerKlb: 3.80, gateFeeNarrowbody: 380, gateFeeWidebody: 820, groundStopsPerMonth: 6.5),

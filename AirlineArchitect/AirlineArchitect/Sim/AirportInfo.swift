@@ -190,6 +190,7 @@ extension Airport {
         "CUR": .init(name: "Curaçao International", city: "Willemstad, Curaçao", operationsPerYear: 45_000, runways: 1, longestRunwayFt: 11_188, metroPopulation: 160_000, annualPassengers: 1_700_000),
         "BON": .init(name: "Flamingo International", city: "Kralendijk, Bonaire", operationsPerYear: 20_000, runways: 1, longestRunwayFt: 9_449, metroPopulation: 22_000, annualPassengers: 600_000),
         "POS": .init(name: "Piarco International", city: "Port of Spain, Trinidad and Tobago", operationsPerYear: 60_000, runways: 1, longestRunwayFt: 10_500, metroPopulation: 550_000, annualPassengers: 2_500_000),
+        "BDA": .init(name: "L.F. Wade International", city: "Hamilton, Bermuda", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 9_713, metroPopulation: 64_000, annualPassengers: 1_000_000),
         "MLE": .init(name: "Velana International", city: "Malé, Maldives", operationsPerYear: 120_000, runways: 1, longestRunwayFt: 10_499, metroPopulation: 250_000, annualPassengers: 7_000_000),
         "SEZ": .init(name: "Seychelles International", city: "Mahé, Seychelles", operationsPerYear: 30_000, runways: 1, longestRunwayFt: 9_800, metroPopulation: 90_000, annualPassengers: 1_200_000),
 

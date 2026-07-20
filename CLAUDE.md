@@ -2933,6 +2933,25 @@ both orientations) incl. the full open-a-route→acquire flow.
   convention) — extract-time shift, don't "fix" the data. Basemap.json ~80KB →
   254KB. Verified live: Central America start shows the full Caribbean arc with
   airports on land; oceania start shows Tahiti under PPT.
+  - **NEWFOUNDLAND ADDED + BERMUDA (BDA) new leisure destination (designer-reported:
+    YYT sat on empty ocean).** Same gap class as above: the whole island of
+    Newfoundland was MISSING from the `canada` layer (no coastline ring reached
+    east of −54°; YYT/St. John's is at −52.75), so it floated. Fix: Newfoundland's
+    455-pt ring (NE 50m land, 2dp) appended to `canada`; Bermuda's 73-pt ring (NE
+    **10m** — the 8-pt 50m ring clipped the airport's eastern St. David's tip)
+    appended to `centralAmerica`. Both verified via point-in-polygon (YYT/BDA sit
+    INSIDE their rings) against the exact rings now in Basemap.json; the basemap
+    projects through the same `GeoProjection` as airports so they can't drift.
+    Basemap.json → 284KB. **Bermuda the airport** (BDA, L.F. Wade Intl, 32.36/
+    −64.68, real single 9,713 ft runway, ~1M pax) added to `Airport.all` /
+    `AirportInfo` / `leisureCodes` (fare ×1.15, opening ×1.75) / `centralAmericaCodes`
+    (its carrier region + basemap hue — a mid-Atlantic British territory, really
+    US/UK-served, bucketed with the western-Atlantic leisure islands for
+    consistency, the same approximation the Caribbean uses). Verified 6/6 headless
+    (resolves, coords, leisure, AirportInfo, region, a carrier picks — AA for
+    BDA↔JFK) + clean build. **Live map screenshot of the two landmasses is
+    pending** (default framing is CONUS; showing NE Canada / mid-Atlantic needs a
+    map pan, i.e. Simulator taps — the designer was remote on iPad this session).
   - **AMENDMENT (designer request): Canary Islands moved europe→AFRICA, Azores
     stays europe.** The islands were originally lumped `Canary/Azores→europe`
     (basemap key) purely because both were "sliced from Spain/Portugal" — but
