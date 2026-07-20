@@ -1,13 +1,54 @@
-# RELEASE STATUS — App Store submission, v1.0 (build 27)
+# RELEASE STATUS — v1.0 (build 27, in review) + v1.1 (build 28, external test)
 
-Snapshot of the 1.0 App Store submission as of **18 July 2026**. Written so a
-future session (or a remote session with no conversation history) can pick this
-up cold. `CLAUDE.md` holds the technical/design context; this file is ONLY the
-release-and-store state.
+Snapshot as of **20 July 2026**. Two things are in flight: **1.0 (build 27)** is
+in App Store review, and **1.1 (build 28)** is being cut for external TestFlight
+testing. Written so a future session (or a remote session with no conversation
+history) can pick this up cold. `CLAUDE.md` holds the technical/design context;
+this file is ONLY the release-and-store state.
 
-Update it as items land, and delete it once 1.0 is live and this is history.
+Update it as items land, and delete it once both are live and this is history.
+Everything from "## The 1.0 binary" onward is the 1.0 App Store submission
+detail; the 1.1 section immediately below is the current active work.
 
-## The binary
+## 1.1 (build 28) — external test cut (in progress)
+
+**Versioning bumped: `MARKETING_VERSION = 1.1`, `CURRENT_PROJECT_VERSION = 28`
+across all 6 configs (commit `8880593`), pushed to `origin/main`.** This is a
+TestFlight EXTERNAL-test cut, independent of the 1.0 (27) App Store review below
+— the two tracks don't interact. Let 1.0 finish review and release; 1.1 becomes
+the next App Store version afterward.
+
+**Headline contents since build 27** (full detail in `CLAUDE.md` + `git log`):
+- **Go Public / IPO** — all 5 steps: stock-price model + IPO + ticker, the
+  levers (dividends / buybacks / secondary offering), activist investors, the
+  board (a 2nd game-over path via ouster), and the balance pass. See
+  `GO_PUBLIC_SPEC.md`.
+- **Competitor Acquisition** — scout → buy → inherit → integration burden →
+  two-stage due diligence → consolidation pressure. See `ACQUISITIONS_SPEC.md`.
+- **Landmass fixes** — Newfoundland, Bermuda (new leisure destination), and the
+  4-airport audit (PMI / RTB / CZM / BAH). All verified point-in-polygon;
+  Newfoundland confirmed rendering on a fresh build. (BAH sits ~5.4 km off its
+  drawn coast — airport on Muharraq islet, absent from Natural Earth; accepted.)
+- **Finance REPORTS / FUNDING split** — loans + Go Public moved to a FUNDING
+  sub-tab; the Total/This-month/Last-month period selector stays under REPORTS.
+- **Restore Purchases "nothing to restore" message** — the fix previously
+  earmarked for 1.0.1 ships here instead (see Known open items below).
+- **"Aging" label** — American spelling in the competitor fleet-age label.
+
+**Still to do (designer, credentialed — Claude can't do these):**
+- [ ] Archive 1.1 (28) in Xcode → Distribute → App Store Connect upload.
+- [ ] Add the build to External Testing in TestFlight; write "What to Test".
+- [ ] Submit for **Beta App Review** — the first build of a NEW version for
+      EXTERNAL testers needs it (internal testers don't). TestFlight builds
+      expire after 90 days.
+
+**Versioning policy going forward** (established 20 July 2026): bump
+`CURRENT_PROJECT_VERSION` **+1 on every upload**, one continuous integer that
+never resets or repeats (ASC rejects a reused build number). Bump
+`MARKETING_VERSION` **minor** for a feature release (1.1, 1.2…), **patch** for a
+fix-only release (1.1.1). Only the designer archives/uploads.
+
+## The 1.0 binary
 
 **SUBMITTED — 1.0 (build 27) is "Waiting for Review" as of 18 July 2026.**
 
@@ -232,7 +273,8 @@ exposes a delegate hook and the change is localized to `Store.swift`.
 ## Known open items (not blocking submission)
 
 - ~~**Restore Purchases shows no message when there is nothing to restore.**~~
-  **FIXED in the working tree (not yet in a build) — queued for 1.0.1.** Root
+  **FIXED and on `main` — ships in 1.1 (28)** (was earmarked for 1.0.1; the
+  bigger 1.1 features overtook it, so it rides along in 1.1). Root
   cause: a restore that finds no entitlement SUCCEEDS at the StoreKit level, so
   `restore()` called `apply(info)` (setting `isPro = false`), threw nothing, and
   the paywall's `if store.isPro` guard meant nothing closed and nothing was
