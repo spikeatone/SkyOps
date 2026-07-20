@@ -99,7 +99,7 @@ struct CompetitorProfile: Identifiable, Equatable {
         switch fleetAgeFraction {
         case ..<0.30: return "Young"
         case ..<0.55: return "Mid-life"
-        case ..<0.75: return "Ageing"
+        case ..<0.75: return "Aging"
         default:      return "Old"
         }
     }
