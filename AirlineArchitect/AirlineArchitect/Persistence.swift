@@ -369,7 +369,12 @@ extension GameStore {
         return h.savedAtEpoch
     }
 
+    /// NSUbiquitousKeyValueStore caps a value at ~1 MB. A save above that can't be
+    /// mirrored — don't even attempt it (pointless, and no reason to hand the KVS
+    /// an oversized value on the save path). Local file stays the source of truth.
+    private static let maxCloudBytes = 900_000
     private static func mirrorToCloud(_ data: Data, slot: Int) {
+        guard data.count <= maxCloudBytes else { return }
         kvs.set(data, forKey: cloudKey(slot))
         // A fresh save supersedes any prior deletion of this slot.
         kvs.removeObject(forKey: tombKey(slot))
