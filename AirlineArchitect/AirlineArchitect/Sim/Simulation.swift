@@ -373,6 +373,46 @@ final class Simulation {
     private static let competitorExitDailyProbability = 0.02
     private static let competitionMinRouteAgeDays = 8
 
+    // MARK: Consolidation pressure
+    //
+    // ACQUISITIONS_SPEC.md's hardest guardrail: winning must NOT empty the map.
+    // Acquiring a competitor removes it from every player route (demand recovers
+    // — the reward), which HALVES rivals-on-routes. Left alone that quiets the
+    // endgame exactly when it should intensify. So each completed acquisition
+    // makes the SURVIVORS more aggressive: fewer players chasing the same
+    // routes, a bigger prize each, and a market that reads the consolidation as
+    // an invitation. This is the INVERSE of the Hubs & Clubs guardrail, which
+    // wanted rivals halved as a success — here that same halving is the failure.
+
+    /// Per-acquisition lift on the daily entry rate. Deliberately SMALL: the
+    /// point is to keep rival DENSITY comparable, not to swarm the map. A first
+    /// sizing of 0.5 overshot ~7× (16.7 → 114 rivals) — because an acquired
+    /// network multiplies the ROUTE count too, and the entry rate is per-route,
+    /// so a modest per-route lift compounds hard across a big inherited network.
+    /// 0.12 keeps per-route entry roughly flat while nudging survivors up.
+    private static let consolidationEntryPerAcquisition = 0.12
+    /// Per-acquisition lift on how many rivals a single route can hold — a
+    /// consolidated market supports incumbents stacking one deeper, capped so it
+    /// can't run away.
+    private static let consolidationCapPerAcquisition = 1
+    private static let consolidationCapMax = 5
+    /// Per-acquisition damping on the exit rate — survivors have more to gain, so
+    /// they dig in rather than churning out (floored so they never become
+    /// permanent).
+    private static let consolidationStickiness = 0.15
+
+    var consolidationEntryMultiplier: Double {
+        1.0 + Double(subsidiaries.count) * Simulation.consolidationEntryPerAcquisition
+    }
+    var effectiveCompetitionCap: Int {
+        min(Simulation.consolidationCapMax,
+            Simulation.competitionCap + subsidiaries.count * Simulation.consolidationCapPerAcquisition)
+    }
+    var effectiveCompetitorExitProbability: Double {
+        Simulation.competitorExitDailyProbability
+            * max(0.55, 1.0 - Double(subsidiaries.count) * Simulation.consolidationStickiness)
+    }
+
     /// Every open player route with a competitor on it (for the Ops box).
     var contestedRoutes: [Route] { playerRoutes.filter { $0.competitionLevel > 0 } }
 
@@ -384,7 +424,7 @@ final class Simulation {
             let ageDays = (tick - r.openedTick) / 1440
             // Must be actually flown + genuinely profitable (a subsidized route's
             // $0 opening cost makes isProfitable true from tick 0 — flights>0 guards it).
-            if r.competitionLevel < Simulation.competitionCap, r.flights > 0, r.isProfitable,
+            if r.competitionLevel < effectiveCompetitionCap, r.flights > 0, r.isProfitable,
                ageDays >= Simulation.competitionMinRouteAgeDays {
                 // High reputation deters entrants (a well-liked incumbent is hard
                 // to unseat): rep 100 → half the base rate, rep 0 → full rate.
@@ -394,15 +434,19 @@ final class Simulation {
                 // operating hub. A SOLD hub is the mirror: +50% entry there.
                 if routeTouchesOperatingHub(r.originCode, r.destCode) { entryRate *= Simulation.hubFortressEntryFactor }
                 if rivalHubs[r.originCode] != nil || rivalHubs[r.destCode] != nil { entryRate *= Simulation.rivalHubEntryFactor }
+                // Consolidation: each acquisition makes the survivors hungrier,
+                // so taking a competitor out of the market doesn't quiet it.
+                entryRate *= consolidationEntryMultiplier
                 if Double.random(in: 0..<1) < entryRate {
                     let name = competitorName(excluding: r.competitors)
                     r.competitionLevel += 1
                     r.competitors.append(name)
+                    let why = subsidiaries.isEmpty ? "" : " as the market consolidates"
                     logOps(.market, "Competitor entered your market",
-                           "\(name) now flies \(r.originCode) ↔\u{FE0E} \(r.destCode)")
+                           "\(name) now flies \(r.originCode) ↔\u{FE0E} \(r.destCode)\(why)")
                 }
             }
-            if r.competitionLevel > 0, Double.random(in: 0..<1) < Simulation.competitorExitDailyProbability {
+            if r.competitionLevel > 0, Double.random(in: 0..<1) < effectiveCompetitorExitProbability {
                 let name = r.competitors.popLast() ?? "A rival"
                 r.competitionLevel -= 1
                 logOps(.market, "Competitor exited",
@@ -411,11 +455,14 @@ final class Simulation {
         }
     }
 
-    /// A plausible rival carrier (avoids duplicating one already on the route).
+    /// A plausible rival carrier (avoids duplicating one already on the route,
+    /// and never names a carrier the player now OWNS — a subsidiary can't enter
+    /// as your competitor).
     private func competitorName(excluding used: [String]) -> String {
+        let owned = Set(subsidiaries.map(\.name))
         let pool = ["American Airlines", "Delta Air Lines", "United Airlines", "Southwest Airlines",
                     "JetBlue", "Alaska Airlines", "Spirit", "Frontier"]
-        return pool.filter { !used.contains($0) }.randomElement() ?? "A new entrant"
+        return pool.filter { !used.contains($0) && !owned.contains($0) }.randomElement() ?? "A new entrant"
     }
 
     /// Speed multiplier. Prototype default is 5× (feels smooth; at 1× the

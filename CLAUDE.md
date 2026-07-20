@@ -3069,6 +3069,24 @@ be crewed to ~2.2/aircraft or they're structurally loss-making and the control
 flattens; and measure NET WORTH not cash, because cash payback penalises
 reinvestment. The sweep binary takes seeds as argv and runs 6-way in parallel.
 
+### CONSOLIDATION PRESSURE — BUILT (14/14 headless)
+
+The map-never-empties guardrail. Acquiring a competitor removes it from every
+player route (demand recovers), halving rivals-on-routes; without a counter the
+endgame goes quiet exactly when it should heat up. Scales with
+`subsidiaries.count`: entry rate ×(1 + 0.12/acq), competition cap 3→4→5 (capped),
+exit rate damped (survivors dig in), and an acquired carrier is excluded from the
+entrant pool (you never compete against yourself). This is the INVERSE of the
+Hubs & Clubs guardrail, which counted rivals-halved as SUCCESS — here it's the
+failure.
+
+**KEY MEASUREMENT LESSON:** a first sizing (0.5/acq) looked like a 7× overshoot
+(16.7 → 114 rivals) but that was total COUNT across different route totals (8 vs
+~58). Per-contested-route DENSITY was 2.46 vs 2.47 — identical. The market
+self-regulates to an equilibrium set by the cap and entry/exit rates, so the
+entry multiplier barely moves steady-state density; consolidation's real teeth
+are the RAISED CAP and STICKINESS. Always measure density, never total count.
+
 ### Step 4 — TWO-STAGE DUE DILIGENCE: BUILT (23/23 headless + live)
 
 Designer's framing: what you can see depends on how far into the deal you are.
