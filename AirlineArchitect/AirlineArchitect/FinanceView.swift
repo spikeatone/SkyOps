@@ -27,6 +27,12 @@ struct FinanceView: View {
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
 
+    // Top-level split: REPORTS (the period-scoped financial statements) vs
+    // FUNDING (ways to raise capital — loans and going public). The period
+    // selector below is the sub-nav for REPORTS only.
+    enum Section: String, CaseIterable { case reports = "REPORTS", funding = "FUNDING" }
+    @State private var section: Section = .reports
+
     enum Period: String, CaseIterable { case total = "Total", thisMonth = "This month", lastMonth = "Last month" }
     @State private var period: Period = .total
     @State private var showIntel = false
@@ -64,23 +70,11 @@ struct FinanceView: View {
             bg.ignoresSafeArea()
             VStack(spacing: 12) {
                 header
-                periodSelector
+                sectionSelector
+                if section == .reports { periodSelector }
                 ScrollView {
                     VStack(spacing: 16) {
-                        planCard
-                        marketIntelCard
-                        if !sim.currentEvent.isNormal { marketBanner }
-                        netWorthCard
-                        if netWorthSeries.count >= 2 { trendCard }
-                        if let f = figures {
-                            flightOpsCard(f)
-                            breakdownCard(f)
-                            cashFlowCard(f)
-                        } else {
-                            unavailableCard
-                        }
-                        financingCard
-                        publicCard
+                        if section == .reports { reportsContent } else { fundingContent }
                     }
                     .padding(.bottom, 8)
                 }
@@ -95,6 +89,52 @@ struct FinanceView: View {
         .fullScreenCover(isPresented: $showIPO) {
             GoPublicView(sim: sim, onClose: { showIPO = false })
         }
+    }
+
+    // MARK: Content — REPORTS (period-scoped statements)
+    @ViewBuilder private var reportsContent: some View {
+        planCard
+        if !sim.currentEvent.isNormal { marketBanner }
+        netWorthCard
+        if netWorthSeries.count >= 2 { trendCard }
+        if let f = figures {
+            flightOpsCard(f)
+            breakdownCard(f)
+            cashFlowCard(f)
+        } else {
+            unavailableCard
+        }
+    }
+
+    // MARK: Content — FUNDING (raise capital, then deploy it)
+    // Financing/Go Public raise capital; Market Intelligence scouts rivals for
+    // Competitor Acquisition — the capital-deployment endgame — so it lives here.
+    @ViewBuilder private var fundingContent: some View {
+        financingCard
+        publicCard
+        marketIntelCard
+    }
+
+    // MARK: Section selector (REPORTS | FUNDING) — same pill styling as period.
+    private var sectionSelector: some View {
+        HStack(spacing: 4) {
+            ForEach(Section.allCases, id: \.self) { s in
+                let on = section == s
+                Button { section = s } label: {
+                    Text(s.rawValue)
+                        .font(.karla(14, .bold))
+                        .foregroundStyle(on ? segActiveText : segInactiveText)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 28)
+                        .background(on ? segActivePill : .clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }.buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(segTrack)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
     // MARK: Public company — GO PUBLIC entry, or the live listing summary.

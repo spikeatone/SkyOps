@@ -2318,6 +2318,20 @@ where numbers are involved.
     during a recession run), and the Last-month view shows that period's own
     numbers reconciling exactly ($934,633 − $1,079,046 − $187,128 = −$331,541),
     with capital spending correctly $0 (acquisitions were in earlier months).
+- **FINANCE split into REPORTS / FUNDING top-level tabs (native app; designer
+  request).** The tab now leads with a `Section` segmented pill (REPORTS |
+  FUNDING) reusing the SAME styling as the period selector. **REPORTS** = the
+  period-scoped statements (plan, market-intelligence, market banner, net worth +
+  trend, flight-ops / overhead / cash-flow) with the Total/This-month/Last-month
+  selector as its SUB-nav (shown only under REPORTS). **FUNDING** = the
+  capital-raising cards: FINANCING (loans) + GO PUBLIC / PUBLIC COMPANY. Pure
+  view-layer regroup in `FinanceView.body` (new `reportsContent`/`fundingContent`
+  `@ViewBuilder`s + `sectionSelector`) — no sim/economics/cash-invariant change,
+  nothing added or dropped from the card set. **Market Intelligence lives under
+  FUNDING** (designer call) alongside loans + Go Public — it scouts rivals for
+  Competitor Acquisition, the capital-deployment endgame. The screen header still
+  reads "FINANCE" (screen identity + cash + bell). Build-verified; live-tap check
+  declined this session (designer declined Simulator control).
 - **IN-APP PURCHASES — scaffolded behind a stub (native app). Designer has a
   RevenueCat account; two tiers ($5.99/mo, $49.99/yr) + a free preview.**
   Decisions (designer): free tier gates SCALE not features (route + fleet cap),
