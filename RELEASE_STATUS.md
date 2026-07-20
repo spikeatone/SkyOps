@@ -1,9 +1,9 @@
-# RELEASE STATUS — v1.0 (build 27, in review) + v1.1 (build 30, external test)
+# RELEASE STATUS — v1.0 (build 27, in review) + v1.1 (build 31, external test)
 
 Snapshot as of **20 July 2026**. Two things are in flight: **1.0 (build 27)** is
-in App Store review, and **1.1 (build 30)** is being cut for external TestFlight
-testing. (Build 28 was the first external cut; **build 30 supersedes it** with
-the launch/save + perf fixes below — do not distribute 28 or 29.) Written so a future session (or a remote session with no conversation
+in App Store review, and **1.1 (build 31)** is being cut for external TestFlight
+testing. (Build 28 was the first external cut; **build 31 supersedes it** with
+the launch/save + perf fixes below — do not distribute 28, 29, or 30.) Written so a future session (or a remote session with no conversation
 history) can pick this up cold. `CLAUDE.md` holds the technical/design context;
 this file is ONLY the release-and-store state.
 
@@ -11,16 +11,16 @@ Update it as items land, and delete it once both are live and this is history.
 Everything from "## The 1.0 binary" onward is the 1.0 App Store submission
 detail; the 1.1 section immediately below is the current active work.
 
-## 1.1 (build 30) — external test cut (in progress)
+## 1.1 (build 31) — external test cut (in progress)
 
-**Versioning: `MARKETING_VERSION = 1.1`, `CURRENT_PROJECT_VERSION = 30` across
+**Versioning: `MARKETING_VERSION = 1.1`, `CURRENT_PROJECT_VERSION = 31` across
 all 6 configs, pushed to `origin/main`.** This is a TestFlight EXTERNAL-test cut,
 independent of the 1.0 (27) App Store review below — the two tracks don't
 interact. Let 1.0 finish review and release; 1.1 becomes the next App Store
 version afterward.
 
-**New in build 30 (since the build-28 external cut)** — the reason 28 is
-superseded:
+**New in builds 29–31 (since the build-28 external cut)** — the reason 28 is
+superseded (31 = 30 + the load-menu/nav polish in the last two bullets):
 - **Launch-crash hardening.** A tester reported build 28 crashing repeatedly on
   launch. **An ASC crash report later confirmed it's a crash on SAVE** ("clicked
   save, it got hung up and then crashed"), on build **27 / 1.0** — the UNBOUNDED
@@ -33,7 +33,13 @@ superseded:
 - **Route-competition actions** (Ops): fare war / ad campaign / loyalty push.
 - **Ops reorder** + **uniform control-bar font**.
 - **Load-menu delete UX**: enlarged the tap-delete trash icon (+50%) and added
-  swipe-left-to-delete on each saved slot (the standard iOS pattern).
+  swipe-left-to-delete on each saved slot (the standard iOS pattern; the red
+  delete box is exactly the slot height and the three slots stay compact).
+- **Back-arrow navigation** for Market Intelligence + Go Public (drill-downs now
+  push in with a leading-chevron header + tab bar visible, not a modal/X — the
+  AIRCRAFT DETAIL pattern). Alerts + Paywall stay modal. Plus the ESTIMATE
+  due-diligence badge in theme-aware orange and the "open their books" text in
+  the section-header blue.
 
 **Headline contents since build 27** (full detail in `CLAUDE.md` + `git log`):
 - **Go Public / IPO** — all 5 steps: stock-price model + IPO + ticker, the
@@ -53,7 +59,7 @@ superseded:
 - **"Aging" label** — American spelling in the competitor fleet-age label.
 
 **Still to do (designer, credentialed — Claude can't do these):**
-- [ ] Archive 1.1 (30) in Xcode → Distribute → App Store Connect upload.
+- [ ] Archive 1.1 (31) in Xcode → Distribute → App Store Connect upload.
 - [ ] Add the build to External Testing in TestFlight; write "What to Test".
 - [ ] Submit for **Beta App Review** — the first build of a NEW version for
       EXTERNAL testers needs it (internal testers don't). TestFlight builds
