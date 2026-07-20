@@ -2101,9 +2101,22 @@ where numbers are involved.
   get the real frame before assuming it's fixed. (Other unruled-out candidates:
   OOM from the wrap-around map's tiled redraw under memory pressure; the
   never-removed `observeCloudChanges` NotificationCenter observer.)
-- **OPEN — LAUNCH CRASH (1.1(28), one tester, "repeatedly on launch") + the
-  hardening pass it triggered.** A tester reported build 28 crashing ON LAUNCH,
-  repeatedly. An exhaustive multi-agent sweep of the whole launch/first-frame/
+- **RESOLVED (pending 1.1(29) tester confirmation) — the crash is on SAVE, not
+  launch.** The ASC crash report (build **27 / 1.0**, iPhone 13) settled it: the
+  tester wrote *"Clicked save and it got hung up and then crashed"* (3× reports),
+  appUptime 12s, 11.9 GB free disk. So it's a main-thread **watchdog/OOM during
+  SAVE** — `sim.snapshot()` + `JSONEncoder().encode` + iCloud `kvs.set`, all on
+  the main thread, choking on the UNBOUNDED `Route.history`. The save-size
+  hardening below IS the fix (a capped save encodes in ms). NOTE it's in **1.0
+  (27) too** — the bug predates 1.1; the fix only exists in 1.1(29). The
+  "build 28 on launch" framing was imprecise — the real fault is the save write,
+  and the launch-path guards below are complementary belt-and-suspenders. Added
+  in the same area: `mirrorToCloud` skips the iCloud KVS set for any save over
+  ~900KB (the ~1MB KVS value limit — pointless + a needless main-thread risk).
+- **(historical hypothesis, kept for context) LAUNCH-CRASH sweep.** A tester
+  reported build 28 crashing "on launch"; a sweep found no in-code trap and
+  pointed at env-layer suspects (iCloud entitlement / RevenueCat) — superseded by
+  the ASC report above, which shows it's the SAVE path. An exhaustive multi-agent sweep of the whole launch/first-frame/
   restore path found **NO confirmed in-code trap**: data is clean (35 unique
   aircraft-type ids, 384 unique airport codes, 19,272 basemap points valid),
   `restore()` guards every aircraft (`guard let type/o/d … continue`) and all
