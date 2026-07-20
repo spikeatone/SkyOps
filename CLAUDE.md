@@ -3289,7 +3289,7 @@ burden) lands. Do NOT ship a build with acquisitions enabled and step 3 missing.
   shrinking carriers both present, region scoping. Plus live in the Simulator,
   both themes.
 
-## Decided — Go Public / IPO (1.1; steps 1–2 of 5 BUILT)
+## Decided — Go Public / IPO (1.1; steps 1–3 of 5 BUILT)
 
 Full design in **`GO_PUBLIC_SPEC.md`**. A SECOND capital route beside loans
 (designer, mid-flight): list the airline, sell equity for cash, live with a
@@ -3381,9 +3381,49 @@ in Simulation.swift ("levers" MARK). `PublicCompany.sharesOutstanding` is now a
   exact dividend/buyback/secondary math, stake rises on buyback + falls on
   secondary, shares shrink/grow, sentiment lifts on dividend, the cash invariant
   holds after every lever + a refused (unaffordable) dividend, gating (a private
-  airline refuses all three), and a save/load round-trip. **Live-tap check
-  pending** — reaching the PUBLIC card needs $500M net worth + going public, and
-  the designer declined Simulator control this session.
+  airline refuses all three), and a save/load round-trip.
+
+### Step 3 — activist investors: BUILT (60/60 headless, cumulative)
+
+The mid-tier threat. Reuses the `decisionQueue` card pattern (like slot/hub
+offers) with a new `.activist` kind + `ActivistDemand` payload; the persisted
+campaign state is `ActivistCampaign` (in GoPublic.swift, `Codable`).
+
+- **Trigger:** the price closing BELOW its IPO price for `activistTriggerMonths`
+  (3) consecutive sim-months (`monthsBelowIPO`, checked in the monthly
+  `tickActivistsMonthly` off `tickStockPrice`). An above-IPO month resets the
+  counter outright. Then an activist takes a `activistInitialStake` (10%) stake
+  and pushes a demand card.
+- **Demands** escalate: round 0 = pay a special dividend (5%), round 1 = a share
+  buyback (25% of float), round 2+ = CLOSE the worst money-losing route
+  (`worstLosingRoute`, by `cumulativeNet`) — falling back to a dividend when the
+  player has no losing route.
+- **Comply** (`resolveActivistComply`) forces the action via the step-2 levers
+  (or `closeRouteUnderPressure`, a no-proceeds archival mirroring slot-buyback
+  teardown). The card STAYS if the action is unaffordable/undoable, so the player
+  can address it another way. Complying ends the campaign + a small relief rally
+  (`activistStandDownRelief` +0.08).
+- **Refuse** (`resolveActivistRefuse`) grows the activist's stake
+  (`activistStakeGrowth` +5%), drops sentiment (`activistRefuseSentimentHit`
+  −0.10), and increments `escalation` — **which is what step 4's board reads.**
+- **Two ways out besides comply:** paying ANY dividend via the step-2 lever ends
+  the campaign (the spec's "fastest way"), and a price recovering above IPO makes
+  the activist give up (rewards just running the airline well). An active campaign
+  also drags sentiment (−0.08, deepening 0.06/escalation) in `nextSentiment`.
+- **Persisted** nil-safe (`activistCampaign` + `monthsBelowIPO`); the demand CARD
+  is transient and regenerates from the campaign next month, like other offers.
+  No new cash-invariant terms (comply routes through the step-2 levers' terms).
+- Card is RED (`megaphone.fill`) in the Alerts modal + Ops Needs-Attention.
+- Verified **60/60 headless** (cumulative): trigger after a sustained slump,
+  the dividend→buyback→dividend demand progression, refuse escalates + grows the
+  stake, comply ends it and charges exactly, a recovering price ends it, save/load
+  persists the campaign, and the cash invariant holds through every path.
+
+### Step 3.5 — Simulator access, this session
+The designer is working REMOTE from an iPad, so the `request_access` dialog (which
+appears on the Mac desktop) can't be approved — live tap-through of the PUBLIC
+card + activist cards is deferred to a Mac session. Steps 2–3 are headless-verified
+only so far (the harness has a proven catch rate here).
 
 ## Decided — Hubs & Clubs (built to the designer-reviewed spec)
 

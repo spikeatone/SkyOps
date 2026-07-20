@@ -880,6 +880,7 @@ final class Simulation {
         guard isPublic else { return }
         if tick >= nextSentimentTick {
             marketSentiment = nextSentiment()
+            tickActivistsMonthly()
             nextSentimentTick += Simulation.ticksPerMonth
         }
         // Ease per sim-day (the target moves as net worth/sentiment move).
@@ -928,6 +929,11 @@ final class Simulation {
         if monthsSinceDividend > 6 {
             target -= min(0.25, (monthsSinceDividend - 6) * 0.03)
         }
+        // An active activist campaign publicly agitates the stock — a drag that
+        // deepens with each refusal (their escalation).
+        if let camp = activistCampaign {
+            target -= min(0.30, 0.08 + 0.06 * Double(camp.escalation))
+        }
         // Random swings: up to 3× normal in the first month of trading.
         target += Double.random(in: -0.06...0.06) * (1 + 2 * ipo)
 
@@ -960,6 +966,8 @@ final class Simulation {
         marketSentiment = min(Simulation.sentimentCeiling, marketSentiment + min(0.15, max(0, yield) * 2.0))
         logOps(.market, "\(pc.ticker) paid a dividend",
                "Special dividend of \(compactMoneySim(cost)) to shareholders.")
+        // A dividend is the fastest way to make an activist stand down (spec).
+        if activistCampaign != nil { endActivistCampaign(reason: .dividend) }
         return true
     }
 
@@ -1001,6 +1009,142 @@ final class Simulation {
             logOps(.market, "\(updated.ticker) secondary offering",
                    "Raised \(compactMoneySim(proceeds)); your stake is now \(Int((updated.playerStake*100).rounded()))%.")
         }
+        return true
+    }
+
+    // MARK: - Public company: activist investors (step 3)
+
+    /// The active activist campaign, if any. Persisted; the demand CARD regenerates
+    /// from it each month. `escalation` (refusals) feeds the board (step 4).
+    private(set) var activistCampaign: ActivistCampaign?
+    /// Consecutive sim-months the price has closed below its IPO price — the fuse
+    /// that lights an activist. Persisted so the pressure doesn't reset on load.
+    private(set) var monthsBelowIPO = 0
+
+    static let activistTriggerMonths = 3          // sustained slump before one appears
+    static let activistInitialStake = 0.10        // fraction of shares taken up front
+    static let activistStakeGrowth = 0.05         // added per refusal
+    static let activistDividendYield = 0.05       // the dividend a "pay us" demand forces
+    static let activistBuybackFraction = 0.25     // the buyback a "return capital" demand forces
+    static let activistRefuseSentimentHit = 0.10  // sentiment lost per refusal
+    static let activistStandDownRelief = 0.08     // sentiment regained when they stand down
+
+    /// Once per sim-month (from `tickStockPrice`): track the slump, and start,
+    /// press, or end an activist campaign.
+    private func tickActivistsMonthly() {
+        guard isPublic, let pc = publicCompany else { return }
+        let belowIPO = displaySharePrice < pc.ipoPrice
+        // A month at/above the IPO price clears the slump counter outright.
+        monthsBelowIPO = belowIPO ? monthsBelowIPO + 1 : 0
+
+        if activistCampaign != nil {
+            // Recovered above the IPO price → the activist gives up (rewards
+            // simply running the airline well).
+            if !belowIPO { endActivistCampaign(reason: .recovered); return }
+            // Still slumping and no card up → they press again with a fresh demand.
+            if !decisionQueue.contains(where: { $0.kind == .activist }) { pushActivistDemand() }
+            return
+        }
+        // No campaign yet: a sustained slump summons one.
+        guard monthsBelowIPO >= Simulation.activistTriggerMonths,
+              !decisionQueue.contains(where: { $0.kind == .activist }) else { return }
+        activistCampaign = ActivistCampaign(stake: min(pc.floatFraction, Simulation.activistInitialStake),
+                                            escalation: 0, startedTick: tick)
+        logOps(.market, "\(pc.ticker): activist investor",
+               "An activist took a \(Int((activistCampaign!.stake*100).rounded()))% stake, pressing for change while the stock trades below its IPO price.")
+        pushActivistDemand()
+    }
+
+    /// The worst money-losing open route — an activist's favourite target.
+    private func worstLosingRoute() -> Route? {
+        playerRoutes.filter { $0.cumulativeNet < 0 }.min(by: { $0.cumulativeNet < $1.cumulativeNet })
+    }
+
+    private func pushActivistDemand() {
+        guard let camp = activistCampaign else { return }
+        let ask: ActivistDemand.Ask
+        var routeId: Int? = nil, routeLabel: String? = nil
+        switch camp.escalation {
+        case 0: ask = .dividend
+        case 1: ask = .buyback
+        default:
+            if let w = worstLosingRoute() {
+                ask = .closeRoute; routeId = w.id
+                routeLabel = "\(w.originCode) ↔\u{FE0E} \(w.destCode)"
+            } else { ask = .dividend }
+        }
+        decisionQueue.append(Decision(id: "activist_\(tick)", kind: .activist, aircraft: nil,
+                                      activist: ActivistDemand(ask: ask, routeId: routeId, routeLabel: routeLabel,
+                                                               stakePct: Int((camp.stake*100).rounded()),
+                                                               escalation: camp.escalation)))
+    }
+
+    enum ActivistEndReason { case complied, dividend, recovered }
+    /// End the campaign, grant a small relief rally, and clear any demand card.
+    private func endActivistCampaign(reason: ActivistEndReason) {
+        guard activistCampaign != nil else { return }
+        activistCampaign = nil
+        monthsBelowIPO = 0
+        marketSentiment = min(Simulation.sentimentCeiling, marketSentiment + Simulation.activistStandDownRelief)
+        decisionQueue.removeAll { $0.kind == .activist }
+        if let pc = publicCompany {
+            let why: String
+            switch reason {
+            case .complied:  why = "The activist's demand was met and they stood down."
+            case .dividend:  why = "A dividend satisfied the activist and they stood down."
+            case .recovered: why = "The recovering share price sent the activist packing."
+            }
+            logOps(.market, "\(pc.ticker): activist stands down", why)
+        }
+    }
+
+    /// ACTIVIST card — comply: perform the demanded action. The card stays if the
+    /// action can't be afforded/done, so the player can address it another way.
+    func resolveActivistComply(_ decision: Decision) {
+        guard let demand = decision.activist else { decisionQueue.removeAll { $0.id == decision.id }; return }
+        let ok: Bool
+        switch demand.ask {
+        case .dividend:  ok = payDividend(yield: Simulation.activistDividendYield)  // also ends the campaign
+        case .buyback:   ok = buyBackShares(floatFraction: Simulation.activistBuybackFraction)
+        case .closeRoute: ok = demand.routeId.map { closeRouteUnderPressure($0) } ?? false
+        }
+        guard ok else { return }
+        if activistCampaign != nil { endActivistCampaign(reason: .complied) }
+        decisionQueue.removeAll { $0.id == decision.id }
+    }
+
+    /// ACTIVIST card — refuse: they grow their stake, sentiment drops, and the
+    /// escalation counter climbs toward the board (step 4).
+    func resolveActivistRefuse(_ decision: Decision) {
+        defer { decisionQueue.removeAll { $0.id == decision.id } }
+        guard var camp = activistCampaign, let pc = publicCompany else { return }
+        camp.escalation += 1
+        camp.stake = min(pc.floatFraction, camp.stake + Simulation.activistStakeGrowth)
+        activistCampaign = camp
+        marketSentiment = max(Simulation.sentimentFloor, marketSentiment - Simulation.activistRefuseSentimentHit)
+        logOps(.market, "\(pc.ticker): activist rebuffed",
+               "The activist grew to \(Int((camp.stake*100).rounded()))% and is escalating (round \(camp.escalation)).")
+    }
+
+    /// Close and archive a player route (freeing its aircraft as a spare), with no
+    /// proceeds — used when an activist forces a money-loser shut. Mirrors the
+    /// slot-buyback teardown.
+    @discardableResult
+    private func closeRouteUnderPressure(_ routeId: Int) -> Bool {
+        guard let idx = playerRoutes.firstIndex(where: { $0.id == routeId }) else { return false }
+        let r = playerRoutes.remove(at: idx)
+        r.closedTick = tick
+        closedPlayerRoutes.append(r)
+        for ac in aircraft where ac.assignedRouteId == routeId {
+            ac.assignedRouteId = nil
+            if let cid = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == cid }) {
+                crew.status = .available
+            }
+            ac.crewId = nil
+            ac.holdReason = nil
+        }
+        logOps(.structural, "Route closed",
+               "\(r.originCode) ↔\u{FE0E} \(r.destCode) closed under activist pressure")
         return true
     }
 
@@ -2312,7 +2456,7 @@ final class Simulation {
     // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
 
     struct Decision: Identifiable {
-        enum Kind { case aog, crew, sell, offer, training, airportOffer, hubOffer }
+        enum Kind { case aog, crew, sell, offer, training, airportOffer, hubOffer, activist }
         let id: String
         let kind: Kind
         /// The subject aircraft (aog / crew / sell). nil for the others.
@@ -2325,6 +2469,19 @@ final class Simulation {
         var pitch: AirportPitch? = nil
         /// A rival bidding to buy one of the player's hubs (`.hubOffer` only).
         var hubOffer: HubOffer? = nil
+        /// An activist investor's demand (`.activist` only).
+        var activist: ActivistDemand? = nil
+    }
+
+    /// A concrete demand from an activist investor. Comply forces the action;
+    /// refuse escalates. Not persisted — regenerated from `activistCampaign`.
+    struct ActivistDemand {
+        enum Ask { case dividend, buyback, closeRoute }
+        let ask: Ask
+        let routeId: Int?        // .closeRoute only
+        let routeLabel: String?  // "ORG ↔ DST" for display
+        let stakePct: Int        // the activist's current stake, for display
+        let escalation: Int      // refusals so far
     }
 
     /// A rival's bid for a player hub — the ONLY way to recoup hub capital.
@@ -3401,6 +3558,8 @@ final class Simulation {
         s.totalEquityRaised = totalEquityRaised
         s.totalDividendsPaid = totalDividendsPaid
         s.totalBuybackSpend = totalBuybackSpend
+        s.activistCampaign = activistCampaign
+        s.monthsBelowIPO = monthsBelowIPO
         s.totalIntegrationSpend = totalIntegrationSpend
         s.totalSenioritySpend = totalSenioritySpend
         s.hubs = hubs
@@ -3501,6 +3660,8 @@ final class Simulation {
         totalEquityRaised = s.totalEquityRaised ?? 0
         totalDividendsPaid = s.totalDividendsPaid ?? 0
         totalBuybackSpend = s.totalBuybackSpend ?? 0
+        activistCampaign = s.activistCampaign
+        monthsBelowIPO = s.monthsBelowIPO ?? 0
         lastDividendTick = tick   // reset the income clock on load (transient)
         nextSentimentTick = tick + Simulation.ticksPerMonth
         totalIntegrationSpend = s.totalIntegrationSpend ?? 0

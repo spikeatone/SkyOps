@@ -198,6 +198,32 @@ struct NeedsAttentionCard: View {
                     ("Decline", { sim.resolveAirportOfferDecline(d) }),
                 ])
         }
+        // Activist investor pressing a demand — comply (forces the action) or
+        // refuse (they escalate). Red, because a refusal walks toward the board.
+        if d.kind == .activist, let a = d.activist {
+            let comply: (label: String, action: () -> Void)
+            switch a.ask {
+            case .dividend:
+                let cost = sim.dividendCost(yield: Simulation.activistDividendYield)
+                comply = ("Pay dividend · \(compactMoney(cost))", { Feedback.impact(.light); sim.resolveActivistComply(d) })
+            case .buyback:
+                let cost = sim.buybackCost(floatFraction: Simulation.activistBuybackFraction)
+                comply = ("Buy back · \(compactMoney(cost))", { Feedback.impact(.light); sim.resolveActivistComply(d) })
+            case .closeRoute:
+                comply = ("Close \(a.routeLabel ?? "route")", { Feedback.impact(.light); sim.resolveActivistComply(d) })
+            }
+            let demandText: String
+            switch a.ask {
+            case .dividend:  demandText = "pay shareholders a special dividend"
+            case .buyback:   demandText = "return capital via a share buyback"
+            case .closeRoute: demandText = "close the money-losing \(a.routeLabel ?? "route")"
+            }
+            return AlertModel(
+                accent: accentRed, icon: "megaphone.fill", category: "Activist investor",
+                title: "An activist holds \(a.stakePct)% and wants change",
+                subtitle: "They demand you \(demandText). Refusing lets them escalate toward the board.",
+                buttons: [comply, ("Refuse", { sim.resolveActivistRefuse(d) })])
+        }
         if d.kind == .hubOffer, let h = d.hubOffer {
             let understaffed = sim.hubUnderstaffed(h.airportCode)
             return AlertModel(
@@ -272,6 +298,10 @@ struct NeedsAttentionCard: View {
             return AlertModel(accent: accentBlue, icon: "building.2.fill",
                               category: "Hub buyout offer", title: "Hub offer", subtitle: "",
                               buttons: [("Decline", { sim.resolveHubSale(d, accept: false) })])
+        case .activist:   // handled by the early return above; unreachable
+            return AlertModel(accent: accentRed, icon: "megaphone.fill",
+                              category: "Activist investor", title: "Activist demand", subtitle: "",
+                              buttons: [("Refuse", { sim.resolveActivistRefuse(d) })])
         }
     }
 

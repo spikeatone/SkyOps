@@ -1,7 +1,7 @@
 # Go Public (IPO) — Design Spec (for designer review)
 
-Status: **Steps 1–2 BUILT & verified (step 1: 30/30 headless + live; step 2:
-37/37 headless). Steps 3–5 pending.** All four forks locked below.
+Status: **Steps 1–3 BUILT & verified (step 1: 30/30 headless + live; steps 2–3:
+60/60 headless cumulative). Steps 4–5 pending.** All four forks locked below.
 
 ### Decisions (designer, locked)
 1. **Board severity: TEETH — can oust you.** Sustained poor performance + lost
@@ -239,7 +239,12 @@ accumulators, and any active activist/board campaign state.
    invariant (`totalDividendsPaid`/`totalBuybackSpend`, capital-out); secondary
    proceeds feed `totalEquityRaised`. The income half of the string is a
    dividend-drought sentiment penalty (grace 6mo, then −0.03/mo, reset on pay).
-3. **Activist investors** (decision cards, comply/refuse, escalation).
+3. ~~**Activist investors** (decision cards, comply/refuse, escalation).~~
+   **DONE (60/60 headless cumulative).** Triggers after 3 sim-months below the
+   IPO price; demands escalate dividend → buyback → close-a-losing-route; comply
+   forces the action (via the step-2 levers), refuse grows their stake + drops
+   sentiment + increments `escalation` (which step 4's board reads). Paying any
+   dividend or a recovering price ends the campaign. `ActivistCampaign` persists.
 4. **The board** (the chosen failure/constraint model) + its recap screen if (B/C).
 5. **Balance pass:** the multi-seed sweep discipline from acquisitions — is equity
    a real alternative to debt, is the price avoidably survivable, does mismanagement

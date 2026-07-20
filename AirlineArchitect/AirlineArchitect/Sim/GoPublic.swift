@@ -36,6 +36,16 @@ struct PublicCompany: Codable, Equatable {
     var floatFraction: Double { sharesOutstanding > 0 ? floatShares / sharesOutstanding : 0 }
 }
 
+/// An activist investor pressing a listed airline whose price has slumped below
+/// its IPO price. Persisted so the campaign survives save/load — the demand CARD
+/// regenerates from it each month, the same way slot/hub offers do. `escalation`
+/// (refusals so far) feeds the board-ouster trigger (step 4).
+struct ActivistCampaign: Codable, Equatable {
+    var stake: Double        // fraction of shares the activist has accumulated
+    var escalation: Int      // refusals so far
+    var startedTick: Int
+}
+
 extension Simulation {
 
     // MARK: - Constants (DESIGNED pacing; the balance sweep settles them)
