@@ -96,6 +96,11 @@ GO PUBLIC flow:
 1. **Choose a ticker** — 1–4 letters, uppercased, player's own (the fun part).
    Light validation only (letters, length); stock tickers don't carry the
    trademark risk airline codes do, so no real-ticker collision check needed.
+   **IPO PRICE SCALES WITH SIZE (designer):** share count is fixed, so a bigger
+   airline lists at a higher per-share price (gate ~$25–31, 10× bigger ~$300).
+   **The first 12 months are deliberately VOLATILE (designer):** a new issue is
+   under pressure to perform — bigger swings + heightened performance sensitivity,
+   decaying to a seasoned stock by month 12.
 2. **Choose the float** — what fraction of the company to sell, **10%–40%**
    (DESIGNER CALL on the ceiling). More float = more cash now = less control =
    more exposure. This is the real decision, so it's a slider, not a fixed deal.

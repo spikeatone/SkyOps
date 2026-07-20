@@ -3300,10 +3300,18 @@ of a loan — no repayment, but you sell control and gain a permanent audience.
   ("Public company" MARK) because they touch private(set) state — same split as
   Acquisition.swift.
 - **Price model:** `marketCap = netWorth × valuationMultiple(1.8) × marketSentiment`;
-  `sharePrice = marketCap / sharesOutstanding`. IPO fixes shares off the pre-money
-  cap (~$50 target price) and credits `float × preMoneyCap` cash. **Price is
-  mostly EARNED** — sentiment (reputation + net-worth trend + active event + small
-  wiggle, clamped [0.5,1.6], 80/20 momentum) is seasoning, not the meal.
+  `sharePrice = marketCap / sharesOutstanding`. **Share count is FIXED**
+  (`ipoShares` = gateCap / $25 ref ≈ 36M), so the IPO PRICE SCALES WITH SIZE
+  (designer): a gate airline lists ~$25–31, a 10× bigger one ~$300. Proceeds still
+  come off `float × preMoneyCap`, never the price. **Price is mostly EARNED** —
+  sentiment (reputation + net-worth trend + active event + wiggle, clamped
+  [0.5,1.6]) is seasoning, not the meal.
+- **IPO-YEAR VOLATILITY (designer):** a new issue's first 12 months are turbulent
+  and unforgiving — an `ipo` factor (1→0 over `ipoVolatilityMonths`=12) amplifies
+  the random swing (up to 3×), heightens sensitivity to performance (the
+  "pressure to perform"), and loosens the momentum (0.5→0.8), then it settles into
+  a seasoned stock. Verified ~6× the settled std-dev in year one, decaying, still
+  bounded.
 - **Ticker** rides next to CASH in NetworkView's header (designer's explicit ask):
   SYMBOL ▲/▼ $price, green above the IPO price / red below. `displaySharePrice`
   eases per sim-day so it animates. The cash LABEL shortens to "Cash:" when public

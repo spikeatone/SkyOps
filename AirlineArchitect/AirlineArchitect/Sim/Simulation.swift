@@ -843,10 +843,11 @@ final class Simulation {
         guard !ticker.isEmpty else { return false }
         let fraction = max(0.01, min(0.99, floatFraction))
 
-        // Value the company as-is, THEN sell a slice. Fix a clean share count off
-        // the pre-money valuation so the IPO price is a sane per-share number.
+        // Value the company as-is, THEN sell a slice. Share count is FIXED (not
+        // derived to hit a flat price), so a bigger airline lists at a higher
+        // per-share price — the price reflects the size of the entity.
         let preMoneyCap = marketCap
-        let shares = max(1, (preMoneyCap / 50).rounded())   // ~$50 IPO price target
+        let shares = Simulation.ipoShares
         let ipoPrice = preMoneyCap / shares
         let proceeds = Int((preMoneyCap * fraction).rounded())
 
@@ -885,15 +886,26 @@ final class Simulation {
     /// plus a small mean-reverting wiggle so the ticker feels alive. Momentum
     /// carried (80/20) so it drifts rather than teleports.
     private func nextSentiment() -> Double {
+        // New-issue turbulence: 1.0 at listing → 0 by `ipoVolatilityMonths`. It
+        // amplifies the random swings AND the sensitivity to performance, and
+        // loosens the smoothing — so the first year is volatile and unforgiving,
+        // then settles into a seasoned stock (designer).
+        var ipo = 0.0
+        if let pc = publicCompany {
+            let monthsPublic = Double(tick - pc.ipoTick) / Double(Simulation.ticksPerMonth)
+            ipo = max(0, 1 - monthsPublic / Simulation.ipoVolatilityMonths)
+        }
+
         var target = 1.0
         // Reputation vs the anchor: ±0.4 across the full 0–100 range.
         target += 0.4 * ((reputation - Simulation.sentimentReputationAnchor) / 50)
-        // Net-worth trend over the last ~2 months of snapshots.
+        // Net-worth trend — the pressure to perform hits HARDER in the IPO year.
         if financeSnapshots.count >= 2 {
             let recent = financeSnapshots.suffix(3)
             if let first = recent.first, let last = recent.last, first.netWorth > 0 {
                 let growth = Double(last.netWorth - first.netWorth) / Double(first.netWorth)
-                target += max(-0.35, min(0.35, growth * 2.0))
+                let clamp = 0.35 * (1 + ipo)
+                target += max(-clamp, min(clamp, growth * 2.0 * (1 + ipo)))
             }
         }
         // Airline stocks move with the macro: a fuel spike / recession drags, a
@@ -901,8 +913,13 @@ final class Simulation {
         if !currentEvent.isNormal {
             target += (1.0 - currentEvent.costMultiplier) * 0.5
         }
-        target += Double.random(in: -0.06...0.06)
-        let blended = 0.8 * marketSentiment + 0.2 * target
+        // Random swings: up to 3× normal in the first month of trading.
+        target += Double.random(in: -0.06...0.06) * (1 + 2 * ipo)
+
+        // Momentum: less smoothing early (more reactive → more visibly volatile),
+        // easing to the normal 0.8 as the issue seasons.
+        let momentum = 0.8 - 0.3 * ipo
+        let blended = momentum * marketSentiment + (1 - momentum) * target
         return max(Simulation.sentimentFloor, min(Simulation.sentimentCeiling, blended))
     }
 

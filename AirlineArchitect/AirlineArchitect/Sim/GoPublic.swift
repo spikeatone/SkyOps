@@ -44,6 +44,20 @@ extension Simulation {
     static let goPublicNetWorthGate = 500_000_000
     /// A growing airline trades ABOVE book — market cap is a multiple of net worth.
     static let valuationMultiple = 1.8
+    /// Reference IPO price for an airline listing right at the gate. A FIXED share
+    /// count is derived from it (below), so a bigger company lists at a
+    /// proportionally HIGHER price — the share price now reflects the size of the
+    /// entity (designer), instead of every airline listing near a flat ~$50.
+    static let ipoReferencePrice = 25.0
+    /// Shares outstanding at IPO — a constant, so price = marketCap / shares scales
+    /// with market cap. Anchored so an airline at the gate lists near the reference
+    /// price: gateCap / refPrice.
+    static var ipoShares: Double {
+        (Double(goPublicNetWorthGate) * valuationMultiple / ipoReferencePrice).rounded()
+    }
+    /// A new issue's first year is turbulent and unforgiving — bigger swings and
+    /// heightened sensitivity to performance, decaying to a seasoned stock by then.
+    static let ipoVolatilityMonths = 12.0
     /// Sentiment clamps — the market's mood can roughly halve or 1.6× the fair value.
     static let sentimentFloor = 0.5
     static let sentimentCeiling = 1.6
