@@ -39,13 +39,14 @@ struct GoPublicView: View {
         ZStack {
             bg.ignoresSafeArea()
             VStack(spacing: 12) {
-                HStack {
+                // Back-arrow navigation (like AIRCRAFT DETAIL), not a modal X.
+                HStack(spacing: 6) {
+                    Button(action: onClose) {
+                        Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(titleColor)
+                    }.buttonStyle(.plain)
                     Text("GO PUBLIC").font(.karla(22, .bold)).foregroundStyle(titleColor)
                     Spacer()
-                    Button(action: onClose) {
-                        Image(systemName: "xmark.circle.fill").font(.system(size: 24))
-                            .foregroundStyle(secondary.opacity(0.7))
-                    }.buttonStyle(.plain)
                 }
                 ScrollView {
                     VStack(spacing: 14) {

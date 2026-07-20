@@ -82,21 +82,17 @@ struct CompetitorIntelView: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(alignment: .center) {
-            if selected != nil {
-                Button { selected = nil } label: {
-                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(titleColor)
-                }.buttonStyle(.plain)
-            }
+        // Back-arrow navigation (like AIRCRAFT DETAIL): the leading chevron steps
+        // carrier-profile → list → back out to Finance. No modal X.
+        HStack(alignment: .center, spacing: 6) {
+            Button { if selected != nil { selected = nil } else { onClose() } } label: {
+                Image(systemName: "chevron.left").font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(titleColor)
+            }.buttonStyle(.plain)
             Text(selected == nil ? "MARKET INTELLIGENCE" : "CARRIER PROFILE")
                 .font(.karla(22, .bold)).foregroundStyle(titleColor)
                 .lineLimit(1).minimumScaleFactor(0.7)
             Spacer()
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill").font(.system(size: 24))
-                    .foregroundStyle(secondary.opacity(0.7))
-            }.buttonStyle(.plain)
         }
     }
 
@@ -296,7 +292,7 @@ struct CompetitorIntelView: View {
                              ? "Open their books · \(compactMoney(cost))"
                              : "Need \(compactMoney(cost)) to open their books")
                             .font(.karla(13, .bold))
-                            .foregroundStyle(sim.playerBalance >= cost ? .white : secondary)
+                            .foregroundStyle(sim.playerBalance >= cost ? .white : titleColor)
                             .frame(maxWidth: .infinity).frame(height: 42)
                             .background(sim.playerBalance >= cost ? Sky.brightBlue : Color.clear)
                             .overlay(RoundedRectangle(cornerRadius: 4)

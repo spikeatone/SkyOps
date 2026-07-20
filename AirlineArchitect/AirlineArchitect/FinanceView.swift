@@ -68,27 +68,42 @@ struct FinanceView: View {
         let _ = sim.displayTick   // throttled UI heartbeat — keeps scrolling smooth
         ZStack {
             bg.ignoresSafeArea()
-            VStack(spacing: 12) {
-                header
-                sectionSelector
-                if section == .reports { periodSelector }
-                ScrollView {
-                    VStack(spacing: 16) {
-                        if section == .reports { reportsContent } else { fundingContent }
-                    }
-                    .padding(.bottom, 8)
+            // Market Intelligence / Go Public are drill-downs: they PUSH in from
+            // the trailing edge with a back-arrow header (like AIRCRAFT DETAIL),
+            // not a modal cover. Mutually exclusive with the main content.
+            Group {
+                if showIntel {
+                    CompetitorIntelView(sim: sim, onClose: { showIntel = false })
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                } else if showIPO {
+                    GoPublicView(sim: sim, onClose: { showIPO = false })
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                } else {
+                    mainContent
+                        .transition(.move(edge: .leading).combined(with: .opacity))
                 }
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 6)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .animation(.easeInOut(duration: 0.3), value: showIntel)
+            .animation(.easeInOut(duration: 0.3), value: showIPO)
         }
-        .fullScreenCover(isPresented: $showIntel) {
-            CompetitorIntelView(sim: sim, onClose: { showIntel = false })
+    }
+
+    private var mainContent: some View {
+        VStack(spacing: 12) {
+            header
+            sectionSelector
+            if section == .reports { periodSelector }
+            ScrollView {
+                VStack(spacing: 16) {
+                    if section == .reports { reportsContent } else { fundingContent }
+                }
+                .padding(.bottom, 8)
+            }
+            Spacer(minLength: 0)
         }
-        .fullScreenCover(isPresented: $showIPO) {
-            GoPublicView(sim: sim, onClose: { showIPO = false })
-        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
     }
 
     // MARK: Content — REPORTS (period-scoped statements)

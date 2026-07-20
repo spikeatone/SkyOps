@@ -3395,8 +3395,22 @@ burden) lands. Do NOT ship a build with acquisitions enabled and step 3 missing.
   addition isn't associative. 44 of 140 profiles differed. Both loops now
   iterate `.sorted(by: key)`. **Any future derived-from-seed value must sum in a
   sorted order** or the regenerate-on-load guarantee silently breaks.
+- **NAV PATTERN (designer decision): drill-down full-screen views use the
+  BACK-ARROW mechanic (a leading `chevron.left` header, within-tab, tab bar
+  stays visible — the AIRCRAFT DETAIL / `FleetDetailView` pattern), NOT a
+  `fullScreenCover` + trailing-X modal.** Converted `CompetitorIntelView`
+  (Market Intelligence) and `GoPublicView` (IPO): FinanceView now shows them
+  state-driven (`showIntel`/`showIPO`) in a `Group` that PUSHES in from the
+  trailing edge (`.move(edge: .trailing)`, main content slides to `.leading`),
+  exactly like FleetView↔FleetDetailView. Their headers dropped the
+  `xmark.circle.fill` for a leading back chevron (Intel's steps
+  carrier-profile → list → out to Finance via the one chevron). EXCEPTIONS that
+  stay MODAL: the Alerts modal (designer-excluded) and the Paywall (an
+  interstitial overlay, not a drill-down). Apply the back-arrow pattern to any
+  future full-screen drill-down.
 - **`CompetitorIntelView.swift`**, presented from FINANCE (evaluating a rival is
-  an investment question) via a MARKET INTELLIGENCE card. List → carrier detail.
+  an investment question) via a MARKET INTELLIGENCE card. List → carrier detail
+  (back-arrow nav, see the NAV PATTERN note above).
   **Scouting is deliberately UNGATED** — it isn't behind the $1B threshold:
   public information is public, it enriches the world for every player, and it
   gives the endgame something visible to aim at.
