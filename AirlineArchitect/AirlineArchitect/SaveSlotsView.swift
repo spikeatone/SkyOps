@@ -168,6 +168,10 @@ private struct SwipeToDeleteContainer<Content: View>: View {
     @State private var offset: CGFloat = 0
     @State private var startOffset: CGFloat = 0
     @State private var dragging = false
+    /// Measured content height. The delete button matches it EXACTLY — using
+    /// `maxHeight: .infinity` here made each row greedy and spread the slots
+    /// apart; sizing to the content keeps the three boxes compact.
+    @State private var rowHeight: CGFloat = 0
 
     var body: some View {
         ZStack(alignment: .trailing) {
@@ -175,16 +179,17 @@ private struct SwipeToDeleteContainer<Content: View>: View {
                 Image(systemName: "trash.fill")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
-            .frame(width: revealWidth)
+            .frame(width: revealWidth, height: rowHeight)
             .background(Sky.red)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .opacity(offset < -2 ? 1 : 0)   // only visible while swiped open
 
             content
                 .offset(x: offset)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowHeight = $0 }
                 .highPriorityGesture(
                     DragGesture(minimumDistance: 18)
                         .onChanged { v in
