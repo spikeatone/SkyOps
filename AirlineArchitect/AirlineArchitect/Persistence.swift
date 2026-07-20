@@ -65,6 +65,11 @@ struct GameSnapshot: Codable {
     var totalEquityRaised: Int? = nil
     var totalDividendsPaid: Int? = nil
     var totalBuybackSpend: Int? = nil
+    var totalMarketingSpend: Int? = nil
+    // Player route promotions (routeId → expiry tick). Empty for pre-1.1 saves.
+    var playerFareWarUntil: [Int: Int] = [:]
+    var adCampaignUntil: [Int: Int] = [:]
+    var loyaltyPushUntil: [Int: Int] = [:]
     var activistCampaign: ActivistCampaign? = nil
     var monthsBelowIPO: Int? = nil
     var boardPressure: Double? = nil
@@ -160,6 +165,7 @@ struct FinanceSave: Codable {
     var integrationSpend: Int? = nil
     var equityRaised: Int? = nil
     var dividendsPaid: Int? = nil, buybackSpend: Int? = nil
+    var marketingSpend: Int? = nil
 }
 
 struct LoanSave: Codable {
@@ -321,12 +327,19 @@ extension GameStore {
         }
     }
 
+    /// Just the two fields reconcile needs — decoded WITHOUT the rest of the
+    /// snapshot. reconcileCloud runs on the main thread at foreground (the iCloud
+    /// change notification), and decoding full late-game saves ×6 (3 slots ×
+    /// local+cloud) there was a real app-switch stall. JSONDecoder ignores the
+    /// other keys, so this reads the header cheaply.
+    private struct SaveHeader: Decodable { var savedAtEpoch: Double; var playerAirlineName: String? }
+
     /// `savedAtEpoch` of an encoded snapshot, or nil if it isn't a valid save.
     private static func epoch(of data: Data?) -> Double? {
         guard let data,
-              let s = try? JSONDecoder().decode(GameSnapshot.self, from: data),
-              s.playerAirlineName != nil else { return nil }
-        return s.savedAtEpoch
+              let h = try? JSONDecoder().decode(SaveHeader.self, from: data),
+              h.playerAirlineName != nil else { return nil }
+        return h.savedAtEpoch
     }
 
     private static func mirrorToCloud(_ data: Data, slot: Int) {

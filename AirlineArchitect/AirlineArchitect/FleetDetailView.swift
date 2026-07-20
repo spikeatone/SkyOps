@@ -43,7 +43,7 @@ struct FleetDetailView: View {
     private var amber: Color { Color(skyHex: 0xFFAB44) }
 
     var body: some View {
-        let _ = sim.tick   // keep status/progress live
+        let _ = sim.displayTick   // throttled UI heartbeat (not raw tick) — keeps status/progress live without churning
         ScrollView {
             VStack(spacing: 16) {
                 if !embedded { header }

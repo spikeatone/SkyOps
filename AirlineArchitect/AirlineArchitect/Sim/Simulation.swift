@@ -151,6 +151,38 @@ final class Simulation {
         return out
     }
 
+    /// Hub airport codes, sorted for a stable UI order (the Hubs panel + the
+    /// per-hub Route-Opportunities drawers).
+    var hubCodes: [String] { hubs.keys.sorted() }
+
+    /// Open player routes touching a hub — the "flights originating at that hub"
+    /// the NETWORK Hubs panel lists, newest first.
+    func hubRoutes(_ code: String) -> [Route] {
+        playerRoutes
+            .filter { $0.isOpen && ($0.originCode == code || $0.destCode == code) }
+            .sorted { $0.openedTick > $1.openedTick }
+    }
+
+    /// Top unserved destinations FROM a given hub, ranked by demand (which already
+    /// folds in the hub bonus). Powers the per-hub Route-Opportunities drawer.
+    /// Candidates are the same home-region pool the general finder uses.
+    func hubRouteOpportunities(from hubCode: String, limit: Int = 6) -> [RouteOpportunity] {
+        guard let hub = airport(hubCode) else { return [] }
+        let served = Set(playerRoutes.map { pairKey($0.originCode, $0.destCode) })
+        var opps: [RouteOpportunity] = []
+        for b in homeAirports where b.info != nil && b.code != hubCode {
+            if served.contains(pairKey(hubCode, b.code)) { continue }
+            let demand = routeDailyDemand(hub, b)
+            let nm = Int(hub.greatCircleNM(to: b).rounded())
+            opps.append(RouteOpportunity(
+                id: "\(hubCode)-\(b.code)", originCode: hubCode, destCode: b.code,
+                originCity: hub.info?.city ?? hubCode, destCity: b.info?.city ?? b.code,
+                demandPerDay: demand, distanceNM: nm,
+                suggested: suggestedClass(demand: demand, distanceNM: nm)))
+        }
+        return Array(opps.sorted { $0.demandPerDay > $1.demandPerDay }.prefix(limit))
+    }
+
     // MARK: - Reputation (service quality → demand)
 
     /// Airline service-quality reputation, 0–100. Falls when the operation fails
@@ -446,11 +478,15 @@ final class Simulation {
                            "\(name) now flies \(r.originCode) ↔\u{FE0E} \(r.destCode)\(why)")
                 }
             }
-            if r.competitionLevel > 0, Double.random(in: 0..<1) < effectiveCompetitorExitProbability {
+            // A player fare war on this route drives rivals off faster.
+            var exitProb = effectiveCompetitorExitProbability
+            if fareWarActive(r.id) { exitProb *= Simulation.promoFareWarExitBoost }
+            if r.competitionLevel > 0, Double.random(in: 0..<1) < exitProb {
                 let name = r.competitors.popLast() ?? "A rival"
                 r.competitionLevel -= 1
+                let why = fareWarActive(r.id) ? " — priced out by your fare war" : ""
                 logOps(.market, "Competitor exited",
-                       "\(name) pulled out of \(r.originCode) ↔\u{FE0E} \(r.destCode)")
+                       "\(name) pulled out of \(r.originCode) ↔\u{FE0E} \(r.destCode)\(why)")
             }
         }
     }
@@ -463,6 +499,82 @@ final class Simulation {
         let pool = ["American Airlines", "Delta Air Lines", "United Airlines", "Southwest Airlines",
                     "JetBlue", "Alaska Airlines", "Spirit", "Frontier"]
         return pool.filter { !used.contains($0) && !owned.contains($0) }.randomElement() ?? "A new entrant"
+    }
+
+    // MARK: - Player route promotions (fare war / ad campaign / loyalty push)
+    // Player-initiated marketing on a contested route — the levers the player
+    // pulls back against competitor entry, surfaced on the Ops Competition rows.
+    // Each is an UPFRONT MARKETING spend (a capital-out term in the Finance cash
+    // invariant, `totalMarketingSpend`). All three are timed per-route effects.
+    //   Ad campaign  — cheap, short: buys demand; the boost scales with the
+    //                  economy (a recession dampens it, a boom amplifies it).
+    //   Fare war     — aggressive: cut your fare, grab share, AND drive rivals
+    //                  off the route faster (accelerated exit). Margin sacrifice.
+    //   Loyalty push — priciest, longest: a sticky SHARE DEFENCE (retain loyal
+    //                  flyers) with no fare cut — the defensive bookend.
+    private(set) var playerFareWarUntil: [Int: Int] = [:]   // routeId → expiry tick
+    private(set) var adCampaignUntil:    [Int: Int] = [:]
+    private(set) var loyaltyPushUntil:   [Int: Int] = [:]
+    private(set) var totalMarketingSpend = 0
+
+    static let promoFareWarDurationDays = 21
+    static let promoAdDurationDays = 14
+    static let promoLoyaltyDurationDays = 45
+    static let promoFareWarFareMult = 0.80      // your fare drops while warring
+    static let promoFareWarShareBoost = 1.25    // ...but you capture more share
+    static let promoFareWarExitBoost = 3.0      // rivals leave ~3× faster (drive-off)
+    static let promoAdDemandBoost = 1.15        // +15% demand at a neutral economy
+    static let promoLoyaltyShareBoost = 1.20    // sticky retained share
+
+    func fareWarActive(_ id: Int) -> Bool { (playerFareWarUntil[id] ?? 0) > tick }
+    func adCampaignActive(_ id: Int) -> Bool { (adCampaignUntil[id] ?? 0) > tick }
+    func loyaltyPushActive(_ id: Int) -> Bool { (loyaltyPushUntil[id] ?? 0) > tick }
+    private func daysLeft(_ until: Int) -> Int { max(0, (until - tick + 1439) / 1440) }
+    func fareWarDaysLeft(_ id: Int) -> Int { daysLeft(playerFareWarUntil[id] ?? tick) }
+    func adCampaignDaysLeft(_ id: Int) -> Int { daysLeft(adCampaignUntil[id] ?? tick) }
+    func loyaltyPushDaysLeft(_ id: Int) -> Int { daysLeft(loyaltyPushUntil[id] ?? tick) }
+
+    private func routeDemand(_ r: Route) -> Int {
+        guard let a = airport(r.originCode), let b = airport(r.destCode) else { return 0 }
+        return routeDailyDemand(a, b)
+    }
+    func fareWarCost(_ r: Route) -> Int { 150_000 + routeDemand(r) * 300 }
+    func adCampaignCost(_ r: Route) -> Int { 80_000 + routeDemand(r) * 150 }
+    func loyaltyPushCost(_ r: Route) -> Int { 250_000 + routeDemand(r) * 400 }
+
+    @discardableResult func startFareWar(_ id: Int) -> Bool {
+        guard let r = playerRoutes.first(where: { $0.id == id }), r.competitionLevel > 0,
+              !fareWarActive(id) else { return false }
+        let cost = fareWarCost(r); guard playerBalance >= cost else { return false }
+        playerBalance -= cost; totalMarketingSpend += cost
+        playerFareWarUntil[id] = tick + Simulation.promoFareWarDurationDays * 1440
+        logOps(.market, "Fare war launched", "\(r.originCode) ↔\u{FE0E} \(r.destCode) — undercutting rivals to reclaim the route")
+        return true
+    }
+    @discardableResult func launchAdCampaign(_ id: Int) -> Bool {
+        guard let r = playerRoutes.first(where: { $0.id == id }), !adCampaignActive(id) else { return false }
+        let cost = adCampaignCost(r); guard playerBalance >= cost else { return false }
+        playerBalance -= cost; totalMarketingSpend += cost
+        adCampaignUntil[id] = tick + Simulation.promoAdDurationDays * 1440
+        logOps(.market, "Ad campaign launched", "\(r.originCode) ↔\u{FE0E} \(r.destCode)")
+        return true
+    }
+    @discardableResult func startLoyaltyPush(_ id: Int) -> Bool {
+        guard let r = playerRoutes.first(where: { $0.id == id }), !loyaltyPushActive(id) else { return false }
+        let cost = loyaltyPushCost(r); guard playerBalance >= cost else { return false }
+        playerBalance -= cost; totalMarketingSpend += cost
+        loyaltyPushUntil[id] = tick + Simulation.promoLoyaltyDurationDays * 1440
+        logOps(.market, "Loyalty push launched", "\(r.originCode) ↔\u{FE0E} \(r.destCode) — locking in loyal flyers")
+        return true
+    }
+
+    /// Daily cleanup: drop expired promos and any pointing at a closed route,
+    /// so the dicts stay small and the buttons re-enable once a promo ends.
+    private func tickPromotions() {
+        let open = Set(playerRoutes.map(\.id))
+        playerFareWarUntil = playerFareWarUntil.filter { $0.value > tick && open.contains($0.key) }
+        adCampaignUntil    = adCampaignUntil.filter    { $0.value > tick && open.contains($0.key) }
+        loyaltyPushUntil   = loyaltyPushUntil.filter   { $0.value > tick && open.contains($0.key) }
     }
 
     /// Speed multiplier. Prototype default is 5× (feels smooth; at 1× the
@@ -1219,6 +1331,21 @@ final class Simulation {
         playerBalance += amount
         devInjectedCash += amount
     }
+
+    /// Master Finance cash-invariant residual — should ALWAYS be 0. A test hook
+    /// for the headless harness (accesses every accumulator in-file). If a new
+    /// cash flow is added and this drifts, the invariant term list is out of date.
+    func cashInvariantResidual() -> Int {
+        let expected = Simulation.startingCapital + devInjectedCash
+            + totalRevenue - totalFees - totalOperatingCost - totalLeaseCost - totalInsuranceSpent
+            - maintenanceSpend - totalDebtService - totalHubLabor - totalClubRent
+            - (totalIntegrationSpend + totalSenioritySpend + totalDiligenceSpend)
+            - totalAcquisitionSpend - totalRouteSpend - totalHedgeSpend - totalHubSpend
+            - totalAcquisitionPrice - totalDividendsPaid - totalBuybackSpend - totalMarketingSpend
+            + totalSaleProceeds + totalOfferIncome + totalLoanProceeds + totalEquityRaised
+        return expected - playerBalance
+    }
+
     #endif
 
     /// Airlines the player has bought. Each keeps flying under its own flag.
@@ -2765,6 +2892,8 @@ final class Simulation {
         tickOfferFulfillment()
         // Rival carriers entering / leaving the player's markets.
         tickCompetition()
+        // Expire finished player promotions (fare war / ad / loyalty).
+        tickPromotions()
         // A rival occasionally bids to buy one of the player's hubs.
         tickHubOffers()
 
@@ -3251,6 +3380,8 @@ final class Simulation {
         var equityRaised = 0
         /// Dividends paid + buybacks — cash returned to shareholders (capital-out).
         var dividendsPaid = 0, buybackSpend = 0
+        /// Player route marketing — fare wars / ad campaigns / loyalty pushes (capital-out).
+        var marketingSpend = 0
         let cash, netWorth: Int
     }
     private(set) var financeSnapshots: [FinanceSnapshot] = []
@@ -3267,6 +3398,7 @@ final class Simulation {
                         integrationSpend: totalIntegrationSpend + totalSenioritySpend + totalDiligenceSpend,
                         equityRaised: totalEquityRaised,
                         dividendsPaid: totalDividendsPaid, buybackSpend: totalBuybackSpend,
+                        marketingSpend: totalMarketingSpend,
                         cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
     }
 
@@ -3281,6 +3413,8 @@ final class Simulation {
         var fareMult = currentEvent.fareMultiplier
         if fxShockActive, ac.type.bodyType.usesWidebodyGateFee { fareMult *= Simulation.fxFareMultiplier }
         if let fw = fareWarRouteId, ac.assignedRouteId == fw, tick < fareWarExpiryTick { fareMult *= Simulation.fareWarMultiplier }
+        // Player's OWN fare war on this route: cut fares to undercut rivals.
+        if let rid = ac.assignedRouteId, fareWarActive(rid) { fareMult *= Simulation.promoFareWarFareMult }
         // Leisure destinations command premium fares (designer: island/beach
         // markets run a premium, as in the real world).
         if Airport.isLeisure(ac.origin.code) || Airport.isLeisure(ac.dest.code) {
@@ -3328,6 +3462,14 @@ final class Simulation {
                     // serve twice. Eases over the integration, never to 1.0 —
                     // only closing/reassigning one of the pair clears it.
                     effDemand *= overlapDemandMultiplier(for: r)
+                    // Player promotions on this route (see the promotions section).
+                    if fareWarActive(rid) { effDemand *= Simulation.promoFareWarShareBoost }
+                    if loyaltyPushActive(rid) { effDemand *= Simulation.promoLoyaltyShareBoost }
+                    if adCampaignActive(rid) {
+                        // The ad boost tracks the economy — a recession dampens it,
+                        // a boom amplifies it, so it isn't always worth the spend.
+                        effDemand *= 1 + (Simulation.promoAdDemandBoost - 1) * currentEvent.loadMultiplier
+                    }
                 }
             }
             let base = Demand.loadFactor(seats: ac.type.seats, dailyOneWay: effDemand)
@@ -3619,6 +3761,10 @@ final class Simulation {
         s.totalEquityRaised = totalEquityRaised
         s.totalDividendsPaid = totalDividendsPaid
         s.totalBuybackSpend = totalBuybackSpend
+        s.totalMarketingSpend = totalMarketingSpend
+        s.playerFareWarUntil = playerFareWarUntil
+        s.adCampaignUntil = adCampaignUntil
+        s.loyaltyPushUntil = loyaltyPushUntil
         s.activistCampaign = activistCampaign
         s.monthsBelowIPO = monthsBelowIPO
         s.boardPressure = boardPressure
@@ -3656,7 +3802,8 @@ final class Simulation {
                         airlineAcquisition: f.airlineAcquisition,
                         integrationSpend: f.integrationSpend,
                         equityRaised: f.equityRaised,
-                        dividendsPaid: f.dividendsPaid, buybackSpend: f.buybackSpend)
+                        dividendsPaid: f.dividendsPaid, buybackSpend: f.buybackSpend,
+                        marketingSpend: f.marketingSpend)
         }
         return s
     }
@@ -3723,6 +3870,10 @@ final class Simulation {
         totalEquityRaised = s.totalEquityRaised ?? 0
         totalDividendsPaid = s.totalDividendsPaid ?? 0
         totalBuybackSpend = s.totalBuybackSpend ?? 0
+        totalMarketingSpend = s.totalMarketingSpend ?? 0
+        playerFareWarUntil = s.playerFareWarUntil
+        adCampaignUntil = s.adCampaignUntil
+        loyaltyPushUntil = s.loyaltyPushUntil
         activistCampaign = s.activistCampaign
         monthsBelowIPO = s.monthsBelowIPO ?? 0
         boardPressure = s.boardPressure ?? 0
@@ -3782,6 +3933,7 @@ final class Simulation {
                             integrationSpend: f.integrationSpend ?? 0,
                             equityRaised: f.equityRaised ?? 0,
                             dividendsPaid: f.dividendsPaid ?? 0, buybackSpend: f.buybackSpend ?? 0,
+                            marketingSpend: f.marketingSpend ?? 0,
                             cash: f.cash, netWorth: f.netWorth)
         }
         if financeSnapshots.isEmpty { financeSnapshots = [financeSnapshotNow()] }

@@ -39,7 +39,7 @@ struct CrewsView: View {
     private let hireBlue = Color(skyHex: 0x5B98CE)
 
     var body: some View {
-        let _ = sim.tick   // live crew counts
+        let _ = sim.displayTick   // throttled UI heartbeat (not raw tick) — keeps tab-switching/scrolling responsive
         ZStack {
             bg.ignoresSafeArea()
             VStack(spacing: 16) {

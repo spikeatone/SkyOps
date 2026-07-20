@@ -62,7 +62,7 @@ struct AlertsModal: View {
     private let accentAmber = Color(skyHex: 0xFFB700)
 
     var body: some View {
-        let _ = sim.tick   // keep erosion rate / affordability live
+        let _ = sim.displayTick   // throttled UI heartbeat — keep erosion rate / affordability live without churning
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Alerts • \(sim.decisionQueue.count)")
@@ -114,7 +114,7 @@ struct NeedsAttentionCard: View {
     private let accentBlue = Color(skyHex: 0x5B98CE)
 
     var body: some View {
-        let _ = sim.tick   // keep erosion rate / affordability live
+        let _ = sim.displayTick   // throttled UI heartbeat — keep erosion rate / affordability live without churning
         let m = model(for: decision)
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {

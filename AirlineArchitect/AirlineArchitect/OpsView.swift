@@ -27,7 +27,12 @@ struct OpsView: View {
     /// Cached so the finder isn't recomputed on every tick — it only changes when
     /// the player's route network changes (demand is otherwise static).
     @State private var opportunities: [Simulation.RouteOpportunity] = []
+    /// Which per-hub opportunity drawers are expanded (only shown once a hub exists).
+    @State private var expandedOppHubs: Set<String> = []
 
+    // Loyalty-push purple — bright #C79CFF pops on the dark map; a darker
+    // #6E43A6 keeps contrast on the light (white) background.
+    private var loyaltyColor: Color { isDark ? Color(skyHex: 0xC79CFF) : Color(skyHex: 0x6E43A6) }
     private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
     private var cardBG: Color      { isDark ? Sky.navBarDark : .white }
     private var cardBorder: Color  { isDark ? Sky.onDarkStroke.opacity(0.6) : Color(skyHex: 0xE6E6E6) }
@@ -46,14 +51,20 @@ struct OpsView: View {
                 header
                 ScrollView {
                     VStack(spacing: 16) {
+                        // The two actionable boxes sit at the TOP (designer
+                        // request): with a large fleet, Needs Attention + the
+                        // status/event groups below push these far down, and a
+                        // player reaches for them often. Urgent decisions are also
+                        // surfaced by the bell/Alerts modal, so Needs Attention
+                        // moving down doesn't hide anything.
+                        opportunitiesGroup
+                        // Fuel Hedge lives on Ops now (moved off the Network tab).
+                        FuelHedgePanel(sim: sim)
                         if !sim.decisionQueue.isEmpty { needsAttentionGroup }
                         if !sim.incentedRoutes.isEmpty { incentivesGroup }
                         if !sim.hubs.isEmpty || !sim.rivalHubs.isEmpty { hubsGroup }
                         reputationGroup
                         competitionGroup
-                        opportunitiesGroup
-                        // Fuel Hedge lives on Ops now (moved off the Network tab).
-                        FuelHedgePanel(sim: sim)
                         eventsGroup
                         if sim.decisionQueue.isEmpty && sim.opsEventLog.isEmpty {
                             Text("Nothing to report yet — a quiet day on the network.")
@@ -238,26 +249,30 @@ struct OpsView: View {
                 Text("No rival carriers on your routes. Profitable routes attract competitors — your reputation helps keep them out.")
                     .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
             } else {
-                ForEach(contested) { r in
+                ForEach(Array(contested.enumerated()), id: \.element.id) { idx, r in
+                    if idx > 0 { Divider().overlay(cardBorder.opacity(0.4)) }
                     let pct = r.competitionPercent(reputation: sim.reputation)
-                    HStack(alignment: .center) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) {
-                                Text(r.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
-                                Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold)).foregroundStyle(secondary)
-                                Text(r.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(r.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold)).foregroundStyle(secondary)
+                                    Text(r.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                                }
+                                Text("vs \(r.competitors.joined(separator: ", "))")
+                                    .font(.karla(12)).foregroundStyle(secondary).lineLimit(2)
                             }
-                            Text("vs \(r.competitors.joined(separator: ", "))")
-                                .font(.karla(12)).foregroundStyle(secondary).lineLimit(2)
+                            Spacer(minLength: 8)
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("\(pct)% demand").font(.karla(15, .bold)).foregroundStyle(Sky.red)
+                                Text("\(r.competitionLevel) rival\(r.competitionLevel == 1 ? "" : "s")")
+                                    .font(.karla(12)).foregroundStyle(secondary)
+                            }
                         }
-                        Spacer(minLength: 8)
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("\(pct)% demand").font(.karla(15, .bold)).foregroundStyle(Sky.red)
-                            Text("\(r.competitionLevel) rival\(r.competitionLevel == 1 ? "" : "s")")
-                                .font(.karla(12)).foregroundStyle(secondary)
-                        }
+                        promoActions(r)
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 6)
                 }
             }
         }
@@ -266,6 +281,54 @@ struct OpsView: View {
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    // MARK: Competition actions (per-route marketing levers)
+    /// Three route-level levers against rivals: an aggressive fare war (cut fare,
+    /// grab share, drive rivals off), a cheaper ad campaign (economy-scaled demand
+    /// boost), and a pricier loyalty push (durable share defence). Each is upfront
+    /// marketing spend; while active the button shows days remaining.
+    private func promoActions(_ r: Route) -> some View {
+        HStack(spacing: 6) {
+            promoButton(
+                idle: "Fare war", active: sim.fareWarActive(r.id), daysLeft: sim.fareWarDaysLeft(r.id),
+                cost: sim.fareWarCost(r), color: Sky.red,
+                afford: sim.playerBalance >= sim.fareWarCost(r)
+            ) { if sim.startFareWar(r.id) { Feedback.success() } }
+            promoButton(
+                idle: "Ad campaign", active: sim.adCampaignActive(r.id), daysLeft: sim.adCampaignDaysLeft(r.id),
+                cost: sim.adCampaignCost(r), color: Sky.brightBlue,
+                afford: sim.playerBalance >= sim.adCampaignCost(r)
+            ) { if sim.launchAdCampaign(r.id) { Feedback.success() } }
+            promoButton(
+                idle: "Loyalty", active: sim.loyaltyPushActive(r.id), daysLeft: sim.loyaltyPushDaysLeft(r.id),
+                cost: sim.loyaltyPushCost(r), color: loyaltyColor,
+                afford: sim.playerBalance >= sim.loyaltyPushCost(r)
+            ) { if sim.startLoyaltyPush(r.id) { Feedback.success() } }
+        }
+    }
+
+    private func promoButton(idle: String, active: Bool, daysLeft: Int, cost: Int,
+                             color: Color, afford: Bool, action: @escaping () -> Void) -> some View {
+        let enabled = !active && afford
+        return Button(action: action) {
+            VStack(spacing: 1) {
+                Text(active ? idle : idle).font(.karla(11, .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                Text(active ? "\(daysLeft)d left" : promoCost(cost)).font(.karla(9)).opacity(0.85).lineLimit(1)
+            }
+            .foregroundStyle(active ? .white : (enabled ? color : secondary))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6).padding(.horizontal, 4)
+            .background(active ? color : color.opacity(enabled ? 0.14 : 0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(color.opacity(active || enabled ? 0.5 : 0.2), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+    }
+
+    private func promoCost(_ v: Int) -> String {
+        v >= 1_000_000 ? String(format: "$%.1fM", Double(v) / 1_000_000) : "$\(v / 1000)k"
     }
 
     // MARK: Route Opportunities (underserved-markets finder)
@@ -279,35 +342,15 @@ struct OpsView: View {
                 Text("No opportunities to show yet.").font(.karla(14)).foregroundStyle(secondary)
                     .padding(.vertical, 4)
             } else {
-                ForEach(opportunities) { opp in
-                    Button { onPreviewRoute(opp) } label: {
-                        HStack(alignment: .center) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    Text(opp.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
-                                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(secondary)
-                                    Text(opp.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
-                                }
-                                Text("\(opp.originCity) – \(opp.destCity)")
-                                    .font(.karla(12)).foregroundStyle(secondary).lineLimit(1)
-                            }
-                            Spacer(minLength: 8)
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text("~\(opp.demandPerDay.formatted())/day")
-                                    .font(.karla(15, .bold)).foregroundStyle(Sky.coreGreen)
-                                Text("\(opp.distanceNM.formatted()) nm · \(opp.suggested)")
-                                    .font(.karla(12)).foregroundStyle(secondary)
-                            }
-                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(secondary.opacity(0.7))
-                                .padding(.leading, 2)
-                        }
-                        .padding(.vertical, 4)
-                        .contentShape(Rectangle())
-                    }
-                    .pressable()
-                }
+                ForEach(opportunities) { oppRow($0) }
+            }
+            // Per-hub drawers — appear once a hub is established. The flat list
+            // above stays the DEFAULT view; expand a hub to see the strongest
+            // markets radiating FROM it (demand already includes the hub bonus).
+            if !sim.hubs.isEmpty {
+                Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
+                Text("BY HUB").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
+                ForEach(sim.hubCodes, id: \.self) { hubOppDrawer($0) }
             }
         }
         .padding(16)
@@ -315,6 +358,67 @@ struct OpsView: View {
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    /// One tappable opportunity row (shared by the flat list and the hub drawers).
+    private func oppRow(_ opp: Simulation.RouteOpportunity) -> some View {
+        Button { onPreviewRoute(opp) } label: {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(opp.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                        Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(secondary)
+                        Text(opp.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                    }
+                    Text("\(opp.originCity) – \(opp.destCity)")
+                        .font(.karla(12)).foregroundStyle(secondary).lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("~\(opp.demandPerDay.formatted())/day")
+                        .font(.karla(15, .bold)).foregroundStyle(Sky.coreGreen)
+                    Text("\(opp.distanceNM.formatted()) nm · \(opp.suggested)")
+                        .font(.karla(12)).foregroundStyle(secondary)
+                }
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(secondary.opacity(0.7))
+                    .padding(.leading, 2)
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .pressable()
+    }
+
+    /// A collapsible "opportunities from this hub" drawer. Computed lazily — the
+    /// per-hub finder only runs when the drawer is expanded.
+    @ViewBuilder private func hubOppDrawer(_ code: String) -> some View {
+        let open = expandedOppHubs.contains(code)
+        let city = sim.airport(code)?.info?.city ?? code
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                if open { expandedOppHubs.remove(code) } else { expandedOppHubs.insert(code) }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "building.2.fill").font(.system(size: 12)).foregroundStyle(Color(skyHex: 0xE9B949))
+                    Text("From \(code)").font(.karla(14, .bold)).foregroundStyle(primary)
+                    Text(city).font(.karla(11)).foregroundStyle(secondary).lineLimit(1)
+                    Spacer(minLength: 6)
+                    Image(systemName: open ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(secondary)
+                }
+                .contentShape(Rectangle())
+            }.buttonStyle(.plain)
+            if open {
+                let opps = sim.hubRouteOpportunities(from: code)
+                if opps.isEmpty {
+                    Text("No new markets from \(code) right now.").font(.karla(12)).foregroundStyle(secondary)
+                } else {
+                    ForEach(opps) { oppRow($0) }
+                }
+            }
+        }
     }
 
     // MARK: Header

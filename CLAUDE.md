@@ -2064,6 +2064,43 @@ where numbers are involved.
   fights manual scroll position — expected, not a bug; scrolling is fine at
   low speed. (The chart above does NOT have this issue — it redraws in one
   Canvas pass rather than a ForEach of moving rows.)
+- **iPad RESPONSIVENESS / RE-RENDER-CHURN PASS (native app) — the INVERSE of the
+  freeze bug, from 1.1(28) external-test feedback.** The freeze bug is "a view
+  that needs `tick` didn't take it." This is the opposite failure: **a heavy
+  view read the RAW `sim.tick` and re-rendered ~125×/sec at 25×** (the tick loop
+  runs on the `@MainActor`, so those re-renders saturate the main thread → taps
+  dropped, scroll sticks). Testers hit exactly this: iPad CREWS→OPS took 5–6 taps
+  and several seconds; the Acquire aircraft list "got stuck" while scrolling.
+  **THE RULE (firm now): list/HUD/scroll views observe `sim.displayTick`
+  (throttled ~5×/sec in `run()`), NEVER raw `sim.tick`.** Raw `tick` is ONLY for
+  the map's motion/animation and the live aircraft tooltip. Fixes shipped:
+  - `CrewsView`, `FleetDetailView`, and BOTH `AlertsView` cards were reading raw
+    `sim.tick` — switched to `sim.displayTick` (FleetView/FinanceView/OpsView
+    already did). CrewsView was the "Crews is slow to leave" report.
+  - **`NetworkView.mapCard` read `sim.tick`/`cameraZoom`/`cameraCenter` INLINE**,
+    so the whole map card — INCLUDING the docked/overlaid Acquire panel's
+    ScrollView — re-rendered every tick (the "scroll gets stuck" report).
+    Extracted a `private struct LiveMap` that reads those hot values in ITS body,
+    so only the map re-renders per tick; the control bar / route / Acquire panels
+    stay stable. (Same value-input contract as before — LiveMap still passes
+    `tick:` into MapView — just isolated so siblings don't share the dependency.)
+    General principle: don't read a hot `@Observable` prop in a parent whose body
+    also builds stable panels; push the hot read into a leaf child.
+  - `GameStore.epoch(of:)` (used by `reconcileCloud`, which runs on the MAIN
+    thread at foreground via the iCloud change notification) decoded the ENTIRE
+    `GameSnapshot` ×6 (3 slots × local+cloud) just to read `savedAtEpoch` — a real
+    app-switch stall for late-game saves. Now decodes a tiny `SaveHeader`
+    (savedAtEpoch + playerAirlineName only; JSONDecoder ignores the rest).
+- **OPEN — app-switch CRASH (1.1(28), reported on BOTH iPhone + iPad).** Testers
+  report AA crashing when toggling between other apps and AA. NO repro/crash log
+  on the dev machine (testers' logs live in TestFlight → Xcode Organizer →
+  Crashes). Working hypothesis: the SAME main-thread saturation above → on
+  FOREGROUND the OS watchdog kills a hung app (0x8badf00d), which reads as a
+  "crash" on both platforms; the re-render + foreground-reconcile fixes above
+  target it. NOT yet confirmed — pull the symbolicated Organizer crash logs to
+  get the real frame before assuming it's fixed. (Other unruled-out candidates:
+  OOM from the wrap-around map's tiled redraw under memory pressure; the
+  never-removed `observeCloudChanges` NotificationCenter observer.)
 - **Fuel hedging (sim mechanic) — DONE (native app); panel UI lands with the
   NETWORK view.** Ported faithfully from the prototype spec (which had been
   dropped from CLAUDE.md and was re-supplied by the designer). A fuel hedge is
@@ -3590,6 +3627,32 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
   entries); Finance rows ("Hub operations" + "Club rent" in overhead,
   "Hubs & clubs built" in capital); Alerts modal hub-offer card
   (Sell·+$X / Decline) with the permanence warning.
+- **HUBS PANEL (NETWORK) + per-hub ROUTE-OPPORTUNITY drawers (native app;
+  designer request) — DONE, built, not yet live-verified.** Two hub-centric
+  navigation surfaces added once the player has ≥1 hub:
+  - **NETWORK gains a 5th control-bar item "Hubs"** (`NetPanel.hubs`), shown ONLY
+    when `!sim.hubs.isEmpty` (otherwise dead weight). Opens `HubsPanel.swift`
+    (styled like RoutesPanel; docks in the iPad rail via the existing
+    `hasSidePanel` = `panel != .none`). Lists each hub with the flights (open
+    routes touching it) originating there — spoke code + aircraft tail +
+    profitable/building chip. ONE hub renders expanded; MULTIPLE hubs are
+    COLLAPSIBLE DRAWERS grouped by hub (a lone hub isn't collapsible) so a big
+    network isn't one long scroll. barButton `minimumScaleFactor` 0.8→0.7 so 5
+    labels still fit a narrow phone.
+  - **OPS Route Opportunities gains per-hub drawers.** The flat cross-tier list
+    stays the DEFAULT; below it, once a hub exists, a "BY HUB" section shows a
+    collapsible "From <HUB>" drawer per hub. Expanding runs
+    `sim.hubRouteOpportunities(from:)` (top unserved dests FROM the hub, demand
+    already includes the hub bonus) — computed lazily, only when open. The
+    opportunity row was extracted to a shared `oppRow(_:)` (flat list + drawers
+    reuse it); tapping still previews on the map via `onPreviewRoute`.
+  - New sim helpers (Simulation.swift, after `topRouteOpportunities`):
+    `hubCodes` (sorted), `hubRoutes(_:)` (open routes touching a hub, newest
+    first), `hubRouteOpportunities(from:limit:)` (home-pool candidates, hub-boosted
+    demand, top-N). Compiles clean; the RouteOpportunity/demand APIs matched.
+    NOT yet driven live (the feature needs an established hub, which the
+    Simulator tap-glitch blocks this session — a real hub-having tester can
+    exercise it immediately).
 - **Verification (all clean)**: 70/70 headless hub/club suite (lifecycle,
   exact cost formulas, billing, suspension-and-revert, sale/decommission,
   persistence round-trip incl. legacy saves, AOG-at-hub timer 135 +
@@ -3681,6 +3744,33 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
   competing for SLOTS at open time, or having their own economy/network — this is
   demand-share competition on the player's routes, which is the impactful, visible
   slice. The background-traffic airline NAMES are still separate cosmetic identity.
+- **PLAYER COMPETITION ACTIONS — BUILT (native app; designer request). Three
+  route-level marketing levers on each Ops "Competition" row, a real
+  spend-to-fight-rivals loop.** All three are UPFRONT MARKETING spend and a NEW
+  capital-out term in the Finance cash invariant (`totalMarketingSpend`, "Marketing"
+  ledger row) — timed per-route effects in a "player promotions" section of
+  Simulation.swift:
+  - **Ad campaign** ($80k + $150·demand, 14 days): +15% demand, SCALED BY THE
+    ECONOMY (`× currentEvent.loadMultiplier` — a recession dampens it, a boom
+    amplifies it, so it's not always worth the spend). No fare change.
+  - **Fare war** ($150k + $300·demand, 21 days): fare ×0.80 (less per-seat) +
+    share ×1.25 AND — designer's call — **drives rivals off faster** (rival exit
+    prob ×3 on that route in `tickCompetition`). The aggressive reclaim lever.
+  - **Loyalty push** ($250k + $400·demand, 45 days): sticky share ×1.20, no fare
+    cut — the priciest/longest DEFENSIVE bookend. Cost ladder ad<fare<loyalty.
+  - State: `playerFareWarUntil`/`adCampaignUntil`/`loyaltyPushUntil` ([routeId:
+    expiryTick], persisted nil-safe), `tickPromotions()` daily cleanup. Actions
+    `startFareWar`/`launchAdCampaign`/`startLoyaltyPush` (afford + not-active gated;
+    fare war also requires a rival). Effects live in `rollRevenue`'s fare/demand
+    stack. UI: 3 buttons per contested row (`promoActions`); active shows "Nd left".
+    Loyalty purple is theme-aware (`#C79CFF` dark / `#6E43A6` light — the light
+    lavender washes out on white). Verified **22/22 headless** (cash invariant holds
+    after every action + 90 sim-days, marketing spend exact, cost ladder, broke-guard,
+    save/load round-trip) via a `cashInvariantResidual()` DEBUG test hook (kept —
+    a reusable invariant guard, like `devInjectCash`; absent from Release) + live.
+  - The hub drawers (Network ▸ Hubs) ALSO gained a "Route Opportunities" subsection
+    (mirrors Ops ▸ Route Opps via `sim.suggestRoute`); Ops ▸ Route Opps gained
+    per-hub "BY HUB" drawers (`hubRouteOpportunities(from:)`).
 - The airline roster (`AIRLINE_ROSTER`) and its US-market-share weighting
   is hardcoded to the current US-only airport network. If a future
   version adds other regions/countries, the roster and weights need to

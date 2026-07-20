@@ -82,7 +82,7 @@ struct NetworkView: View {
     /// Easter-egg counter — bumped when the NETWORK title is tapped (plane fly-by).
     @State private var flyByID = 0
 
-    enum NetPanel { case none, acquire, routes, hire }
+    enum NetPanel { case none, acquire, routes, hire, hubs }
 
     private var routeHighlights: Set<String> {
         switch routeMode {
@@ -214,6 +214,8 @@ struct NetworkView: View {
                 AddCrewPanel(sim: sim) { withAnimation(Motion.glide) { panel = .none } }
                 Spacer(minLength: 0)
             }
+        case .hubs:
+            HubsPanel(sim: sim).frame(maxHeight: .infinity, alignment: .top)
         case .none:
             VStack(spacing: 8) {
                 if isRouteConfirm {
@@ -308,10 +310,14 @@ struct NetworkView: View {
     private func mapCard(selected: Aircraft?, sideDocked: Bool,
                          mapWidth: CGFloat? = nil, cardWidth: CGFloat? = nil) -> some View {
         ZStack(alignment: .leading) {
-            MapView(sim: sim, tick: sim.tick,
-                    cameraZoom: sim.cameraZoom, cameraCenter: sim.cameraCenter,
-                    selectedID: selected?.id, highlightCodes: routeHighlights)
-                .frame(width: mapWidth)
+            // LiveMap isolates the hot tick/camera reads to the map ALONE.
+            // Reading sim.tick here (in mapCard, part of NetworkView's body)
+            // made the whole card — including the docked Acquire panel's
+            // ScrollView — re-render every sim-tick (~125×/sec at 25×), which
+            // fought scrolling and dropped taps. Now only LiveMap re-renders per
+            // tick; the control bar / panels / Acquire browser stay stable.
+            LiveMap(sim: sim, selectedID: selected?.id,
+                    highlightCodes: routeHighlights, mapWidth: mapWidth)
         }
         .frame(width: cardWidth, alignment: .leading)
         .clipShape(RoundedRectangle(cornerRadius: 4))
@@ -386,6 +392,9 @@ struct NetworkView: View {
         case .hire:
             AddCrewPanel(sim: sim) { withAnimation(Motion.glide) { panel = .none } }.transition(slide)
             Spacer(minLength: 0)
+        case .hubs:
+            HubsPanel(sim: sim).transition(slide)
+            Spacer(minLength: 0)
         case .none:
             Spacer(minLength: 0)
             bottomDocked(selected: selected)
@@ -423,10 +432,29 @@ struct NetworkView: View {
         // the labels differ in width the visible GAPS between them read as
         // uneven. Spacers make the inter-label gaps equal instead. No dividers
         // (Figma 2:1592).
+        ViewThatFits(in: .horizontal) {
+            controlBarRow(font: 13.5)
+            controlBarRow(font: 12)
+            controlBarRow(font: 11)
+            controlBarRow(font: 10)
+            controlBarRow(font: 9)
+        }
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background(barBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
+        .shadow(color: barShadow, radius: 3, y: 1)
+    }
+
+    /// One control-bar row at a uniform font — ViewThatFits picks the largest
+    /// size whose full-text row fits, so every label matches (no per-label
+    /// scaling / truncation). Content-sized labels + equal Spacers keep the gaps
+    /// even (not equal-width columns, which read as uneven gaps).
+    private func controlBarRow(font: CGFloat) -> some View {
         HStack(spacing: 0) {
-            barButton("Acquire A/C", active: panel == .acquire) { toggle(.acquire) }
-            Spacer(minLength: 6)
-            barButton("Open Route", active: routeMode != .off) {
+            barButton("Acquire A/C", font: font, active: panel == .acquire) { toggle(.acquire) }
+            Spacer(minLength: 5)
+            barButton("Open Route", font: font, active: routeMode != .off) {
                 panel = .none
                 if routeMode != .off { sim.clearAssignment() }
                 if routeMode == .off {
@@ -435,16 +463,17 @@ struct NetworkView: View {
                     routeMode = .pickOrigin; selectedID = nil; selectedAirportCode = nil
                 } else { routeMode = .off }
             }
-            Spacer(minLength: 6)
-            barButton("Routes", active: panel == .routes) { toggle(.routes) }
-            Spacer(minLength: 6)
-            barButton("Hire Crew", active: panel == .hire) { toggle(.hire) }
+            Spacer(minLength: 5)
+            barButton("Routes", font: font, active: panel == .routes) { toggle(.routes) }
+            Spacer(minLength: 5)
+            barButton("Hire Crew", font: font, active: panel == .hire) { toggle(.hire) }
+            // "Hubs" appears only once the player has established a hub — a 5th
+            // control-bar item that would otherwise be dead weight.
+            if !sim.hubs.isEmpty {
+                Spacer(minLength: 5)
+                barButton("Hubs", font: font, active: panel == .hubs) { toggle(.hubs) }
+            }
         }
-        .padding(.horizontal, 10).padding(.vertical, 5)
-        .background(barBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
-        .shadow(color: barShadow, radius: 3, y: 1)
     }
 
     private func toggle(_ p: NetPanel) {
@@ -454,18 +483,13 @@ struct NetworkView: View {
         panel = (panel == p) ? .none : p
     }
 
-    private func barButton(_ title: String, active: Bool, action: @escaping () -> Void) -> some View {
+    private func barButton(_ title: String, font: CGFloat, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                // With Fuel Hedge moved to Ops there are only 4 buttons, so they
-                // can be bigger and more readable on the phone. Content-sized +
-                // equal Spacers keeps the inter-label gaps even; the low scale
-                // floor is small-device insurance so long labels never clip.
-                .font(.karla(13.5, .semibold))
+                .font(.karla(font, .semibold))   // uniform across the row (chosen by ViewThatFits)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
                 .foregroundStyle(active ? Sky.brightBlue : barText)
-                .padding(.vertical, 8).padding(.horizontal, 8)
+                .padding(.vertical, 8).padding(.horizontal, 6)
                 .background(active ? Sky.brightBlue.opacity(0.18) : Color.clear)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
         }
@@ -927,5 +951,27 @@ struct FuelHedgePanel: View {
 
     private var divider: some View {
         Rectangle().fill(cardBorder).frame(height: 1)
+    }
+}
+
+/// The map, isolated so ONLY it depends on the hot per-tick/camera values.
+/// Reading `sim.tick` / `sim.cameraZoom` / `sim.cameraCenter` in NetworkView's
+/// body re-rendered the whole map card — including any docked panel's
+/// ScrollView — on every sim-tick, which made the Acquire list stick while
+/// scrolling and dropped taps at speed. Keeping these reads inside a dedicated
+/// child struct means the tick change re-runs only THIS body; the overlays
+/// (control bar, route/Acquire panels) stay put unless their own inputs change.
+/// The map still needs `tick` as a real value input (the Phase-1 freeze bug),
+/// which it gets here.
+private struct LiveMap: View {
+    let sim: Simulation
+    let selectedID: UUID?
+    let highlightCodes: Set<String>
+    let mapWidth: CGFloat?
+    var body: some View {
+        MapView(sim: sim, tick: sim.tick,
+                cameraZoom: sim.cameraZoom, cameraCenter: sim.cameraCenter,
+                selectedID: selectedID, highlightCodes: highlightCodes)
+            .frame(width: mapWidth)
     }
 }
