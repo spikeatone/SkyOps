@@ -233,15 +233,22 @@ struct NetworkView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Text("Cash on hand:")
+                // Shorten the label when the ticker is also on this line, so a
+                // wide cash figure + ticker + Save/Quit still fit without wrapping.
+                Text(sim.isPublic ? "Cash:" : "Cash on hand:")
                     .font(.karla(15, .semibold))
                     .foregroundStyle(isDark ? .white : .black)
+                    .lineLimit(1).fixedSize()
                 Text(cashString)
                     .font(.karla(15, .semibold))
                     .foregroundStyle(sim.playerBalance < 0 ? Sky.red : Sky.coreGreen)
+                    .lineLimit(1).minimumScaleFactor(0.7)
                     // Rolling counter — the money ticks up/down instead of snapping.
                     .contentTransition(.numericText())
                     .animation(.snappy(duration: 0.35), value: sim.playerBalance)
+                // Stock ticker — appears the moment the airline lists (designer:
+                // "display on top next to the CASH figure").
+                if let pc = sim.publicCompany { stockTicker(pc) }
                 Spacer(minLength: 8)
                 // Save / Quit — flushed right on the cash line (persistent on every tab).
                 SaveQuitBar(onSave: onSave, onQuit: onQuit)
@@ -268,6 +275,28 @@ struct NetworkView: View {
 
 
     private var cashString: String { cashLabel(sim.playerBalance) }
+
+    /// Live stock ticker chip: SYMBOL + share price, coloured vs the IPO price
+    /// (green = shareholders are up on the listing, red = under water).
+    @ViewBuilder
+    private func stockTicker(_ pc: PublicCompany) -> some View {
+        let price = sim.displaySharePrice
+        let up = price >= pc.ipoPrice
+        let tint = up ? Sky.coreGreen : Sky.red
+        HStack(spacing: 3) {
+            Text(pc.ticker).font(.karla(13, .bold)).foregroundStyle(isDark ? .white : .black)
+            Image(systemName: up ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+                .font(.system(size: 8)).foregroundStyle(tint)
+            Text(String(format: "$%.2f", price)).font(.karla(13, .semibold)).foregroundStyle(tint)
+                .contentTransition(.numericText())
+                .animation(.snappy(duration: 0.35), value: price)
+        }
+        .lineLimit(1).fixedSize()
+        .padding(.horizontal, 7).padding(.vertical, 3)
+        .background((isDark ? Sky.navBarDark : Color(skyHex: 0xF1F1F1)))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(tint.opacity(0.4), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
 
     // MARK: - Map card + overlays
 

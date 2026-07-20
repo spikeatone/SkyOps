@@ -1,7 +1,32 @@
 # Go Public (IPO) — Design Spec (for designer review)
 
-Status: **DRAFT — not built.** Design shape + recommendations below; the forks
-marked **DESIGNER CALL** change the architecture and want a decision before code.
+Status: **Step 1 BUILT & verified (30/30 headless + live). Steps 2–5 pending.**
+All four forks locked below.
+
+### Decisions (designer, locked)
+1. **Board severity: TEETH — can oust you.** Sustained poor performance + lost
+   control = game over, a second failure path beside bankruptcy, with its own
+   recap. Fully avoidable by performing or keeping control.
+2. **The string: BOTH** — the market expects growth AND dividends; falling short
+   on either sinks the price.
+3. **Unlock gate: net worth ≥ $500M.** Not as late as acquisitions ($1B), further
+   in than the mid-game. Deliberately interacts with acquisitions (see the
+   net-worth note below) — going public is a real path TOWARD the acquisition
+   game, mirroring real airline roll-ups.
+4. **Float: NO hard cap — dilution is self-priced.** Sell as much as you like, but
+   the IPO screen must make the risk visceral, and **the board-ouster trigger
+   accelerates the more the player dilutes their own stake.** Below majority the
+   board is dangerous; near-total dilution leaves almost no protection.
+
+### The net-worth interaction (designer raised it; poked and kept)
+An IPO credits real, spendable CASH to the balance, and net worth is cash + fleet
+with NO offsetting liability for the public's stake. So going public genuinely
+RAISES net worth and can move a $500M player toward the $1B acquisition gate —
+which is the designer's intent and mirrors how real airlines IPO to fund
+acquisitions. It is not a pure exploit: the cash is paid for with permanent
+dilution + board risk and can't be cheaply undone. **Balance-pass must verify it
+doesn't make organic growth pointless** — the one real risk of gating on net
+worth that equity can inflate.
 
 Origin: designer, mid-flight. A second route to capital alongside the existing
 LOAN mechanism — list the airline on a stock market, raise money by selling
@@ -188,9 +213,19 @@ accumulators, and any active activist/board campaign state.
 
 ## Scope & sequencing (build order, each independently verifiable)
 
-1. **Stock price model + IPO + ticker UI.** Ships the core: go public, raise cash,
-   watch a live ticker next to CASH. Value on its own, and the foundation
-   everything else needs.
+1. ~~**Stock price model + IPO + ticker UI.**~~ **DONE (30/30 headless + live).**
+   `Sim/GoPublic.swift` (types + valuation) + the "Public company" MARK in
+   Simulation.swift (mutating), `GoPublicView.swift` (the IPO flow), the ticker
+   chip in NetworkView's header, and a GO PUBLIC / PUBLIC COMPANY card in Finance.
+   Gate $500M net worth; `marketCap = netWorth × 1.8 × sentiment`; sentiment
+   updates monthly from reputation + net-worth trend + the active event + a small
+   wiggle, clamped [0.5, 1.6]; `displaySharePrice` eases per sim-day for a live
+   ticker. Ticker shows SYMBOL + price coloured vs the IPO price. Float has NO cap
+   — the slider shows live dilution risk (controlling / exposed / vulnerable /
+   powerless). Equity raised joins the Finance cash invariant (capital-in);
+   everything persists nil-safe. Verified: gate, exact proceeds, invariant through
+   IPO + 6 months public, sentiment stays bounded, price moves, save/load
+   round-trip, legacy-save loads private.
 2. **Levers:** dividends, buybacks, secondary offerings + the Finance PUBLIC card.
 3. **Activist investors** (decision cards, comply/refuse, escalation).
 4. **The board** (the chosen failure/constraint model) + its recap screen if (B/C).

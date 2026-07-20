@@ -30,6 +30,7 @@ struct FinanceView: View {
     enum Period: String, CaseIterable { case total = "Total", thisMonth = "This month", lastMonth = "Last month" }
     @State private var period: Period = .total
     @State private var showIntel = false
+    @State private var showIPO = false
 
     // Theme tokens (light Figma-family / dark Sky), matched to Crews/Ops.
     private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
@@ -79,6 +80,7 @@ struct FinanceView: View {
                             unavailableCard
                         }
                         financingCard
+                        publicCard
                     }
                     .padding(.bottom, 8)
                 }
@@ -89,6 +91,74 @@ struct FinanceView: View {
         }
         .fullScreenCover(isPresented: $showIntel) {
             CompetitorIntelView(sim: sim, onClose: { showIntel = false })
+        }
+        .fullScreenCover(isPresented: $showIPO) {
+            GoPublicView(sim: sim, onClose: { showIPO = false })
+        }
+    }
+
+    // MARK: Public company — GO PUBLIC entry, or the live listing summary.
+    private var publicCard: some View {
+        Group {
+            if let pc = sim.publicCompany {
+                let price = sim.displaySharePrice
+                let up = price >= pc.ipoPrice
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("PUBLIC COMPANY").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                        Spacer()
+                        Text(pc.ticker).font(.karla(13, .bold)).foregroundStyle(primary)
+                    }
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(String(format: "$%.2f", price)).font(.karla(26, .heavy))
+                            .foregroundStyle(up ? green : red)
+                        Text(String(format: "%@%.1f%% vs IPO", up ? "+" : "", (price/pc.ipoPrice - 1)*100))
+                            .font(.karla(13, .semibold)).foregroundStyle(up ? green : red)
+                    }
+                    ledgerLine("Your stake", String(format: "%.1f%%", pc.playerStake*100))
+                    ledgerLine("Market cap", compactMoney(Int(sim.marketCap)))
+                    ledgerLine("Raised at IPO", compactMoney(sim.totalEquityRaised))
+                    Text("Levers — dividends, buybacks, a secondary offering — arrive next.")
+                        .font(.karla(10)).foregroundStyle(secondary)
+                }
+                .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                .background(cardBG).clipShape(RoundedRectangle(cornerRadius: 4))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+            } else {
+                Button { if sim.canGoPublic { showIPO = true } } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("GO PUBLIC").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                            if sim.canGoPublic {
+                                Text("List the airline to raise capital")
+                                    .font(.karla(14, .semibold)).foregroundStyle(primary)
+                                Text("Sell equity for cash — no repayment, but you answer to shareholders")
+                                    .font(.karla(11)).foregroundStyle(secondary)
+                            } else {
+                                Text("Unlocks at \(compactMoney(Simulation.goPublicNetWorthGate)) net worth")
+                                    .font(.karla(14, .semibold)).foregroundStyle(primary)
+                                Text("\(compactMoney(max(0, Simulation.goPublicNetWorthGate - sim.netWorth))) to go")
+                                    .font(.karla(11)).foregroundStyle(secondary)
+                            }
+                        }
+                        Spacer()
+                        if sim.canGoPublic {
+                            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(secondary)
+                        }
+                    }
+                    .padding(14).background(cardBG).clipShape(RoundedRectangle(cornerRadius: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+                }.buttonStyle(.plain).disabled(!sim.canGoPublic)
+            }
+        }
+    }
+
+    private func ledgerLine(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label).font(.karla(13)).foregroundStyle(secondary)
+            Spacer()
+            Text(value).font(.karla(14, .semibold)).foregroundStyle(primary)
         }
     }
 
@@ -304,6 +374,7 @@ struct FinanceView: View {
                 hubSpend: sim.totalHubSpend, hubLabor: sim.totalHubLabor, clubRent: sim.totalClubRent,
                 airlineAcquisition: sim.totalAcquisitionPrice,
                 integrationSpend: sim.totalIntegrationSpend + sim.totalSenioritySpend + sim.totalDiligenceSpend,
+                equityRaised: sim.totalEquityRaised,
                 cashStart: Simulation.startingCapital, cashEnd: sim.playerBalance, isTotal: true)
         case .thisMonth:
             return delta(from: s.last, toLive: true)
@@ -338,6 +409,7 @@ struct FinanceView: View {
             clubRent: d(sim.totalClubRent, \.clubRent),
             airlineAcquisition: d(sim.totalAcquisitionPrice, \.airlineAcquisition),
             integrationSpend: d(sim.totalIntegrationSpend + sim.totalSenioritySpend + sim.totalDiligenceSpend, \.integrationSpend),
+            equityRaised: d(sim.totalEquityRaised, \.equityRaised),
             cashStart: base?.cash ?? Simulation.startingCapital,
             cashEnd: toLive ? sim.playerBalance : (end?.cash ?? sim.playerBalance),
             isTotal: false)
@@ -546,12 +618,14 @@ struct PeriodFigures {
     var airlineAcquisition = 0
     /// Merger integration bills + seniority settlement.
     var integrationSpend = 0
+    /// Equity raised via IPO / secondary offerings.
+    var equityRaised = 0
     var cashStart, cashEnd: Int
     var isTotal: Bool
     var operatingProfit: Int { revenue - fees - operatingCost }
     var overhead: Int { leaseCost + insurance + maintenance + debtService + hubLabor + clubRent + integrationSpend }
     var capitalOut: Int { acquisition + routeSpend + hedgeSpend + hubSpend + airlineAcquisition }
-    var capitalIn: Int { saleProceeds + offerIncome + loanProceeds }
+    var capitalIn: Int { saleProceeds + offerIncome + loanProceeds + equityRaised }
 }
 
 /// A compact net-worth-over-time line. Line is green above the launch baseline,

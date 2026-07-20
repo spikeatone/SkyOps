@@ -3275,6 +3275,57 @@ burden) lands. Do NOT ship a build with acquisitions enabled and step 3 missing.
   shrinking carriers both present, region scoping. Plus live in the Simulator,
   both themes.
 
+## Decided — Go Public / IPO (1.1; step 1 of 5 BUILT)
+
+Full design in **`GO_PUBLIC_SPEC.md`**. A SECOND capital route beside loans
+(designer, mid-flight): list the airline, sell equity for cash, live with a
+living stock price + (later steps) activists and a board. The deliberate opposite
+of a loan — no repayment, but you sell control and gain a permanent audience.
+
+- **DESIGNER DECISIONS (locked):** board can OUST you (a 2nd game-over path, step
+  4); the string is BOTH growth and dividends; unlock at **$500M net worth**; NO
+  float cap — dilution is self-priced (the ouster trigger accelerates the more you
+  sell, step 4).
+- **NET-WORTH INTERACTION (designer raised, poked, KEPT):** IPO proceeds are real
+  cash and net worth carries NO liability for the public's stake, so going public
+  RAISES net worth and can move a $500M player toward the $1B acquisition gate —
+  intended (real airlines IPO to fund acquisitions), and not a pure exploit
+  because dilution + board risk are the sticky cost. The balance sweep must
+  confirm it doesn't make organic growth pointless.
+
+### Step 1 — model + IPO + ticker: BUILT (30/30 headless + live)
+
+- **`Sim/GoPublic.swift`** = `PublicCompany` + valuation/gate/control-risk (pure);
+  the mutating `goPublic`/`tickStockPrice`/sentiment live in Simulation.swift
+  ("Public company" MARK) because they touch private(set) state — same split as
+  Acquisition.swift.
+- **Price model:** `marketCap = netWorth × valuationMultiple(1.8) × marketSentiment`;
+  `sharePrice = marketCap / sharesOutstanding`. IPO fixes shares off the pre-money
+  cap (~$50 target price) and credits `float × preMoneyCap` cash. **Price is
+  mostly EARNED** — sentiment (reputation + net-worth trend + active event + small
+  wiggle, clamped [0.5,1.6], 80/20 momentum) is seasoning, not the meal.
+- **Ticker** rides next to CASH in NetworkView's header (designer's explicit ask):
+  SYMBOL ▲/▼ $price, green above the IPO price / red below. `displaySharePrice`
+  eases per sim-day so it animates. The cash LABEL shortens to "Cash:" when public
+  so the row doesn't wrap (a real layout fix — the ticker crowded the line).
+- **Float has NO hard cap** (designer): the IPO slider shows live dilution risk
+  tiers (`controlRisk`) with plain-language consequences, since below majority the
+  board (step 4) gets dangerous.
+- **Finance:** a GO PUBLIC card (gated, shows "$X to go" when locked) → the IPO
+  flow; once listed, a PUBLIC COMPANY card (live price, stake, market cap, raised).
+  `totalEquityRaised` is a capital-IN term in the master cash invariant + cash-flow
+  card. All state persists nil-safe (pre-IPO saves load private).
+- **`sanitizeTicker`** = uppercase letters, ≤4. No real-ticker collision check
+  (tickers don't carry the airline-code trademark risk).
+- Verified **30/30 headless** (gate refusal moves no cash, exact proceeds,
+  CASH INVARIANT through IPO + 6 months public, sentiment bounded, price alive,
+  control-risk tiers, save/load round-trip, legacy-save loads private) + live
+  (ticker next to cash, the IPO flow with the dilution warning + live deal
+  summary).
+- **NOT SHIPPABLE ALONE:** step 1 is pure upside (raise cash, no downside yet).
+  The pitfalls — dwindling price already emergent, then activists (step 3) and the
+  board (step 4) — are what make it a real tradeoff. Steps 2–5 pending.
+
 ## Decided — Hubs & Clubs (built to the designer-reviewed spec)
 
 - **The full mechanic from `HUBS_AND_CLUBS_SPEC.md` is BUILT (native app) —

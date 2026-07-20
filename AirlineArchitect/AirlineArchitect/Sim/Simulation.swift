@@ -817,6 +817,100 @@ final class Simulation {
     // ⚠️ NOT SHIPPABLE WITHOUT STEP 3 (the integration burden). As it stands an
     // acquisition is pure upside, which is the design the spec rejects.
 
+    // MARK: - Public company (IPO) — step 1: model + transaction + ticker
+    //
+    // Types, gate, and valuation live in GoPublic.swift; the mutating work is here
+    // because it touches private(set) state.
+
+    /// The listed airline, or nil while private.
+    private(set) var publicCompany: PublicCompany?
+    /// The market's mood, ∈ [floor, ceiling]. Updated monthly toward a
+    /// fundamentals-driven target; persisted so the ticker doesn't jump on load.
+    private(set) var marketSentiment: Double = 1.0
+    /// The displayed share price, eased toward `targetSharePrice` each tick so the
+    /// ticker animates instead of snapping.
+    private(set) var displaySharePrice: Double = 0
+    /// Capital-in accumulator for the Finance cash invariant.
+    private(set) var totalEquityRaised = 0
+    private var nextSentimentTick = 0
+
+    /// Take the airline public. Player picks a ticker and how much to sell.
+    /// Returns false if ungated, already public, or the ticker is invalid.
+    @discardableResult
+    func goPublic(ticker rawTicker: String, floatFraction: Double) -> Bool {
+        guard canGoPublic else { return false }
+        let ticker = Simulation.sanitizeTicker(rawTicker)
+        guard !ticker.isEmpty else { return false }
+        let fraction = max(0.01, min(0.99, floatFraction))
+
+        // Value the company as-is, THEN sell a slice. Fix a clean share count off
+        // the pre-money valuation so the IPO price is a sane per-share number.
+        let preMoneyCap = marketCap
+        let shares = max(1, (preMoneyCap / 50).rounded())   // ~$50 IPO price target
+        let ipoPrice = preMoneyCap / shares
+        let proceeds = Int((preMoneyCap * fraction).rounded())
+
+        publicCompany = PublicCompany(ticker: ticker, ipoTick: tick, ipoPrice: ipoPrice,
+                                      sharesOutstanding: shares,
+                                      playerShares: shares * (1 - fraction))
+        displaySharePrice = ipoPrice
+        playerBalance += proceeds
+        totalEquityRaised += proceeds
+        nextSentimentTick = tick + Simulation.ticksPerMonth
+
+        logOps(.market, "\(ticker) is public",
+               "Listed at \(compactMoneySim(Int(ipoPrice)))/share. Raised \(compactMoneySim(proceeds)) selling \(Int((fraction*100).rounded()))%.")
+        celebrate("ipo", "chart.line.uptrend.xyaxis", "\(ticker) went public",
+                  "Raised \(compactMoneySim(proceeds))")
+        return true
+    }
+
+    /// Per-tick: ease the displayed price toward its target, and refresh sentiment
+    /// once per sim-month. Called from the tick loop.
+    private func tickStockPrice() {
+        guard isPublic else { return }
+        if tick >= nextSentimentTick {
+            marketSentiment = nextSentiment()
+            nextSentimentTick += Simulation.ticksPerMonth
+        }
+        // Ease per sim-day (the target moves as net worth/sentiment move).
+        if tick % 1440 == 0 {
+            let target = targetSharePrice
+            displaySharePrice += (target - displaySharePrice) * Simulation.sharePriceEasing
+        }
+    }
+
+    /// Next month's sentiment from the fundamentals the game already tracks:
+    /// reputation, the recent net-worth trend, and the active economic event —
+    /// plus a small mean-reverting wiggle so the ticker feels alive. Momentum
+    /// carried (80/20) so it drifts rather than teleports.
+    private func nextSentiment() -> Double {
+        var target = 1.0
+        // Reputation vs the anchor: ±0.4 across the full 0–100 range.
+        target += 0.4 * ((reputation - Simulation.sentimentReputationAnchor) / 50)
+        // Net-worth trend over the last ~2 months of snapshots.
+        if financeSnapshots.count >= 2 {
+            let recent = financeSnapshots.suffix(3)
+            if let first = recent.first, let last = recent.last, first.netWorth > 0 {
+                let growth = Double(last.netWorth - first.netWorth) / Double(first.netWorth)
+                target += max(-0.35, min(0.35, growth * 2.0))
+            }
+        }
+        // Airline stocks move with the macro: a fuel spike / recession drags, a
+        // boom lifts. costMultiplier > 1 is harmful, < 1 favourable.
+        if !currentEvent.isNormal {
+            target += (1.0 - currentEvent.costMultiplier) * 0.5
+        }
+        target += Double.random(in: -0.06...0.06)
+        let blended = 0.8 * marketSentiment + 0.2 * target
+        return max(Simulation.sentimentFloor, min(Simulation.sentimentCeiling, blended))
+    }
+
+    /// Ticker validation shared by the sim and the naming UI.
+    static func sanitizeTicker(_ raw: String) -> String {
+        String(raw.uppercased().filter { $0.isLetter }.prefix(4))
+    }
+
     #if DEBUG
     /// TEST HOOK — reaching the $1B acquisition gate through the real economy
     /// takes sim-years, which no headless suite can afford. Injections are
@@ -2842,6 +2936,8 @@ final class Simulation {
         var airlineAcquisition = 0
         /// Merger integration bills + seniority settlement (overhead).
         var integrationSpend = 0
+        /// Equity raised via IPO / secondary offerings (capital-in).
+        var equityRaised = 0
         let cash, netWorth: Int
     }
     private(set) var financeSnapshots: [FinanceSnapshot] = []
@@ -2856,6 +2952,7 @@ final class Simulation {
                         hubSpend: totalHubSpend, hubLabor: totalHubLabor, clubRent: totalClubRent,
                         airlineAcquisition: totalAcquisitionPrice,
                         integrationSpend: totalIntegrationSpend + totalSenioritySpend + totalDiligenceSpend,
+                        equityRaised: totalEquityRaised,
                         cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
     }
 
@@ -3202,6 +3299,10 @@ final class Simulation {
         s.activeIntegration = activeIntegration
         s.diligencedCarriers = Array(diligencedCarriers)
         s.totalDiligenceSpend = totalDiligenceSpend
+        s.publicCompany = publicCompany
+        s.marketSentiment = marketSentiment
+        s.displaySharePrice = displaySharePrice
+        s.totalEquityRaised = totalEquityRaised
         s.totalIntegrationSpend = totalIntegrationSpend
         s.totalSenioritySpend = totalSenioritySpend
         s.hubs = hubs
@@ -3233,7 +3334,8 @@ final class Simulation {
                         loanProceeds: f.loanProceeds, debtService: f.debtService,
                         hubSpend: f.hubSpend, hubLabor: f.hubLabor, clubRent: f.clubRent,
                         airlineAcquisition: f.airlineAcquisition,
-                        integrationSpend: f.integrationSpend)
+                        integrationSpend: f.integrationSpend,
+                        equityRaised: f.equityRaised)
         }
         return s
     }
@@ -3294,6 +3396,11 @@ final class Simulation {
         activeIntegration = s.activeIntegration
         diligencedCarriers = Set(s.diligencedCarriers ?? [])
         totalDiligenceSpend = s.totalDiligenceSpend ?? 0
+        publicCompany = s.publicCompany
+        marketSentiment = s.marketSentiment ?? 1.0
+        displaySharePrice = s.displaySharePrice ?? 0
+        totalEquityRaised = s.totalEquityRaised ?? 0
+        nextSentimentTick = tick + Simulation.ticksPerMonth
         totalIntegrationSpend = s.totalIntegrationSpend ?? 0
         totalSenioritySpend = s.totalSenioritySpend ?? 0
         hubs = s.hubs ?? [:]
@@ -3345,6 +3452,7 @@ final class Simulation {
                             hubSpend: f.hubSpend ?? 0, hubLabor: f.hubLabor ?? 0, clubRent: f.clubRent ?? 0,
                             airlineAcquisition: f.airlineAcquisition ?? 0,
                             integrationSpend: f.integrationSpend ?? 0,
+                            equityRaised: f.equityRaised ?? 0,
                             cash: f.cash, netWorth: f.netWorth)
         }
         if financeSnapshots.isEmpty { financeSnapshots = [financeSnapshotNow()] }
@@ -3386,6 +3494,7 @@ final class Simulation {
         tickInsuranceBilling()
         tickIntegration()
         tickLoanBilling()
+        tickStockPrice()
         tickHubBilling()
         tickUsedMarketReplenishment()
         tickSolvency()
