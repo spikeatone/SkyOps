@@ -63,10 +63,10 @@ struct SaveSlotsView: View {
     }
 
     private func savedRow(_ index: Int, _ info: SlotInfo) -> some View {
-        // Swipe-left-to-delete (standard iOS pattern) wraps the whole row, plus
-        // the tap affordance below with its enlarged trash icon.
-        SwipeToDeleteContainer(onDelete: { performDelete(index) }) {
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
+            // Swipe-left-to-delete wraps ONLY the card, so the red delete button
+            // is exactly the CARD's height — not the card + the tap affordance.
+            SwipeToDeleteContainer(onDelete: { performDelete(index) }) {
                 Button { onLoad(index) } label: {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -88,27 +88,29 @@ struct SaveSlotsView: View {
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(border, lineWidth: 1))
                 }
                 .buttonStyle(.plain).pressable()
-
-                // Tap-delete affordance — arm with one tap, confirm with the second.
-                HStack {
-                    Spacer()
-                    if confirmDelete == index {
-                        Text("Delete this airline?").font(.karla(11)).foregroundStyle(secondary)
-                        Button("Cancel") { confirmDelete = nil }
-                            .font(.karla(11, .semibold)).foregroundStyle(secondary)
-                        Button("Delete") { performDelete(index) }
-                            .font(.karla(11, .bold)).foregroundStyle(Sky.red)
-                    } else {
-                        Button { confirmDelete = index } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "trash").font(.system(size: 15))   // +50% (was 10)
-                                Text("Delete").font(.karla(12))
-                            }.foregroundStyle(secondary.opacity(0.8))
-                        }.buttonStyle(.plain)
-                    }
-                }
-                .padding(.top, 6).padding(.horizontal, 4)
             }
+
+            // Tap-delete affordance — OUTSIDE the swipe container (kept below the
+            // card, so the swipe reveal stays card-height). Arm with one tap,
+            // confirm with the second.
+            HStack {
+                Spacer()
+                if confirmDelete == index {
+                    Text("Delete this airline?").font(.karla(11)).foregroundStyle(secondary)
+                    Button("Cancel") { confirmDelete = nil }
+                        .font(.karla(11, .semibold)).foregroundStyle(secondary)
+                    Button("Delete") { performDelete(index) }
+                        .font(.karla(11, .bold)).foregroundStyle(Sky.red)
+                } else {
+                    Button { confirmDelete = index } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "trash").font(.system(size: 15))   // +50% (was 10)
+                            Text("Delete").font(.karla(12))
+                        }.foregroundStyle(secondary.opacity(0.8))
+                    }.buttonStyle(.plain)
+                }
+            }
+            .padding(.top, 6).padding(.horizontal, 4)
         }
     }
 

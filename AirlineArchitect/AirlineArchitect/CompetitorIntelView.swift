@@ -35,6 +35,9 @@ struct CompetitorIntelView: View {
     private var primary: Color    { isDark ? .white : Color(skyHex: 0x1F232D) }
     private var secondary: Color  { isDark ? Sky.lightBlue.opacity(0.75) : Color(skyHex: 0x64748B) }
     private var red: Color        { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
+    // Orange for the ESTIMATE badge — bright on dark, deeper on white so it pops
+    // (a light orange washes out on the light background).
+    private var orange: Color     { isDark ? Color(skyHex: 0xFFAB44) : Color(skyHex: 0xD97706) }
 
     private var carriers: [CompetitorProfile] { sim.relevantCompetitors }
     private var rivals: Set<String> { sim.rivalsOnMyRoutes }
@@ -242,7 +245,7 @@ struct CompetitorIntelView: View {
                     Text(stage >= 2 ? "DUE DILIGENCE — FULL BOOKS" : "DUE DILIGENCE — PRELIMINARY")
                         .font(.karla(12, .bold)).foregroundStyle(titleColor)
                     Spacer()
-                    chip(stage >= 2 ? "VERIFIED" : "ESTIMATE", stage >= 2 ? Sky.coreGreen : secondary)
+                    chip(stage >= 2 ? "VERIFIED" : "ESTIMATE", stage >= 2 ? Sky.coreGreen : orange)
                 }
                 Text(stage >= 2
                      ? "Their books are open. These are the actual airframes and the real renewal bill."
