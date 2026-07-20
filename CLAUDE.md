@@ -2952,6 +2952,22 @@ both orientations) incl. the full open-a-route→acquire flow.
     BDA↔JFK) + clean build. **Live map screenshot of the two landmasses is
     pending** (default framing is CONUS; showing NE Canada / mid-Atlantic needs a
     map pan, i.e. Simulator taps — the designer was remote on iPad this session).
+  - **FULL FLOATER AUDIT (designer request: "any OTHER airports not on a
+    landmass?").** A repeatable point-in-polygon audit (`scratchpad/audit.py`) of
+    all 384 airports against every basemap ring (582, all 10 layers, antimeridian
+    wrap-aware — note `states` nests one level deeper than the other layers).
+    Found 4 more missing-island floaters and fixed them by appending NE-land rings
+    to the matching layer: **PMI** Palma de Mallorca (was 194 km offshore → 50m
+    Mallorca → `europe`), **RTB** Roatán (59 km → 10m Bay Islands ×3 →
+    `centralAmerica`), **CZM** Cozumel (17 km → 10m → `mexico`), **BAH** Bahrain
+    (42 km → 10m main island → `asia`; the airport is on Muharraq islet, absent
+    from NE, so it lands 5.4 km off — visually on Bahrain at map scale). Post-fix
+    audit: **zero missing-landmass floaters.** The ONLY two airports still >12 km
+    from a drawn coast are **HRG (Hurghada) and SSH (Sharm El Sheikh)** — both on
+    the Egyptian/Sinai MAINLAND, ~14–18 km off the game's coarse Red Sea coastline
+    (a coastline-simplification artifact, NOT a missing landmass; would need a
+    finer Egypt coastline to close, deferred as low-value). Re-run `audit.py` after
+    any airport/basemap change.
   - **AMENDMENT (designer request): Canary Islands moved europe→AFRICA, Azores
     stays europe.** The islands were originally lumped `Canary/Azores→europe`
     (basemap key) purely because both were "sliced from Spain/Portugal" — but
