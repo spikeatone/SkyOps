@@ -3289,7 +3289,7 @@ burden) lands. Do NOT ship a build with acquisitions enabled and step 3 missing.
   shrinking carriers both present, region scoping. Plus live in the Simulator,
   both themes.
 
-## Decided — Go Public / IPO (1.1; step 1 of 5 BUILT)
+## Decided — Go Public / IPO (1.1; steps 1–2 of 5 BUILT)
 
 Full design in **`GO_PUBLIC_SPEC.md`**. A SECOND capital route beside loans
 (designer, mid-flight): list the airline, sell equity for cash, live with a
@@ -3346,7 +3346,44 @@ of a loan — no repayment, but you sell control and gain a permanent audience.
   summary).
 - **NOT SHIPPABLE ALONE:** step 1 is pure upside (raise cash, no downside yet).
   The pitfalls — dwindling price already emergent, then activists (step 3) and the
-  board (step 4) — are what make it a real tradeoff. Steps 2–5 pending.
+  board (step 4) — are what make it a real tradeoff. Steps 3–5 pending.
+
+### Step 2 — levers (dividends / buybacks / secondary): BUILT (37/37 headless)
+
+The three ways a listed airline manages the market, in the Finance FUNDING →
+PUBLIC card. Pure read-side option math in GoPublic.swift; the mutating actions
+in Simulation.swift ("levers" MARK). `PublicCompany.sharesOutstanding` is now a
+`var` (buybacks retire shares, secondaries mint them).
+
+- **Pay dividend** (`payDividend(yield:)`) — a special dividend at 2/5/8% of the
+  share price, charged on the PUBLIC FLOAT only (the player's own portion is a
+  wash, never moved). Costs cash, lifts sentiment immediately (capped +0.15), and
+  resets the dividend-drought clock. Will also end an activist campaign (step 3).
+- **Buy back stock** (`buyBackShares(floatFraction:)`) — repurchase 10/25/50% of
+  the float at the current price and RETIRE it: `sharesOutstanding` shrinks so the
+  player's STAKE rises (playerShares unchanged) and the activist fuel (float)
+  shrinks. Expensive when the price is high.
+- **Secondary offering** (`secondaryOffering(fraction:)`) — mint new shares = 5/10/
+  20% of current shares at the price: raises cash now, DILUTES the stake (raises
+  board-ouster risk, step 4). Proceeds join `totalEquityRaised` (same capital-in
+  term as the IPO). Raises little when the price is depressed — the realistic
+  penalty for needing cash in a downturn.
+- **The "string" is now BOTH** (locked decision): the GROWTH half was already in
+  sentiment (net-worth trend); step 2 adds the INCOME half — a dividend-drought
+  penalty in `nextSentiment()` (grace 6 sim-months, then −0.03/mo up to −0.25),
+  reset by paying a dividend. So skipping dividends indefinitely sinks the price.
+- **Finance invariant EXTENDED** with two capital-out terms: `totalDividendsPaid`
+  + `totalBuybackSpend` (both persisted nil-safe; added to `FinanceSnapshot` /
+  `FinanceSave` / `PeriodFigures.capitalOut`; new "Dividends paid" / "Share
+  buybacks" / "Equity raised" ledger rows in the breakdown, shown when public).
+  **Any future harness MUST include `− totalDividendsPaid − totalBuybackSpend`.**
+- Verified **37/37 headless** (`scratchpad/TestMain.swift`, real Sim/*.swift):
+  exact dividend/buyback/secondary math, stake rises on buyback + falls on
+  secondary, shares shrink/grow, sentiment lifts on dividend, the cash invariant
+  holds after every lever + a refused (unaffordable) dividend, gating (a private
+  airline refuses all three), and a save/load round-trip. **Live-tap check
+  pending** — reaching the PUBLIC card needs $500M net worth + going public, and
+  the designer declined Simulator control this session.
 
 ## Decided — Hubs & Clubs (built to the designer-reviewed spec)
 

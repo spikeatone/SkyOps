@@ -28,7 +28,7 @@ struct PublicCompany: Codable, Equatable {
     let ticker: String
     let ipoTick: Int
     let ipoPrice: Double          // price per share at listing
-    let sharesOutstanding: Double
+    var sharesOutstanding: Double // shrinks with buybacks (retired), grows with secondaries
     var playerShares: Double      // falls with secondary offerings, rises with buybacks
 
     var playerStake: Double { sharesOutstanding > 0 ? playerShares / sharesOutstanding : 1 }
@@ -101,5 +101,54 @@ extension Simulation {
         case 0.15..<0.34: return .vulnerable
         default: return .powerless
         }
+    }
+
+    // MARK: - Levers (step 2): read-side option math for the UI
+    //
+    // The mutating actions (payDividend/buyBackShares/secondaryOffering) live in
+    // Simulation.swift; these pure helpers let the Finance PUBLIC card show each
+    // option's cost / proceeds / resulting stake before the player commits.
+
+    /// The live per-share price the levers transact at (the eased display price).
+    var currentSharePrice: Double { max(0.01, displaySharePrice) }
+
+    /// Special-dividend yields offered in the UI (fraction of the share price).
+    static let dividendYieldOptions: [Double] = [0.02, 0.05, 0.08]
+    /// Cash cost of a special dividend at `yield` — paid on the PUBLIC float only
+    /// (the player's own portion is a wash, so it never leaves the balance).
+    func dividendCost(yield: Double) -> Int {
+        guard let pc = publicCompany else { return 0 }
+        return Int((currentSharePrice * max(0, yield) * pc.floatShares).rounded())
+    }
+
+    /// Buyback sizes offered in the UI (fraction of the current public float).
+    static let buybackFloatOptions: [Double] = [0.10, 0.25, 0.50]
+    /// Cash cost to repurchase `floatFraction` of the float at the current price.
+    func buybackCost(floatFraction: Double) -> Int {
+        guard let pc = publicCompany else { return 0 }
+        return Int((pc.floatShares * max(0, min(1, floatFraction)) * currentSharePrice).rounded())
+    }
+    /// The player's stake after repurchasing `floatFraction` of the float (rises,
+    /// because the retired shares shrink the denominator).
+    func stakeAfterBuyback(floatFraction: Double) -> Double {
+        guard let pc = publicCompany else { return 1 }
+        let retired = pc.floatShares * max(0, min(1, floatFraction))
+        let total = pc.sharesOutstanding - retired
+        return total > 0 ? pc.playerShares / total : 1
+    }
+
+    /// Secondary-offering sizes offered in the UI (new shares as a fraction of the
+    /// CURRENT shares outstanding).
+    static let secondaryOptions: [Double] = [0.05, 0.10, 0.20]
+    /// Cash a secondary raises by issuing `fraction` × current shares at the price.
+    func secondaryProceeds(fraction: Double) -> Int {
+        guard let pc = publicCompany else { return 0 }
+        return Int((pc.sharesOutstanding * max(0, fraction) * currentSharePrice).rounded())
+    }
+    /// The player's stake after a `fraction` secondary (falls — dilution).
+    func stakeAfterSecondary(fraction: Double) -> Double {
+        guard let pc = publicCompany else { return 1 }
+        let total = pc.sharesOutstanding * (1 + max(0, fraction))
+        return total > 0 ? pc.playerShares / total : 1
     }
 }

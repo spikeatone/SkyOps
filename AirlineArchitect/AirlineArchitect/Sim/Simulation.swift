@@ -832,6 +832,13 @@ final class Simulation {
     private(set) var displaySharePrice: Double = 0
     /// Capital-in accumulator for the Finance cash invariant.
     private(set) var totalEquityRaised = 0
+    /// Cash returned to public shareholders as dividends (Finance cash-out).
+    private(set) var totalDividendsPaid = 0
+    /// Cash spent repurchasing float shares (Finance cash-out).
+    private(set) var totalBuybackSpend = 0
+    /// Tick of the most recent dividend (seeded to the IPO tick) — drives the
+    /// dividend-drought sentiment penalty (the "income" half of the string).
+    private var lastDividendTick = 0
     private var nextSentimentTick = 0
 
     /// Take the airline public. Player picks a ticker and how much to sell.
@@ -857,6 +864,7 @@ final class Simulation {
         displaySharePrice = ipoPrice
         playerBalance += proceeds
         totalEquityRaised += proceeds
+        lastDividendTick = tick   // the income clock starts at listing
         nextSentimentTick = tick + Simulation.ticksPerMonth
 
         logOps(.market, "\(ticker) is public",
@@ -913,6 +921,13 @@ final class Simulation {
         if !currentEvent.isNormal {
             target += (1.0 - currentEvent.costMultiplier) * 0.5
         }
+        // The income half of the string: shareholders sour the longer they go
+        // without a dividend. A grace period, then a growing drag a special
+        // dividend resets. The growth half is the net-worth-trend term above.
+        let monthsSinceDividend = Double(tick - lastDividendTick) / Double(Simulation.ticksPerMonth)
+        if monthsSinceDividend > 6 {
+            target -= min(0.25, (monthsSinceDividend - 6) * 0.03)
+        }
         // Random swings: up to 3× normal in the first month of trading.
         target += Double.random(in: -0.06...0.06) * (1 + 2 * ipo)
 
@@ -926,6 +941,67 @@ final class Simulation {
     /// Ticker validation shared by the sim and the naming UI.
     static func sanitizeTicker(_ raw: String) -> String {
         String(raw.uppercased().filter { $0.isLetter }.prefix(4))
+    }
+
+    // MARK: - Public company: levers (step 2 — dividends, buybacks, secondary)
+
+    /// Pay a special dividend at `yield` of the share price on the public float.
+    /// Costs cash, lifts sentiment immediately, resets the dividend-drought clock,
+    /// and (step 3) is the fastest way to end an activist campaign. Returns false
+    /// if private or unaffordable.
+    @discardableResult
+    func payDividend(yield: Double) -> Bool {
+        guard let pc = publicCompany else { return false }
+        let cost = dividendCost(yield: yield)
+        guard cost > 0, playerBalance >= cost else { return false }
+        playerBalance -= cost
+        totalDividendsPaid += cost
+        lastDividendTick = tick
+        marketSentiment = min(Simulation.sentimentCeiling, marketSentiment + min(0.15, max(0, yield) * 2.0))
+        logOps(.market, "\(pc.ticker) paid a dividend",
+               "Special dividend of \(compactMoneySim(cost)) to shareholders.")
+        return true
+    }
+
+    /// Repurchase `floatFraction` of the public float at the current price and
+    /// retire the shares: the player's stake rises (fewer shares outstanding) and
+    /// the float that fuels activists shrinks. Expensive when the price is high.
+    @discardableResult
+    func buyBackShares(floatFraction: Double) -> Bool {
+        guard let pc = publicCompany else { return false }
+        let shares = pc.floatShares * max(0, min(1, floatFraction))
+        guard shares > 0 else { return false }
+        let cost = Int((shares * currentSharePrice).rounded())
+        guard cost > 0, playerBalance >= cost else { return false }
+        playerBalance -= cost
+        totalBuybackSpend += cost
+        publicCompany?.sharesOutstanding = pc.sharesOutstanding - shares
+        if let updated = publicCompany {
+            logOps(.market, "\(updated.ticker) bought back stock",
+                   "Repurchased \(compactMoneySim(cost)) of shares; your stake is now \(Int((updated.playerStake*100).rounded()))%.")
+        }
+        return true
+    }
+
+    /// Issue new shares equal to `fraction` × current shares outstanding at the
+    /// current price: raises cash now, dilutes the player's stake (raising board
+    /// risk, step 4). Raises little when the price is depressed — the realistic
+    /// penalty for needing cash in a downturn.
+    @discardableResult
+    func secondaryOffering(fraction: Double) -> Bool {
+        guard let pc = publicCompany else { return false }
+        let newShares = pc.sharesOutstanding * max(0, fraction)
+        guard newShares > 0 else { return false }
+        let proceeds = Int((newShares * currentSharePrice).rounded())
+        guard proceeds > 0 else { return false }
+        publicCompany?.sharesOutstanding = pc.sharesOutstanding + newShares
+        playerBalance += proceeds
+        totalEquityRaised += proceeds
+        if let updated = publicCompany {
+            logOps(.market, "\(updated.ticker) secondary offering",
+                   "Raised \(compactMoneySim(proceeds)); your stake is now \(Int((updated.playerStake*100).rounded()))%.")
+        }
+        return true
     }
 
     #if DEBUG
@@ -2955,6 +3031,8 @@ final class Simulation {
         var integrationSpend = 0
         /// Equity raised via IPO / secondary offerings (capital-in).
         var equityRaised = 0
+        /// Dividends paid + buybacks — cash returned to shareholders (capital-out).
+        var dividendsPaid = 0, buybackSpend = 0
         let cash, netWorth: Int
     }
     private(set) var financeSnapshots: [FinanceSnapshot] = []
@@ -2970,6 +3048,7 @@ final class Simulation {
                         airlineAcquisition: totalAcquisitionPrice,
                         integrationSpend: totalIntegrationSpend + totalSenioritySpend + totalDiligenceSpend,
                         equityRaised: totalEquityRaised,
+                        dividendsPaid: totalDividendsPaid, buybackSpend: totalBuybackSpend,
                         cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
     }
 
@@ -3320,6 +3399,8 @@ final class Simulation {
         s.marketSentiment = marketSentiment
         s.displaySharePrice = displaySharePrice
         s.totalEquityRaised = totalEquityRaised
+        s.totalDividendsPaid = totalDividendsPaid
+        s.totalBuybackSpend = totalBuybackSpend
         s.totalIntegrationSpend = totalIntegrationSpend
         s.totalSenioritySpend = totalSenioritySpend
         s.hubs = hubs
@@ -3352,7 +3433,8 @@ final class Simulation {
                         hubSpend: f.hubSpend, hubLabor: f.hubLabor, clubRent: f.clubRent,
                         airlineAcquisition: f.airlineAcquisition,
                         integrationSpend: f.integrationSpend,
-                        equityRaised: f.equityRaised)
+                        equityRaised: f.equityRaised,
+                        dividendsPaid: f.dividendsPaid, buybackSpend: f.buybackSpend)
         }
         return s
     }
@@ -3417,6 +3499,9 @@ final class Simulation {
         marketSentiment = s.marketSentiment ?? 1.0
         displaySharePrice = s.displaySharePrice ?? 0
         totalEquityRaised = s.totalEquityRaised ?? 0
+        totalDividendsPaid = s.totalDividendsPaid ?? 0
+        totalBuybackSpend = s.totalBuybackSpend ?? 0
+        lastDividendTick = tick   // reset the income clock on load (transient)
         nextSentimentTick = tick + Simulation.ticksPerMonth
         totalIntegrationSpend = s.totalIntegrationSpend ?? 0
         totalSenioritySpend = s.totalSenioritySpend ?? 0
@@ -3470,6 +3555,7 @@ final class Simulation {
                             airlineAcquisition: f.airlineAcquisition ?? 0,
                             integrationSpend: f.integrationSpend ?? 0,
                             equityRaised: f.equityRaised ?? 0,
+                            dividendsPaid: f.dividendsPaid ?? 0, buybackSpend: f.buybackSpend ?? 0,
                             cash: f.cash, netWorth: f.netWorth)
         }
         if financeSnapshots.isEmpty { financeSnapshots = [financeSnapshotNow()] }

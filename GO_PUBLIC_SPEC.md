@@ -1,7 +1,7 @@
 # Go Public (IPO) — Design Spec (for designer review)
 
-Status: **Step 1 BUILT & verified (30/30 headless + live). Steps 2–5 pending.**
-All four forks locked below.
+Status: **Steps 1–2 BUILT & verified (step 1: 30/30 headless + live; step 2:
+37/37 headless). Steps 3–5 pending.** All four forks locked below.
 
 ### Decisions (designer, locked)
 1. **Board severity: TEETH — can oust you.** Sustained poor performance + lost
@@ -231,7 +231,14 @@ accumulators, and any active activist/board campaign state.
    everything persists nil-safe. Verified: gate, exact proceeds, invariant through
    IPO + 6 months public, sentiment stays bounded, price moves, save/load
    round-trip, legacy-save loads private.
-2. **Levers:** dividends, buybacks, secondary offerings + the Finance PUBLIC card.
+2. ~~**Levers:** dividends, buybacks, secondary offerings + the Finance PUBLIC
+   card.~~ **DONE (37/37 headless).** `payDividend`/`buyBackShares`/
+   `secondaryOffering` in Simulation.swift + read-side option math in
+   GoPublic.swift; the PUBLIC card gained dividend (2/5/8%) / buyback (10/25/50%
+   of float) / secondary (+5/10/20%) chips. Dividends + buybacks joined the cash
+   invariant (`totalDividendsPaid`/`totalBuybackSpend`, capital-out); secondary
+   proceeds feed `totalEquityRaised`. The income half of the string is a
+   dividend-drought sentiment penalty (grace 6mo, then −0.03/mo, reset on pay).
 3. **Activist investors** (decision cards, comply/refuse, escalation).
 4. **The board** (the chosen failure/constraint model) + its recap screen if (B/C).
 5. **Balance pass:** the multi-seed sweep discipline from acquisitions — is equity

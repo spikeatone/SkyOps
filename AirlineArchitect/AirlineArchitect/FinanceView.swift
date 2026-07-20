@@ -157,9 +157,37 @@ struct FinanceView: View {
                     }
                     ledgerLine("Your stake", String(format: "%.1f%%", pc.playerStake*100))
                     ledgerLine("Market cap", compactMoney(Int(sim.marketCap)))
-                    ledgerLine("Raised at IPO", compactMoney(sim.totalEquityRaised))
-                    Text("Levers — dividends, buybacks, a secondary offering — arrive next.")
-                        .font(.karla(10)).foregroundStyle(secondary)
+                    ledgerLine("Raised (IPO + secondary)", compactMoney(sim.totalEquityRaised))
+                    let risk = Simulation.controlRisk(stake: pc.playerStake)
+                    Text(risk.rawValue)
+                        .font(.karla(11, .semibold))
+                        .foregroundStyle(pc.playerStake >= 0.5 ? green : red)
+
+                    Divider().overlay(cardBorder.opacity(0.5)).padding(.vertical, 2)
+                    leverSection("DIVIDEND", "Pay shareholders — lifts sentiment, costs cash",
+                                 Simulation.dividendYieldOptions.map { y in
+                        let cost = sim.dividendCost(yield: y)
+                        return LeverOption(label: "\(Int(y*100))%", detail: "−\(compactMoney(cost))",
+                                           enabled: cost > 0 && sim.playerBalance >= cost, tint: red) {
+                            if sim.payDividend(yield: y) { Feedback.success() }
+                        }
+                    })
+                    leverSection("BUY BACK STOCK", "Shrink the float — raises your stake, defends control",
+                                 Simulation.buybackFloatOptions.map { fr in
+                        let cost = sim.buybackCost(floatFraction: fr)
+                        return LeverOption(label: "\(Int(fr*100))% float", detail: "−\(compactMoney(cost))",
+                                           enabled: cost > 0 && sim.playerBalance >= cost, tint: red) {
+                            if sim.buyBackShares(floatFraction: fr) { Feedback.success() }
+                        }
+                    })
+                    leverSection("SECONDARY OFFERING", "Sell new shares for cash — dilutes your stake",
+                                 Simulation.secondaryOptions.map { fr in
+                        let proceeds = sim.secondaryProceeds(fraction: fr)
+                        return LeverOption(label: "+\(Int(fr*100))%", detail: "+\(compactMoney(proceeds))",
+                                           enabled: proceeds > 0, tint: green) {
+                            if sim.secondaryOffering(fraction: fr) { Feedback.success() }
+                        }
+                    })
                 }
                 .padding(14).frame(maxWidth: .infinity, alignment: .leading)
                 .background(cardBG).clipShape(RoundedRectangle(cornerRadius: 4))
@@ -199,6 +227,39 @@ struct FinanceView: View {
             Text(label).font(.karla(13)).foregroundStyle(secondary)
             Spacer()
             Text(value).font(.karla(14, .semibold)).foregroundStyle(primary)
+        }
+    }
+
+    // MARK: Public-company levers (step 2) — dividend / buyback / secondary chips.
+    private struct LeverOption: Identifiable {
+        let id = UUID()
+        let label: String
+        let detail: String
+        let enabled: Bool
+        let tint: Color
+        let action: () -> Void
+    }
+
+    private func leverSection(_ title: String, _ subtitle: String, _ options: [LeverOption]) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.karla(11, .bold)).foregroundStyle(titleColor)
+            Text(subtitle).font(.karla(10)).foregroundStyle(secondary)
+            HStack(spacing: 6) {
+                ForEach(options) { opt in
+                    Button(action: opt.action) {
+                        VStack(spacing: 1) {
+                            Text(opt.label).font(.karla(12, .bold))
+                            Text(opt.detail).font(.karla(9, .semibold))
+                        }
+                        .foregroundStyle(opt.enabled ? opt.tint : secondary)
+                        .frame(maxWidth: .infinity).padding(.vertical, 6)
+                        .overlay(RoundedRectangle(cornerRadius: 4)
+                            .stroke(opt.enabled ? opt.tint.opacity(0.55) : cardBorder, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!opt.enabled)
+                }
+            }
         }
     }
 
@@ -415,6 +476,7 @@ struct FinanceView: View {
                 airlineAcquisition: sim.totalAcquisitionPrice,
                 integrationSpend: sim.totalIntegrationSpend + sim.totalSenioritySpend + sim.totalDiligenceSpend,
                 equityRaised: sim.totalEquityRaised,
+                dividendsPaid: sim.totalDividendsPaid, buybackSpend: sim.totalBuybackSpend,
                 cashStart: Simulation.startingCapital, cashEnd: sim.playerBalance, isTotal: true)
         case .thisMonth:
             return delta(from: s.last, toLive: true)
@@ -450,6 +512,8 @@ struct FinanceView: View {
             airlineAcquisition: d(sim.totalAcquisitionPrice, \.airlineAcquisition),
             integrationSpend: d(sim.totalIntegrationSpend + sim.totalSenioritySpend + sim.totalDiligenceSpend, \.integrationSpend),
             equityRaised: d(sim.totalEquityRaised, \.equityRaised),
+            dividendsPaid: d(sim.totalDividendsPaid, \.dividendsPaid),
+            buybackSpend: d(sim.totalBuybackSpend, \.buybackSpend),
             cashStart: base?.cash ?? Simulation.startingCapital,
             cashEnd: toLive ? sim.playerBalance : (end?.cash ?? sim.playerBalance),
             isTotal: false)
@@ -490,10 +554,17 @@ struct FinanceView: View {
                 ledgerRow("Hubs & clubs built", f.hubSpend, sign: .minus)
                 ledgerRow("Fuel hedges", f.hedgeSpend, sign: .minus)
                 ledgerRow("Debt service", f.debtService, sign: .minus)
+                if sim.isPublic || f.dividendsPaid > 0 || f.buybackSpend > 0 {
+                    ledgerRow("Dividends paid", f.dividendsPaid, sign: .minus)
+                    ledgerRow("Share buybacks", f.buybackSpend, sign: .minus)
+                }
                 Divider().overlay(cardBorder.opacity(0.5))
                 ledgerRow("Aircraft sales", f.saleProceeds, sign: .plus)
                 ledgerRow("Slot buybacks", f.offerIncome, sign: .plus)
                 ledgerRow("Loans drawn", f.loanProceeds, sign: .plus)
+                if sim.isPublic || f.equityRaised > 0 {
+                    ledgerRow("Equity raised", f.equityRaised, sign: .plus)
+                }
             }
         }
     }
@@ -660,11 +731,13 @@ struct PeriodFigures {
     var integrationSpend = 0
     /// Equity raised via IPO / secondary offerings.
     var equityRaised = 0
+    /// Dividends paid to shareholders + share buybacks (cash returned to owners).
+    var dividendsPaid = 0, buybackSpend = 0
     var cashStart, cashEnd: Int
     var isTotal: Bool
     var operatingProfit: Int { revenue - fees - operatingCost }
     var overhead: Int { leaseCost + insurance + maintenance + debtService + hubLabor + clubRent + integrationSpend }
-    var capitalOut: Int { acquisition + routeSpend + hedgeSpend + hubSpend + airlineAcquisition }
+    var capitalOut: Int { acquisition + routeSpend + hedgeSpend + hubSpend + airlineAcquisition + dividendsPaid + buybackSpend }
     var capitalIn: Int { saleProceeds + offerIncome + loanProceeds + equityRaised }
 }
 
