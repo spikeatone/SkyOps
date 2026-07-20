@@ -10,7 +10,12 @@
 import SwiftUI
 
 struct GameOverView: View {
+    /// The two failure paths — cash bankruptcy, or removal by the board of a
+    /// public company. Same recap layout; different headline + explanation.
+    enum Cause { case bankruptcy, boardOuster }
+
     let sim: Simulation
+    var cause: Cause = .bankruptcy
     let onRestart: () -> Void
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
@@ -21,14 +26,26 @@ struct GameOverView: View {
     private var secondary: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x64748B) }
     private let red = Color(skyHex: 0xFF5C5C)
 
+    private var headline: String { cause == .bankruptcy ? "BANKRUPT" : "OUSTED" }
+    private var icon: String { cause == .bankruptcy ? "airplane.circle" : "person.crop.circle.badge.xmark" }
+    private var message: String {
+        let name = sim.playerAirlineName ?? "The airline"
+        switch cause {
+        case .bankruptcy:
+            return "\(name) ran out of cash and its fleet was liquidated."
+        case .boardOuster:
+            return "\(name)'s board voted to remove you. Losing majority control while the share price languished cost you the airline."
+        }
+    }
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.7).ignoresSafeArea()
             VStack(spacing: 18) {
-                Image(systemName: "airplane.circle")
+                Image(systemName: icon)
                     .font(.system(size: 44, weight: .light)).foregroundStyle(red)
-                Text("BANKRUPT").font(.karla(28, .heavy)).foregroundStyle(red)
-                Text("\(sim.playerAirlineName ?? "The airline") ran out of cash and its fleet was liquidated.")
+                Text(headline).font(.karla(28, .heavy)).foregroundStyle(red)
+                Text(message)
                     .font(.karla(15)).foregroundStyle(secondary)
                     .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
 

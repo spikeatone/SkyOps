@@ -67,6 +67,8 @@ struct GameSnapshot: Codable {
     var totalBuybackSpend: Int? = nil
     var activistCampaign: ActivistCampaign? = nil
     var monthsBelowIPO: Int? = nil
+    var boardPressure: Double? = nil
+    var oustedByBoard: Bool? = nil
 
     // Hubs & Clubs (nil in pre-hub saves)
     var hubs: [String: Simulation.Hub]? = nil

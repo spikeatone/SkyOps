@@ -3289,7 +3289,7 @@ burden) lands. Do NOT ship a build with acquisitions enabled and step 3 missing.
   shrinking carriers both present, region scoping. Plus live in the Simulator,
   both themes.
 
-## Decided — Go Public / IPO (1.1; steps 1–3 of 5 BUILT)
+## Decided — Go Public / IPO (1.1; steps 1–4 of 5 BUILT)
 
 Full design in **`GO_PUBLIC_SPEC.md`**. A SECOND capital route beside loans
 (designer, mid-flight): list the airline, sell equity for cash, live with a
@@ -3419,11 +3419,45 @@ campaign state is `ActivistCampaign` (in GoPublic.swift, `Codable`).
   stake, comply ends it and charges exactly, a recovering price ends it, save/load
   persists the campaign, and the cash invariant holds through every path.
 
-### Step 3.5 — Simulator access, this session
+### Step 4 — the board (ouster = game over): BUILT (78/78 headless, cumulative)
+
+The top-tier threat, per the LOCKED decision (Teeth — the board can OUST you, a
+second game-over path beside bankruptcy).
+
+- **`boardPressure`** (0…1, persisted) builds ONLY when BOTH: the player is below
+  majority control (`boardControlThreshold` 0.5) AND performance is poor (price
+  below IPO, or an active activist campaign). `tickBoardMonthly` (off
+  `tickStockPrice`, after activists). At 1.0 → `oustByBoard()`.
+- **Majority control (≥50%) is TOTAL immunity** — you hold the votes; pressure can
+  never build. This is the legible, avoidable rule ("keep your stake above 50% or
+  perform"). Good performance while diluted also keeps pressure at 0 (it only
+  builds on poor performance).
+- **The trigger ACCELERATES with dilution** (spec): rate = 0.06 + 0.22·dilution +
+  0.05·min(escalation,4) per month, where dilution = (0.5 − stake)/0.5. At the
+  majority margin it's ~a year of poor performance; near-total dilution, a few
+  months. Activist escalation (step 3's `escalation`) feeds it directly.
+- **Ouster** sets `oustedByBoard` AND flips `isBankrupt`, so ALL the existing
+  game-over plumbing (autosave-skip, tick guards, restart-to-menu) applies
+  unchanged — only the recap differs. `tickStockPrice` now also guards `!isBankrupt`
+  so the market freezes at game over.
+- **Recap:** `GameOverView` gained a `Cause` (bankruptcy / boardOuster) — the
+  ouster screen reads "OUSTED · the board voted to remove you…" with a
+  `person.crop.circle.badge.xmark` icon; ContentView passes the cause off
+  `oustedByBoard`. **Visceral warning:** the Finance PUBLIC card shows a red
+  "Board patience" bar (Watching → Weighing your removal) once pressure builds
+  below majority.
+- **Persisted** nil-safe (`boardPressure`, `oustedByBoard`); no new cash-invariant
+  terms (ouster moves no cash).
+- Verified **78/78 headless** (cumulative): ouster of a diluted + poor-performing
+  player (flags + pressure ceiling), majority immunity, good-performance immunity,
+  recovery by buying back to majority calms the board, pressure persists, and the
+  cash invariant holds throughout.
+
+### Simulator access, this session
 The designer is working REMOTE from an iPad, so the `request_access` dialog (which
 appears on the Mac desktop) can't be approved — live tap-through of the PUBLIC
-card + activist cards is deferred to a Mac session. Steps 2–3 are headless-verified
-only so far (the harness has a proven catch rate here).
+card / activist / ouster screens is deferred to a Mac session. Steps 2–4 are
+headless-verified only so far (the harness has a proven catch rate here).
 
 ## Decided — Hubs & Clubs (built to the designer-reviewed spec)
 

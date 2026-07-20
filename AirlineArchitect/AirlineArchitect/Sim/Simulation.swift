@@ -877,10 +877,11 @@ final class Simulation {
     /// Per-tick: ease the displayed price toward its target, and refresh sentiment
     /// once per sim-month. Called from the tick loop.
     private func tickStockPrice() {
-        guard isPublic else { return }
+        guard isPublic, !isBankrupt else { return }   // frozen once the game is over
         if tick >= nextSentimentTick {
             marketSentiment = nextSentiment()
             tickActivistsMonthly()
+            tickBoardMonthly()
             nextSentimentTick += Simulation.ticksPerMonth
         }
         // Ease per sim-day (the target moves as net worth/sentiment move).
@@ -1146,6 +1147,60 @@ final class Simulation {
         logOps(.structural, "Route closed",
                "\(r.originCode) ↔\u{FE0E} \(r.destCode) closed under activist pressure")
         return true
+    }
+
+    // MARK: - Public company: the board (step 4 — ouster = game over)
+
+    /// The board's impatience, 0…1. Builds only when the player has lost majority
+    /// control AND performance is poor; at 1.0 the board OUSTS the player — a
+    /// second game-over path beside bankruptcy. Majority control (≥50%) is total
+    /// immunity. Persisted so the board's patience doesn't reset on load.
+    private(set) var boardPressure = 0.0
+    /// Set when the board removes the player — drives the ouster recap. Also flips
+    /// `isBankrupt`, so every existing game-over path (autosave-skip, tick guards,
+    /// restart) applies unchanged; only the recap screen differs.
+    private(set) var oustedByBoard = false
+
+    /// At/above this stake the board cannot act — the player holds the votes.
+    static let boardControlThreshold = 0.5
+
+    /// Once per sim-month (from `tickStockPrice`, after activists): build or bleed
+    /// the board's impatience, and oust at 1.0.
+    private func tickBoardMonthly() {
+        guard isPublic, !isBankrupt, let pc = publicCompany else { return }
+        let stake = pc.playerStake
+        // Majority control is complete immunity — you hold the votes.
+        if stake >= Simulation.boardControlThreshold {
+            boardPressure = max(0, boardPressure - 0.25)
+            return
+        }
+        let belowIPO = displaySharePrice < pc.ipoPrice
+        let escalation = activistCampaign?.escalation ?? 0
+        let poorPerformance = belowIPO || escalation > 0
+        guard poorPerformance else { boardPressure = max(0, boardPressure - 0.20); return }
+
+        // How fast the board moves: it ACCELERATES with dilution (spec — "the
+        // ouster trigger accelerates the more the player dilutes") and with how
+        // far the activist has escalated. At the majority margin it's slow (~a
+        // year of poor performance); near-total dilution, only a few months.
+        let dilution = (Simulation.boardControlThreshold - stake) / Simulation.boardControlThreshold  // 0…1
+        let rate = 0.06 + 0.22 * dilution + 0.05 * Double(min(escalation, 4))
+        let was = boardPressure
+        boardPressure = min(1.0, boardPressure + rate)
+        if boardPressure >= 1.0 { oustByBoard(); return }
+        if was < 0.5, boardPressure >= 0.5 {
+            logOps(.market, "\(pc.ticker): the board is restless",
+                   "The board is weighing your removal. Rebuild your stake above 50% or lift the share price.")
+        }
+    }
+
+    private func oustByBoard() {
+        oustedByBoard = true
+        isBankrupt = true   // reuse the game-over gate/plumbing; only the recap differs
+        if let pc = publicCompany {
+            logOps(.market, "\(pc.ticker): ousted by the board",
+                   "Control lost and the stock in the doldrums — the board voted you out.")
+        }
     }
 
     #if DEBUG
@@ -3560,6 +3615,8 @@ final class Simulation {
         s.totalBuybackSpend = totalBuybackSpend
         s.activistCampaign = activistCampaign
         s.monthsBelowIPO = monthsBelowIPO
+        s.boardPressure = boardPressure
+        s.oustedByBoard = oustedByBoard
         s.totalIntegrationSpend = totalIntegrationSpend
         s.totalSenioritySpend = totalSenioritySpend
         s.hubs = hubs
@@ -3662,6 +3719,8 @@ final class Simulation {
         totalBuybackSpend = s.totalBuybackSpend ?? 0
         activistCampaign = s.activistCampaign
         monthsBelowIPO = s.monthsBelowIPO ?? 0
+        boardPressure = s.boardPressure ?? 0
+        oustedByBoard = s.oustedByBoard ?? false
         lastDividendTick = tick   // reset the income clock on load (transient)
         nextSentimentTick = tick + Simulation.ticksPerMonth
         totalIntegrationSpend = s.totalIntegrationSpend ?? 0

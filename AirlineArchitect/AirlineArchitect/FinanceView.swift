@@ -162,6 +162,25 @@ struct FinanceView: View {
                     Text(risk.rawValue)
                         .font(.karla(11, .semibold))
                         .foregroundStyle(pc.playerStake >= 0.5 ? green : red)
+                    // Board pressure — visceral once it's actually building. Only
+                    // possible below majority control (≥50% = immunity).
+                    if pc.playerStake < Simulation.boardControlThreshold, sim.boardPressure > 0.01 {
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Text("Board patience").font(.karla(10, .semibold)).foregroundStyle(secondary)
+                                Spacer()
+                                Text(sim.boardPressure >= 0.5 ? "Weighing your removal" : "Watching")
+                                    .font(.karla(10, .semibold)).foregroundStyle(sim.boardPressure >= 0.5 ? red : secondary)
+                            }
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 2).fill(cardBorder)
+                                    RoundedRectangle(cornerRadius: 2).fill(red)
+                                        .frame(width: geo.size.width * min(1, sim.boardPressure))
+                                }
+                            }.frame(height: 4)
+                        }
+                    }
 
                     Divider().overlay(cardBorder.opacity(0.5)).padding(.vertical, 2)
                     leverSection("DIVIDEND", "Pay shareholders — lifts sentiment, costs cash",

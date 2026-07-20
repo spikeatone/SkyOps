@@ -173,7 +173,7 @@ struct ContentView: View {
         // Game over — bankruptcy. Modal recap + fresh start (new sim instance).
         .overlay {
             if sim.isBankrupt {
-                GameOverView(sim: sim) {
+                GameOverView(sim: sim, cause: sim.oustedByBoard ? .boardOuster : .bankruptcy) {
                     if let s = currentSlot { GameStore.clear(slot: s) }  // failed airline gone for good
                     sim = Simulation()
                     gameID = UUID()

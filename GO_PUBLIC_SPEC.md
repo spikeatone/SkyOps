@@ -1,7 +1,8 @@
 # Go Public (IPO) — Design Spec (for designer review)
 
-Status: **Steps 1–3 BUILT & verified (step 1: 30/30 headless + live; steps 2–3:
-60/60 headless cumulative). Steps 4–5 pending.** All four forks locked below.
+Status: **Steps 1–4 BUILT & verified (step 1: 30/30 headless + live; steps 2–4:
+78/78 headless cumulative). Step 5 (balance sweep) pending.** All four forks
+locked below.
 
 ### Decisions (designer, locked)
 1. **Board severity: TEETH — can oust you.** Sustained poor performance + lost
@@ -245,7 +246,12 @@ accumulators, and any active activist/board campaign state.
    forces the action (via the step-2 levers), refuse grows their stake + drops
    sentiment + increments `escalation` (which step 4's board reads). Paying any
    dividend or a recovering price ends the campaign. `ActivistCampaign` persists.
-4. **The board** (the chosen failure/constraint model) + its recap screen if (B/C).
+4. ~~**The board** (the chosen failure/constraint model) + its recap screen if
+   (B/C).~~ **DONE (78/78 headless cumulative).** Teeth (B): `boardPressure`
+   builds only when below majority AND performing poorly, accelerating with
+   dilution + activist escalation; at 1.0 the board ousts (game over) with an
+   "OUSTED" recap (GameOverView.Cause). Majority control = total immunity. A red
+   "Board patience" bar in the PUBLIC card makes it visceral.
 5. **Balance pass:** the multi-seed sweep discipline from acquisitions — is equity
    a real alternative to debt, is the price avoidably survivable, does mismanagement
    actually cost you? Tune `valuationMultiple`, float ceiling, trigger thresholds.
