@@ -4202,8 +4202,10 @@ final class Simulation {
     }()
     private static func computeWeatherZone(_ ap: Airport) -> WeatherZone {
         let r = Airline.region(ap.code), lat = ap.lat
-        // Tropical Atlantic/Gulf/Caribbean/Pacific-Mexico hurricane belt.
-        if r == .caribbean || r == .centralAmerica || ((r == .us || r == .mexico) && lat >= 10 && lat < 31) { return .hurricane }
+        // Hurricane basin: Caribbean + Central America (inherently coastal islands/
+        // isthmus) plus the CURATED coastal Gulf/Atlantic/E-Pacific/Hawaii set.
+        // Inland cities get remnants only (baseline weather), never a named hurricane.
+        if r == .caribbean || r == .centralAmerica || Airport.hurricaneProneCodes.contains(ap.code) { return .hurricane }
         if r == .asia && lat >= 5 && lat <= 30 { return .monsoon }   // South/SE Asia monsoon
         if lat >= 37 { return .northWinter }                          // temperate northern winter
         if lat <= -33 { return .southWinter }                         // temperate southern winter

@@ -98,6 +98,28 @@ final class Airport: Identifiable {
         "SNA": (1320, 420), "SAN": (1410, 390), "SJC": (1410, 390),
     ]
     static func hasCurfew(_ code: String) -> Bool { curfews[code] != nil }
+
+    /// Airports genuinely in a hurricane basin (coastal Gulf / Atlantic / E-Pacific
+    /// + Hawaii). Used by the seasonal-weather classifier so a "Hurricane" ground
+    /// stop only appears where hurricanes actually strike. INLAND cities (Mexico
+    /// City, Guadalajara, León, Oaxaca, Monterrey, San Antonio, Austin, Jackson…)
+    /// get remnant rain at most — that's just baseline weather, NOT a named
+    /// hurricane — so they're deliberately excluded (designer: "remnants of a
+    /// hurricane, but never a hurricane"). Caribbean + Central America airports are
+    /// inherently coastal, so those whole regions qualify via computeWeatherZone and
+    /// aren't listed here. Guam gets typhoons (not modeled) so it's left out too.
+    static let hurricaneProneCodes: Set<String> = [
+        // US Gulf & Atlantic coast (incl. Louisiana, which takes direct hits inland)
+        "MIA", "FLL", "RSW", "TPA", "MCO", "MSY", "HOU", "IAH", "BTR", "CHS", "ORF",
+        // Hawaii (real, if infrequent, Pacific hurricane season)
+        "HNL", "OGG", "KOA", "ITO", "LIH",
+        // US Caribbean territories
+        "SJU", "STT",
+        // Mexico — Gulf/Caribbean coast
+        "CUN", "CZM", "MID", "VER",
+        // Mexico — Pacific coast
+        "PVR", "SJD", "MZT", "CUL", "HMO",
+    ]
     /// "2300-0600" style label for the airport card.
     static func curfewLabel(_ code: String) -> String? {
         guard let w = curfews[code] else { return nil }
