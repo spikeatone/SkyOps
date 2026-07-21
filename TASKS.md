@@ -27,6 +27,16 @@ as the work, not "later."
 - [x] More vertical gap between a ground-stopped airport's ring and its weather
       glyph (designer — too tight after the 50% glyph bump). Glyph y-offset
       r+8→r+17 × es. Verified live (DEN/MCI zoomed — glyph clears the ring).
+- [x] Weather/curfew glyph BELOW the ring (designer — "name above, icon below").
+      MapView glyph y flips from y-(r+17) to y+(r+13) × es. Verified live
+      (DEN/MCI zoomed — name label above the dot, snowflake below).
+- [x] Only regionally-plausible weather (designer — "MCI would never have a
+      hurricane"). Replaced computeWeatherZone's lat-10-31 US/Mexico band (swept
+      in inland Kansas City / Mexico City / Guadalajara / Oaxaca / Monterrey /
+      San Antonio / Austin / Guam, missed coastal Charleston / Norfolk) with a
+      curated Airport.hurricaneProneCodes set of 27 real coastal airports;
+      Caribbean/Central America still auto-hurricane. 43/43 headless, incl. a
+      global no-stray-inland-hurricane invariant. MCI → northWinter.
 
 ## 1.1.x — LOD realism / delight polish batch (designer request)
 Roadmap the designer greenlit: #1 registration prefixes, #5 more milestones, #2
