@@ -67,3 +67,75 @@ Welcome to Airline Architect — grow a global airline from a single jet.
 Feedback is always welcome. Happy flying.
 ------------------------------------------------------------------------------
 
+
+# App Review Information → Notes (reviewer notes)
+
+Supersedes the 1.0 draft in RELEASE_STATUS.md. Updated for 1.1 (build 32): the
+Finance plan card is now labelled "FREE PLAN" (was "Your Plan") and lives under
+the Finance tab's REPORTS view, which is shown by default. ~2,300 chars.
+
+------------------------------------------------------------------------------
+Airline Architect is a single-player airline-management simulation. There is no
+account system and no login, so no demo credentials are required — the app opens
+directly into the game.
+
+REACHING THE IN-APP PURCHASE
+
+The app is free to play with the complete feature set. The free tier limits the
+SIZE of the player's network rather than locking features:
+
+  - Maximum 3 aircraft
+  - Maximum 2 open routes
+
+The subscription ("Airline Architect Pro", offered monthly or annually) removes
+both limits. Three ways to reach the paywall:
+
+  1. FASTEST — Finance tab (rightmost). It opens on the "REPORTS" view, which
+     shows a "FREE PLAN" card at the top with a live usage count and an "Upgrade"
+     button. Tapping Upgrade opens the paywall directly, with no setup needed.
+
+  2. Fleet tab > Marketplace. Tap "Buy new" on aircraft until 3 are owned;
+     attempting a 4th opens the paywall. (Starting cash is $20M, so choose an
+     inexpensive aircraft — use the "RJ" category filter at the top of the
+     Marketplace, or a turboprop.)
+
+  3. Network tab > Open Route. After 2 routes are open, opening a 3rd shows the
+     paywall.
+
+"Restore Purchases" is at the bottom of the paywall screen.
+
+FIRST LAUNCH
+
+On first launch the app asks for an airline name, a 2-letter tail code, and a
+starting region, then offers an optional walkthrough that can be skipped.
+
+GAMEPLAY NOTES FOR TESTING
+
+  - The simulation runs continuously and does not pause. Flights take several
+    in-game hours, so aircraft will not appear to move much in real time. Use the
+    speed control at the bottom of the Network tab (up to 25x) to advance time
+    quickly and see revenue accumulate.
+  - Aircraft need crew. If one sits idle at the gate, open the Crews tab and hire
+    additional crew — crews follow real duty and rest limits, so a single crew
+    cannot fly continuously. This is intended behavior, not a defect.
+  - The map supports pan and pinch-to-zoom. Tapping an aircraft or airport opens
+    its detail card.
+  - Saved games sync across the user's own devices via iCloud key-value storage.
+    No game data is transmitted to us, and there is no server.
+
+REAL-WORLD REFERENCES
+
+The app references real airports, aircraft types, and airline names as factual
+reference data for the simulation (text only — no logos, liveries, or branding,
+and no affiliation or endorsement is implied).
+
+PRIVACY
+
+The app collects no personal data and contains no analytics or advertising SDKs.
+RevenueCat is used solely to verify subscription status. This matches the "Data
+Not Collected" declaration and the published privacy policy.
+
+Thank you for reviewing. Any questions: postmarkdigitalco@gmail.com
+------------------------------------------------------------------------------
+
+
