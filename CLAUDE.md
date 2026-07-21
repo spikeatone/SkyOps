@@ -3721,6 +3721,49 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
     NOT yet driven live (the feature needs an established hub, which the
     Simulator tap-glitch blocks this session — a real hub-having tester can
     exercise it immediately).
+- **HUB PAYBACK CHART (NETWORK ▸ Hubs drawer) — DONE (1.1.x).** Each hub's
+  drawer now shows a "HUB P&L" payback line — the direct analog of the Routes
+  `RouteProfitChart`: cumulative net of the routes the hub concentrates,
+  measured against the hub's facility cost, with a dashed $0 break-even, red
+  below / mint above (split at each crossing), and a mint recoup marker +
+  "Recouped in ~N mo · <date>" caption. **FRAMING (deliberate, labelled in the
+  subtitle "routes through DEN − hub & club costs"):** this is the hub-as-a-whole
+  bet (spoke-route net minus facility cost), NOT the hub's isolated MARGINAL
+  uplift — that's an unmeasurable counterfactual (the routes earn with or without
+  the hub). Labelled so a player can't misread it as "the hub prints money."
+  - **Data model — new, because a hub carried NO per-airport time series** (`Hub`
+    only had establishedTick/hasClub/clubOpenedTick, and hub costs were GLOBAL
+    totals). Added `Simulation.HubLedger` (per hub: establishCost + clubBuildCost
+    + laborPaid + rentPaid running totals, + a `[HubSnapshot]` of monthly
+    {tick, spokeNet, facilityCost}). `hubSpokeNet(_)` sums cumulativeNet over open
+    + closed routes touching the code; `hubFacilityCost(_)` sums the ledger;
+    `hubPaybackNow(_)` is the live trailing point. A monthly snapshot appends in
+    `tickHubBilling`; the establish "hole" seeds at `establishHub`.
+  - **CASH INVARIANT UNTOUCHED — the ledger only RECORDS spend already deducted
+    and tracked globally** (`totalHubLabor`/`totalClubRent`/`totalHubSpend`), so
+    it adds NO new cash flow. Do not add ledger terms to the invariant.
+  - **Legacy/acquisition-safe:** `hubLedgers` persists as an optional
+    GameSnapshot field (nil in pre-ledger saves); on restore any hub missing a
+    ledger is backfilled (establishCost from the formula). Acquisition-inherited
+    hubs (`inheritHubs`) get a ledger via `ensureHubLedger`. Monthly snapshots
+    are CAPPED (`maxHubSnapshots = 120`, oldest dropped — deliberately bounded
+    after the unbounded-`Route.history` save-crash).
+  - **`HubProfitChart` (HubsPanel.swift)** is theme-aware (dark mint/red +
+    light #10B981/#D70000) and takes `tick: sim.displayTick` as a CHANGING VALUE
+    INPUT — the documented Canvas-freeze avoidance (a stable `route`/`sim`-only
+    input freezes the Canvas; this is the same fix RouteProfitChart uses).
+  - **Verified:** 36/36 headless (`aa-1.1.x/HubChartMain.swift` — ledger accrual
+    == formula × billed months, snapshot cap, spokeNet/facilityCost math,
+    invariant residual == exactly the un-persisted `devInjectCash` after
+    save/load, legacy backfill, decommission drops the ledger) PLUS the explicit
+    payback SERIES printed for a well-crewed flying fleet: −$6.2M establish hole
+    → crosses $0 between month 1–2 → climbs to +$152M by month 24 (exercises red
+    → recoup marker → mint → "Recouped" caption). PLUS live in the Simulator,
+    BOTH THEMES (renders, no freeze, correct break-even/labels/subtitle). NOTE:
+    an UNATTENDED or crew-limited run shows the line DESCENDING (spoke net stalls
+    on unresolved AOG/crew holds while facility cost climbs) — that's an honest
+    depiction of a starved hub, not a bug; a well-crewed flying fleet climbs and
+    recoups (per the harness series).
 - **Verification (all clean)**: 70/70 headless hub/club suite (lifecycle,
   exact cost formulas, billing, suspension-and-revert, sale/decommission,
   persistence round-trip incl. legacy saves, AOG-at-hub timer 135 +

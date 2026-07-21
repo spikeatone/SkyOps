@@ -81,6 +81,8 @@ struct GameSnapshot: Codable {
     var totalHubSpend: Int? = nil
     var totalHubLabor: Int? = nil
     var totalClubRent: Int? = nil
+    // Per-hub payback ledgers (nil in pre-ledger saves; backfilled on restore).
+    var hubLedgers: [String: Simulation.HubLedger]? = nil
 
     // Camera
     var cameraZoom = 1.0

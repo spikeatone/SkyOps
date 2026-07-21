@@ -16,6 +16,13 @@ group never compiles them into the build.
   ALL flights (incl. dropped), the cash invariant holds under heavy flying, a
   save/load round-trip keeps history capped, and a pre-1.1 save (nil totals + full
   history) recomputes its aggregates and caps on load. (18/18 green when last run.)
+- **`HubChartMain.swift`** — verifies the per-hub payback ledger feeding the Hubs
+  panel's payback chart: establish/club/labor/rent accrue exactly, monthly
+  snapshots append + stay within `maxHubSnapshots`, `hubSpokeNet`/`hubFacilityCost`
+  math, the cash invariant is UNTOUCHED (it only records already-tracked spend — the
+  restored gap is exactly the un-persisted `devInjectCash`), a save/load round-trip
+  preserves ledgers, a legacy no-ledger save is backfilled on restore, and
+  decommission drops the ledger. (36/36 green when last run.)
 
 ## How to run
 The entry file must be named `main.swift` (top-level `MainActor.assumeIsolated {…}`).

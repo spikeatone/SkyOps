@@ -16,6 +16,22 @@ actual technical detail on all of it; this file is just the task-tracking
 layer. Don't let it drift this far again — update it in the same session
 as the work, not "later."
 
+## 1.1.x (maintenance / polish line)
+
+- [x] HUB PAYBACK CHART — BUILT. Each hub's NETWORK ▸ Hubs drawer now shows a
+      "HUB P&L" payback line (the Routes `RouteProfitChart` analog): cumulative
+      spoke-route net vs the hub's facility cost (establish + club + labor +
+      rent), dashed $0 break-even, red-below / mint-above, recoup marker +
+      "Recouped in ~N mo" caption. New `Simulation.HubLedger` (per-hub running
+      costs + capped monthly snapshots) feeds it — records already-tracked spend
+      only, so the cash invariant is UNTOUCHED; persisted nil-safe, legacy/
+      acquired hubs backfilled on restore. `HubProfitChart` is theme-aware +
+      value-input (Canvas-freeze-safe). Verified 36/36 headless
+      (`aa-1.1.x/HubChartMain.swift`) incl. an explicit climbing-to-recoup
+      series, + live in the Simulator both themes. See CLAUDE.md "HUB PAYBACK
+      CHART". NOTE: an unattended/crew-starved run shows the line descending
+      (honest depiction of a starved hub); a well-crewed flying fleet climbs.
+
 ## Playtest feedback batch (designer, post-build-18 playtest)
 
 Done this session:

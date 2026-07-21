@@ -240,6 +240,33 @@ final class Simulation {
     private(set) var totalClubRent = 0    // club rent bills (overhead)
     private var nextHubBillTick = 0
 
+    // MARK: Per-hub payback tracking (feeds the Hubs-panel payback chart)
+    //
+    // A hub carries no per-airport time series in `Hub` itself, and hub costs are
+    // tracked only as GLOBAL totals above — so charting a hub's payback over time
+    // needs its own record. `HubLedger` accumulates this hub's facility spend
+    // (establish + club build + labor + rent) plus a monthly payback snapshot.
+    // It ONLY records spend that's already deducted/tracked globally, so the
+    // sacred Finance cash invariant is unaffected (no new cash flow). Legacy saves
+    // and acquisition-inherited hubs get a ledger lazily (`ensureHubLedger`).
+    // Monthly snapshots are capped (ints only, tiny) — deliberately bounded after
+    // the save-size crash that unbounded `Route.history` caused.
+    struct HubSnapshot: Codable {
+        var tick: Int
+        var spokeNet: Int      // cumulative net of routes touching the hub, at this tick
+        var facilityCost: Int  // cumulative hub+club establish/build + labor + rent, at this tick
+        var payback: Int { spokeNet - facilityCost }
+    }
+    struct HubLedger: Codable {
+        var establishCost: Int
+        var clubBuildCost: Int = 0
+        var laborPaid: Int = 0
+        var rentPaid: Int = 0
+        var monthly: [HubSnapshot] = []   // capped at maxHubSnapshots (oldest dropped)
+    }
+    private(set) var hubLedgers: [String: HubLedger] = [:]
+    static let maxHubSnapshots = 120       // ~10 sim-years of monthly points; bounded on purpose
+
     // All DESIGNED pacing (spec'd, tunable).
     static let hubMinRoutes = 5
     static let hubBonusRateHub = 0.15          // amplified per-spoke demand rate (base 0.08)
@@ -304,6 +331,43 @@ final class Simulation {
         return Int((20_000 + 800 * paxM).rounded())
     }
 
+    // MARK: Hub payback (chart data)
+
+    /// Cumulative net of ALL player routes (open + closed) touching this airport —
+    /// the "return" side of the hub-portfolio payback (routes the hub concentrates,
+    /// NOT the hub's isolated marginal uplift, which is an unmeasurable counterfactual).
+    func hubSpokeNet(_ code: String) -> Int {
+        (playerRoutes + closedPlayerRoutes)
+            .filter { $0.originCode == code || $0.destCode == code }
+            .reduce(0) { $0 + $1.cumulativeNet }
+    }
+    /// Total facility spend booked to this hub (establish + club build + labor + rent).
+    /// Falls back to the establish formula for a hub with no ledger yet (legacy/acquired).
+    func hubFacilityCost(_ code: String) -> Int {
+        guard let l = hubLedgers[code] else { return airport(code).map { hubEstablishCost($0) } ?? 0 }
+        return l.establishCost + l.clubBuildCost + l.laborPaid + l.rentPaid
+    }
+    /// Live payback point (spoke net − facility cost) — the chart's trailing value.
+    func hubPaybackNow(_ code: String) -> Int { hubSpokeNet(code) - hubFacilityCost(code) }
+
+    /// Create a ledger for a hub that doesn't have one (real establish path passes
+    /// the actual charged cost; legacy/acquired hubs approximate from the formula).
+    /// Seeds the starting "hole" snapshot so a fresh hub's chart begins at −establishCost.
+    private func ensureHubLedger(_ code: String, establishCost: Int? = nil) {
+        guard hubLedgers[code] == nil else { return }
+        let est = establishCost ?? (airport(code).map { hubEstablishCost($0) } ?? 0)
+        hubLedgers[code] = HubLedger(establishCost: est)
+        appendHubSnapshot(code)
+    }
+    /// Append one monthly payback snapshot for a hub (capped, oldest dropped).
+    private func appendHubSnapshot(_ code: String) {
+        guard hubLedgers[code] != nil else { return }
+        hubLedgers[code]!.monthly.append(
+            HubSnapshot(tick: tick, spokeNet: hubSpokeNet(code), facilityCost: hubFacilityCost(code)))
+        let over = hubLedgers[code]!.monthly.count - Simulation.maxHubSnapshots
+        if over > 0 { hubLedgers[code]!.monthly.removeFirst(over) }
+    }
+
     @discardableResult
     func establishHub(at code: String) -> Bool {
         guard hubEligible(code), let ap = airport(code) else { return false }
@@ -313,6 +377,7 @@ final class Simulation {
         playerBalance -= cost
         totalHubSpend += cost
         hubs[code] = Hub(establishedTick: tick)
+        ensureHubLedger(code, establishCost: cost)
         logOps(.structural, "Hub established at \(code)",
                "\(playerAirlineName ?? "Your airline") invested \(dollars(cost)) in a new hub", airportCode: code)
         return true
@@ -328,6 +393,8 @@ final class Simulation {
         hub.hasClub = true
         hub.clubOpenedTick = tick
         hubs[code] = hub
+        ensureHubLedger(code)
+        hubLedgers[code]?.clubBuildCost += cost
         logOps(.structural, "\(clubName) opens at \(code)",
                "Premium lounge built for \(dollars(cost)) — loyalty starts here", airportCode: code)
         return true
@@ -338,6 +405,7 @@ final class Simulation {
     func decommissionHub(at code: String) {
         guard hubs[code] != nil else { return }
         hubs[code] = nil
+        hubLedgers[code] = nil
         logOps(.structural, "Hub decommissioned", "\(code) hub closed — the build-out is written off", airportCode: code)
     }
 
@@ -347,14 +415,19 @@ final class Simulation {
         guard !hubs.isEmpty, tick >= nextHubBillTick else { return }
         nextHubBillTick = tick + Simulation.ticksPerMonth
         for (code, hub) in hubs {
+            ensureHubLedger(code)
             let labor = hubMonthlyLabor(code)
             playerBalance -= labor
             totalHubLabor += labor
+            hubLedgers[code]?.laborPaid += labor
             if hub.hasClub, let ap = airport(code) {
                 let rent = clubMonthlyRent(ap)
                 playerBalance -= rent
                 totalClubRent += rent
+                hubLedgers[code]?.rentPaid += rent
             }
+            // One monthly payback point per hub (facility cost is now current for the month).
+            appendHubSnapshot(code)
         }
     }
 
@@ -390,6 +463,7 @@ final class Simulation {
         playerBalance += offer.price
         totalOfferIncome += offer.price
         hubs[offer.airportCode] = nil          // club (if any) closes with the sale
+        hubLedgers[offer.airportCode] = nil
         rivalHubs[offer.airportCode] = offer.rival
         logOps(.structural, "Hub SOLD to \(offer.rival)",
                "\(offer.airportCode) is now a \(offer.rival) hub — \(dollars(offer.price)) banked, gates gone for good",
@@ -1667,6 +1741,7 @@ final class Simulation {
     private func inheritHubs(from p: CompetitorProfile) {
         for code in p.hubCodes where hubs[code] == nil {
             hubs[code] = Hub(establishedTick: tick)
+            ensureHubLedger(code)   // inherited hub still gets a payback ledger
             rivalHubs[code] = nil   // no longer a rival's — it's in the group now
         }
     }
@@ -3784,6 +3859,7 @@ final class Simulation {
         s.totalSenioritySpend = totalSenioritySpend
         s.hubs = hubs
         s.rivalHubs = rivalHubs
+        s.hubLedgers = hubLedgers
         s.totalHubSpend = totalHubSpend
         s.totalHubLabor = totalHubLabor
         s.totalClubRent = totalClubRent
@@ -3905,6 +3981,14 @@ final class Simulation {
         totalSenioritySpend = s.totalSenioritySpend ?? 0
         hubs = s.hubs ?? [:]
         rivalHubs = s.rivalHubs ?? [:]
+        // Payback ledgers: adopt saved ones; backfill any hub missing a ledger
+        // (pre-ledger 1.1 save, or an acquisition-inherited hub) so the chart has
+        // a baseline. No snapshot append here — order-independent; the chart's
+        // live trailing point + forward monthly snapshots fill it in.
+        hubLedgers = s.hubLedgers ?? [:]
+        for code in hubs.keys where hubLedgers[code] == nil {
+            hubLedgers[code] = HubLedger(establishCost: airport(code).map { hubEstablishCost($0) } ?? 0)
+        }
         totalHubSpend = s.totalHubSpend ?? 0
         totalHubLabor = s.totalHubLabor ?? 0
         totalClubRent = s.totalClubRent ?? 0
