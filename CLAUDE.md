@@ -1324,8 +1324,15 @@ where numbers are involved.
   so `xcodebuild -scheme AirlineArchitect`), the entitlements file, the app
   struct (`AirlineArchitectApp`), the logo type (`SkyOpsLogo` → `AppLogo`),
   and the **bundle id** (`Postmark-Digital.SkyOps` → `Postmark-Digital.AirlineArchitect`)
-  all carry the new name. `CFBundleDisplayName` = "Airline Architect" (in the
-  merged `Info.plist`). The default blank-name airline is now "New Airline"
+  all carry the new name. **HOME-SCREEN NAME IS "Airline Arch" ON PURPOSE (designer
+  confirmed, build 33):** the `Info.plist` sets `CFBundleDisplayName` = "Airline
+  Architect", but the app target's build setting `INFOPLIST_KEY_CFBundleDisplayName
+  = "Airline Arch"` OVERRIDES it (INFOPLIST_KEY_* wins over the merged plist), so
+  the icon label is "Airline Arch" — short enough to avoid a home-screen ellipsis.
+  This is NOT a bug to "fix": the designer was asked directly at the build-33 cut
+  and chose to keep "Airline Arch". Leave both configs (Debug + Release) as-is. (The
+  App Store listing name, the in-app wordmark, and `CFBundleName` all still read the
+  full "Airline Architect".) The default blank-name airline is now "New Airline"
   (was "SkyOps Air"). Identifiers use the NO-SPACE `AirlineArchitect`; the
   human display name uses the space. **Deliberately still named SkyOps** (not
   a miss): the git REPO directory (`GitHub/SkyOps`), the Figma file
