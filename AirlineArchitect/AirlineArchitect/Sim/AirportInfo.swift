@@ -293,6 +293,7 @@ extension Airport {
         "NCE": .init(name: "Nice Côte d'Azur Airport", city: "Nice, France", operationsPerYear: 160_000, runways: 2, longestRunwayFt: 9_678, metroPopulation: 1_000_000, annualPassengers: 14_000_000),
         "NAP": .init(name: "Naples International Airport", city: "Naples, Italy", operationsPerYear: 90_000, runways: 1, longestRunwayFt: 8_622, metroPopulation: 3_100_000, annualPassengers: 12_000_000),
         "EDI": .init(name: "Edinburgh Airport", city: "Edinburgh, United Kingdom", operationsPerYear: 130_000, runways: 2, longestRunwayFt: 8_400, metroPopulation: 1_400_000, annualPassengers: 14_000_000),
+        "GLA": .init(name: "Glasgow Airport", city: "Glasgow, United Kingdom", operationsPerYear: 90_000, runways: 1, longestRunwayFt: 8_720, metroPopulation: 1_850_000, annualPassengers: 7_900_000),
         "PRG": .init(name: "Václav Havel Airport Prague", city: "Prague, Czech Republic", operationsPerYear: 150_000, runways: 2, longestRunwayFt: 12_188, metroPopulation: 2_700_000, annualPassengers: 15_000_000),
         "KEF": .init(name: "Keflavík International Airport", city: "Reykjavík, Iceland", operationsPerYear: 80_000, runways: 2, longestRunwayFt: 10_056, metroPopulation: 240_000, annualPassengers: 8_000_000),
         "VKO": .init(name: "Vnukovo International Airport", city: "Moscow, Russia", operationsPerYear: 130_000, runways: 2, longestRunwayFt: 11_483, metroPopulation: 21_000_000, annualPassengers: 12_000_000),

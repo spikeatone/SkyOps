@@ -447,6 +447,7 @@ final class Airport: Identifiable {
         .init(code: "NCE", lat: 43.6584, lon: 7.2159,   landingFeePerKlb: 5.40,  gateFeeNarrowbody: 410, gateFeeWidebody: 940,  groundStopsPerMonth: 2.0),
         .init(code: "NAP", lat: 40.8860, lon: 14.2908,  landingFeePerKlb: 4.80,  gateFeeNarrowbody: 380, gateFeeWidebody: 840,  groundStopsPerMonth: 2.5),
         .init(code: "EDI", lat: 55.9500, lon: -3.3725,  landingFeePerKlb: 5.20,  gateFeeNarrowbody: 400, gateFeeWidebody: 900,  groundStopsPerMonth: 5.0),
+        .init(code: "GLA", lat: 55.8719, lon: -4.4331,  landingFeePerKlb: 4.80,  gateFeeNarrowbody: 375, gateFeeWidebody: 830,  groundStopsPerMonth: 5.5),
         .init(code: "PRG", lat: 50.1008, lon: 14.2600,  landingFeePerKlb: 5.00,  gateFeeNarrowbody: 390, gateFeeWidebody: 880,  groundStopsPerMonth: 4.0),
         .init(code: "KEF", lat: 63.9850, lon: -22.6056, landingFeePerKlb: 4.60,  gateFeeNarrowbody: 370, gateFeeWidebody: 820,  groundStopsPerMonth: 6.0),
         .init(code: "VKO", lat: 55.5915, lon: 37.2615,  landingFeePerKlb: 4.80,  gateFeeNarrowbody: 380, gateFeeWidebody: 840,  groundStopsPerMonth: 6.5),
