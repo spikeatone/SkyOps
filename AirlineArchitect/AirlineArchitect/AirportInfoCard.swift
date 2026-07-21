@@ -35,6 +35,9 @@ struct AirportInfoCard: View {
                 if let city = airport.info?.city {
                     Text(city).font(.karla(13)).foregroundStyle(labelColor)
                 }
+                if let flavor = Airport.destinationFlavor(airport.code) {
+                    Text(flavor).font(.karla(12).italic()).foregroundStyle(labelColor.opacity(0.8))
+                }
             }
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
 
@@ -50,6 +53,22 @@ struct AirportInfoCard: View {
                 .foregroundStyle(Color(skyHex: 0xFF5C5C))
                 .padding(.horizontal, 8).padding(.vertical, 6)
                 .background(Color(skyHex: 0xFF5C5C).opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+
+            // Real night curfew (#4) — no departures during the local window.
+            if let window = Airport.curfewLabel(airport.code) {
+                let indigo = Color(skyHex: 0x9AA8E0)
+                HStack(spacing: 6) {
+                    Image(systemName: airport.curfew ? "moon.stars.fill" : "moon").font(.system(size: 12))
+                    Text(airport.curfew ? "Night curfew — closed now" : "Night curfew \(window) local")
+                        .font(.karla(13, airport.curfew ? .bold : .regular)).lineLimit(1).minimumScaleFactor(0.7)
+                    Spacer(minLength: 6)
+                    if !airport.curfew { Text(window).font(.karla(12)).opacity(0) }  // keep layout stable
+                }
+                .foregroundStyle(indigo)
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .background(indigo.opacity(0.14))
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             }
 

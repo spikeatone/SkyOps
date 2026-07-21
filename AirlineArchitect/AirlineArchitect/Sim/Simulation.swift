@@ -4126,6 +4126,7 @@ final class Simulation {
         // baseline is seeded in init) for the Finance tab's period views.
         if tick % Simulation.ticksPerMonth == 0 { financeSnapshots.append(financeSnapshotNow()) }
         tickWeather()
+        tickCurfews()
         tickCrewPool()
         tickAOGOnset()
         tickEconomicEvents()
@@ -4251,6 +4252,28 @@ final class Simulation {
                 ap.groundStopTicksLeft = 90 + Int.random(in: 0...240)
                 ap.groundStopReason = reason
                 if relevant.contains(ap.code) { logOps(.disruption, "Ground stop", "\(reason) hold at \(ap.code)", airportCode: ap.code) }
+            }
+        }
+    }
+
+    /// Real night curfews (#4). Sets `ap.curfew` from LOCAL time at each curfew
+    /// airport (local time derived from longitude, same subsolar convention as the
+    /// day/night terminator). advance() gates DEPARTURES on it (no night take-offs).
+    private func tickCurfews() {
+        let mod = tick % 1440
+        for ap in airports where Airport.hasCurfew(ap.code) {
+            guard let w = Airport.curfews[ap.code] else { continue }
+            // Local minutes-of-day: (720 + (lon-180)*4 + simMinutes) mod 1440.
+            let localMin = ((720 + Int((ap.lon - 180) * 4) + mod) % 1440 + 1440) % 1440
+            let active = w.start < w.end ? (localMin >= w.start && localMin < w.end)
+                                         : (localMin >= w.start || localMin < w.end)
+            if ap.curfew != active {
+                ap.curfew = active
+                if playerRouteCodes.contains(ap.code) {
+                    logOps(.disruption, active ? "Night curfew" : "Curfew lifted",
+                           active ? "\(ap.code) is closed for its night curfew" : "\(ap.code)'s curfew has lifted",
+                           airportCode: ap.code)
+                }
             }
         }
     }

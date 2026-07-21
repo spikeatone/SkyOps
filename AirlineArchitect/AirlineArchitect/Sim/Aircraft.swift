@@ -203,8 +203,9 @@ final class Aircraft: Identifiable {
                 }
 
             case .taxiOut:
-                // departure ground stop — freeze at the runway until it lifts
-                if origin.groundStop { holdReason = .weather; return event }
+                // departure ground stop OR active night curfew — freeze at the
+                // runway until it lifts (no night take-offs at a curfewed airport).
+                if origin.groundStop || origin.curfew { holdReason = .weather; return event }
 
             case .approach:
                 if dest.groundStop {

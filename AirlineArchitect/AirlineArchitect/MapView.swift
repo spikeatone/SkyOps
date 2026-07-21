@@ -86,6 +86,7 @@ struct MapView: View {
                 var w = ctx
                 w.translateBy(x: dx, y: 0)
                 drawBasemap(w)
+                drawNightShade(w)   // day/night terminator — dims the geography, under the live network
                 drawRoutes(w)
                 drawAirports(w)
                 drawAircraft(w)
@@ -97,6 +98,32 @@ struct MapView: View {
     }
 
     // MARK: - Layers
+
+    /// Day/night terminator — a soft night band on the half of the globe where the
+    /// sun is below the horizon, sweeping west as sim-time advances (subsolar
+    /// longitude = longitude of local noon). Longitude-based (no seasonal polar
+    /// tilt — a future refinement); drawn under the live network so it dims the
+    /// geography but the aircraft/routes still glow over it. Tiles with the map.
+    private func drawNightShade(_ ctx: GraphicsContext) {
+        let maxDark = isDark ? 0.42 : 0.12
+        let nightColor = isDark ? Color(red: 0x0C/255, green: 0x16/255, blue: 0x3A/255)   // deep twilight blue
+                                : Color(red: 0x1E/255, green: 0x29/255, blue: 0x3B/255)
+        let subLon = 180.0 - Double(tick % 1440) / 1440.0 * 360.0   // subsolar longitude, deg
+        let topY = sim.project(GeoProjection.unit(lat: GeoProjection.latMax, lon: 0)).y
+        let botY = sim.project(GeoProjection.unit(lat: GeoProjection.latMin, lon: 0)).y
+        let strips = 60
+        let step = (GeoProjection.lonMax - GeoProjection.lonMin) / Double(strips)
+        for i in 0..<strips {
+            let lonA = GeoProjection.lonMin + step * Double(i)
+            let h = (lonA + step / 2 - subLon) * .pi / 180
+            let nightness = max(0, -cos(h))     // 0 at the terminator/day side, 1 at anti-solar
+            if nightness <= 0.02 { continue }
+            let xA = sim.project(GeoProjection.unit(lat: 0, lon: lonA)).x
+            let xB = sim.project(GeoProjection.unit(lat: 0, lon: lonA + step)).x
+            let rect = CGRect(x: min(xA, xB), y: topY, width: abs(xB - xA) + 1, height: botY - topY)
+            ctx.fill(Path(rect), with: .color(nightColor.opacity(maxDark * nightness)))
+        }
+    }
 
     private func drawGrid(_ ctx: GraphicsContext, _ size: CGSize) {
         let spacing: CGFloat = 40
@@ -184,6 +211,27 @@ struct MapView: View {
         }
         ctx.fill(dots, with: .color(climbColor.opacity(0.85)))
         ctx.stroke(stopped, with: .color(heldColor.opacity(0.9)), lineWidth: 1.5)
+
+        // Weather glyph on a ground-stopped airport — named by the seasonal reason
+        // (#2): a cyclone in hurricane season, a snowflake for a winter storm, rain
+        // for the monsoon, else a generic cloud. A curfewed airport in its local
+        // night (#4) gets a moon instead. Reads the disruption type at a glance.
+        for ap in sim.airports {
+            let sym: String, tint: Color
+            if ap.groundStop {
+                switch ap.groundStopReason {
+                case "Hurricane":    sym = "hurricane"
+                case "Winter storm": sym = "snowflake"
+                case "Monsoon":      sym = "cloud.heavyrain.fill"
+                default:             sym = "cloud.fill"
+                }
+                tint = heldColor
+            } else if ap.curfew {
+                sym = "moon.stars.fill"; tint = Color(red: 0x9A/255, green: 0xA8/255, blue: 0xE0/255)
+            } else { continue }
+            ctx.draw(Text(Image(systemName: sym)).font(.system(size: 9 * es)).foregroundColor(tint),
+                     at: CGPoint(x: ap.screen.x, y: ap.screen.y - (r + 8 * es)))
+        }
 
         // Hub badges — the identity-on-the-map payoff. Player hubs: a gold
         // double ring (dimmed amber when UNDERSTAFFED). Sold hubs: the rival's

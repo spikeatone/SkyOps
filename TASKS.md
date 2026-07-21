@@ -20,10 +20,19 @@ as the work, not "later."
 
 ## 1.1.x — LOD realism / delight polish batch (designer request)
 Roadmap the designer greenlit: #1 registration prefixes, #5 more milestones, #2
-seasonal weather, #3 seasonal leisure yield (all DONE below); still queued: #4
-day/night terminator + night curfews (needs 2 design calls: curfew airport list +
-season magnitudes), #6 destination/aircraft flavor, #7 weather glyph on
-ground-stopped airports.
+seasonal weather, #3 seasonal leisure yield, #4 day/night + curfews, #6 flavor,
+#7 weather glyph — ALL DONE. Full LOD realism/delight batch shipped.
+- [x] #4 DAY/NIGHT TERMINATOR + REAL NIGHT CURFEWS — DONE. Terminator: a night
+      band sweeping the map by sim-time (MapView.drawNightShade). Curfews: 27 real
+      web-researched + verified airports (LHR/FRA/SYD/YTZ/SNA/…); departures gated
+      during the local night window (no deadlock — 7/7 headless). Moon glyph + card
+      info. Curfew data + flavor from a research WORKFLOW (parallel agents + fact-check).
+- [x] #6 DESTINATION/AIRCRAFT FLAVOR — DONE. AircraftType.flavor (747 "Queen of the
+      Skies" …) in Fleet detail; Airport.destinationFlavor (50 one-liners) in the
+      airport card.
+- [x] #7 WEATHER GLYPH — DONE. Ground-stopped airports show a hurricane/snowflake/
+      rain/cloud glyph (typed by the seasonal reason); moon for an active curfew.
+      See CLAUDE.md "DAY/NIGHT TERMINATOR + NIGHT CURFEWS + WEATHER GLYPHS + FLAVOR".
 - [x] #2 SEASONAL WEATHER — DONE. Ground-stop rates vary by month × climate zone
       (hurricane/winter/monsoon), curves average ~1.0 so annual totals stay
       calibrated; seasonal ops-log reason ("Hurricane hold at MIA"). 28/28 headless.

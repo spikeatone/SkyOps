@@ -3102,6 +3102,39 @@ both orientations) incl. the full open-a-route→acquire flow.
     peak in hurricane season, and a leisure route earns 1.61× more in winter than
     summer while a non-leisure control stays flat (1.03×). Cash-invariant-safe
     (amounts change, accounting doesn't). Clean full app build.
+- **DAY/NIGHT TERMINATOR + NIGHT CURFEWS + WEATHER GLYPHS + FLAVOR (1.1.x LOD
+  realism/delight batch — #4/#6/#7).**
+  - **Day/night terminator (#4).** `MapView.drawNightShade` paints a soft night
+    band on the half of the globe where the sun is below the horizon, sweeping west
+    as sim-time advances (subsolar longitude = `180 − (tick % 1440)/1440 × 360`).
+    Longitude-based nightness `max(0, −cos(lon − subLon))`, drawn as ~60 vertical
+    strips per wrap-tile UNDER the live network (dims the geography, aircraft glow
+    over it). `maxDark` 0.42 dark / 0.12 light, deep-twilight-blue. NO seasonal
+    polar tilt (a future refinement) — the phase is arbitrary (the sim has no UTC
+    reference); it just sweeps. Verified live (clear gradient across CONUS).
+  - **Real night curfews (#4).** `Airport.curfews` = 27 real, web-researched +
+    adversarially-verified airports with legally-enforced night curfews (LHR/LGW/
+    STN, FRA/ORY/ZRH/MUC/BER/DUS/HAM/GVA/BUD, SYD/ADL/OOL/WLG/ZQN, ITM/FUK, TLV,
+    YTZ/YYZ, CGH/SDU, SNA/SAN/SJC), each a LOCAL window (minutes-of-day, wraps
+    midnight). `tickCurfews()` sets `ap.curfew` from local time (derived from
+    longitude, same subsolar convention as the terminator); `Aircraft.advance`
+    gates DEPARTURES on `origin.curfew` (reusing the weather-hold path — no
+    take-offs during the local night; arrivals NOT gated, to avoid ugly 6-hour
+    holding patterns). A curfewed airport shows a moon glyph + the window on its
+    card. Real operational cost: a curfew route completes measurably fewer flights.
+    Verified 7/7 headless (`aa-1.1.x/CurfewVerify.swift`): LHR active ~420 min/day,
+    JFK never, NO deadlock (44 flights/14 days), throughput < a control (44<47),
+    cash invariant intact. Curfew data from a RESEARCH WORKFLOW (parallel
+    web-capable agents by region + an adversarial fact-check pass; all 27 game
+    curfews passed).
+  - **Weather glyph (#7).** `MapView` draws a glyph on a ground-stopped airport
+    typed by the seasonal reason — `hurricane` / `snowflake` / `cloud.heavyrain.fill`
+    / `cloud.fill`, and `moon.stars.fill` (indigo) for an active curfew.
+  - **Flavor (#6).** `AircraftType.flavor` (35 lines — 747 "Queen of the Skies",
+    A380 "Superjumbo", 787 "Dreamliner", DH8B "The short-field island hopper";
+    shown in Fleet detail) and `Airport.destinationFlavor` (50 evocative one-liners
+    for leisure islands + marquee cities; shown in the airport card). Both from the
+    research workflow's flavor agents. Purely cosmetic.
 - **ISLAND BASEMAP GEOMETRY — ADDED (designer-reported: Caribbean airports sat
   on empty ocean).** The original Natural Earth 110m extraction drops small
   islands, so every island-airport group lacked land: the whole Caribbean

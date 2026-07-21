@@ -141,6 +141,31 @@ struct AircraftType: Identifiable {
         }
     }
 
+    /// A short evocative flavor line per type (real nicknames where they exist —
+    /// 747 "Queen of the Skies", A380 "Superjumbo", 787 "Dreamliner") — shown in
+    /// the Fleet detail. Purely cosmetic delight (1.1.x).
+    var flavor: String? { AircraftType.flavorByID[id] }
+    private static let flavorByID: [String: String] = [
+        "A319": "The compact single-aisle", "A320": "The single-aisle workhorse",
+        "A321": "Stretched for more seats", "A319NEO": "Efficient new-engine compact",
+        "A320NEO": "Quiet, fuel-sipping bestseller", "A321NEO": "The long-legged narrowbody",
+        "B737700": "Nimble short-field 737", "B737800": "The everyday workhorse",
+        "B739": "Stretched Next-Generation 737", "MAX8": "The efficient re-engined 737",
+        "MAX9": "The stretched MAX", "A220300": "The whisper-quiet newcomer",
+        "A220100": "Small, modern, remarkably quiet", "B773": "The mighty Triple Seven",
+        "B788": "The Dreamliner", "B789": "Dreamliner, stretched for range",
+        "B78J": "The longest Dreamliner", "A339": "The modern A330neo",
+        "A359": "Extra-wide body, extra range", "B747": "Queen of the Skies",
+        "A380": "The Superjumbo", "A340": "Four engines, long-haul stalwart",
+        "E170": "The regional jet debut", "E175": "The regional workhorse",
+        "E190": "The bigger E-Jet", "E195": "Stretched regional flagship",
+        "CRJ900": "The regional express", "CRJ1000": "The stretched regional jet",
+        "ERJ135": "The pocket regional jet", "ERJ140": "The compact commuter jet",
+        "ERJ145": "The regional feeder classic", "B1900": "The regional turboprop workhorse",
+        "AT46": "Short-field turboprop workhorse", "D328": "The fast regional turboprop",
+        "DH8B": "The short-field island hopper",
+    ]
+
     /// Practical range in nautical miles — representative published figures per
     /// type (shown in the Acquire card). Display-only; not sim-critical.
     var rangeNM: Int { AircraftType.rangeByID[id] ?? 3000 }

@@ -35,6 +35,9 @@ final class Airport: Identifiable {
     /// What triggered the current ground stop (Weather / ATC staffing shortage /
     /// Security incident) — shown on the airport card's red-ring explainer.
     var groundStopReason: String? = nil
+    /// Transient: this airport's real night curfew is currently active (set by
+    /// tickCurfews from local time). Blocks departures — no take-offs at night.
+    var curfew: Bool = false
 
     // Route-slot scarcity (Phase 5). Abstract capacity for new player routes —
     // busier/more-expensive airports have fewer. NOT real competitor modeling.
@@ -72,6 +75,66 @@ final class Airport: Identifiable {
         "BDA",                                                        // Bermuda (mid-Atlantic)
     ]
     static func isLeisure(_ code: String) -> Bool { leisureCodes.contains(code) }
+
+    /// Real-world NIGHT CURFEWS at the game's airports — researched + fact-checked
+    /// (1.1.x). Value is the LOCAL curfew window in minutes-of-day (start, end),
+    /// wrapping midnight when start > end. During the window the airport takes no
+    /// scheduled departures (no night take-offs) — the realistic operational cost
+    /// of flying to a curfewed city. Windows are approximations of the real rules
+    /// (some real ones are noise quotas rather than hard bans).
+    static let curfews: [String: (start: Int, end: Int)] = [
+        // Europe
+        "LHR": (1380, 360), "LGW": (1380, 360), "STN": (1380, 360),  // London 2300-0600
+        "FRA": (1380, 300), "ORY": (1410, 360), "ZRH": (1410, 360),
+        "MUC": (0, 300), "BER": (0, 300), "DUS": (1380, 360), "HAM": (1380, 360),
+        "GVA": (0, 360), "BUD": (0, 300),
+        // Oceania
+        "SYD": (1380, 360), "ADL": (1380, 360), "OOL": (1380, 360),  // Australia 2300-0600
+        "WLG": (0, 360), "ZQN": (1320, 360),
+        // Asia / Middle East
+        "ITM": (1260, 420), "FUK": (1320, 420), "TLV": (100, 300),
+        // Americas
+        "YTZ": (1380, 405), "YYZ": (30, 390), "CGH": (1380, 360), "SDU": (1380, 360),
+        "SNA": (1320, 420), "SAN": (1410, 390), "SJC": (1410, 390),
+    ]
+    static func hasCurfew(_ code: String) -> Bool { curfews[code] != nil }
+    /// "2300-0600" style label for the airport card.
+    static func curfewLabel(_ code: String) -> String? {
+        guard let w = curfews[code] else { return nil }
+        func hhmm(_ m: Int) -> String { String(format: "%02d%02d", m / 60, m % 60) }
+        return "\(hhmm(w.start))-\(hhmm(w.end))"
+    }
+
+    /// A short evocative one-liner for notable/iconic destinations (leisure islands
+    /// + marquee world cities) — shown in the airport card. Cosmetic delight (1.1.x).
+    static func destinationFlavor(_ code: String) -> String? { flavorByCode[code] }
+    private static let flavorByCode: [String: String] = [
+        "LIH": "Gateway to Kauai's emerald canyons", "OGG": "Where the road to Hana begins",
+        "ITO": "Rainforest doorstep to living volcanoes", "KOA": "Sun-baked lava coast and Kona coffee",
+        "SJU": "Old San Juan's blue cobblestones", "STT": "Emerald hills over turquoise harbors",
+        "NAS": "Pink sands and pastel colonial charm", "PLS": "Grace Bay's impossibly clear water",
+        "GCM": "Seven Mile Beach and Stingray City", "EIS": "Sailor's gateway to the Virgin Islands",
+        "AXA": "Thirty-three beaches, barely a crowd", "SXM": "Where jets skim Maho Beach",
+        "SBH": "Chic harbor of yachts and glamour", "ANU": "A beach for every day",
+        "SKB": "Green peaks meet Caribbean blue", "DOM": "The wild, unspoiled Nature Isle",
+        "UVF": "The Pitons rise from the sea", "SVD": "Volcanic gateway to the Grenadines",
+        "GND": "The fragrant Spice Isle awaits", "BGI": "Rum, cricket, and Bajan sunshine",
+        "AUA": "One happy island, endless sun", "CUR": "Pastel Dutch facades on the sea",
+        "BON": "Diver's paradise ringed by reefs", "POS": "Home of carnival and steelpan",
+        "BDA": "Pink beaches and pastel cottages", "MLE": "Overwater villas on glassy lagoons",
+        "SEZ": "Granite boulders on powder-white sand", "MRU": "Where mountains meet the coral sea",
+        "ZNZ": "Spice trade and Stone Town alleys", "NAN": "Bula — islands of warm welcomes",
+        "PPT": "Black-sand shores of French Polynesia", "OKA": "Japan's tropical island of longevity",
+        "SID": "Atlantic dunes and shimmering salt flats", "CDG": "The City of Light awaits",
+        "HND": "Neon nights and ancient shrines", "LHR": "Crossroads of the wider world",
+        "JFK": "The city that never sleeps", "DXB": "Desert skyline of gilded ambition",
+        "SIN": "Garden city where the future lands", "SYD": "Harbor sails and golden beaches",
+        "HKG": "Where East meets a neon skyline", "LAX": "Palm-lined gateway to the stars",
+        "LAS": "Bright lights in the desert night", "DEN": "Mile-high gateway to the Rockies",
+        "ANC": "Last frontier under the midnight sun", "KEF": "Land of fire, ice, and aurora",
+        "CPT": "Table Mountain guards two oceans", "GRU": "Brazil's restless, endless metropolis",
+        "EZE": "Tango, steak, and midnight streets",
+    ]
 
     /// The real airport network: 48 U.S. (top-50 by fee, minus 2 cross-batch
     /// duplicates; includes ANC/HNL) + 46 Latin American + 20 Canadian, 114 total.

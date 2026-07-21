@@ -104,6 +104,9 @@ struct FleetDetailView: View {
             VStack(spacing: 2) {
                 Text(aircraft.tail).font(.karla(24, .heavy)).foregroundStyle(primary)
                 Text(aircraft.type.name).font(.karla(16)).foregroundStyle(secondary)
+                if let flavor = aircraft.type.flavor {
+                    Text(flavor).font(.karla(12).italic()).foregroundStyle(secondary.opacity(0.75))
+                }
             }
             ownershipChip(aircraft.isLeased)
             if let img = AircraftArt.image(for: aircraft.type.id) {

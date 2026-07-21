@@ -33,6 +33,10 @@ group never compiles them into the build.
   early-game regional-jet trap (high-variance noise) — the opportunity-landscape probe
   is the robust framing. Under-gauging (buying the tiniest aircraft) also gives false
   "all routes lose money" reads — gauge-match to demand.
+- **`CurfewVerify.swift`** — verifies the night-curfew mechanic (7/7): LHR active
+  ~420 min/sim-day, JFK (no curfew) never, a curfew route still completes flights
+  (NO deadlock) but fewer than a non-curfew control, cash invariant intact. Touches
+  the core flight state machine, so this is the important safety net.
 - **`SeasonVerify.swift`** — verifies seasonality (28/28): #2 weather zone
   classification, seasonal factors peaking in the right months, curves averaging
   ~1.0 (annual calibration preserved), empirical MIA onsets peaking in hurricane
