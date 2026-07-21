@@ -1913,6 +1913,26 @@ where numbers are involved.
   reject, blank default, player tail carries the code, background shows real
   carrier codes) + Simulator screenshots of the new field and the UA error
   state.
+- **NATIONAL REGISTRATION PREFIXES (1.1.x realism polish).** Background/subsidiary
+  tails used to be ALL US-registered `N…` regardless of carrier — a Lufthansa jet
+  read `N123LH` instead of `D…LH`, the last obvious tell that background traffic
+  isn't real (the same "a player will notice" ethos behind the roster-accuracy
+  work). `Airline.regPrefixByCode` maps every roster carrier's IATA code to its
+  country's ICAO registration prefix (the recognizable leading letters: D Germany,
+  F France, G UK, VH Australia, JA Japan, B China, A6 UAE, C Canada, XA Mexico, CC
+  Chile…), with a loose `regPrefixByRegion` fallback for the Independent Operator.
+  `Airline.registrationPrefix(code:region:)` is applied in `makeAircraft` (background)
+  and the acquisition-inherited tail build (a subsidiary keeps its OWN flag — an
+  Air Canada sub stays `C…`). The game tail is stylised (`<prefix><n><IATAcode>`),
+  so this nationalises just the leading prefix — `D123LH`, `VH456QF`, `JA789JL`.
+  **Player's own fleet stays `N`** (a US startup; a future touch could key it to
+  home region). Persistence-safe (background tails regenerate; existing saved
+  acquisition tails are unaffected — only newly-generated ones change). The 141
+  code→prefix entries are keyed by HQ country (multinationals like SAS use their
+  primary flag). Verified 43/43 headless (`aa-1.1.x/RegDelightVerify.swift`):
+  well-known carriers map correctly, every roster carrier has a prefix, and the
+  real spawn path produces national tails (a live Lufthansa tail is `D…`, Qantas
+  `VH…`, player `N…`).
 - **Figma-to-code workflow that worked (for the next Figma screen):**
   `get_design_context` (official Figma MCP, loaded via ToolSearch) returned
   STRUCTURED React+Tailwind + a screenshot + a token list — NOT the
@@ -3984,7 +4004,19 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
   route recouping), `Celebration.originCode`/`destCode` drive a city-pair line
   rendered with the ⇄ `arrow.left.arrow.right` icon between the codes (matches the
   Figma "RT Route Arrows" 61:4824 + the Ops boxes) instead of a unicode ↔ in the
-  title string. (4) MAP ROUTE-OPEN RIPPLE — `routeOpenPulse` (set in `openRoute`) drives
+  title string. **MILESTONE LADDER EXPANDED (1.1.x):** added first_route,
+  routes 5/10/25, first_intl (first cross-`Airline.region` route), regions_4/7
+  (distinct regions served — a "spread" reward), flights_100 (a beat between
+  first_flight and 1,000), first_widebody, iconic SBH/PPT (you EARN St. Barths —
+  it's DH8B-only — and Tahiti; both use `beach.umbrella.fill` + the city-pair
+  render), first_subsidiary (acquisition) and went_public (IPO). All one-time via
+  `firedMilestones`, spread across the whole game arc so they're not spammy.
+  Verified 43/43 headless (`aa-1.1.x/RegDelightVerify.swift`) that each fires on
+  its trigger. NOTE the 3-slot `celebrations` display cap: a burst that fires >3
+  in ONE tick (e.g. a cash-injected test that trips the whole net-worth ladder at
+  once) drops the earliest from the toast QUEUE — a display cap, not a
+  fire-failure (they're still in `firedMilestones`); real play fires them on
+  separate ticks. (4) MAP ROUTE-OPEN RIPPLE — `routeOpenPulse` (set in `openRoute`) drives
   two staggered expanding rings at both endpoints in `MapView.drawRoutePulse`
   (tick-driven over 48 ticks, no SwiftUI animation — the Canvas already redraws
   each tick; speed-dependent, acceptable). (5) EASTER EGG — tapping the "NETWORK"

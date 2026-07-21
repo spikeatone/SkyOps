@@ -1612,7 +1612,10 @@ final class Simulation {
             let type = entry.type
             do {
                 guard let base = bases.randomElement() ?? homeBaseAirports.randomElement() else { continue }
-                let tail = "N\(nextTailNum)\(p.code.isEmpty ? playerTailCode : p.code)"
+                // A subsidiary keeps its OWN flag, so inherited tails keep the
+                // acquired carrier's national registration prefix (Air Canada → C…).
+                let carrierCode = p.code.isEmpty ? playerTailCode : p.code
+                let tail = "\(Airline.registrationPrefix(code: carrierCode))\(nextTailNum)\(carrierCode)"
                 nextTailNum += 1
                 let cycles = Int(Double(type.expectedLifespanCycles) * entry.ageFraction)
                 let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
@@ -2433,7 +2436,9 @@ final class Simulation {
         // Tail carries the carrier's real IATA code (Delta → "N123DL"); the
         // generic fallback gets a random non-real code so they aren't uniform.
         let code = airline.code.isEmpty ? Airline.randomTailCode() : airline.code
-        let tail = "N\(nextTailNum)\(code)"
+        // National registration prefix by carrier (Lufthansa → D…, Qantas → VH…),
+        // not the old blanket US "N…". Player's own fleet stays N (a US startup).
+        let tail = "\(Airline.registrationPrefix(code: code, region: region))\(nextTailNum)\(code)"
         nextTailNum += 1
         let ac = Aircraft(tail: tail,
                           type: type,
@@ -3810,6 +3815,45 @@ final class Simulation {
                          (25, "A major carrier."), (50, "A powerhouse of the skies.")] where owned >= n {
             celebrate("fleet_\(n)", "airplane.circle.fill", "\(n) aircraft in the fleet", sub)
         }
+
+        // --- Network / route milestones ---
+        let routeCount = playerRoutes.count
+        if routeCount >= 1, let r = playerRoutes.first {
+            celebrate("first_route", "point.3.connected.trianglepath.dotted", "First route opened!",
+                      "Your first city pair is live.", originCode: r.originCode, destCode: r.destCode)
+        }
+        for (n, sub) in [(5, "A real network."), (10, "The map is filling in."),
+                         (25, "A serious network.")] where routeCount >= n {
+            celebrate("routes_\(n)", "point.3.connected.trianglepath.dotted", "\(n) routes in the network", sub)
+        }
+        if let intl = playerRoutes.first(where: { Airline.region($0.originCode) != Airline.region($0.destCode) }) {
+            celebrate("first_intl", "globe.americas.fill", "First international route!", "You're crossing borders now.",
+                      originCode: intl.originCode, destCode: intl.destCode)
+        }
+        let regionsServed = Set(playerRoutes.flatMap { [Airline.region($0.originCode), Airline.region($0.destCode)] }).count
+        if regionsServed >= 4 { celebrate("regions_4", "globe", "Four regions in your network", "Your reach is spreading.") }
+        if regionsServed >= 7 { celebrate("regions_7", "globe", "Seven regions served", "A sprawling, worldwide map.") }
+
+        // --- Flight-count beats (100 sits between first_flight and 1,000) ---
+        if totalFlightsFlown >= 100 { celebrate("flights_100", "airplane.departure", "100 flights flown", "Finding your rhythm.") }
+
+        // --- Fleet & iconic-destination flavor ---
+        if aircraft.contains(where: { $0.purchased && ($0.type.bodyType == .widebody2Engine || $0.type.bodyType == .widebody4Engine) }) {
+            celebrate("first_widebody", "airplane.circle", "First widebody!", "The big metal has arrived.")
+        }
+        // Hard-to-reach fields you genuinely EARN (SBH's 2,000ft strip is DH8B-only).
+        if let sbh = playerRoutes.first(where: { $0.originCode == "SBH" || $0.destCode == "SBH" }) {
+            celebrate("iconic_SBH", "beach.umbrella.fill", "You now serve St. Barths!",
+                      "That 2,000-ft strip is a badge of honor.", originCode: sbh.originCode, destCode: sbh.destCode)
+        }
+        if let ppt = playerRoutes.first(where: { $0.originCode == "PPT" || $0.destCode == "PPT" }) {
+            celebrate("iconic_PPT", "beach.umbrella.fill", "Paradise on your map!",
+                      "Tahiti joins the network.", originCode: ppt.originCode, destCode: ppt.destCode)
+        }
+
+        // --- Endgame milestones ---
+        if !subsidiaries.isEmpty { celebrate("first_subsidiary", "building.2.fill", "First airline acquired!", "Your empire grows by merger.") }
+        if isPublic { celebrate("went_public", "chart.line.uptrend.xyaxis", "You're publicly traded!", "The airline rings the opening bell.") }
     }
 
     // MARK: - Persistence (save / restore)

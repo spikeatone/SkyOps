@@ -18,6 +18,22 @@ as the work, not "later."
 
 ## 1.1.x (maintenance / polish line)
 
+## 1.1.x — LOD realism / delight polish batch (designer request)
+Roadmap the designer greenlit: #1 registration prefixes, #5 more milestones (both
+DONE below); still queued: #2 seasonal weather/hurricane season, #3 seasonal
+leisure demand, #4 day/night terminator + night curfews, #6 destination/aircraft
+flavor, #7 weather glyph on ground-stopped airports.
+- [x] #1 NATIONAL REGISTRATION PREFIXES — DONE. Background/subsidiary tails carry
+      their carrier's real national prefix (Lufthansa D…, Qantas VH…, JAL JA…)
+      instead of blanket US "N…". `Airline.regPrefixByCode` (141 carriers) +
+      `registrationPrefix(code:region:)`, applied in makeAircraft + acquisition.
+      Player fleet stays N. Verified 43/43 headless. See CLAUDE.md "NATIONAL
+      REGISTRATION PREFIXES".
+- [x] #5 MORE MILESTONES — DONE. Added first_route, routes 5/10/25, first_intl,
+      regions_4/7, flights_100, first_widebody, iconic SBH/PPT, first_subsidiary,
+      went_public — spread across the game arc. Verified 43/43 headless. See
+      CLAUDE.md "MILESTONE LADDER EXPANDED".
+
 - [x] START-REGION PARITY — MEASURED (aa-1.1.x/RegionParityProbe.swift). Finding:
       no early traps/cakewalks — every region's starter routes are profitable with a
       gauge-matched 50-seat jet; 6/7 regions up-gauge to narrowbodies at ~90% load.

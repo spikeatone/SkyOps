@@ -511,6 +511,68 @@ struct Airline {
         "SB": "Aircalin", "PX": "Air Niugini",
     ]
 
+    /// National aircraft-registration prefix (ICAO) by carrier IATA code — the
+    /// leading letters a knowledgeable player recognizes on a tail (D- Germany,
+    /// F- France, G- UK, VH- Australia, JA Japan, B- China…). Background tails were
+    /// ALL US-registered "N…" regardless of carrier, so a Lufthansa jet read
+    /// "N123LH" instead of "D…LH" — the last obvious tell that background traffic
+    /// isn't real. The game tail is stylised (prefix + number + IATA code), so this
+    /// nationalises just the recognizable leading prefix. Keyed by the carrier's
+    /// country of registration (HQ; multinationals like SAS use their primary flag).
+    static let regPrefixByCode: [String: String] = [
+        // United States (all N-)
+        "AA":"N","DL":"N","WN":"N","UA":"N","AS":"N","B6":"N","NK":"N","F9":"N","G4":"N",
+        "OO":"N","YX":"N","MQ":"N","9E":"N","QX":"N","OH":"N",
+        // Canada (C-)
+        "AC":"C","WS":"C","QK":"C","PD":"C","TS":"C","F8":"C",
+        // Mexico (XA-)
+        "AM":"XA","Y4":"XA","VB":"XA",
+        // Central America
+        "CM":"HP",   // Copa — Panama
+        "AV":"HK",   // Avianca — Colombia
+        // Caribbean
+        "BW":"9Y",   // Caribbean Airlines — Trinidad & Tobago
+        "UP":"C6",   // Bahamasair — Bahamas
+        "KX":"VP",   // Cayman Airways — Cayman Is (VP-C)
+        "JY":"VQ",   // interCaribbean — Turks & Caicos (VQ-T)
+        "WM":"PJ",   // Winair — Sint Maarten / Curaçao
+        "S6":"HH",   // Sunrise — Haiti
+        // South America
+        "LA":"CC","G3":"PR","AD":"PR","AR":"LV","H2":"CC","JA":"CC",
+        // Europe
+        "FR":"EI","U2":"G","LH":"D","TK":"TC","BA":"G","AF":"F","W6":"HA","KL":"PH",
+        "PC":"TC","SU":"RA","IB":"EC","VY":"EC","SK":"SE","TP":"CS","DY":"LN","AZ":"I",
+        "LX":"HB","EI":"EI","AY":"OH","A3":"SX","OS":"OE","BT":"YL","LO":"SP","RO":"YR",
+        "JU":"YU","PS":"UR","B2":"EW","OU":"9A","FB":"LZ","S4":"CS","CL":"D","WA":"PH","YW":"EC",
+        // Africa
+        "ET":"ET","MS":"SU","AT":"CN","SA":"ZS","KQ":"5Y","AH":"7T","P4":"5N","FA":"ZS",
+        "TU":"TS","WB":"9XR","HF":"TU","HC":"6V","DT":"D2","KP":"5V","TC":"5H","NT":"EC",
+        // Asia
+        "CA":"B","MU":"B","CZ":"B","6E":"VT","AI":"VT","NH":"JA","JL":"JA","AK":"9M",
+        "CX":"B","HU":"B","KE":"HL","SQ":"9V","MF":"B","JT":"PK","TG":"HS","VJ":"VN",
+        "VN":"VN","5J":"RP","PR":"RP","GA":"PK","MH":"9M","3U":"B","ZH":"B","9C":"B",
+        "OZ":"HL","CI":"B","BR":"B","SG":"VT","UK":"VT","TR":"9V","QP":"VT","PK":"AP",
+        "PA":"AP","BI":"V8","K6":"XU","UB":"XY",
+        // Middle East
+        "EK":"A6","QR":"A7","SV":"HZ","EY":"A6","FZ":"A6","G9":"A6","WY":"A4O","KU":"9K",
+        "GF":"A9C","RJ":"JY","LY":"4X","IR":"EP","W5":"EP",
+        // Oceania / South Pacific
+        "QF":"VH","NZ":"ZK","VA":"VH","JQ":"VH","FJ":"DQ","ZL":"VH","TN":"F","SB":"F","PX":"P2",
+    ]
+    /// Loose per-region fallback (only reached by the Independent Operator, whose
+    /// tail uses a random code not in the map above).
+    static let regPrefixByRegion: [Region: String] = [
+        .us:"N", .canada:"C", .mexico:"XA", .centralAmerica:"HP", .caribbean:"VP",
+        .southAmerica:"PT", .europe:"G", .africa:"5", .asia:"B", .middleEast:"A6", .oceania:"VH",
+    ]
+    /// The registration prefix for a carrier's tail — accurate by IATA code, with a
+    /// region fallback for the generic fallback operator.
+    static func registrationPrefix(code: String, region: Region? = nil) -> String {
+        if let p = regPrefixByCode[code] { return p }
+        if let r = region, let rp = regPrefixByRegion[r] { return rp }
+        return "N"
+    }
+
     /// A random 2-uppercase-letter code that isn't a real airline code — used
     /// for the fallback carrier's tails so they aren't all identical.
     static func randomTailCode() -> String {

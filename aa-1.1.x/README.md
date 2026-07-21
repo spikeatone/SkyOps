@@ -33,6 +33,15 @@ group never compiles them into the build.
   early-game regional-jet trap (high-variance noise) — the opportunity-landscape probe
   is the robust framing. Under-gauging (buying the tiniest aircraft) also gives false
   "all routes lose money" reads — gauge-match to demand.
+- **`RegDelightVerify.swift`** — verifies the LOD realism/delight batch (43/43):
+  #1 national registration prefixes (well-known carriers map to the right prefix,
+  every roster carrier has one, the real spawn path yields national tails —
+  Lufthansa `D…`, Qantas `VH…`, player `N…`) and #5 the expanded milestone ladder
+  (each new milestone fires on its trigger — first jet/route/flight/international/
+  widebody/St. Barths). NOTE the `celebrations` 3-slot display cap: a test that
+  fires >3 milestones in ONE tick (e.g. injecting cash trips the whole net-worth
+  ladder) drops the earliest from the QUEUE — set up incrementally / on the real
+  $20M start so each first-milestone gets its own tick.
 - **`CaribbeanVerify.swift`** — verifies the Caribbean carrier region (18/18): the
   6-carrier roster, the caribbean/centralAmerica code split, weighted draws never
   yielding mainland carriers, domestic Caribbean legs drawing Caribbean carriers,
