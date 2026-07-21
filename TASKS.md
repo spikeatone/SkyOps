@@ -21,6 +21,9 @@ as the work, not "later."
 ### Accumulating for the NEXT build (build 33 — 1.1 (32) is archived + in App Store review)
 - [x] Weather/curfew map glyphs 50% larger (designer note). MapView glyph size
       9→13.5 × elementScale. On main; ships in the next archive.
+- [x] Day/night terminator more obvious (designer note). MapView.drawNightShade
+      maxDark 0.42→0.55 dark / 0.12→0.18 light, night colour slightly deeper.
+      Verified live (clear west-night/east-day gradient across CONUS).
 
 ## 1.1.x — LOD realism / delight polish batch (designer request)
 Roadmap the designer greenlit: #1 registration prefixes, #5 more milestones, #2

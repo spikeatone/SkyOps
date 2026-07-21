@@ -105,9 +105,9 @@ struct MapView: View {
     /// tilt — a future refinement); drawn under the live network so it dims the
     /// geography but the aircraft/routes still glow over it. Tiles with the map.
     private func drawNightShade(_ ctx: GraphicsContext) {
-        let maxDark = isDark ? 0.42 : 0.12
-        let nightColor = isDark ? Color(red: 0x0C/255, green: 0x16/255, blue: 0x3A/255)   // deep twilight blue
-                                : Color(red: 0x1E/255, green: 0x29/255, blue: 0x3B/255)
+        let maxDark = isDark ? 0.55 : 0.18
+        let nightColor = isDark ? Color(red: 0x0A/255, green: 0x12/255, blue: 0x34/255)   // deep twilight blue
+                                : Color(red: 0x1A/255, green: 0x24/255, blue: 0x38/255)
         let subLon = 180.0 - Double(tick % 1440) / 1440.0 * 360.0   // subsolar longitude, deg
         let topY = sim.project(GeoProjection.unit(lat: GeoProjection.latMax, lon: 0)).y
         let botY = sim.project(GeoProjection.unit(lat: GeoProjection.latMin, lon: 0)).y
