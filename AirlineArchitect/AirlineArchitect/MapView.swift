@@ -229,7 +229,7 @@ struct MapView: View {
             } else if ap.curfew {
                 sym = "moon.stars.fill"; tint = Color(red: 0x9A/255, green: 0xA8/255, blue: 0xE0/255)
             } else { continue }
-            ctx.draw(Text(Image(systemName: sym)).font(.system(size: 9 * es)).foregroundColor(tint),
+            ctx.draw(Text(Image(systemName: sym)).font(.system(size: 13.5 * es)).foregroundColor(tint),   // 50% larger (designer, next build)
                      at: CGPoint(x: ap.screen.x, y: ap.screen.y - (r + 8 * es)))
         }
 

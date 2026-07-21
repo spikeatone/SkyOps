@@ -18,6 +18,10 @@ as the work, not "later."
 
 ## 1.1.x (maintenance / polish line)
 
+### Accumulating for the NEXT build (build 33 — 1.1 (32) is archived + in App Store review)
+- [x] Weather/curfew map glyphs 50% larger (designer note). MapView glyph size
+      9→13.5 × elementScale. On main; ships in the next archive.
+
 ## 1.1.x — LOD realism / delight polish batch (designer request)
 Roadmap the designer greenlit: #1 registration prefixes, #5 more milestones, #2
 seasonal weather, #3 seasonal leisure yield, #4 day/night + curfews, #6 flavor,
