@@ -1,15 +1,36 @@
-# RELEASE STATUS — v1.0 (build 27, in review) + v1.1 (build 31, external test)
+# RELEASE STATUS — v1.1 (build 33, in App Store review — the PUBLIC DEBUT)
 
-Snapshot as of **20 July 2026**. Two things are in flight: **1.0 (build 27)** is
-in App Store review, and **1.1 (build 31)** is being cut for external TestFlight
-testing. (Build 28 was the first external cut; **build 31 supersedes it** with
-the launch/save + perf fixes below — do not distribute 28, 29, or 30.) Written so a future session (or a remote session with no conversation
-history) can pick this up cold. `CLAUDE.md` holds the technical/design context;
-this file is ONLY the release-and-store state.
+Snapshot as of **21 July 2026**. **1.1 (build 33) is submitted to App Store review
+and is the public debut.** 1.0 was NEVER released: **1.0 (build 27) was pulled from
+review** rather than shipped, because it carried a crash-on-SAVE (unbounded
+`Route.history` encoded on the main thread). 1.1 replaces it as the first public
+version — cleaner to debut on the build that fixes the known bugs than to ship
+1.0 and immediately fast-follow. Written so a future session (or a remote session
+with no conversation history) can pick this up cold. `CLAUDE.md` holds the
+technical/design context; this file is ONLY the release-and-store state.
 
-Update it as items land, and delete it once both are live and this is history.
-Everything from "## The 1.0 binary" onward is the 1.0 App Store submission
-detail; the 1.1 section immediately below is the current active work.
+**Current state (21 Jul 2026):**
+- **App Store:** 1.1 (build 33) submitted for review. Build 32 was swapped OUT for
+  33 before submission (33 = 32 + the save-loss-on-update fix + Glasgow airport +
+  weather-glyph polish). Waiting on Apple review.
+- **TestFlight:** build 33 is the current external-test cut — get it to testers,
+  it's the fix for the save-loss reports.
+- **1.0 (build 27):** pulled, not shipping. The 1.0 submission detail below is
+  retained only as reference; it is superseded by 1.1.
+
+**Why build 33 (the swap from 32):** the tester-reported "lost my game on a new
+build" bug. Root cause was synthesized `Codable` throwing `keyNotFound` on a
+missing key for a non-optional field even with a default, so every older save that
+predated a later build's new field failed to decode → swallowed to nil → "empty"
+slot → overwritten. Fixed with tolerant `init(from:)` decoders on every save
+struct + a last-known-good `.bak`. See CLAUDE.md persistence section; verified
+12/12 SaveCompat + 13/13 real round-trip headless + live. **DEFERRED (needs two
+physical devices on one Apple ID, not gating): full-body iCloud validation before
+adopting + async-correct restore-on-fresh-install.**
+
+Update it as items land, and delete it once 1.1 is live and this is history.
+Everything from "## The 1.0 binary" onward is the (now-superseded) 1.0 submission
+detail; the 1.1 section immediately below is the historical build-29–31 log.
 
 ## 1.1 (build 31) — external test cut (in progress)
 

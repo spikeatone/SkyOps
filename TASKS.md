@@ -18,7 +18,7 @@ as the work, not "later."
 
 ## 1.1.x (maintenance / polish line)
 
-### Accumulating for the NEXT build (build 33 — 1.1 (32) is archived + in App Store review)
+### Build 33 — CUT + SUBMITTED (1.1 public debut; swapped in for 32, in App Store review as of 21 Jul 2026; also the current TestFlight external cut). Contents below.
 - [x] Weather/curfew map glyphs 50% larger (designer note). MapView glyph size
       9→13.5 × elementScale. On main; ships in the next archive.
 - [x] Day/night terminator more obvious (designer note). MapView.drawNightShade
