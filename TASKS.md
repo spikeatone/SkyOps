@@ -18,6 +18,17 @@ as the work, not "later."
 
 ## 1.1.x (maintenance / polish line)
 
+- [x] LEISURE FARE TUNING — DONE. A measurement pass (real Sim headless,
+      scratchpad `LeisureMeasure.swift`) found leisure routes were a mild free
+      lunch: the +15% fare has ZERO load/elasticity cost (pure upside), and the
+      ×1.75 opening premium added only ~$63k (recouped in 2-5 flights) — the
+      "bigger buy-in" never bit. Designer chose "make the buy-in bite" (keep the
+      fare reward, make it a real capital commitment). Replaced the ×1.75
+      multiplier with a flat $500k establishment surcharge (`leisureOpeningSurcharge`):
+      opening a leisure route is now ~$580k (≈7× a mainland route), recouped in
+      ~17-49 flights (vs 3-7 mainland), fare premium unchanged. Cash invariant
+      verified unaffected. See CLAUDE.md "LEISURE OPENING RETUNED (1.1.x)".
+
 - [x] HUB PAYBACK CHART — BUILT. Each hub's NETWORK ▸ Hubs drawer now shows a
       "HUB P&L" payback line (the Routes `RouteProfitChart` analog): cumulative
       spoke-route net vs the hub's facility cost (establish + club + labor +

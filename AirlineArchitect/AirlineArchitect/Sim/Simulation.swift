@@ -2012,11 +2012,18 @@ final class Simulation {
     /// Real opening cost: base + both endpoints' gate fees, plus a premium per
     /// endpoint with no free slot. Ported from computeRouteOpeningCost().
     /// Leisure economics (designer-specified pair, deliberately opposed): island
-    /// fares run a PREMIUM (+15%), but ESTABLISHING an island route costs more
-    /// (×1.75 — "labor, setup costs, materials all cost more in a leisure
-    /// destination"). Bigger buy-in, richer payback curve. DESIGNED pacing.
+    /// fares run a PREMIUM (+15%), but ESTABLISHING an island route is a real
+    /// CAPITAL COMMITMENT ("labor, setup costs, materials all cost more in a
+    /// leisure destination"). Bigger buy-in, richer payback curve.
     static let leisureFareMultiplier = 1.15
-    static let leisureOpeningCostMultiplier = 1.75
+    /// FLAT leisure establishment surcharge (1.1.x tuning). Was a ×1.75 multiplier,
+    /// but the base opening cost is tiny (~$85k), so ×1.75 added only ~$63k —
+    /// recouped in 2-5 flights, invisible (measured). A flat $500k makes reaching
+    /// an island a felt decision: opening ~$580k vs ~$85k mainland (≈7×), recouped
+    /// in ~17 flights on a strong island (LAX-OGG) to ~49 on a thin one (MIA-AUA),
+    /// while the +15% fare premium still makes leisure pay off long-term. DESIGNED
+    /// pacing — tune the one number.
+    static let leisureOpeningSurcharge = 500_000
 
     func routeOpeningCost(_ origin: Airport, _ dest: Airport) -> Int {
         var cost = Double(Simulation.routeBaseCost)
@@ -2026,7 +2033,7 @@ final class Simulation {
         if origin.slotsAvailable <= 0, !hubOperating(origin.code) { cost += Double(Simulation.routeSlotPurchasePremium) }
         if dest.slotsAvailable <= 0, !hubOperating(dest.code) { cost += Double(Simulation.routeSlotPurchasePremium) }
         if Airport.isLeisure(origin.code) || Airport.isLeisure(dest.code) {
-            cost *= Simulation.leisureOpeningCostMultiplier
+            cost += Double(Simulation.leisureOpeningSurcharge)
         }
         return Int(cost.rounded())
     }

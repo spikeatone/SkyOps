@@ -2995,10 +2995,27 @@ both orientations) incl. the full open-a-route→acquire flow.
   deliberately NOT leisure yet). TWO designer-specified mechanics, deliberately
   opposed: fares on any route touching a leisure code run ×1.15
   (`leisureFareMultiplier`, in `rollRevenue`'s fareMult stack) while OPENING a
-  leisure route costs ×1.75 (`leisureOpeningCostMultiplier`, in
-  `routeOpeningCost` — automatically surfaces in the route-confirm panel and
-  slot-buyback values). Bigger buy-in, richer payback; both numbers are
-  DESIGNED pacing. Carrier regions: Caribbean islands ride
+  leisure route carries a flat **$500k establishment surcharge**
+  (`leisureOpeningSurcharge`, in `routeOpeningCost` — automatically surfaces in
+  the route-confirm panel and slot-buyback values). Bigger buy-in, richer
+  payback; both numbers are DESIGNED pacing.
+  **LEISURE OPENING RETUNED (1.1.x): was a ×1.75 multiplier, now a flat $500k
+  surcharge.** A measurement pass (scratchpad `LeisureMeasure.swift`, real Sim
+  headless) found the ×1.75 was INVISIBLE: the base opening cost is ~$85k, so
+  ×1.75 added only ~$63k, recouped in 2-5 flights — no "buy-in" at all, and since
+  the +15% leisure fare has ZERO load/elasticity cost, leisure was a mild free
+  lunch (a small-island route netted about the same as a mainland route to a
+  huge hub). Designer chose "make the buy-in bite" (keep the fare reward, make
+  reaching an island a real capital commitment). The flat $500k makes opening a
+  leisure route ~$580k (≈7× a ~$85k mainland route), recouped in ~17 flights on a
+  strong island (LAX-OGG) to ~26-49 on a thin one — vs 3-7 for mainland — while
+  the +15% fare still pays off long-term. The fare multiplier is UNCHANGED (the
+  reward stays). The surcharge doesn't touch per-flight economics, so a
+  poorly-matched leisure route (an oversized jet on a thin short island) just
+  hurts more — on-intent. Cash invariant verified unaffected (opening cost was
+  already a `totalRouteSpend` term; the change is amount-only). Tune the one
+  constant if the bite feels off; a recurring island ops surcharge was the
+  considered alternative (deferred — "capital commitment" = upfront). Carrier regions: Caribbean islands ride
   `centralAmericaCodes` (Copa/Avianca approximation — a real Caribbean roster
   is a future refinement); SJU/STT stay US-region (territories, same principle
   as GUM); MLE→asia, SEZ→africa. REAL-RUNWAY HONESTY: SBH (2,119 ft) and EIS
@@ -3035,7 +3052,7 @@ both orientations) incl. the full open-a-route→acquire flow.
     projects through the same `GeoProjection` as airports so they can't drift.
     Basemap.json → 284KB. **Bermuda the airport** (BDA, L.F. Wade Intl, 32.36/
     −64.68, real single 9,713 ft runway, ~1M pax) added to `Airport.all` /
-    `AirportInfo` / `leisureCodes` (fare ×1.15, opening ×1.75) / `centralAmericaCodes`
+    `AirportInfo` / `leisureCodes` (fare ×1.15, opening +$500k surcharge) / `centralAmericaCodes`
     (its carrier region + basemap hue — a mid-Atlantic British territory, really
     US/UK-served, bucketed with the western-Atlantic leisure islands for
     consistency, the same approximation the Caribbean uses). Verified 6/6 headless

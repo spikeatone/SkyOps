@@ -16,6 +16,11 @@ group never compiles them into the build.
   ALL flights (incl. dropped), the cash invariant holds under heavy flying, a
   save/load round-trip keeps history capped, and a pre-1.1 save (nil totals + full
   history) recomputes its aggregates and caps on load. (18/18 green when last run.)
+- **`LeisureMeasure.swift`** — a MEASUREMENT tool (not assertions): flies representative
+  leisure routes vs mainland controls and reports load / opening cost / per-flight net /
+  recoup flights, isolating the leisure fare + opening effect. Used to retune the leisure
+  opening premium (×1.75 multiplier → flat $500k surcharge). Also prints the cash-invariant
+  residual (0 = holds). Reach for it if leisure economics get tuned again.
 - **`HubChartMain.swift`** — verifies the per-hub payback ledger feeding the Hubs
   panel's payback chart: establish/club/labor/rent accrue exactly, monthly
   snapshots append + stay within `maxHubSnapshots`, `hubSpokeNet`/`hubFacilityCost`
