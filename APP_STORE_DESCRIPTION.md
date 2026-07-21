@@ -1,4 +1,4 @@
-# App Store Description — Airline Architect (1.1 / build 32)
+# App Store Description — Airline Architect (1.1 / build 33)
 
 Paste the text between the lines into App Store Connect → App Information →
 Description. App Store descriptions render as PLAIN TEXT (no markdown), so this
@@ -51,9 +51,10 @@ One jet and $20M. Grow a global airline in a living world of real airports and a
 
 # What's New / Version release notes (ASC → the version's "What's New" field)
 
-NOTE: for a FIRST public release the App Store shows the Description, not this
-field — it becomes prominent on the first UPDATE. Included so it's ready either
-way. ~440 chars.
+PUBLIC-FACING. New users never experienced any bug, so this stays positive and
+never advertises a fix — the save reliability is framed as a benefit. For a FIRST
+public release the App Store shows the Description over this field; it becomes
+prominent on the first UPDATE. ~470 chars.
 
 ------------------------------------------------------------------------------
 Welcome to Airline Architect — grow a global airline from a single jet.
@@ -63,8 +64,32 @@ Welcome to Airline Architect — grow a global airline from a single jet.
 • Grow deep: hubs, airport lounges, loans, IPOs, and rival buyouts
 • Real seasons, a day/night map, and real airport night curfews
 • Crews with real duty limits — and the clock never stops
+• Progress saves automatically and syncs across your devices
 
 Feedback is always welcome. Happy flying.
+------------------------------------------------------------------------------
+
+
+# What to Test (ASC → TestFlight → build 33 → "What to Test")
+
+TESTER-FACING (not public). Existing testers HAVE hit the save loss, so this is
+direct about the fix and exactly what to exercise. ~1,050 chars.
+
+------------------------------------------------------------------------------
+Build 33 — the headline fix is SAVED GAMES SURVIVING APP UPDATES.
+
+If you've ever installed a new build and found your airline gone, this is the fix. From this build on, updating will not lose your save.
+
+Please test:
+• Update to this build over your existing one, then open the app — your airline(s) should still be in the load menu and open normally, with your cash, fleet, and routes intact.
+• Play a bit, then Quit or background the app and relaunch — confirm nothing is lost.
+• If an earlier build made an airline "disappear" and you did NOT start a new game over that slot, it may reappear now — please tell us if it does.
+• New airport: Glasgow (GLA), Scotland — open a route to it and check it on the map.
+• Map polish: weather icons now sit just below an affected airport, and a day/night line sweeps the map — do these read clearly?
+
+Honest note: if an earlier build already lost a game AND you started a new airline in that slot, that one can't be recovered — but it won't happen again.
+
+Thanks as always — reply in TestFlight with anything that feels off.
 ------------------------------------------------------------------------------
 
 
