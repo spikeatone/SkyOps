@@ -33,6 +33,12 @@ group never compiles them into the build.
   early-game regional-jet trap (high-variance noise) — the opportunity-landscape probe
   is the robust framing. Under-gauging (buying the tiniest aircraft) also gives false
   "all routes lose money" reads — gauge-match to demand.
+- **`SeasonVerify.swift`** — verifies seasonality (28/28): #2 weather zone
+  classification, seasonal factors peaking in the right months, curves averaging
+  ~1.0 (annual calibration preserved), empirical MIA onsets peaking in hurricane
+  season; #3 a leisure route earning markedly more in winter than summer while a
+  non-leisure control stays flat. NOTE: capture per-flight revenue DURING the run
+  (route.history caps at 60, so a year-end read only shows the final months).
 - **`RegDelightVerify.swift`** — verifies the LOD realism/delight batch (43/43):
   #1 national registration prefixes (well-known carriers map to the right prefix,
   every roster carrier has one, the real spawn path yields national tails —

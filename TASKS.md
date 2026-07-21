@@ -19,10 +19,18 @@ as the work, not "later."
 ## 1.1.x (maintenance / polish line)
 
 ## 1.1.x — LOD realism / delight polish batch (designer request)
-Roadmap the designer greenlit: #1 registration prefixes, #5 more milestones (both
-DONE below); still queued: #2 seasonal weather/hurricane season, #3 seasonal
-leisure demand, #4 day/night terminator + night curfews, #6 destination/aircraft
-flavor, #7 weather glyph on ground-stopped airports.
+Roadmap the designer greenlit: #1 registration prefixes, #5 more milestones, #2
+seasonal weather, #3 seasonal leisure yield (all DONE below); still queued: #4
+day/night terminator + night curfews (needs 2 design calls: curfew airport list +
+season magnitudes), #6 destination/aircraft flavor, #7 weather glyph on
+ground-stopped airports.
+- [x] #2 SEASONAL WEATHER — DONE. Ground-stop rates vary by month × climate zone
+      (hurricane/winter/monsoon), curves average ~1.0 so annual totals stay
+      calibrated; seasonal ops-log reason ("Hurricane hold at MIA"). 28/28 headless.
+- [x] #3 SEASONAL LEISURE YIELD — DONE. Leisure fares swing seasonally (peak
+      northern winter, dip summer; averages ~1.0). A leisure route earns 1.61× more
+      in winter than summer; non-leisure control stays flat. 28/28. See CLAUDE.md
+      "SEASONALITY".
 - [x] #1 NATIONAL REGISTRATION PREFIXES — DONE. Background/subsidiary tails carry
       their carrier's real national prefix (Lufthansa D…, Qantas VH…, JAL JA…)
       instead of blanket US "N…". `Airline.regPrefixByCode` (141 carriers) +

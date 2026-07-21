@@ -3079,6 +3079,29 @@ both orientations) incl. the full open-a-route→acquire flow.
   data error. Verified 75/75 headless + live (Central America start now frames
   the whole Caribbean; the label declutterer fans the Lesser Antilles cluster
   automatically).
+- **SEASONALITY — BUILT (1.1.x LOD realism; calendar-driven off `monthOfYear` =
+  `(tick / ticksPerMonth) % 12`, a 12-month/30-day sim year).** Two features:
+  - **#2 Seasonal weather.** `tickWeather`'s ground-stop onset probability is now
+    multiplied by `seasonalWeatherFactor(ap)` — a per-airport CLIMATE ZONE
+    (`computeWeatherZone`: hurricane / northWinter / southWinter / monsoon / mild,
+    by region + latitude, cached in `weatherZoneByCode`) × a 12-month curve.
+    Hurricane belt (Caribbean/CentralAm + US/Mexico lat 10-31) peaks Sep; northern
+    winter (lat ≥ 37) peaks Jan; southern winter (lat ≤ −33) peaks Jul; South/SE
+    Asia monsoon peaks Jul-Aug. **Each curve AVERAGES ~1.0 so the ANNUAL ground-stop
+    total stays calibrated — seasonality REDISTRIBUTES disruptions, it doesn't add
+    them.** The ops-log/tooltip reason is seasonal too ("Hurricane hold at MIA" in
+    Sep, "Winter storm", "Monsoon"). Magnitudes are DESIGNED pacing (tunable).
+  - **#3 Seasonal leisure yield.** In `rollRevenue`, a leisure route's fare gets
+    `× leisureSeasonCurve[monthOfYear]` on top of the ×1.15 premium — island fares
+    peak in NORTHERN winter (snowbirds), dip in summer. Implemented as a fare-YIELD
+    swing (not a demand modifier — dodges the 0.92 load cap and is always
+    effective); averages ~1.0 so the buy-in tuning holds ON AVERAGE while a leisure
+    route becomes a genuine seasonal bet.
+  - Verified 28/28 headless (`aa-1.1.x/SeasonVerify.swift`): zone classification,
+    factors peak in the right months, curves average ~1.0, empirical MIA onsets
+    peak in hurricane season, and a leisure route earns 1.61× more in winter than
+    summer while a non-leisure control stays flat (1.03×). Cash-invariant-safe
+    (amounts change, accounting doesn't). Clean full app build.
 - **ISLAND BASEMAP GEOMETRY — ADDED (designer-reported: Caribbean airports sat
   on empty ocean).** The original Natural Earth 110m extraction drops small
   islands, so every island-airport group lacked land: the whole Caribbean

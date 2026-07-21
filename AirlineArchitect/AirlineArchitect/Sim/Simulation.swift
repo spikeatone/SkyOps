@@ -3508,6 +3508,10 @@ final class Simulation {
         // markets run a premium, as in the real world).
         if Airport.isLeisure(ac.origin.code) || Airport.isLeisure(ac.dest.code) {
             fareMult *= Simulation.leisureFareMultiplier
+            // Seasonal yield: island fares peak in northern winter (snowbirds),
+            // dip in summer — averages ~1.0 over the year, so the buy-in economics
+            // hold on average but a leisure route is now a genuine seasonal bet.
+            fareMult *= Simulation.leisureSeasonCurve[monthOfYear]
         }
         // Hub yield: connecting itineraries through an operating hub earn a
         // small fare premium (+3%, player only, once per leg) — the hub's one
@@ -4173,6 +4177,64 @@ final class Simulation {
     /// Per-airport weather ground stops. Onset uses each airport's real
     /// groundStopsPerMonth rate; duration 90–330 ticks (1.5–5.5 sim-hours).
     /// Ported from tickWeather(). Universal — applies to all traffic.
+    // MARK: - Seasonality (calendar-driven weather + leisure demand, 1.1.x)
+    //
+    // The sim runs a 12-month, 30-day calendar (ticksPerMonth). monthOfYear 0=Jan.
+    /// Sim calendar month, 0 = January … 11 = December.
+    var monthOfYear: Int { (tick / Simulation.ticksPerMonth) % 12 }
+
+    enum WeatherZone { case hurricane, northWinter, southWinter, monsoon, mild }
+    // 12-month multipliers (Jan…Dec), each averaging ~1.0 so ANNUAL ground-stop
+    // totals stay calibrated — seasonality REDISTRIBUTES disruptions across the
+    // year, it doesn't add them. DESIGNED pacing, tunable.
+    private static let hurricaneCurve:   [Double] = [0.5,0.5,0.5,0.6,0.7,1.0,1.4,1.9,2.2,1.6,0.9,0.6] // peak Sep
+    private static let northWinterCurve: [Double] = [1.9,1.8,1.3,0.9,0.6,0.5,0.5,0.5,0.6,0.8,1.1,1.7] // peak Jan
+    private static let southWinterCurve: [Double] = [0.5,0.5,0.6,0.8,1.1,1.7,1.9,1.8,1.3,0.9,0.6,0.5] // peak Jul
+    private static let monsoonCurve:     [Double] = [0.7,0.7,0.7,0.8,0.9,1.4,1.8,1.7,1.4,0.9,0.8,0.7] // peak Jul-Aug
+
+    /// Airport → climate zone, computed once (region + latitude), cached (this runs
+    /// per-airport per-tick in tickWeather — keep it a dict lookup, not a re-classify).
+    @ObservationIgnored private lazy var weatherZoneByCode: [String: WeatherZone] = {
+        var m: [String: WeatherZone] = [:]
+        for ap in airports { m[ap.code] = Simulation.computeWeatherZone(ap) }
+        return m
+    }()
+    private static func computeWeatherZone(_ ap: Airport) -> WeatherZone {
+        let r = Airline.region(ap.code), lat = ap.lat
+        // Tropical Atlantic/Gulf/Caribbean/Pacific-Mexico hurricane belt.
+        if r == .caribbean || r == .centralAmerica || ((r == .us || r == .mexico) && lat >= 10 && lat < 31) { return .hurricane }
+        if r == .asia && lat >= 5 && lat <= 30 { return .monsoon }   // South/SE Asia monsoon
+        if lat >= 37 { return .northWinter }                          // temperate northern winter
+        if lat <= -33 { return .southWinter }                         // temperate southern winter
+        return .mild
+    }
+    func weatherZone(_ ap: Airport) -> WeatherZone { weatherZoneByCode[ap.code] ?? .mild }
+    func seasonalWeatherFactor(_ ap: Airport) -> Double {
+        switch weatherZone(ap) {
+        case .hurricane:   return Simulation.hurricaneCurve[monthOfYear]
+        case .northWinter: return Simulation.northWinterCurve[monthOfYear]
+        case .southWinter: return Simulation.southWinterCurve[monthOfYear]
+        case .monsoon:     return Simulation.monsoonCurve[monthOfYear]
+        case .mild:        return 1.0
+        }
+    }
+    /// Flavor label for the ops log — names the season when it's actually peaking.
+    private func seasonalWeatherReason(_ ap: Airport) -> String {
+        let m = monthOfYear
+        switch weatherZone(ap) {
+        case .hurricane where m >= 7 && m <= 9:            return "Hurricane"     // Aug-Oct
+        case .northWinter where m == 11 || m <= 1:         return "Winter storm"  // Dec-Feb
+        case .southWinter where m >= 5 && m <= 7:          return "Winter storm"  // Jun-Aug
+        case .monsoon where m >= 5 && m <= 8:              return "Monsoon"       // Jun-Sep
+        default:                                           return "Weather"
+        }
+    }
+    // Leisure demand season — island/beach markets peak in NORTHERN winter (the
+    // snowbird source markets escape the cold), trough in summer. Applied as a
+    // fare-YIELD swing (peak fares up, off-season down) on leisure routes; averages
+    // ~1.0 so annual leisure economics (and the buy-in tuning) stay neutral.
+    static let leisureSeasonCurve: [Double] = [1.3,1.3,1.2,1.0,0.85,0.75,0.75,0.8,0.85,0.95,1.1,1.3]
+
     private func tickWeather() {
         let relevant = playerRouteCodes   // only log weather where the player flies
         for ap in airports {
@@ -4183,11 +4245,12 @@ final class Simulation {
                     ap.groundStopReason = nil
                     if relevant.contains(ap.code) { logOps(.disruption, "Ground stop lifted", ap.code) }
                 }
-            } else if Double.random(in: 0..<1) < ap.groundStopsPerMonth / Double(Simulation.ticksPerMonth) {
+            } else if Double.random(in: 0..<1) < ap.groundStopsPerMonth * seasonalWeatherFactor(ap) / Double(Simulation.ticksPerMonth) {
+                let reason = seasonalWeatherReason(ap)
                 ap.groundStop = true
                 ap.groundStopTicksLeft = 90 + Int.random(in: 0...240)
-                ap.groundStopReason = "Weather"
-                if relevant.contains(ap.code) { logOps(.disruption, "Ground stop", "Weather hold at \(ap.code)", airportCode: ap.code) }
+                ap.groundStopReason = reason
+                if relevant.contains(ap.code) { logOps(.disruption, "Ground stop", "\(reason) hold at \(ap.code)", airportCode: ap.code) }
             }
         }
     }
