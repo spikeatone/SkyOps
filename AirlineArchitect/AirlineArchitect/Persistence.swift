@@ -201,6 +201,247 @@ extension CrewStatus {
     }
 }
 
+// MARK: - Backward-compatible decoding  (why testers used to lose saves on update)
+//
+// Swift's SYNTHESIZED Codable throws `keyNotFound` for a missing key on a
+// NON-optional property — EVEN when that property has a default value
+// (`var x = 0`). So the moment a build shipped a new persisted field as
+// non-optional, EVERY older save (which lacks that key) failed to decode. The
+// throw was swallowed by `try?` into nil, the slot rendered as "empty", and the
+// player then overwrote their still-intact file by starting a new game.
+//
+// The durable fix: every save struct decodes each field with `decodeSafe`
+// (missing/undecodable key -> default) via a hand-written `init(from:)`. This
+// makes "add a field -> lose saves" STRUCTURALLY impossible, past AND future:
+// an unknown-to-this-build key is ignored on decode (Codable already ignores
+// extra keys), and a known-key-missing falls back to its default instead of
+// throwing. The compiler enforces every stored property is initialised, so a
+// new field can't be silently dropped from the decoder. `init(from:)` lives in
+// EXTENSIONS so the memberwise inits `snapshot()` uses are preserved.
+//
+// RULE for future sessions: when you add a persisted field, add a `decodeSafe`
+// line here for it. If you add a whole new nested Codable save type, give it the
+// same tolerant `init(from:)`. Never rely on a bare `var x = 0` surviving decode.
+private extension KeyedDecodingContainer {
+    /// Value for `key`, or `def` if the key is absent OR its value can't decode.
+    /// (`try?` flattens the Optional since Swift 5, so this is a single `??`.)
+    func decodeSafe<T: Decodable>(_ key: Key, default def: T) -> T {
+        (try? decodeIfPresent(T.self, forKey: key)) ?? def
+    }
+    /// Optional variant: nil if the key is absent or its value can't decode.
+    func decodeSafeOpt<T: Decodable>(_ type: T.Type, _ key: Key) -> T? {
+        try? decodeIfPresent(type, forKey: key)
+    }
+}
+
+extension GameSnapshot {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version = c.decodeSafe(.version, default: 3)
+        savedAtTick = c.decodeSafe(.savedAtTick, default: 0)
+        savedAtEpoch = c.decodeSafe(.savedAtEpoch, default: 0.0)
+        playerAirlineName = c.decodeSafeOpt(String.self, .playerAirlineName)
+        playerTailCode = c.decodeSafe(.playerTailCode, default: "ZQ")
+        playerBalance = c.decodeSafe(.playerBalance, default: 0)
+        tick = c.decodeSafe(.tick, default: 0)
+        nextTailNum = c.decodeSafe(.nextTailNum, default: 1)
+        nextRouteId = c.decodeSafe(.nextRouteId, default: 1)
+        totalRevenue = c.decodeSafe(.totalRevenue, default: 0)
+        totalFees = c.decodeSafe(.totalFees, default: 0)
+        totalOperatingCost = c.decodeSafe(.totalOperatingCost, default: 0)
+        totalLeaseCost = c.decodeSafe(.totalLeaseCost, default: 0)
+        totalInsuranceSpent = c.decodeSafe(.totalInsuranceSpent, default: 0)
+        maintenanceSpend = c.decodeSafe(.maintenanceSpend, default: 0)
+        totalAcquisitionSpend = c.decodeSafe(.totalAcquisitionSpend, default: 0)
+        totalRouteSpend = c.decodeSafe(.totalRouteSpend, default: 0)
+        totalHedgeSpend = c.decodeSafe(.totalHedgeSpend, default: 0)
+        totalSaleProceeds = c.decodeSafe(.totalSaleProceeds, default: 0)
+        totalOfferIncome = c.decodeSafe(.totalOfferIncome, default: 0)
+        totalFlightsFlown = c.decodeSafe(.totalFlightsFlown, default: 0)
+        totalLoanProceeds = c.decodeSafe(.totalLoanProceeds, default: 0)
+        totalDebtService = c.decodeSafe(.totalDebtService, default: 0)
+        loans = c.decodeSafe(.loans, default: [])
+        isBankrupt = c.decodeSafe(.isBankrupt, default: false)
+        insolventSinceTick = c.decodeSafeOpt(Int.self, .insolventSinceTick)
+        useDemandModel = c.decodeSafe(.useDemandModel, default: true)
+        reputation = c.decodeSafe(.reputation, default: Simulation.reputationStart)
+        firedMilestones = c.decodeSafe(.firedMilestones, default: [])
+        stressTestCount = c.decodeSafe(.stressTestCount, default: 0)
+        homeRegion = c.decodeSafeOpt(String.self, .homeRegion)
+        competitorSeed = c.decodeSafeOpt(UInt64.self, .competitorSeed)
+        subsidiaries = c.decodeSafeOpt([Subsidiary].self, .subsidiaries)
+        totalAcquisitionPrice = c.decodeSafeOpt(Int.self, .totalAcquisitionPrice)
+        activeIntegration = c.decodeSafeOpt(Integration.self, .activeIntegration)
+        totalIntegrationSpend = c.decodeSafeOpt(Int.self, .totalIntegrationSpend)
+        totalSenioritySpend = c.decodeSafeOpt(Int.self, .totalSenioritySpend)
+        diligencedCarriers = c.decodeSafeOpt([String].self, .diligencedCarriers)
+        totalDiligenceSpend = c.decodeSafeOpt(Int.self, .totalDiligenceSpend)
+        publicCompany = c.decodeSafeOpt(PublicCompany.self, .publicCompany)
+        marketSentiment = c.decodeSafeOpt(Double.self, .marketSentiment)
+        displaySharePrice = c.decodeSafeOpt(Double.self, .displaySharePrice)
+        totalEquityRaised = c.decodeSafeOpt(Int.self, .totalEquityRaised)
+        totalDividendsPaid = c.decodeSafeOpt(Int.self, .totalDividendsPaid)
+        totalBuybackSpend = c.decodeSafeOpt(Int.self, .totalBuybackSpend)
+        totalMarketingSpend = c.decodeSafeOpt(Int.self, .totalMarketingSpend)
+        playerFareWarUntil = c.decodeSafe(.playerFareWarUntil, default: [:])
+        adCampaignUntil = c.decodeSafe(.adCampaignUntil, default: [:])
+        loyaltyPushUntil = c.decodeSafe(.loyaltyPushUntil, default: [:])
+        activistCampaign = c.decodeSafeOpt(ActivistCampaign.self, .activistCampaign)
+        monthsBelowIPO = c.decodeSafeOpt(Int.self, .monthsBelowIPO)
+        boardPressure = c.decodeSafeOpt(Double.self, .boardPressure)
+        oustedByBoard = c.decodeSafeOpt(Bool.self, .oustedByBoard)
+        hubs = c.decodeSafeOpt([String: Simulation.Hub].self, .hubs)
+        rivalHubs = c.decodeSafeOpt([String: String].self, .rivalHubs)
+        totalHubSpend = c.decodeSafeOpt(Int.self, .totalHubSpend)
+        totalHubLabor = c.decodeSafeOpt(Int.self, .totalHubLabor)
+        totalClubRent = c.decodeSafeOpt(Int.self, .totalClubRent)
+        hubLedgers = c.decodeSafeOpt([String: Simulation.HubLedger].self, .hubLedgers)
+        cameraZoom = c.decodeSafe(.cameraZoom, default: 1.0)
+        cameraCenterX = c.decodeSafe(.cameraCenterX, default: 0.0)
+        cameraCenterY = c.decodeSafe(.cameraCenterY, default: 0.0)
+        aircraft = c.decodeSafe(.aircraft, default: [])
+        routes = c.decodeSafe(.routes, default: [])
+        closedRoutes = c.decodeSafe(.closedRoutes, default: [])
+        crewPools = c.decodeSafe(.crewPools, default: [:])
+        reserveCrews = c.decodeSafe(.reserveCrews, default: [:])
+        crewTrainingDue = c.decodeSafe(.crewTrainingDue, default: [:])
+        crewTrainingDeferred = c.decodeSafe(.crewTrainingDeferred, default: [:])
+        financeSnapshots = c.decodeSafe(.financeSnapshots, default: [])
+    }
+}
+
+extension AircraftSave {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        tail = c.decodeSafe(.tail, default: "")
+        typeId = c.decodeSafe(.typeId, default: "")
+        originCode = c.decodeSafe(.originCode, default: "")
+        destCode = c.decodeSafe(.destCode, default: "")
+        stateIndex = c.decodeSafe(.stateIndex, default: 0)
+        stateTick = c.decodeSafe(.stateTick, default: 0)
+        cyclesAccrued = c.decodeSafe(.cyclesAccrued, default: 0)
+        assignedRouteId = c.decodeSafeOpt(Int.self, .assignedRouteId)
+        pendingRouteId = c.decodeSafeOpt(Int.self, .pendingRouteId)
+        sellOfferDismissed = c.decodeSafe(.sellOfferDismissed, default: false)
+        isLeased = c.decodeSafe(.isLeased, default: false)
+        leaseAccrued = c.decodeSafe(.leaseAccrued, default: 0)
+        maint = c.decodeSafe(.maint, default: false)
+        aogAutoClearTick = c.decodeSafeOpt(Int.self, .aogAutoClearTick)
+        crewId = c.decodeSafeOpt(Int.self, .crewId)
+        subsidiaryCode = c.decodeSafeOpt(String.self, .subsidiaryCode)
+    }
+}
+
+extension RouteSave {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.decodeSafe(.id, default: 0)
+        originCode = c.decodeSafe(.originCode, default: "")
+        destCode = c.decodeSafe(.destCode, default: "")
+        openedTick = c.decodeSafe(.openedTick, default: 0)
+        openingCost = c.decodeSafe(.openingCost, default: 0)
+        cumulativeNet = c.decodeSafe(.cumulativeNet, default: 0)
+        flights = c.decodeSafe(.flights, default: 0)
+        totalLeaseCost = c.decodeSafe(.totalLeaseCost, default: 0)
+        closedTick = c.decodeSafeOpt(Int.self, .closedTick)
+        competitionLevel = c.decodeSafe(.competitionLevel, default: 0)
+        competitors = c.decodeSafe(.competitors, default: [])
+        incentiveBonus = c.decodeSafe(.incentiveBonus, default: 0)
+        incentiveWaived = c.decodeSafe(.incentiveWaived, default: 0)
+        fulfillByTick = c.decodeSafeOpt(Int.self, .fulfillByTick)
+        subsidiaryCode = c.decodeSafeOpt(String.self, .subsidiaryCode)
+        history = c.decodeSafe(.history, default: [])
+        assignmentHistory = c.decodeSafe(.assignmentHistory, default: [])
+        revenueTotal = c.decodeSafeOpt(Int.self, .revenueTotal)
+        feesTotal = c.decodeSafeOpt(Int.self, .feesTotal)
+        opCostTotal = c.decodeSafeOpt(Int.self, .opCostTotal)
+        loadFactorSum = c.decodeSafeOpt(Double.self, .loadFactorSum)
+    }
+}
+
+extension FlightRecordSave {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.decodeSafe(.id, default: 0)
+        tick = c.decodeSafe(.tick, default: 0)
+        tail = c.decodeSafe(.tail, default: "")
+        revenue = c.decodeSafe(.revenue, default: 0)
+        fees = c.decodeSafe(.fees, default: 0)
+        operatingCost = c.decodeSafe(.operatingCost, default: 0)
+        leaseCostEstimate = c.decodeSafe(.leaseCostEstimate, default: 0)
+        net = c.decodeSafe(.net, default: 0)
+        pax = c.decodeSafe(.pax, default: 0)
+        seats = c.decodeSafe(.seats, default: 0)
+        loadFactor = c.decodeSafe(.loadFactor, default: 0)
+        cumulativeNet = c.decodeSafe(.cumulativeNet, default: 0)
+    }
+}
+
+extension RouteAssignmentSave {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.decodeSafe(.id, default: 0)
+        tail = c.decodeSafe(.tail, default: "")
+        typeName = c.decodeSafe(.typeName, default: "")
+        assignedTick = c.decodeSafe(.assignedTick, default: 0)
+    }
+}
+
+extension CrewSave {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.decodeSafe(.id, default: 0)
+        status = c.decodeSafe(.status, default: 0)
+        dutyTicks = c.decodeSafe(.dutyTicks, default: 0)
+        restTicksLeft = c.decodeSafe(.restTicksLeft, default: 0)
+    }
+}
+
+extension FinanceSave {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        tick = c.decodeSafe(.tick, default: 0)
+        revenue = c.decodeSafe(.revenue, default: 0)
+        fees = c.decodeSafe(.fees, default: 0)
+        operatingCost = c.decodeSafe(.operatingCost, default: 0)
+        leaseCost = c.decodeSafe(.leaseCost, default: 0)
+        insurance = c.decodeSafe(.insurance, default: 0)
+        maintenance = c.decodeSafe(.maintenance, default: 0)
+        acquisition = c.decodeSafe(.acquisition, default: 0)
+        routeSpend = c.decodeSafe(.routeSpend, default: 0)
+        hedgeSpend = c.decodeSafe(.hedgeSpend, default: 0)
+        saleProceeds = c.decodeSafe(.saleProceeds, default: 0)
+        offerIncome = c.decodeSafe(.offerIncome, default: 0)
+        flights = c.decodeSafe(.flights, default: 0)
+        cash = c.decodeSafe(.cash, default: 0)
+        netWorth = c.decodeSafe(.netWorth, default: 0)
+        loanProceeds = c.decodeSafe(.loanProceeds, default: 0)
+        debtService = c.decodeSafe(.debtService, default: 0)
+        hubSpend = c.decodeSafeOpt(Int.self, .hubSpend)
+        hubLabor = c.decodeSafeOpt(Int.self, .hubLabor)
+        clubRent = c.decodeSafeOpt(Int.self, .clubRent)
+        airlineAcquisition = c.decodeSafeOpt(Int.self, .airlineAcquisition)
+        integrationSpend = c.decodeSafeOpt(Int.self, .integrationSpend)
+        equityRaised = c.decodeSafeOpt(Int.self, .equityRaised)
+        dividendsPaid = c.decodeSafeOpt(Int.self, .dividendsPaid)
+        buybackSpend = c.decodeSafeOpt(Int.self, .buybackSpend)
+        marketingSpend = c.decodeSafeOpt(Int.self, .marketingSpend)
+    }
+}
+
+extension LoanSave {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = c.decodeSafe(.id, default: 0)
+        originalPrincipal = c.decodeSafe(.originalPrincipal, default: 0)
+        remainingPrincipal = c.decodeSafe(.remainingPrincipal, default: 0)
+        monthlyRate = c.decodeSafe(.monthlyRate, default: 0)
+        monthlyPayment = c.decodeSafe(.monthlyPayment, default: 0)
+        termMonths = c.decodeSafe(.termMonths, default: 0)
+        takenTick = c.decodeSafe(.takenTick, default: 0)
+    }
+}
+
 // MARK: - Disk store
 
 /// Lightweight summary of a saved slot, for the load/quit menu without decoding
@@ -225,6 +466,23 @@ enum GameStore {
     private static func url(_ slot: Int) -> URL {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return dir.appendingPathComponent("savegame_\(slot).json")
+    }
+    /// Last-known-good backup, kept so a bad write or an undecodable primary is
+    /// always recoverable (files are ~KB, so this is nearly free).
+    private static func bakURL(_ slot: Int) -> URL {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return dir.appendingPathComponent("savegame_\(slot).bak.json")
+    }
+
+    /// Decode a file into a snapshot (may be bankrupt/nameless — the caller decides).
+    private static func rawDecode(at url: URL) -> GameSnapshot? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(GameSnapshot.self, from: data)
+    }
+    /// A *loadable* game: decodes, is named, and isn't bankrupt.
+    private static func validGame(at url: URL) -> GameSnapshot? {
+        guard let s = rawDecode(at: url), s.playerAirlineName != nil, !s.isBankrupt else { return nil }
+        return s
     }
 
     /// Above this, a save is treated as too big to parse on the COLD-LAUNCH path
@@ -269,6 +527,15 @@ enum GameStore {
         snap.savedAtEpoch = Date().timeIntervalSince1970
         do {
             let data = try JSONEncoder().encode(snap)
+            // Preserve the last KNOWN-GOOD save as `.bak` before overwriting, so a
+            // bad write or any future decode gap is always recoverable. Only refresh
+            // .bak from a primary that currently decodes — never let a corrupt
+            // primary clobber a good backup. (Skip an oversized legacy primary — it
+            // re-saves small right after this and decoding it here would be costly.)
+            if fileSize(slot) <= maxDecodeBytes, validGame(at: url(slot)) != nil {
+                try? FileManager.default.removeItem(at: bakURL(slot))
+                try? FileManager.default.copyItem(at: url(slot), to: bakURL(slot))
+            }
             try data.write(to: url(slot), options: .atomic)
             mirrorToCloud(data, slot: slot)   // keep the player's other devices in sync
         } catch { /* a failed save shouldn't crash the game */ }
@@ -276,14 +543,13 @@ enum GameStore {
 
     static func load(slot: Int) -> GameSnapshot? {
         migrateLegacyIfNeeded()
-        guard let data = try? Data(contentsOf: url(slot)),
-              let snap = try? JSONDecoder().decode(GameSnapshot.self, from: data),
-              snap.playerAirlineName != nil, !snap.isBankrupt else { return nil }
-        return snap
+        // Primary first; fall back to the last-known-good backup if it can't decode.
+        return validGame(at: url(slot)) ?? validGame(at: bakURL(slot))
     }
 
     static func clear(slot: Int) {
         try? FileManager.default.removeItem(at: url(slot))
+        try? FileManager.default.removeItem(at: bakURL(slot))
         cloudDelete(slot: slot)   // save key removed + a dated tombstone written
     }
 
@@ -295,17 +561,26 @@ enum GameStore {
             // An oversized legacy save (pre-1.1 unbounded history) would be a
             // launch-menu watchdog/OOM to decode just for a card — show a
             // lightweight placeholder; loading it re-saves it capped and small.
-            if fileSize(slot) > maxDecodeBytes {
-                return SlotInfo(index: slot, airlineName: "Saved game", day: 0,
-                                cash: 0, fleet: 0, routes: 0, savedAtEpoch: fileModified(slot))
+            if fileSize(slot) > maxDecodeBytes { return placeholder(slot) }
+            if let s = validGame(at: url(slot)) ?? validGame(at: bakURL(slot)),
+               let name = s.playerAirlineName {
+                return SlotInfo(index: slot, airlineName: name, day: s.tick / 1440,
+                                cash: s.playerBalance, fleet: s.aircraft.count,
+                                routes: s.routes.count, savedAtEpoch: s.savedAtEpoch)
             }
-            guard let data = try? Data(contentsOf: url(slot)),
-                  let s = try? JSONDecoder().decode(GameSnapshot.self, from: data),
-                  let name = s.playerAirlineName, !s.isBankrupt else { return nil }
-            return SlotInfo(index: slot, airlineName: name, day: s.tick / 1440,
-                            cash: s.playerBalance, fleet: s.aircraft.count,
-                            routes: s.routes.count, savedAtEpoch: s.savedAtEpoch)
+            // Decodes but is bankrupt/nameless → treat as empty (unchanged behavior).
+            if rawDecode(at: url(slot)) != nil { return nil }
+            // Present but genuinely UNDECODABLE (corrupt, and no good .bak): show an
+            // OCCUPIED placeholder rather than nil, so the player can never overwrite
+            // recoverable data by starting a new game in what looked like an empty
+            // slot. They can still explicitly Delete it from the menu.
+            return placeholder(slot)
         }
+    }
+
+    private static func placeholder(_ slot: Int) -> SlotInfo {
+        SlotInfo(index: slot, airlineName: "Saved game", day: 0, cash: 0, fleet: 0,
+                 routes: 0, savedAtEpoch: fileModified(slot))
     }
 }
 
@@ -409,7 +684,15 @@ extension GameStore {
                                    cloudSaveEpoch: epoch(of: cloudData),
                                    tombstoneEpoch: tomb) {
             case .adoptCloud:
-                if let cloudData { try? cloudData.write(to: url(slot), options: .atomic) }
+                if let cloudData {
+                    // Back up a good local save before letting cloud overwrite it, so
+                    // an unexpected cloud value is still recoverable from .bak.
+                    if !big, validGame(at: url(slot)) != nil {
+                        try? FileManager.default.removeItem(at: bakURL(slot))
+                        try? FileManager.default.copyItem(at: url(slot), to: bakURL(slot))
+                    }
+                    try? cloudData.write(to: url(slot), options: .atomic)
+                }
             case .pushLocal:
                 if let localData { kvs.set(localData, forKey: cloudKey(slot)) }
             case .deleteLocal:

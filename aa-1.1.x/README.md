@@ -66,6 +66,22 @@ group never compiles them into the build.
   restored gap is exactly the un-persisted `devInjectCash`), a save/load round-trip
   preserves ledgers, a legacy no-ledger save is backfilled on restore, and
   decommission drops the ledger. (36/36 green when last run.)
+- **`SaveCompatVerify.swift`** — the guard for the "testers lose saves on a new
+  build" bug (12/12). Builds a real modern GameSnapshot, strips keys that later
+  builds added (top-level + nested route/aircraft elements) to simulate an OLDER
+  save, and asserts the current build STILL decodes it with defaults filled. Also:
+  an empty `{}` decodes to defaults, and the normal round-trip is intact. Run it
+  against pre-fix Persistence.swift and it REPRODUCES the bug (older save → nil);
+  against the tolerant `init(from:)` decoders it's green. **Re-run after ANY change
+  to the save structs** — it's the regression net that makes add-a-field-→-lose-
+  saves impossible.
+- **`RoundTripVerify.swift`** — end-to-end save path (13/13): a REAL Simulation
+  (2 aircraft, 2 routes, a loan, 20 sim-days flown) → `snapshot()` → JSON encode →
+  JSON decode → `restore()` into a fresh sim, asserting name/tail/balance/tick/
+  fleet/routes/reputation/finance-snapshots/loans all restore exactly and the
+  restored sim keeps running. The restored residual is `-(devInjectCash)` exactly
+  (the injection isn't persisted — that's the proof of an exact restore, per the
+  Acquisition-harness lesson), NOT 0.
 
 ## How to run
 The entry file must be named `main.swift` (top-level `MainActor.assumeIsolated {…}`).

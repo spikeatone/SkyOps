@@ -37,6 +37,19 @@ as the work, not "later."
       curated Airport.hurricaneProneCodes set of 27 real coastal airports;
       Caribbean/Central America still auto-hurricane. 43/43 headless, incl. a
       global no-stray-inland-hurricane invariant. MCI → northWinter.
+- [x] SAVES SURVIVE APP UPDATES (tester "lost my game on a new TF build"). Root
+      cause: synthesized Codable throws keyNotFound on a missing key for a
+      NON-optional field even with a default, so every older save that predated a
+      later build's new field failed to decode → swallowed to nil → "empty" slot →
+      overwritten. Fix: tolerant init(from:) (decodeSafe → default) on every save
+      struct; makes add-a-field-→-lose-saves impossible past+future. Plus a
+      last-known-good .bak (load falls back to it) and an occupied placeholder for
+      undecodable files so they can't be silently overwritten. 12/12 SaveCompat +
+      13/13 real round-trip headless + live launch (existing save decoded fine).
+      See CLAUDE.md persistence section. DEFERRED (need 2 devices): full-body
+      cloud validation + async-correct fresh-install iCloud restore.
+- [x] Add Glasgow (GLA) airport, Scotland — 8,720ft runway (blocks A380 class),
+      europe region, on the GB mainland. 12/12 headless. Count 384→385.
 
 ## 1.1.x — LOD realism / delight polish batch (designer request)
 Roadmap the designer greenlit: #1 registration prefixes, #5 more milestones, #2

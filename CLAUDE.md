@@ -2678,6 +2678,55 @@ where numbers are involved.
   `.fixedSize(horizontal:)` keeps the labels from truncating to "S…"/"Q…" when the
   cash line is tight (a real bug caught in the Simulator).
 
+- **SAVES SURVIVE APP UPDATES — the tester "lost my game on a new TestFlight
+  build" bug, ROOT-CAUSED and FIXED (native app; 1.1.x).** Reported repeatedly:
+  testers lost saves when installing a new build. A 4-angle audit (schema /
+  decode-resilience / iCloud / identity) + an empirical `swiftc` repro found the
+  cause is NOT iCloud or the bundle id — it's **Swift's synthesized `Codable`
+  throwing `keyNotFound` for a missing key on a NON-optional property, EVEN when
+  that property has a default value** (`var x = 0`). So every build that shipped a
+  new persisted field as non-optional (loans, promotions, crew-training,
+  competition, incentives, `leaseAccrued`, …) made every OLDER save undecodable;
+  the throw was swallowed by `try?` → nil → the slot rendered as "empty" → the
+  player overwrote their still-intact file by starting a new game. iOS preserves
+  the Documents container across same-bundle updates, so the file was always there
+  — the code just couldn't read it. (The SkyOps→AirlineArchitect rename was a
+  ONE-TIME container break, not the recurring cause; the build-27 save-crash was a
+  mostly-resolved corrupt-file contributor.)
+  - **THE FIX (durable, structural): every save struct now decodes each field with
+    a `decodeSafe`/`decodeSafeOpt` helper (missing/undecodable key → default) via a
+    hand-written `init(from:)` in an EXTENSION (extensions preserve the memberwise
+    inits `snapshot()` uses; the synthesized `encode`/`CodingKeys` stay).** This
+    makes "add a field → lose saves" IMPOSSIBLE for past AND future saves —
+    unknown keys are ignored (Codable already does that), missing known keys fall
+    back to defaults, and the compiler enforces every stored property is
+    initialised so a new field can't be silently dropped. Covers GameSnapshot +
+    AircraftSave/RouteSave/FlightRecordSave/RouteAssignmentSave/CrewSave/
+    FinanceSave/LoanSave. `try?` flattens the Optional since Swift 5, so the helper
+    is a single `??`. **RULE for future sessions: adding a persisted field means
+    adding one `decodeSafe` line in Persistence.swift; a new nested Codable save
+    type needs the same tolerant `init(from:)`. Never trust a bare `var x = 0` to
+    survive decode.**
+  - **SAFETY NET (Fix B): a last-known-good `.bak` is kept before every overwrite**
+    (only refreshed from a primary that currently decodes, so a corrupt primary
+    can't clobber a good backup); `load()`/`slotInfos()` fall back to `.bak` if the
+    primary won't decode; `clear()` removes it; and a present-but-UNDECODABLE file
+    now shows as an OCCUPIED placeholder (not an empty slot) so the player can't
+    silently overwrite recoverable data — they can still explicitly Delete it. The
+    iCloud `.adoptCloud` path also backs up the local good save before overwriting.
+  - **Verified**: `aa-1.1.x/SaveCompatVerify.swift` (12/12 — reproduces the bug on
+    pre-fix code, then an older-build save with later keys stripped decodes with
+    defaults filled; empty `{}` decodes; normal round-trip intact) +
+    `aa-1.1.x/RoundTripVerify.swift` (13/13 — a REAL sim snapshot→JSON→restore is
+    exact, residual == −(un-persisted `devInjectCash`), keeps running) + clean app
+    build + live launch (a pre-existing on-disk save decoded and showed correctly
+    in the load menu). **STILL DEFERRED (Fix C/D, need two physical devices on one
+    Apple ID to validate real iCloud): full-body cloud validation before adopting
+    (today `adoptCloud` checks only the `SaveHeader`), and async-correct
+    restore-on-fresh-install (a late-arriving cloud save never flips the menu on,
+    and a first-run new game can stomp an un-downloaded cloud save). These are
+    hardening, not the recurring cause — the tolerant decode + `.bak` fixes ship
+    first.**
 - **PERSISTENCE + MULTI-SLOT SAVES — DONE (native app).** The game persists so a
   player picks up where they left off, with up to 3 named save slots.
   - **`Persistence.swift`**: a `Codable` `GameSnapshot` captures the PERSISTENT
