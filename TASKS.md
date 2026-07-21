@@ -24,6 +24,9 @@ as the work, not "later."
 - [x] Day/night terminator more obvious (designer note). MapView.drawNightShade
       maxDark 0.42→0.55 dark / 0.12→0.18 light, night colour slightly deeper.
       Verified live (clear west-night/east-day gradient across CONUS).
+- [x] More vertical gap between a ground-stopped airport's ring and its weather
+      glyph (designer — too tight after the 50% glyph bump). Glyph y-offset
+      r+8→r+17 × es. Verified live (DEN/MCI zoomed — glyph clears the ring).
 
 ## 1.1.x — LOD realism / delight polish batch (designer request)
 Roadmap the designer greenlit: #1 registration prefixes, #5 more milestones, #2
