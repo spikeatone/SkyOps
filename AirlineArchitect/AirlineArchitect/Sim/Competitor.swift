@@ -109,7 +109,7 @@ enum CompetitorIntel {
 
     /// Build every carrier's profile for this game. Deterministic in `seed`.
     static func generateAll(seed: UInt64, airports: [Airport]) -> [CompetitorProfile] {
-        let regions: [Airline.Region] = [.us, .canada, .mexico, .centralAmerica,
+        let regions: [Airline.Region] = [.us, .canada, .mexico, .centralAmerica, .caribbean,
                                          .southAmerica, .europe, .africa, .asia,
                                          .middleEast, .oceania]
         var out: [CompetitorProfile] = []
@@ -264,7 +264,8 @@ enum CompetitorIntel {
         case .us:             return "United States"
         case .canada:         return "Canada"
         case .mexico:         return "Mexico"
-        case .centralAmerica: return "Central America & Caribbean"
+        case .centralAmerica: return "Central America"
+        case .caribbean:      return "Caribbean"
         case .southAmerica:   return "South America"
         case .europe:         return "Europe"
         case .africa:         return "Africa"

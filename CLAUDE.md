@@ -2984,6 +2984,40 @@ both orientations) incl. the full open-a-route→acquire flow.
   (per-region pools, frames, in-region spares/opportunities, save/load
   round-trip, legacy default) + live (Europe start frames Europe with its
   region colours). Naming screen now scrolls (the picker adds height).
+- **CARIBBEAN CARRIER REGION — BUILT (1.1.x). The Caribbean islands are now their
+  OWN internal carrier region** (`Airline.Region.caribbean`), split out of Central
+  America. Prompted by the start-region parity measurement (see
+  `aa-1.1.x/RegionParityProbe.swift`): the finding was NO early traps/cakewalks —
+  every region's starter routes are profitable — with Central America/Caribbean the
+  one low-ceiling outlier (genuinely smaller markets, data-accurate). The one cheap,
+  non-fudging polish there was the roster: Caribbean airports used to draw
+  Copa/Avianca/Volaris (`centralAmericaRoster`), which read repetitive/wrong for
+  inter-island flying. Now `caribbeanRoster` = 6 real carriers (Caribbean Airlines
+  BW, Bahamasair UP, Cayman Airways KX, interCaribbean JY, Winair WM, Sunrise S6),
+  per-type eligibility mapped to the game fleet (ATR 72→`AT46`; Twin Otter/Dash-8→
+  `DH8B` — note DH8B is the only type that serves St. Barths' 2,000ft strip, so
+  Winair's Twin Otters land there realistically). Wiring (all touched — a new
+  `Region` case makes every non-exhaustive switch a COMPILE error, which caught them):
+  `caribbeanCodes` split from `centralAmericaCodes`; `region()`/`roster(for:)`/
+  `corridors`/`allRegions` updated; `realCodes` gains the 6 codes (tail-code
+  collision guard); `Competitor.swift` `regionLabel` (+"Caribbean", Central America
+  relabeled from "Central America & Caribbean") and its HARDCODED `generateAll`
+  region list (NOT `allRegions` — a real gotcha; it must be hand-updated or Caribbean
+  carriers never appear in Market Intelligence). **`PlayerRegion.centralAmerica`
+  ("Central America & The Caribbean") now spans `[.centralAmerica, .caribbean]`**, so
+  the start's framing / spare bases / opportunities / offers are UNCHANGED (still
+  covers the islands). Cross-region legs (Caribbean↔Panama/US) still mix in
+  Copa/Avianca/US carriers via `pick`'s endpoint-region combining, so the mainland
+  hubs' real Caribbean reach is preserved. Background-spawn (`pickBackgroundRegion`
+  uses `allRegions`) and map colours (basemap-layer-keyed, not Region) needed no
+  change — Caribbean islands still render in the Central America map hue.
+  Persistence-safe (internal `Region` isn't persisted; the player's `homeRegion`
+  rawValue is unchanged). Verified 18/18 headless (`aa-1.1.x/CaribbeanVerify.swift`:
+  roster shape, region split, weighted draws never yield mainland carriers, domestic
+  Caribbean legs draw Caribbean carriers, every type resolves, realCodes guard, CA
+  start spans both regions, background traffic actually flies Caribbean carriers on
+  Caribbean airports, Market Intelligence includes them deterministically) + clean
+  full app build.
 - **LEISURE DESTINATIONS — BUILT (designer playtest request).** 26 new airports
   (343 total): Hawaii neighbors (LIH/OGG/ITO/KOA), the Caribbean primaries per
   the designer's territory list (SJU STT NAS PLS GCM EIS AXA SXM SBH ANU SKB
@@ -3015,9 +3049,10 @@ both orientations) incl. the full open-a-route→acquire flow.
   hurts more — on-intent. Cash invariant verified unaffected (opening cost was
   already a `totalRouteSpend` term; the change is amount-only). Tune the one
   constant if the bite feels off; a recurring island ops surcharge was the
-  considered alternative (deferred — "capital commitment" = upfront). Carrier regions: Caribbean islands ride
-  `centralAmericaCodes` (Copa/Avianca approximation — a real Caribbean roster
-  is a future refinement); SJU/STT stay US-region (territories, same principle
+  considered alternative (deferred — "capital commitment" = upfront). Carrier regions: Caribbean islands
+  now have their OWN carrier region (see "CARIBBEAN CARRIER REGION" below — the
+  "future refinement" is BUILT; they no longer ride Central America's
+  Copa/Avianca); SJU/STT stay US-region (territories, same principle
   as GUM); MLE→asia, SEZ→africa. REAL-RUNWAY HONESTY: SBH (2,119 ft) and EIS
   (4,642 ft) are genuinely jet-unservable — turboprop-only in reality; they
   render + host background flavor and are a future turboprop-type hook, NOT a

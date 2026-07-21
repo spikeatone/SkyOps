@@ -18,6 +18,19 @@ as the work, not "later."
 
 ## 1.1.x (maintenance / polish line)
 
+- [x] START-REGION PARITY — MEASURED (aa-1.1.x/RegionParityProbe.swift). Finding:
+      no early traps/cakewalks — every region's starter routes are profitable with a
+      gauge-matched 50-seat jet; 6/7 regions up-gauge to narrowbodies at ~90% load.
+      Central America/Caribbean is the lone low-ceiling outlier (genuinely smaller
+      markets — data-accurate, not a bug). Healthier than feared; no balance fix needed.
+- [x] CARIBBEAN CARRIER REGION — BUILT (the one polish the parity pass surfaced).
+      Split the Caribbean islands into their own `Airline.Region.caribbean` with 6
+      real carriers (Caribbean Airlines/Bahamasair/Cayman/interCaribbean/Winair/
+      Sunrise) instead of drawing Central America's Copa/Avianca. The "Central America
+      & The Caribbean" start still spans both. Verified 18/18 headless
+      (aa-1.1.x/CaribbeanVerify.swift) + clean app build. See CLAUDE.md "CARIBBEAN
+      CARRIER REGION".
+
 - [x] LEISURE FARE TUNING — DONE. A measurement pass (real Sim headless,
       scratchpad `LeisureMeasure.swift`) found leisure routes were a mild free
       lunch: the +15% fare has ZERO load/elasticity cost (pure upside), and the

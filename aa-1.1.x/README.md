@@ -21,6 +21,25 @@ group never compiles them into the build.
   recoup flights, isolating the leisure fare + opening effect. Used to retune the leisure
   opening premium (×1.75 multiplier → flat $500k surcharge). Also prints the cash-invariant
   residual (0 = holds). Reach for it if leisure economics get tuned again.
+- **`RegionParityProbe.swift`** — a MEASUREMENT tool (not assertions): start-region
+  difficulty parity. Per region, asks the region-aware opportunity finder for top
+  markets, keeps those a starter-affordable (<= $20M) best-gauged aircraft can fly,
+  flies the top few and reports per-flight net + load; then flies a 165-seat A320 on
+  each region's top route to show the mid-game up-gauge ceiling. FINDING (1.1.x): no
+  early traps/cakewalks — every region's starter routes are profitable with a 50-seat
+  jet; 6/7 regions up-gauge to narrowbodies at ~90% load; Central America/Caribbean is
+  the lone low-ceiling outlier (demand-thin small markets — data-accurate, not a bug).
+  LESSON: a growth-autopilot version was tried first and kept tripping on the known
+  early-game regional-jet trap (high-variance noise) — the opportunity-landscape probe
+  is the robust framing. Under-gauging (buying the tiniest aircraft) also gives false
+  "all routes lose money" reads — gauge-match to demand.
+- **`CaribbeanVerify.swift`** — verifies the Caribbean carrier region (18/18): the
+  6-carrier roster, the caribbean/centralAmerica code split, weighted draws never
+  yielding mainland carriers, domestic Caribbean legs drawing Caribbean carriers,
+  every type resolving, the realCodes tail-collision guard, the "Central America &
+  The Caribbean" start spanning both regions, background traffic actually flying
+  Caribbean carriers on Caribbean airports (real `setFleetSize` path), and
+  Market-Intelligence inclusion + determinism.
 - **`HubChartMain.swift`** — verifies the per-hub payback ledger feeding the Hubs
   panel's payback chart: establish/club/labor/rent accrue exactly, monthly
   snapshots append + stay within `maxHubSnapshots`, `hubSpokeNet`/`hubFacilityCost`

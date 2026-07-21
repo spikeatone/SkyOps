@@ -65,7 +65,7 @@ struct Airline {
     /// The five geographic regions a flight can touch. A leg draws carriers from
     /// its endpoints' regions, so a Mexican domestic leg shows Mexican carriers,
     /// a Brazilian one South American carriers, etc. — not a lumped LatAm pool.
-    enum Region { case us, canada, mexico, centralAmerica, southAmerica, europe, africa, asia, middleEast, oceania }
+    enum Region { case us, canada, mexico, centralAmerica, caribbean, southAmerica, europe, africa, asia, middleEast, oceania }
 
     /// The PLAYER-facing start-region choice (designer's list of seven), mapped
     /// onto the finer internal carrier regions above. Chosen on the naming
@@ -95,7 +95,7 @@ struct Airline {
             case .africa:         return [.africa]
             case .asia:           return [.asia, .middleEast]
             case .oceania:        return [.oceania]
-            case .centralAmerica: return [.centralAmerica]
+            case .centralAmerica: return [.centralAmerica, .caribbean]
             case .europe:         return [.europe]
             case .northAmerica:   return [.us, .canada, .mexico]
             case .southAmerica:   return [.southAmerica]
@@ -127,6 +127,23 @@ struct Airline {
         .init(name: "Copa Airlines", code: "CM", weight: 12, types: ["B737700","B737800","MAX8","MAX9"]),
         .init(name: "Avianca",       code: "AV", weight: 8,  types: ["A319","A320","A321","A320NEO","A321NEO","B788"]),
         .init(name: "Volaris",       code: "Y4", weight: 6,  types: ["A319","A320","A321","A320NEO","A321NEO"]),
+    ]
+
+    /// Real Caribbean carriers — the islands were split out of the Central America
+    /// carrier region (they used to draw Copa/Avianca/Volaris, which read as
+    /// repetitive and wrong for inter-island flying). Per-type eligibility mapped
+    /// to the game's fleet (ATR 72 → AT46 ATR 42-600; Twin Otter/Dash-8 → DH8B —
+    /// note DH8B is the only type that can serve St. Barths' 2,000ft strip, so
+    /// Winair's Twin Otters land there realistically). Copa/Avianca still appear on
+    /// Caribbean↔Panama/Colombia legs via the cross-region `pick` (endpoint regions
+    /// combine), so the mainland hubs' real Caribbean reach is preserved.
+    static let caribbeanRoster: [Airline] = [
+        .init(name: "Caribbean Airlines",     code: "BW", weight: 12, types: ["B737800","MAX8","AT46"]),   // Trinidad & Tobago flag carrier, largest
+        .init(name: "Bahamasair",             code: "UP", weight: 8,  types: ["B737700","B737800","AT46","DH8B"]),
+        .init(name: "Cayman Airways",         code: "KX", weight: 7,  types: ["B737800","MAX8","DH8B"]),
+        .init(name: "interCaribbean Airways", code: "JY", weight: 7,  types: ["ERJ145","AT46","DH8B"]),   // Turks & Caicos regional feeder
+        .init(name: "Winair",                 code: "WM", weight: 5,  types: ["DH8B","AT46"]),             // St. Maarten; short-field islands (SBH/SXM)
+        .init(name: "Sunrise Airways",        code: "S6", weight: 4,  types: ["ERJ145","ERJ135"]),          // Haiti-based regional
     ]
 
     /// Real South American carriers.
@@ -295,17 +312,17 @@ struct Airline {
     ]
     static let centralAmericaCodes: Set<String> = [
         "PTY","SJO","SAL","GUA","LIR","SAP","MGA","BZE","XPL","RTB",
-        // Caribbean leisure islands ride the Central America carrier region
-        // (Copa/Avianca genuinely blanket the Caribbean; a dedicated Caribbean
-        // roster — Caribbean Airlines, interCaribbean — is a future refinement).
-        // SJU/STT are deliberately NOT here: US territories, US carriers (same
-        // principle as GUM).
+    ]
+    /// Caribbean islands — their OWN carrier region now (real Caribbean carriers),
+    /// split out of Central America. The "Central America & The Caribbean" player
+    /// start still spans BOTH (see PlayerRegion.gameRegions), so framing / spare
+    /// bases / opportunities are unchanged for that start. SJU/STT are deliberately
+    /// NOT here: US territories, US carriers (same principle as GUM). Bermuda (BDA),
+    /// a mid-Atlantic British territory (really US/UK-carrier served), is bucketed
+    /// with the western-Atlantic islands for consistency and shares their basemap layer.
+    static let caribbeanCodes: Set<String> = [
         "NAS","PLS","GCM","EIS","AXA","SXM","SBH","ANU","SKB","DOM",
-        "UVF","SVD","GND","BGI","AUA","CUR","BON","POS",
-        // Bermuda is a mid-Atlantic British territory (really US/UK-carrier
-        // served); bucketed with the western-Atlantic leisure islands here for
-        // consistency, and it renders in the same basemap layer.
-        "BDA",
+        "UVF","SVD","GND","BGI","AUA","CUR","BON","POS","BDA",
     ]
     static let southAmericaCodes: Set<String> = [
         "BOG","GRU","SCL","LIM","CGH","AEP","GIG","VCP","MDE","BSB","EZE","UIO","SDU","CLO","CNF","CTG","POA","REC","SSA","GYE",
@@ -346,6 +363,7 @@ struct Airline {
         if canadaCodes.contains(code) { return .canada }
         if mexicoCodes.contains(code) { return .mexico }
         if centralAmericaCodes.contains(code) { return .centralAmerica }
+        if caribbeanCodes.contains(code) { return .caribbean }
         if southAmericaCodes.contains(code) { return .southAmerica }
         if europeCodes.contains(code) { return .europe }
         if africaCodes.contains(code) { return .africa }
@@ -360,6 +378,7 @@ struct Airline {
         case .canada:         return canadaRoster
         case .mexico:         return mexicoRoster
         case .centralAmerica: return centralAmericaRoster
+        case .caribbean:      return caribbeanRoster
         case .southAmerica:   return southAmericaRoster
         case .europe:         return europeRoster
         case .africa:         return africaRoster
@@ -392,11 +411,12 @@ struct Airline {
     /// flows and excludes ones nobody flies nonstop (e.g. Oceania↔Africa,
     /// South America↔Asia). Keeps a carrier's routes inside its real reach.
     static let corridors: [Region: [Region]] = [
-        .us:             [.canada, .mexico, .centralAmerica, .southAmerica, .europe, .asia, .oceania, .middleEast, .africa],
-        .canada:         [.us, .europe, .asia, .mexico, .centralAmerica, .southAmerica],
-        .mexico:         [.us, .canada, .centralAmerica, .southAmerica, .europe],
-        .centralAmerica: [.us, .mexico, .southAmerica, .canada],
-        .southAmerica:   [.us, .europe, .centralAmerica, .mexico, .canada, .africa, .middleEast],
+        .us:             [.canada, .mexico, .centralAmerica, .caribbean, .southAmerica, .europe, .asia, .oceania, .middleEast, .africa],
+        .canada:         [.us, .europe, .asia, .mexico, .centralAmerica, .caribbean, .southAmerica],
+        .mexico:         [.us, .canada, .centralAmerica, .caribbean, .southAmerica, .europe],
+        .centralAmerica: [.us, .mexico, .caribbean, .southAmerica, .canada],
+        .caribbean:      [.us, .mexico, .centralAmerica, .southAmerica, .canada],
+        .southAmerica:   [.us, .europe, .centralAmerica, .caribbean, .mexico, .canada, .africa, .middleEast],
         .europe:         [.us, .canada, .africa, .middleEast, .asia, .southAmerica, .mexico],
         .africa:         [.europe, .middleEast, .us, .asia, .southAmerica],
         .middleEast:     [.europe, .africa, .asia, .us, .canada, .oceania, .southAmerica],
@@ -405,7 +425,7 @@ struct Airline {
     ]
 
     /// Every region that carries background traffic (has a roster).
-    static let allRegions: [Region] = [.us, .canada, .mexico, .centralAmerica, .southAmerica, .europe, .africa, .asia, .middleEast, .oceania]
+    static let allRegions: [Region] = [.us, .canada, .mexico, .centralAmerica, .caribbean, .southAmerica, .europe, .africa, .asia, .middleEast, .oceania]
 
     /// Region-based overload kept for callers/tests that reason in regions.
     /// No gateway logic — overseas carriers never enter through this path.
@@ -458,6 +478,8 @@ struct Airline {
         "JQ": "Jetstar", "AI": "Air India", "GA": "Garuda Indonesia", "MH": "Malaysia Airlines",
         "TG": "Thai Airways", "VN": "Vietnam Airlines", "PR": "Philippine Airlines",
         "BR": "EVA Air", "CI": "China Airlines", "AM": "Aeroméxico", "CM": "Copa Airlines",
+        "BW": "Caribbean Airlines", "UP": "Bahamasair", "KX": "Cayman Airways",
+        "JY": "interCaribbean Airways", "WM": "Winair", "S6": "Sunrise Airways",
         "LA": "LATAM", "AV": "Avianca", "AR": "Aerolíneas Argentinas", "WS": "WestJet",
         "DY": "Norwegian", "FI": "Icelandair", "LO": "LOT Polish Airlines", "OK": "Czech Airlines",
         "MS": "EgyptAir", "RJ": "Royal Jordanian", "GF": "Gulf Air", "WY": "Oman Air",
