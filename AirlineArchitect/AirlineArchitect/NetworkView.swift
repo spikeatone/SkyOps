@@ -499,7 +499,9 @@ struct NetworkView: View {
     // MARK: - Sim Speed Control Bar (¼×–25×, ¼× rate-limited)
 
     private var speedBar: some View {
-        HStack(spacing: 0) {
+        VStack(spacing: 6) {
+            GameClockLine(sim: sim, color: barText)
+            HStack(spacing: 0) {
             ForEach(Simulation.speedOptions, id: \.self) { s in
                 let active = sim.speed == s
                 let quarterBlocked = (s == 0.25) && sim.quarterSpeedUsesRemaining == 0
@@ -513,6 +515,7 @@ struct NetworkView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
                 .pressable(0.9)
+            }
             }
         }
         .padding(4)
@@ -973,5 +976,28 @@ private struct LiveMap: View {
                 cameraZoom: sim.cameraZoom, cameraCenter: sim.cameraCenter,
                 selectedID: selectedID, highlightCodes: highlightCodes)
             .frame(width: mapWidth)
+    }
+}
+
+/// Slim Day / Date / Time readout for the top of the speed bar. Reads the
+/// THROTTLED `displayTick` in its OWN body (not raw `tick`, and not in the
+/// parent), so the clock refreshes ~5×/sec without pulling NetworkView's panels
+/// onto the per-tick re-render path — same isolation idea as LiveMap.
+private struct GameClockLine: View {
+    let sim: Simulation
+    let color: Color
+    var body: some View {
+        let t = sim.displayTick
+        HStack(spacing: 5) {
+            Text("Day \(Simulation.gameDay(at: t))")
+            Text("·").opacity(0.45)
+            Text(Simulation.gameDateString(at: t, startDay: sim.calendarStartDay))
+            Text("·").opacity(0.45)
+            Text(Simulation.gameTimeString(at: t)).monospacedDigit()
+        }
+        .font(.karla(12, .semibold))
+        .foregroundStyle(color)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
     }
 }

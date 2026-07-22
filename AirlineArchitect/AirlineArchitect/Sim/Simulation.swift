@@ -22,6 +22,11 @@ final class Simulation {
     static let baseTickMs: Double = 250
 
     private(set) var tick: Int = 0
+    /// Calendar start-of-year offset in days (0–359). 0 = the game opens Jan 1;
+    /// randomized per new game (see `randomizeCalendarStart`) so the starting date
+    /// AND season vary. Drives `monthOfYear` and the Game Date display; does NOT
+    /// affect `tick`, Game Day (operational days), or time-of-day. Persisted.
+    private(set) var calendarStartDay: Int = 0
     /// Throttled UI heartbeat: mirrors `tick` but only advances a few times a
     /// second regardless of sim speed. List/HUD views (Ops/Fleet/Finance/Crews)
     /// observe THIS instead of `tick`, so scrolling a long list doesn't fight a
@@ -3871,6 +3876,7 @@ final class Simulation {
         s.playerTailCode = playerTailCode
         s.playerBalance = playerBalance
         s.tick = tick
+        s.calendarStartDay = calendarStartDay
         s.nextTailNum = nextTailNum
         s.nextRouteId = nextRouteId
         s.totalRevenue = totalRevenue; s.totalFees = totalFees
@@ -3987,6 +3993,7 @@ final class Simulation {
         playerTailCode = s.playerTailCode
         playerBalance = s.playerBalance
         tick = s.tick
+        calendarStartDay = s.calendarStartDay
         nextTailNum = s.nextTailNum
         nextRouteId = s.nextRouteId
         totalRevenue = s.totalRevenue; totalFees = s.totalFees
@@ -4181,8 +4188,49 @@ final class Simulation {
     // MARK: - Seasonality (calendar-driven weather + leisure demand, 1.1.x)
     //
     // The sim runs a 12-month, 30-day calendar (ticksPerMonth). monthOfYear 0=Jan.
-    /// Sim calendar month, 0 = January … 11 = December.
-    var monthOfYear: Int { (tick / Simulation.ticksPerMonth) % 12 }
+    /// Sim calendar month, 0 = January … 11 = December. Includes `calendarStartDay`
+    /// so a game that started in (say) July has July's weather/season from tick 0.
+    /// With the default offset 0 this is identical to `(tick / ticksPerMonth) % 12`.
+    var monthOfYear: Int { ((tick / 1440 + calendarStartDay) / 30) % 12 }
+
+    /// Randomize the calendar start-of-year (0–359 days) so every NEW game begins on
+    /// a different date AND in a different season. Called ONCE from the app's
+    /// new-game flow (ContentView), never from `nameAirline` — so headless tests
+    /// (which call nameAirline) stay deterministic at offset 0. Loaded games keep
+    /// their persisted `calendarStartDay`; only a brand-new airline rolls a new one.
+    func randomizeCalendarStart() { calendarStartDay = Int.random(in: 0..<360) }
+
+    // MARK: - Game clock readouts (Day / Date / Time)
+    //
+    // Pure functions of a tick so the UI can compute them off the THROTTLED
+    // `displayTick` (never raw `tick`) — that keeps the readout view off the
+    // per-tick re-render path (the documented churn/freeze rule). The date is
+    // derived from the SAME 30-day-month calendar the seasonal curves read
+    // (monthOfYear), so Game Date always lines up with the weather/season.
+    static let monthAbbrev = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    /// The sim's opening calendar year (its fleet/roster fiction is the 2025–26 era).
+    static let gameStartYear = 2026
+    /// Calendar day number, 1-INDEXED: Day 1 = the opening day (Jan 1). Within the
+    /// first month it matches the date's day-of-month (Day 7 = Jan 7); after that
+    /// it keeps counting up while the date wraps monthly — two different readouts.
+    static func gameDay(at tick: Int) -> Int { tick / 1440 + 1 }
+    /// 24-hour clock, "HH:MM", from the minute-of-day.
+    static func gameTimeString(at tick: Int) -> String {
+        let m = ((tick % 1440) + 1440) % 1440
+        return String(format: "%02d:%02d", m / 60, m % 60)
+    }
+    /// Real-month date on the sim's 30-day-month calendar, e.g. "Jan 8, 2026".
+    /// `startDay` (0–359) is the game's randomized calendar start-of-year offset, so
+    /// a new game can begin in any month/season; pass `sim.calendarStartDay`. Day-of-
+    /// month is 1…30; the month index == `monthOfYear` (which reads the SAME offset),
+    /// so the date can't drift from the weather. The year advances every 360 sim-days.
+    static func gameDateString(at tick: Int, startDay: Int = 0) -> String {
+        let totalDays = tick / 1440 + startDay
+        let month = (totalDays / 30) % 12
+        let dom = (totalDays % 30) + 1
+        let year = gameStartYear + totalDays / 360
+        return "\(monthAbbrev[month]) \(dom), \(year)"
+    }
 
     enum WeatherZone { case hurricane, northWinter, southWinter, monsoon, mild }
     // 12-month multipliers (Jan…Dec), each averaging ~1.0 so ANNUAL ground-stop

@@ -1757,6 +1757,47 @@ where numbers are involved.
   (`quarterSpeedUsesRemaining`, resets when `tick/1440` changes, NOT a rolling
   window); the 4th request snaps to 1× (not the previous speed). Verified 8/8
   headless. NetworkView reads/greys the ¼× control by the remaining count.
+- **GAME CLOCK readout on the speed bar — DONE (designer request).** A slim
+  `Day N · Mon D, YYYY · HH:MM` line sits at the TOP of the Sim Speed Control Bar
+  box (Network tab), above the pills — designer's chosen spot (pairs the time
+  DISPLAY with the time CONTROL). Three pure `Simulation` helpers off a passed tick
+  (not instance state): `gameDay(at:)` = `tick/1440 + 1` (**1-INDEXED: Day 1 at
+  start**), `gameTimeString(at:)` = 24-hr `HH:MM` from minute-of-day,
+  `gameDateString(at:startDay:)` = real-month date **with year** ("Jan 8, 2026")
+  on the sim's 30-DAY-MONTH calendar (`gameStartYear = 2026`, the game's 2025–26
+  fleet/roster era; year advances every 360 sim-days). **Game Date is derived from
+  the SAME 30-day-month calendar the seasonal curves read (`monthOfYear`), on
+  purpose** — a real 365-day calendar would drift out of sync with the weather/
+  season model; the date's month index is provably always == `monthOfYear`. Within
+  the first month Game Day == the date's day-of-month (Day 7 = Jan 7); after that
+  Game Day keeps counting while the date wraps monthly (two different readouts).
+- **RANDOMIZED START DATE + SEASON per new game (designer request).**
+  `Simulation.calendarStartDay` (0–359, `private(set)`, **persisted**) offsets the
+  calendar so a new game begins on a random date AND in a random season.
+  `monthOfYear` is now `((tick/1440 + calendarStartDay) / 30) % 12` (identical to
+  the old `(tick/ticksPerMonth)%12` when the offset is 0), so the weather/leisure
+  curves shift WITH the start date automatically — a December start shows winter
+  storms from tick 0 (verified live: "Dec 17, 2026" with snowflake glyphs on the
+  map). `gameDateString` takes `startDay` (view passes `sim.calendarStartDay`);
+  Game Day and time-of-day are OFFSET-INDEPENDENT (operational days / minute of
+  day). **`randomizeCalendarStart()` is called ONCE from the app's new-game flow
+  (ContentView, right after `nameAirline`), NOT inside `nameAirline`** — because
+  headless harnesses call `nameAirline` and `SeasonVerify` asserts a Jan-start
+  month; keeping the randomizer in the view layer leaves every harness
+  deterministic at offset 0. Loaded games keep their persisted offset; legacy
+  saves (no field) default to 0 (Jan start), unchanged from how they were played.
+- RENDER ISOLATION (the documented churn rule): the readout is a dedicated leaf
+  view `GameClockLine` that reads the THROTTLED `sim.displayTick` (~5×/sec) in ITS
+  OWN body — NOT raw `tick`, and NOT in NetworkView.body — so the clock refreshes
+  without pulling NetworkView's panels/scroll views onto the per-tick re-render
+  path (same isolation idea as `LiveMap`). Hides with the speed bar under the
+  eye-overlay toggle. Verified 23/23 headless (`aa-1.1.x/GameClockVerify.swift` —
+  1-indexed day, year, edges, month/year rollover, the date-month == seasonal-
+  month invariant WITH a random offset over a full year, and a `calendarStartDay`
+  persistence round-trip + legacy-default-0) + Season 28/28 / SaveCompat 12/12 /
+  RoundTrip 13/13 unaffected + live. Not persisted for the LOAD MENU's separate
+  "Day N" summary (still `tick/1440`, 0-indexed) — a minor known inconsistency,
+  align if wanted. Easy tweaks parked: mirror the readout to other tabs.
 - **Two NEW control-bar panels (functional; FuelHedge now Figma-restyled — see
   the "Figma panel-restyle batch — DONE" note; AddCrew still dev-chromed):**
   `AddCrewPanel` (Hire Crew — lists owned families with crew count + real hire

@@ -75,6 +75,14 @@ group never compiles them into the build.
   against the tolerant `init(from:)` decoders it's green. **Re-run after ANY change
   to the save structs** — it's the regression net that makes add-a-field-→-lose-
   saves impossible.
+- **`GameClockVerify.swift`** — the Day/Date/Time speed-bar readout (23/23): the
+  three pure helpers (`gameDay` 1-indexed / `gameDateString` with year+`startDay` /
+  `gameTimeString`) at start, at edges (23:59, zero-pad), across month + year
+  rollover; the RANDOMIZED-start `calendarStartDay` (offset shifts date+season, not
+  Game Day/clock), a persistence round-trip of the offset + legacy-default-0; and
+  the key invariant that Game Date's month index always equals the seasonal
+  `monthOfYear` — both at the default offset (3 sim-years) AND under a random offset
+  (a full year) — so the displayed date can't drift out of sync with the weather.
 - **`RoundTripVerify.swift`** — end-to-end save path (13/13): a REAL Simulation
   (2 aircraft, 2 routes, a loan, 20 sim-days flown) → `snapshot()` → JSON encode →
   JSON decode → `restore()` into a fresh sim, asserting name/tail/balance/tick/

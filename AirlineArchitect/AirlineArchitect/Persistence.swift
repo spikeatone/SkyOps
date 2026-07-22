@@ -24,6 +24,7 @@ struct GameSnapshot: Codable {
     var playerTailCode = "ZQ"
     var playerBalance = 0
     var tick = 0
+    var calendarStartDay = 0   // randomized calendar start-of-year offset (0–359)
     var nextTailNum = 1
     var nextRouteId = 1
 
@@ -244,6 +245,7 @@ extension GameSnapshot {
         playerTailCode = c.decodeSafe(.playerTailCode, default: "ZQ")
         playerBalance = c.decodeSafe(.playerBalance, default: 0)
         tick = c.decodeSafe(.tick, default: 0)
+        calendarStartDay = c.decodeSafe(.calendarStartDay, default: 0)
         nextTailNum = c.decodeSafe(.nextTailNum, default: 1)
         nextRouteId = c.decodeSafe(.nextRouteId, default: 1)
         totalRevenue = c.decodeSafe(.totalRevenue, default: 0)

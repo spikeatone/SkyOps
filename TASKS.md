@@ -18,6 +18,22 @@ as the work, not "later."
 
 ## 1.1.x (maintenance / polish line)
 
+### Accumulating for the NEXT build (build 34 — 1.1 (33) is in App Store review + TestFlight)
+- [x] GAME CLOCK on the speed bar (designer request): a slim "Day N · Mon D, YYYY ·
+      HH:MM" line above the ¼×–25× pills (Network tab). Game Day is 1-INDEXED (Day 1
+      at start); Game Date carries a year (start 2026) and is derived from the sim's
+      30-day-month calendar so it stays locked to the weather/season; Game Time is a
+      24-hr clock. Rendered via a leaf view reading throttled displayTick (off the
+      per-tick churn path).
+- [x] RANDOMIZE start date + season per new game (designer request):
+      Simulation.calendarStartDay (0–359, persisted) offsets the calendar so each new
+      game opens on a random date AND season (monthOfYear reads the offset, so weather
+      shifts with it — a Dec start shows winter storms). Randomized from the app's
+      new-game flow (ContentView, not nameAirline, so harnesses stay deterministic).
+      23/23 headless (aa-1.1.x/GameClockVerify.swift, incl. persistence + the
+      random-offset date==season invariant); Season/SaveCompat/RoundTrip unaffected;
+      live. Parked: mirror the readout to other tabs; align the load-menu "Day N".
+
 ### Build 33 — CUT + SUBMITTED (1.1 public debut; swapped in for 32, in App Store review as of 21 Jul 2026; also the current TestFlight external cut). Contents below.
 - [x] Weather/curfew map glyphs 50% larger (designer note). MapView glyph size
       9→13.5 × elementScale. On main; ships in the next archive.

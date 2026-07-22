@@ -91,6 +91,7 @@ struct ContentView: View {
                     if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
                     sim.setHomeRegion(region)
                     sim.nameAirline(name, tailCode: tailCode)
+                    sim.randomizeCalendarStart()   // new game starts on a random date + season
                     if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
                     // Always run the walkthrough when NAMING a fresh airline (not
                     // when Continuing a save). No "seen once, ever" gate — that
