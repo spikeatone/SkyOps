@@ -4037,8 +4037,11 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
 
 ## Open / not yet decided
 
-- Xcode project shell doesn't exist yet — needs creating in Xcode itself on
-  a Mac (can't be done from a Linux sandbox). See ROADMAP Phase 0.
+- ~~Xcode project shell doesn't exist yet~~ **RESOLVED long ago (stale line
+  removed as a claim).** The Xcode project exists and the app has SHIPPED through
+  1.1 (build 33, public debut) — `AirlineArchitect/AirlineArchitect.xcodeproj`,
+  SwiftUI, file-system-synchronized groups. This bullet was a leftover from the
+  pre-native planning era; kept only as a marker of how far the project has come.
 - **Persistence — BUILT (native app), and NOT via SwiftData.** Went with a
   plain Codable snapshot to disk (JSON), not SwiftData/Core Data — the sim state
   is a self-contained object graph that serializes cleanly, and a single-slot
@@ -4107,14 +4110,17 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
   - The hub drawers (Network ▸ Hubs) ALSO gained a "Route Opportunities" subsection
     (mirrors Ops ▸ Route Opps via `sim.suggestRoute`); Ops ▸ Route Opps gained
     per-hub "BY HUB" drawers (`hubRouteOpportunities(from:)`).
-- The airline roster (`AIRLINE_ROSTER`) and its US-market-share weighting
-  is hardcoded to the current US-only airport network. If a future
-  version adds other regions/countries, the roster and weights need to
-  become region-aware — right now there's no mechanism for that at all,
-  it's a single fixed US-weighted list. Also has no way to detect real-
-  world fleet/route changes on its own (an Alaska Airlines update this
-  session was applied because it was reported and independently
-  verified, not because anything in the game noticed).
+- The airline roster IS region-aware now (this bullet was PARTLY stale — the
+  "no region mechanism at all / single fixed US-weighted list" claim is corrected).
+  There are 8 region rosters in `Airline.swift` (`canadaRoster`/`mexicoRoster`/
+  `centralAmericaRoster`/`caribbeanRoster`/`southAmericaRoster`/`africaRoster`/
+  `europeRoster`/`asiaRoster` + the US default) with per-region airport-code Sets
+  and `region()`/`roster(for:)`/`pick(...)` classification — so background carriers
+  match the leg's region. **What's still true:** each roster is a hand-curated
+  literal, and there's no mechanism to detect real-world fleet/route changes on its
+  own (roster corrections — e.g. the Alaska Airlines update — get applied because
+  someone reported and independently verified them, not because the game noticed).
+  Treat every roster entry as due for eventual re-verification.
 - **REPUTATION — BUILT (native app).** A service-quality stat (0–100, starts 70)
   that feeds back into demand. FALLS when the operation fails passengers (an
   aircraft grounded −4 at AOG-hold start, a flight held for crew −2) and RECOVERS
@@ -4232,20 +4238,19 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
     infrequent action — a nod, not a nag), under the shared `.playback` session.
     Swap the file to change the call (no code change); the recording is generic
     (not airline-specific), which is the designer's choice.
-- **Pinch-zoom on the mobile app**: still not built (this is a browser
-  prototype), but the underlying mechanism is no longer blocked or even
-  really "open" in the same sense — the camera system built for pan/zoom
-  (see Map section) is the same math a mobile pinch-gesture handler would
-  drive, just fed by touch events instead of drag+wheel. What's
-  genuinely unbuilt: the touch gesture handling itself.
-- **Label cluster detection doesn't re-evaluate on zoom.** A cluster
-  fanned out with leader lines at the default zoom level (NYC, Bay Area,
-  etc.) stays fanned out even after zooming in far enough that the
-  underlying airports would naturally have enough room for normal,
-  un-fanned labels — `computeAirportLabelPositions()` runs once at
-  startup, not per-frame. Not broken, just static; a real fix means
-  recomputing clusters against CURRENT on-screen distance each frame
-  (or on zoom-change), which is more scope than this pass covered.
+- **Pinch-zoom — BUILT in the native app (this bullet was stale; it described
+  the browser prototype).** `NetworkView` drives the camera with a real
+  `MagnifyGesture` (anchored at pinch start) + `DragGesture` pan, and the designer
+  confirmed it live ("pan feels great, as does pinch"); max zoom is `cameraMaxZoom`
+  60. See "Pan/zoom camera + airport labels" in the Native iOS Port section. The
+  BROWSER prototype still uses scroll-wheel zoom (no touch gesture) — that's the
+  only place this note still applies.
+- **Label cluster detection — FIXED in the native app (this bullet described the
+  browser prototype, now stale for native).** `MapView` recomputes clusters against
+  CURRENT on-screen distance EVERY FRAME (see "Label declutter — DONE, better than
+  the prototype" in the Native iOS Port section), so fanned clusters un-fan
+  automatically once zoom gives labels room. The static-once-at-startup behavior
+  this bullet warned about only remains in the BROWSER prototype.
 - **The map is not a true global projection.** WORLD_BOUNDS now spans
   Alaska-to-the-Americas-to-Asia-to-Oceania (every populated continent has
   airports), but it's still one fixed rectangular lon/lat box with a
@@ -4288,13 +4293,21 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
   player who leases a $200M widebody with no revenue goes negative day 0 and
   bankrupts exactly at day 14 (grace) after the leased jet is returned with
   nothing left to sell. The browser prototype has no failure state.
-- **Route-opening cost and starting capital are now REAL** — this item
-  used to be open, resolved this session (see Fleet Lifecycle and Route
-  Network sections). Real remaining gap in the same area: player-funded
-  route marketing and the airport-incentive-offer mechanic (bottom-15
-  airports, waived fees, real clawback penalty for abandoning early) were
-  both explicitly scoped as later phases (C/D) and are still not built —
-  only the foundational route-opening mechanic (A/B) shipped.
+- **Route-opening cost and starting capital are REAL; the Phase-C/D marketing
+  + airport-incentive layers are now BUILT too — this bullet was STALE, corrected.**
+  An earlier version said "player-funded route marketing and the airport-incentive-
+  offer mechanic ... are still not built (Phase C/D); only the A/B foundation
+  shipped." That is no longer true (both shipped; the claim contradicted the
+  detailed BUILT notes elsewhere in this file). Player route marketing = the
+  per-route ad-campaign / fare-war / loyalty-push levers on each Ops "Competition"
+  row (`startFareWar`/`launchAdCampaign`/`startLoyaltyPush` in Simulation.swift,
+  `totalMarketingSpend` in the Finance invariant — see "PLAYER COMPETITION ACTIONS
+  — BUILT" below). Airport incentives = the `.airportOffer` recruitment-offer card:
+  waived opening cost + signing bonus, a 14-day fulfillment deadline, and bonus
+  clawback on forfeit (`incentiveWaived`/`incentiveBonus`/`fulfillByTick` in
+  Route.swift + Simulation.swift — see "#18 AIRPORT RECRUITMENT OFFER — DONE"). So
+  the whole route-opening area (A/B foundation AND the C/D marketing/incentive
+  layers) is shipped.
 - **Routes profitability chart — RESOLVED (native app).** The designer's goal
   (an app view charting profitability over time, seeing exactly when a route
   became profitable) is built — see `RouteProfitChart` in the Native iOS Port
@@ -4321,9 +4334,10 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
   decision/reasoning exists in this file or the chat history available at
   time of this update. If that reasoning matters later, it may need to be
   re-asked rather than looked up.
-- `README.md` is referenced in `TASKS.md`'s "Repo scaffolded" line but was
-  never confirmed to actually exist in the repo — flagged once early in
-  this project's history, never independently verified since. Check it.
+- `README.md` — CHECKED (2026-07-22): there is NO `README.md` at the repo root
+  (`ls` confirms). The old `TASKS.md` "Repo scaffolded" reference to one was
+  aspirational, never real. Not worth creating one — HANDOFF.md + this file +
+  RELEASE_STATUS.md already orient a cold session. Resolved; stop re-flagging it.
 
 ## Release status (1.0 / build 26) — see `RELEASE_STATUS.md`
 

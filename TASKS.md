@@ -228,13 +228,12 @@ Queued (bigger, not started):
 - [x] Confirm min iOS version — set to iOS 18.0 across all three targets
       (was 26.5 from the template default). Nothing in the port needs
       26-only APIs, so 18 maximizes reach at no technical cost.
-- [ ] Get Figma file link from designer, pull first screen via
-      `Figma:get_design_context` — DEFERRED to Phase 4 (this is UI-layer
-      work; Figma MCP also needs authorizing in an interactive session
-      first). Note: the Figma MCP tool returns flattened raster exports
-      for at least some node types regardless of query params — confirmed
-      during icon work, see `CLAUDE.md` Icons section — verify early
-      whether this affects full-screen mockups too.
+- [x] Figma → SwiftUI pipeline — PROVEN and used across the app (was
+      stale-unchecked). `get_design_context` returned STRUCTURED React/Tailwind
+      + tokens (NOT the raster the icon-node caveat feared) for full-screen
+      mockups; adapted by hand to SwiftUI on the naming screen, NetworkView,
+      Fleet, Crews, Ops, tab bar, and the panel-restyle batch. See CLAUDE.md
+      "Figma-to-code workflow that worked".
 
 ## Phase 1 — DONE (port the validated tick engine)
 
@@ -274,11 +273,11 @@ Queued (bigger, not started):
       tier and oriented by heading, replacing the placeholder triangles.
       Verified in-sim: recognizable aircraft silhouettes, tiers distinct
       by size. See CLAUDE.md native-port section.
-- [ ] NOT YET (deferred within Phase 2 — these are the economy layer the
-      ROADMAP folded in): real load-factor × fare revenue formula, real
-      per-flight operating cost, and the randomized economic-event system.
-      These pair naturally with the Phase 5 economy work and the
-      hover-tooltip UI; sequence them next or fold into Phase 5.
+- [x] Economy layer (deferred out of Phase 2, done with Phase 5) — BUILT
+      (was stale-unchecked): distance-based fare × demand-model load factor,
+      real per-flight operating cost at turnaround, and the randomized
+      economic-event system (Oil Spike / Fuel Drop / Boom / Recession + the
+      16-event external system). See CLAUDE.md "Decided — Economy".
 
 ## In progress (Phase 3 — crew / AOG / weather)
 
@@ -363,7 +362,11 @@ Queued (bigger, not started):
       (buy→spare→openRoute→fly→earn, scoping, shrink-protects-owned) +
       full in-sim loop ($20M → buy → open SLC↔RDU → balance grows as it
       flies). Airport tap tolerance set to 44pt (fingertip-sized).
-- [ ] Leasing + used-aircraft market (slice 4) — additive.
+- [x] Leasing + used-aircraft market (slice 4) — BUILT (was stale-unchecked).
+      15% upfront + fixed monthly lease obligation (billed regardless of
+      utilization); buy-only persistent used market priced off the same
+      depreciation curve as sell value. See CLAUDE.md "Leasing + used-aircraft
+      market — DONE".
 - [x] Competitor airline identity (slice 6, competitor half). Background
       (non-owned) traffic now carries a real US-market-share-weighted
       airline (Airline.roster — 21 carriers + Independent Operator fallback)
@@ -388,8 +391,10 @@ Queued (bigger, not started):
       defaults). FONT NOTE: design uses Karla + Geist (not on iOS),
       approximated with the system font at matching weights — bundle the
       real families for pixel-exact type if wanted.
-- [ ] ROUTES panel (list/detail P&L view) — data model is ready
-      (Route.cumulativeNet / flights / openingCost).
+- [x] ROUTES panel (list/detail P&L view) — BUILT (was stale-unchecked).
+      List (open+closed, newest first) → detail with full P&L + capped
+      recent-flights log + the `RouteProfitChart`. See CLAUDE.md
+      "ROUTES P&L panel — DONE" / "Profitability CHART — DONE".
 
 ## Blocked
 
@@ -473,22 +478,33 @@ Queued (bigger, not started):
       variable references, only actual parse errors. An ESLint
       `no-undef` pass now runs alongside it before anything ships.
 
-## Not yet started — beyond current scope
+## RESOLVED — these "beyond current scope" items are ALL BUILT now (list was stale)
 
-- [ ] Player-funded route marketing (view loads by route/origin, spend to
-      boost them) — genuinely separate from the airport-incentive
-      mechanic below, needs its own load-visibility UI.
-- [ ] Airport-incentive-offer mechanic — bottom-15 airports offering
-      waived fees + marketing support, with a real clawback penalty for
-      abandoning the route early. Explicitly sequenced as Phase C/D,
-      held until the route-opening foundation (Phase A/B, now done and
-      shipped) could be felt in actual play first.
-- [ ] Route profitability chart visualization — the data model
-      (`route.history`) is real and verified sufficient to build this;
-      the actual chart doesn't exist yet.
-- [ ] Bankruptcy / negative-balance consequences — `playerBalance` can go
-      negative (confirmed via lease billing) with no consequence beyond
-      red text and being blocked from further purchases.
+This section listed 4 items as "not yet started." A code check (2026-07-22 session)
+found every one is shipped — this is the TASKS.md drift the file's own header warns
+about. Corrected to `[x]` with code pointers so it stops misleading; do NOT re-open
+these as pending work.
+
+- [x] Player-funded route marketing — BUILT as the per-route ad-campaign /
+      fare-war / loyalty-push levers on each Ops "Competition" row
+      (`startFareWar` / `launchAdCampaign` / `startLoyaltyPush`, Simulation.swift;
+      `totalMarketingSpend` joined the Finance cash invariant). 22/22 headless.
+      See CLAUDE.md "PLAYER COMPETITION ACTIONS — BUILT".
+- [x] Airport-incentive-offer mechanic — BUILT as the `.airportOffer` recruitment
+      offer: waived opening cost + signing bonus, a 14-day fulfillment deadline,
+      and bonus clawback on forfeit (`incentiveWaived` / `incentiveBonus` /
+      `fulfillByTick`, Route.swift + Simulation.swift). See CLAUDE.md
+      "#18 AIRPORT RECRUITMENT OFFER — DONE".
+- [x] Route profitability chart — BUILT as `RouteProfitChart`
+      (ContentView.swift:800, used at :758 with a changing-value `flights:` input;
+      the documented model for HubProfitChart). Verified live. Only pending: an
+      OPTIONAL Figma restyle (it's hand-drawn in the dev aesthetic). See CLAUDE.md
+      "Profitability CHART — DONE".
+- [x] Bankruptcy / negative-balance consequences — BUILT: a 14-sim-day insolvency
+      grace countdown → `forcedLiquidation()` (sells owned-outright most-valuable-
+      first, then hands back leases) → `isBankrupt` GAME OVER via `GameOverView`
+      (`insolventSinceTick` / `bankruptcyGraceTicks` / `tickSolvency`,
+      Simulation.swift). See CLAUDE.md "Bankruptcy / failure state — BUILT".
 
 ## Done — fleet lifecycle & ownership economy
 
