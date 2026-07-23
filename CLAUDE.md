@@ -4193,6 +4193,56 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
   Motion collapses it to a static network + calm logo fade. Shown once per
   process launch (ContentView `showSplash`, zIndex 10 over the load menu /
   naming screen). Verified via timed simulator frame captures.
+- **ARCHITECT'S-TOOLS BRAND MOTIF — BUILT (designer, Figma `90:4819` "home - dark").
+  A faint drafting-tools still life behind the cold-launch screens, intended as a
+  COMMON VISUAL THEME ACROSS THE WHOLE ARCHITECT SERIES** (Airline Architect, Golf
+  Course Architect, Vineyard Architect…). `ArchitectBackdrop.swift` +
+  `Resources/Brand/ArchitectTools.png` (T-square, mechanical pencil, compass —
+  white line art on alpha, 892×1200).
+  - **DELIBERATELY PORTABLE:** the file depends on nothing app-specific, so reusing
+    it in a sibling app is "copy 1 Swift file + 1 PNG." The art is drawn as a
+    **template** image, so a sibling can `tint:` it to its own brand colour with no
+    re-export. `ArchitectBackdrop.figmaOpacity` (0.10) is the single tuning knob.
+  - **The Figma-export gotcha applied again** (same as the aircraft illustrations):
+    `download_assets`' `export` bakes in an opaque frame background — the **rawImages**
+    entry is the transparent source. Node 90:4876 returns TWO raws that are the same
+    art at 1× and ¼×; the Figma "mask group" is the image masking its own alpha, so
+    only the artwork is needed and the mask is just `.clipped()`.
+  - **Geometry is FRACTIONAL, not fixed points** — the Figma frame is 440 wide, real
+    devices are 402/430/iPad-wide, so hard-coding would drift off-screen. Art width =
+    `1.371 × container width` (603.274/440), centre at `(0.368, 0.578)`, rotation 30°.
+    Figma's own numbers were verified before porting: a 603.274×811.579 box rotated
+    30° gives a bounding box of 928.23×1004.47, matching the file's stated
+    928.24×1004.485.
+  - **WIRED INTO ALL THREE COLD-LAUNCH SURFACES** — `SplashView`, `AirlineNamingView`,
+    and `SaveSlotsView` each gained an optional `backdropOpacity` (nil = off) and each
+    draws its OWN instance. **They are NOT a single shared layer, on purpose:** the
+    geometry is a pure function of container size, so all three land pixel-identically
+    and the tools hold still across every handoff — while each screen keeps its own
+    opaque background. ContentView passes `ArchitectBackdrop.figmaOpacity`. The splash
+    draws it over its navy sky and UNDER the route arcs, so the intro animation plays
+    on top of the motif (the designer's sequencing idea, and they signed it off live).
+  - **DARK THEME ONLY for naming + the load menu** (`ContentView.coldLaunchBackdrop`
+    returns nil in light) — the art is WHITE line work and would be invisible on the
+    light theme's white background. The SPLASH carries it in both themes because it's
+    always navy. **A light-mode (ink-on-paper) treatment is an open designer call**,
+    deliberately not invented here.
+  - **NOTE on view API:** `backdropOpacity` is declared BEFORE the trailing closure
+    (`onLaunch`/`onDone`) on both views so the trailing-closure call style still
+    compiles — reordering the memberwise init is the whole reason.
+  - **DEBUG harness:** `ArchitectBackdropTestView.swift`, reached with the
+    `-backdropTest` launch arg (`#if DEBUG`, compiled out of Release). Three modes
+    (`-backdropMode motif|naming|sequence`) plus live opacity/angle/scale sliders, so
+    the treatment can be dialled in on-device instead of round-tripping through Figma;
+    `-backdropOpacity <n>` / `-hideControls` seed it for screenshots. **The Simulator's
+    input channel died mid-session (the documented glitch), so modes are reachable by
+    launch arg rather than taps** — keep that pattern for any future harness.
+  - Verified live on the iPhone 17 Pro sim: motif alone, the naming screen, and the
+    REAL no-arg cold launch (splash → load menu) all render it; the designer watched
+    the intro animation play over it and approved. Caveat worth knowing: `simctl io
+    screenshot` takes ~1s, and the splash is only ~3.3s including cold start, so
+    catching a mid-animation frame by polling is unreliable — the live attached panel
+    is the honest way to judge the motion.
 - **HAPTICS + SUBTLE SFX — BUILT (native app; designer request, extends the
   delight layer).** `Feedback.swift` (UIKit/AVFoundation, VIEW layer only — the
   Sim layer stays framework-free for the headless harness, so every trigger is a

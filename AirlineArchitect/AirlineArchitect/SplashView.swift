@@ -18,6 +18,12 @@
 import SwiftUI
 
 struct SplashView: View {
+    /// Opacity of the shared architect's-tools brand motif, drawn over the navy
+    /// sky and UNDER the route arcs. `nil` = don't draw it. The naming screen
+    /// and load menu draw the same motif at the same geometry, so it holds
+    /// still as the splash fades into whichever screen follows. Declared BEFORE
+    /// `onDone` so the trailing-closure call style still works.
+    var backdropOpacity: Double? = nil
     /// Called when the splash finishes (or is tapped through).
     let onDone: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -49,6 +55,9 @@ struct SplashView: View {
             LinearGradient(colors: [Color(skyHex: 0x2B303D), Color(skyHex: 0x101937)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
+
+            // Architect's-tools motif, under the network that draws over it.
+            if let o = backdropOpacity { ArchitectBackdrop(opacity: o) }
 
             // The route network + the jets flying it.
             TimelineView(.animation(paused: reduceMotion)) { timeline in

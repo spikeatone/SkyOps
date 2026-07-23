@@ -20,7 +20,18 @@ struct AirlineArchitectApp: App {
     }
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            // Design experiment: `-backdropTest` opens the architect's-tools
+            // brand-motif harness instead of the game. DEBUG-only, so it is
+            // compiled out of Release entirely.
+            if ProcessInfo.processInfo.arguments.contains("-backdropTest") {
+                ArchitectBackdropTestView()
+            } else {
+                ContentView()
+            }
+            #else
             ContentView()
+            #endif
         }
     }
 }

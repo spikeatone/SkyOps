@@ -35,6 +35,16 @@ struct ContentView: View {
     /// Regular width (iPad, full screen) → sidebar rail; compact (iPhone) → bottom tabs.
     @Environment(\.horizontalSizeClass) private var hSize
     private var isPadLayout: Bool { hSize == .regular }
+    @Environment(\.colorScheme) private var scheme
+
+    /// Architect's-tools brand motif for the cold-launch surfaces (Figma
+    /// 90:4819). The art is WHITE line work, so it only reads on the dark
+    /// theme — the light theme's white background is left alone until the
+    /// designer specs a light (ink-on-paper) treatment. The splash is always
+    /// navy, so it carries the motif in both themes.
+    private var coldLaunchBackdrop: Double? {
+        scheme == .dark ? ArchitectBackdrop.figmaOpacity : nil
+    }
 
     var body: some View {
         // Custom bottom nav (SkyTabBar) — the Figma tab bar (yellow-on-dark /
@@ -82,12 +92,13 @@ struct ContentView: View {
         .overlay {
             // Load / slot-picker menu — takes precedence over naming.
             if showLoadMenu {
-                SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) })
+                SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) },
+                              backdropOpacity: coldLaunchBackdrop)
                     .id(cloudGen)   // rebuild (re-read slots) when iCloud merges a change
                     .transition(.opacity)
             } else if sim.playerAirlineName == nil {
                 // First-launch: name the airline before anything else.
-                AirlineNamingView { name, tailCode, region in
+                AirlineNamingView(backdropOpacity: coldLaunchBackdrop) { name, tailCode, region in
                     if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
                     sim.setHomeRegion(region)
                     sim.nameAirline(name, tailCode: tailCode)
@@ -152,9 +163,14 @@ struct ContentView: View {
         // Fades out into whichever screen cold launch shows (load menu / naming).
         .overlay {
             if showSplash {
-                SplashView { withAnimation(.easeOut(duration: 0.45)) { showSplash = false } }
-                    .transition(.opacity)
-                    .zIndex(10)
+                // The motif is drawn by the splash itself (over its navy sky,
+                // under the arcs) and again by whichever screen it fades into,
+                // at identical geometry — so it holds still across the handoff.
+                SplashView(backdropOpacity: ArchitectBackdrop.figmaOpacity) {
+                    withAnimation(.easeOut(duration: 0.45)) { showSplash = false }
+                }
+                .transition(.opacity)
+                .zIndex(10)
             }
         }
         // Milestone celebrations — glide down from the top, auto-dismiss.
