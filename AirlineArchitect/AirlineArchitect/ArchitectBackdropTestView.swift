@@ -47,28 +47,39 @@ struct ArchitectBackdropTestView: View {
     }
 
     @State private var mode: Mode = Mode(rawValue: (arg("-backdropMode") ?? "").capitalized) ?? .motif
-    @State private var opacity: Double = Double(arg("-backdropOpacity") ?? "") ?? 0.10   // Figma
+    /// `-backdropLight` previews the light (ink-on-paper) treatment.
+    @State private var light = ProcessInfo.processInfo.arguments.contains("-backdropLight")
+    @State private var opacity: Double = Double(arg("-backdropOpacity") ?? "")
+        ?? (ProcessInfo.processInfo.arguments.contains("-backdropLight")
+            ? ArchitectBackdrop.lightOpacity : ArchitectBackdrop.figmaOpacity)
     @State private var angle: Double = 30              // Figma
     @State private var widthScale: Double = 603.274 / 440   // Figma
     @State private var showControls = !ProcessInfo.processInfo.arguments.contains("-hideControls")
     @State private var phase: Phase = .splash
     @State private var runID = 0
 
+    /// The ink the motif is drawn in — white line-work on the dark page, brand
+    /// blue on the light one. Must be threaded into EVERY mode: a naming-mode
+    /// preview that forgot it drew white-on-white and read as "the light
+    /// treatment doesn't work", which was a harness bug, not a design finding.
+    private var motifTint: Color { light ? Sky.darkBlue : .white }
+
     var body: some View {
         ZStack {
             // ONE persistent backdrop for every mode — this is the whole point
             // of the sequencing test: the motif is a base layer the other
             // screens composite onto, so it never re-renders or jumps.
-            Sky.darkBG.ignoresSafeArea()
+            (light ? Color.white : Sky.darkBG).ignoresSafeArea()
             ArchitectBackdrop(opacity: opacity,
                               angle: angle,
-                              widthScale: CGFloat(widthScale))
+                              widthScale: CGFloat(widthScale),
+                              tint: motifTint)
 
             content
 
             if showControls { controls }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(light ? .light : .dark)
         .overlay(alignment: .topTrailing) {
             Button(showControls ? "Hide" : "Tune") { withAnimation { showControls.toggle() } }
                 .font(.karla(13, .semibold))
@@ -98,7 +109,7 @@ struct ArchitectBackdropTestView: View {
 
         case .naming:
             // The real shipping screen, with the motif switched on behind it.
-            AirlineNamingView(backdropOpacity: opacity) { _, _, _ in }
+            AirlineNamingView(backdropOpacity: opacity, backdropTint: motifTint) { _, _, _ in }
 
         case .sequence:
             // Exactly the shipping arrangement: each screen draws its OWN
@@ -111,7 +122,7 @@ struct ArchitectBackdropTestView: View {
                     .id(runID)
                     .transition(.opacity)
                 } else {
-                    AirlineNamingView(backdropOpacity: opacity) { _, _, _ in }
+                    AirlineNamingView(backdropOpacity: opacity, backdropTint: motifTint) { _, _, _ in }
                         .transition(.opacity)
                 }
             }

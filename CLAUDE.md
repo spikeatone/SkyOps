@@ -4222,11 +4222,28 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
     opaque background. ContentView passes `ArchitectBackdrop.figmaOpacity`. The splash
     draws it over its navy sky and UNDER the route arcs, so the intro animation plays
     on top of the motif (the designer's sequencing idea, and they signed it off live).
-  - **DARK THEME ONLY for naming + the load menu** (`ContentView.coldLaunchBackdrop`
-    returns nil in light) — the art is WHITE line work and would be invisible on the
-    light theme's white background. The SPLASH carries it in both themes because it's
-    always navy. **A light-mode (ink-on-paper) treatment is an open designer call**,
-    deliberately not invented here.
+  - **BOTH THEMES, ONE PNG — the light treatment is BUILT** (supersedes the earlier
+    "dark theme only / light is an open designer call" note). Because the art is drawn
+    as a `.template` image it's tinted at draw time, so the same asset serves both:
+    **white line-work on the dark page, `Sky.darkBlue` #4E67A0 brand ink on the light
+    one** — drafting pencil on vellum rather than a grey smudge. `ContentView`
+    supplies `coldLaunchBackdrop` (opacity) + `coldLaunchTint`; `AirlineNamingView`
+    and `SaveSlotsView` take a `backdropTint`. The SPLASH always uses white because
+    it's always navy regardless of theme. (`Sky.darkBlue` was promoted to a named
+    token in the same pass — the hex was already used inline in several places.)
+  - **THE TWO OPACITIES ARE DIFFERENT ON PURPOSE — do not "unify" them.** Dark ink on
+    white carries further than white line-art on #2B303D, so equal alpha does NOT read
+    equal: `figmaOpacity` 0.10 (dark, the Figma value) vs `lightOpacity` **0.08**.
+    Tuned by eye on device over the REAL naming screen — 0.06 vanished entirely, 0.12
+    began competing with the form fields, 0.08 sits behind the content the way the
+    dark 0.10 does. Verified live on the naming screen AND the real no-arg light cold
+    launch (load menu).
+  - **A harness bug worth remembering (it masqueraded as a design finding):** the
+    test view's naming/sequence modes called `AirlineNamingView(backdropOpacity:)`
+    without passing the tint, so it defaulted to `.white` → white ink on a white page
+    → "the light treatment doesn't work." The SHIPPING path was correct the whole
+    time. When a preview harness wraps a real view, thread EVERY styling input
+    through it, or the harness will lie to you.
   - **NOTE on view API:** `backdropOpacity` is declared BEFORE the trailing closure
     (`onLaunch`/`onDone`) on both views so the trailing-closure call style still
     compiles — reordering the memberwise init is the whole reason.
@@ -4234,7 +4251,8 @@ needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
     `-backdropTest` launch arg (`#if DEBUG`, compiled out of Release). Three modes
     (`-backdropMode motif|naming|sequence`) plus live opacity/angle/scale sliders, so
     the treatment can be dialled in on-device instead of round-tripping through Figma;
-    `-backdropOpacity <n>` / `-hideControls` seed it for screenshots. **The Simulator's
+    `-backdropOpacity <n>` / `-backdropLight` (preview the light ink treatment) /
+    `-hideControls` seed it for screenshots. **The Simulator's
     input channel died mid-session (the documented glitch), so modes are reachable by
     launch arg rather than taps** — keep that pattern for any future harness.
   - Verified live on the iPhone 17 Pro sim: motif alone, the naming screen, and the

@@ -32,6 +32,9 @@ enum Sky {
     static let navBarDark  = Color(skyHex: 0x1F232D)
     static let darkBG      = Color(skyHex: 0x2B303D)
     static let red         = Color(skyHex: 0xFF5C5C)
+    /// Figma "Dark Blue" — the light theme's title / main-button-label ink.
+    /// Also the light-mode tint for the architect's-tools brand motif.
+    static let darkBlue    = Color(skyHex: 0x4E67A0)
 }
 
 struct NetworkView: View {

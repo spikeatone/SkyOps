@@ -38,13 +38,15 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var scheme
 
     /// Architect's-tools brand motif for the cold-launch surfaces (Figma
-    /// 90:4819). The art is WHITE line work, so it only reads on the dark
-    /// theme — the light theme's white background is left alone until the
-    /// designer specs a light (ink-on-paper) treatment. The splash is always
-    /// navy, so it carries the motif in both themes.
-    private var coldLaunchBackdrop: Double? {
-        scheme == .dark ? ArchitectBackdrop.figmaOpacity : nil
+    /// 90:4819). ONE PNG serves both themes because the art is a template
+    /// image: white line-work on the dark page, brand ink on the light one —
+    /// drafting pencil on vellum rather than a grey smudge. The light value is
+    /// fainter on purpose; see `ArchitectBackdrop.lightOpacity`.
+    private var isDark: Bool { scheme == .dark }
+    private var coldLaunchBackdrop: Double {
+        isDark ? ArchitectBackdrop.figmaOpacity : ArchitectBackdrop.lightOpacity
     }
+    private var coldLaunchTint: Color { isDark ? .white : Sky.darkBlue }
 
     var body: some View {
         // Custom bottom nav (SkyTabBar) — the Figma tab bar (yellow-on-dark /
@@ -93,12 +95,13 @@ struct ContentView: View {
             // Load / slot-picker menu — takes precedence over naming.
             if showLoadMenu {
                 SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) },
-                              backdropOpacity: coldLaunchBackdrop)
+                              backdropOpacity: coldLaunchBackdrop, backdropTint: coldLaunchTint)
                     .id(cloudGen)   // rebuild (re-read slots) when iCloud merges a change
                     .transition(.opacity)
             } else if sim.playerAirlineName == nil {
                 // First-launch: name the airline before anything else.
-                AirlineNamingView(backdropOpacity: coldLaunchBackdrop) { name, tailCode, region in
+                AirlineNamingView(backdropOpacity: coldLaunchBackdrop,
+                                  backdropTint: coldLaunchTint) { name, tailCode, region in
                     if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
                     sim.setHomeRegion(region)
                     sim.nameAirline(name, tailCode: tailCode)

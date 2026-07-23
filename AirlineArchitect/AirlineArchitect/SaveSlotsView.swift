@@ -19,6 +19,8 @@ struct SaveSlotsView: View {
     /// and naming screen use — so a returning player's splash → load-menu
     /// handoff carries the texture through instead of dropping it. `nil` = off.
     var backdropOpacity: Double? = nil
+    /// Tint for that motif — white on the dark theme, brand ink on the light one.
+    var backdropTint: Color = .white
 
     /// Rebuilt from disk whenever the menu appears or a slot is deleted.
     @State private var slots: [SlotInfo?] = GameStore.slotInfos()
@@ -37,7 +39,7 @@ struct SaveSlotsView: View {
     var body: some View {
         ZStack {
             screenBG.ignoresSafeArea()
-            if let o = backdropOpacity { ArchitectBackdrop(opacity: o) }
+            if let o = backdropOpacity { ArchitectBackdrop(opacity: o, tint: backdropTint) }
             VStack(spacing: 20) {
                 VStack(spacing: 10) {
                     AppLogo().frame(width: 132, height: 106)

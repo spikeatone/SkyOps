@@ -57,9 +57,20 @@ enum ArchitectArt {
 /// pixel-identically — so the tools never shift as one screen hands off to the
 /// next, and no screen has to give up its own opaque background.
 struct ArchitectBackdrop: View {
-    /// The opacity the designer specified in Figma 90:4819. Single source of
-    /// truth for the shipping surfaces — tune here, not at each call site.
+    /// The opacity the designer specified in Figma 90:4819 (the DARK frame).
+    /// Single source of truth for the shipping surfaces — tune here, not at
+    /// each call site.
     static let figmaOpacity: Double = 0.10
+
+    /// Light-theme opacity. Deliberately LOWER than the dark value: the same
+    /// alpha does not read the same on the two backgrounds — dark ink on white
+    /// carries further than white line-art on #2B303D, so matching 0.10 makes
+    /// the light treatment shout while the dark one whispers.
+    ///
+    /// Tuned by eye on device over the real naming screen (the only honest way
+    /// to set it): 0.06 vanished, 0.12 started competing with the form fields,
+    /// 0.08 sits behind the content the way the dark 0.10 does.
+    static let lightOpacity: Double = 0.08
 
     /// How present the motif is. The Figma calls for 0.10; kept as a parameter
     /// because this is the one value most likely to be tuned per app/screen.
