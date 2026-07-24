@@ -4455,6 +4455,31 @@ Two details are load-bearing:
   net, a proven one. This is still the single most valuable next step
   before adding more scope, and has been true and repeated at nearly
   every major addition this session.
+  - **PARTLY ADDRESSED — a headless SOAK harness now covers the class of this
+    concern that a machine CAN reach (`aa-1.1.x/SoakMain.swift`).** It drives ONE
+    `Simulation` through a multi-year game with randomised-but-plausible play —
+    buy/lease/sell across the whole fleet, open routes, hire crew, take/repay
+    loans, weather events, establish hubs, go public + pull levers, drain the
+    decision queue — asserting the cross-system invariants on every check: the cash
+    residual, crew integrity (crewId resolves in its family pool; no double-booking,
+    keyed on (family,id) since ids are per-family), duty/rest bounds + accumulation
+    liveness, ownership scoping (every decision names a PURCHASED aircraft), route/
+    fleet consistency, and a save/load round-trip of the soaked state. **Result:
+    8/8 seeds × 2 sim-years clean (~7.9M ticks), all went public, one went bankrupt
+    while public and the cash invariant held through it — NO bugs found.** Of the
+    six historical bugs above, five are in this harness's reach (operatingCost /
+    lease-proration → cash residual; phantom-crew-family + crew duty/rest reset →
+    the crew invariants + `peakDuty✓rest` liveness; ownership-scoping → the decision
+    check). **The SIXTH — the decision-panel/dropdown/buy-panel FLICKER — is a pure
+    UI re-render and is fundamentally OUT of a headless harness's reach; it still
+    needs the Simulator + eyes.** So the concern is NARROWED, not closed: the
+    numeric/state-integrity half now has a continuous net (re-run after any economy
+    change), and the residual is the UI/"does it feel right" half a real sustained
+    session is still owed. **Calibration lesson (kept in the harness README): the
+    soak's first two "findings" were BOTH the harness's own bounds being wrong, not
+    game bugs — duty legitimately overshoots the cap (cap-and-rest fires at
+    release, end-of-flight, realistic Part 117), and crewId is family-scoped. A
+    soak finding is a HYPOTHESIS until checked against the real contract.**
 - **Why Sukhoi Superjet 100 was removed isn't documented anywhere.** The
   type and its crew family are fully gone from the code (confirmed clean
   — no orphaned references anywhere), but no record of the actual

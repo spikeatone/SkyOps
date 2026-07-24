@@ -7,6 +7,33 @@ of the app target — they live at the repo root so the file-system-synchronized
 group never compiles them into the build.
 
 ## What's here
+- **`SoakMain.swift`** — the ONE harness that isn't a single-system unit check: a
+  long, multi-year SOAK that drives a single `Simulation` through randomised-but-
+  plausible play (buy/lease/sell across the whole fleet, open routes, hire crew,
+  take/repay loans, weather events, establish hubs, go public + pull levers, drain
+  the decision queue) and asserts a battery of CROSS-SYSTEM invariants on every
+  check: the cash residual, crew integrity (crewId resolves in its family pool; no
+  double-booking — key on (family,id), ids are per-family), duty/rest bounds,
+  ownership scoping (every decision names a PURCHASED aircraft), route/fleet
+  consistency, and a save/load round-trip of the soaked state. Targets the
+  "never played end-to-end" concern (CLAUDE.md) — the class of bug that emerges
+  from systems INTERACTING over a long horizon, which the isolated harnesses can't
+  reach. Seeded (SplitMix64) so a failing seed replays. Args: `soak [seeds] [simYears]`
+  (default 6 × 2). Each seed grows a ~200-aircraft empire per sim-year, so it's a
+  torture test, not a realistic session. **Deliberately OUT of reach:** the
+  decision-panel/dropdown/buy-panel FLICKER bug is a pure UI re-render — invisible
+  headless; it needs the simulator + eyes. **Calibration lesson (worth keeping):**
+  the first two "findings" were BOTH the harness's own bounds being wrong, not game
+  bugs — duty legitimately overshoots `maxDutyTicks` (the cap-and-rest check is at
+  release, end-of-span, so a crew finishes its flight; realistic Part 117), and
+  crewId is per-family so a double-booking check must key on (family,id). A soak
+  finding is a HYPOTHESIS: verify against the real contract before believing it.
+  **Result when last run: 8/8 seeds clean × 2 sim-years each (~7.9M ticks total),
+  fleet steady at the 60 cap, all went public; one seed went BANKRUPT while public
+  and every invariant — incl. the cash residual — held right through it.** No game
+  bugs; the two "findings" above were both harness-calibration. A soft `fleetCap`
+  (60) keeps each tick cheap and the network realistic; without it the buy-heavy
+  mix balloons to 400+ aircraft and each 2-year seed takes many minutes.
 - **`PromoMain.swift`** — verifies the route-competition player actions (fare war /
   ad campaign / loyalty push): exact cost math, cost ladder, broke-guard, the cash
   invariant after every action + 90 sim-days, and a save/load round-trip of the
