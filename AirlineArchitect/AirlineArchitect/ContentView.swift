@@ -48,6 +48,20 @@ struct ContentView: View {
     }
     private var coldLaunchTint: Color { isDark ? .white : Sky.darkBlue }
 
+    #if DEBUG
+    /// `-devScenario <publicGate|listed|activist|ouster>` — seed a Go Public
+    /// scenario at cold launch (see `Simulation.DevScenario`). The feature gates
+    /// on a $500M airline, so its shipping UI is otherwise unreachable by hand;
+    /// this is how it gets DRIVEN rather than only headless-verified. Skips the
+    /// splash, load menu and naming, and opens FINANCE. `currentSlot` stays nil
+    /// on purpose, so a seeded session can never autosave over a real save.
+    private static let devScenario: Simulation.DevScenario? = {
+        let a = ProcessInfo.processInfo.arguments
+        guard let i = a.firstIndex(of: "-devScenario"), i + 1 < a.count else { return nil }
+        return Simulation.DevScenario(rawValue: a[i + 1])
+    }()
+    #endif
+
     var body: some View {
         // Custom bottom nav (SkyTabBar) — the Figma tab bar (yellow-on-dark /
         // blue-on-light, custom icons) isn't a stock UITabBar, so we drive tab
@@ -66,6 +80,14 @@ struct ContentView: View {
         // then show the load menu if any saved game exists; otherwise fall
         // through to the naming screen for a fresh airline in slot 0.
         .onAppear {
+            #if DEBUG
+            if let scenario = Self.devScenario {
+                sim.devSeed(scenario)
+                showSplash = false
+                tab = 4                     // FINANCE — where Go Public lives
+                return
+            }
+            #endif
             GameStore.reconcileCloud()
             if currentSlot == nil, sim.playerAirlineName == nil, GameStore.anySave {
                 showLoadMenu = true

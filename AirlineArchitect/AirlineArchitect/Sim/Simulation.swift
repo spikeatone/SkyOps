@@ -1425,6 +1425,55 @@ final class Simulation {
         return expected - playerBalance
     }
 
+    /// LIVE-VERIFICATION HARNESS for Go Public (steps 1–4). The whole feature is
+    /// gated behind a $500M airline, and an activist campaign needs three
+    /// sim-months of slump on top of that — sim-YEARS of real play — so the
+    /// SHIPPING UI could never be driven by hand. That is exactly why the live
+    /// tap-through sat pending. `-devScenario <name>` (ContentView) seeds one of
+    /// these at cold launch. Lives HERE, not in an extension, because it writes
+    /// `private(set)` state and calls the private monthly ticks. DEBUG-only.
+    enum DevScenario: String {
+        /// Named + past the $500M gate, still private → the gated GO PUBLIC card.
+        case publicGate
+        /// Listed with majority kept → the PUBLIC card's three levers.
+        case listed
+        /// Listed + slumping, an activist demand card already up → comply/refuse.
+        case activist
+        /// Listed + diluted + slumping, one board tick from removal → OUSTED.
+        case ouster
+    }
+
+    func devSeed(_ scenario: DevScenario) {
+        nameAirline("Test Air", tailCode: "TS")
+        // netWorth = balance + fleetMarketValue, and this airline has no fleet,
+        // so cash alone clears the gate.
+        devInjectCash(600_000_000)
+        guard scenario != .publicGate else { return }
+
+        // The ouster scenario has to sell past majority; the others keep control
+        // so the board can never interfere with what they're demonstrating.
+        goPublic(ticker: "TSTA", floatFraction: scenario == .ouster ? 0.75 : 0.30)
+        guard scenario != .listed else { return }
+
+        // Depress the stock below its IPO price — the single fuse under BOTH the
+        // activist trigger (months below IPO) and the board's "poor performance".
+        marketSentiment = Simulation.sentimentFloor
+        displaySharePrice = (publicCompany?.ipoPrice ?? 1) * 0.6
+
+        if scenario == .activist {
+            monthsBelowIPO = Simulation.activistTriggerMonths
+            tickActivistsMonthly()   // starts the campaign AND pushes the demand card
+        } else {
+            boardPressure = 0.9      // one monthly board tick clears 1.0 → ouster
+            // Bring that monthly tick forward from a sim-MONTH (43,200 ticks —
+            // minutes of real time) to 240, ~60s at 1×. Deliberately not
+            // shorter: the red "Board patience" bar on the Finance PUBLIC card
+            // is only visible BEFORE the ouster, so the window has to be long
+            // enough to navigate there and watch the removal land.
+            nextSentimentTick = tick + 240
+        }
+    }
+
     #endif
 
     /// Airlines the player has bought. Each keeps flying under its own flag.

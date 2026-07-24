@@ -3711,8 +3711,8 @@ of a loan — no repayment, but you sell control and gain a permanent audience.
   summary).
 - **(Step 1 was "not shippable alone" — pure upside. Steps 2–5 below add the
   levers, activists, the board, and the balance pass that make it a real tradeoff.
-  The feature is now COMPLETE; the only gate to a beta cut is the live tap-through,
-  see the Simulator-access note at the end of this section.)**
+  The feature is COMPLETE, and the live tap-through that gated a beta cut is now
+  DONE too — see the live-tap-through note at the end of this section.)**
 
 ### Step 2 — levers (dividends / buybacks / secondary): BUILT (37/37 headless)
 
@@ -3847,14 +3847,73 @@ slowly sours regardless). Findings (constants VALIDATED, not changed):
   future growth.
 - `valuationMultiple` 1.8 gives sane prices ($25/share at the gate, ~$250 at 10×).
 
-### Simulator access, this session — LIVE TAP-THROUGH STILL PENDING
-The designer is working REMOTE from an iPad, so the `request_access` dialog (which
-appears on the Mac desktop) can't be approved. The ENTIRE Go Public feature
-(steps 2–5) is headless-verified only — 78/78 lifecycle + the balance probe, on
-the real sim code (a proven catch rate here), plus clean app builds. **Before a
-beta cut, drive it live on the Mac Simulator:** the PUBLIC card levers, an
-activist demand card (comply/refuse), and an ouster → "OUSTED" recap. Reaching it
-needs a $500M airline; use a `#if DEBUG devInjectCash` seed to get there fast.
+### LIVE TAP-THROUGH — DONE (supersedes "STILL PENDING"; the pre-beta gate is CLEARED)
+
+The earlier note here said the whole feature was headless-verified only, because the
+designer was remote from an iPad and the Mac `request_access` dialog couldn't be
+approved. **That gate is now closed: every Go Public surface has been DRIVEN on the
+iPhone 17 Pro simulator, in BOTH themes, and every number reconciled on screen.** No
+defects found — the 78/78 headless suite had it right.
+
+- **The IPO flow (light).** Gated card → "List the airline to raise capital"; the flow's
+  arithmetic ties out exactly ($620M net worth × 1.8 = **$1,116.0M** valuation, 25% =
+  **$279.0M** raised, "cash after listing" **$899.0M** — which is what the header then
+  read). `sanitizeTicker` verified AT THE FIELD: a 5th letter is rejected and the
+  `.characters` keyboard is already uppercase. Dragging the float slider past majority
+  flips the summary red — "You keep 32% · **Minority — little protection**" — which is
+  the visceral dilution warning the designer asked for. Listing fired the `went_public`
+  milestone toast ("You're publicly traded! The airline rings the opening bell.") and
+  the ticker card came up at **$31.00**, inside the spec's predicted $25–31 at the gate.
+- **The three levers (light), each exact.** Dividend 5% → **−$14.7M**; buyback 25% of
+  float → **−$73.5M** and the stake rose **75.0% → 80.0%**; secondary +10% → **+$110.3M**
+  and the stake fell **80.0% → 72.7%**, with "Raised (IPO + secondary)" moving
+  $279.0M → $389.3M. Every chip repriced off the new float immediately.
+  **Worth knowing — a price move between render and tap is CORRECT, not a bug.** The 5%
+  dividend chip read −$13.9M and charged −$14.7M, because one sim-day elapsed while the
+  screen sat there and `displaySharePrice` eased $31.00 → $32.67 (12% of the gap to
+  target, per `sharePriceEasing`). The levers transact at the LIVE price, and post-IPO
+  the price climbs on its own because the proceeds raise net worth — the documented
+  net-worth interaction, visible.
+- **The activist card (dark), BOTH paths.** Red `megaphone.fill` card, round-0 dividend
+  demand, "An activist holds 10% and wants change", ask **$10.0M** (= 5% × the depressed
+  $18.60 price × the 10.8M float shares). **Refuse** → card cleared, **cash unchanged**,
+  one new ops entry (the escalation). **Comply** → **exactly −$10.0M**, card cleared, and
+  TWO new ops entries — the dividend and the "activist stands down", which is the
+  signature of `payDividend` → `endActivistCampaign(.dividend)`.
+- **The board (dark).** The Finance PUBLIC card showed the red **"Board patience"** bar
+  nearly full and labelled **"Weighing your removal"** at a 25% stake / −40.0% vs IPO,
+  and then — in the SAME run — the **OUSTED** recap dropped over it: the
+  `person.crop.circle.badge.xmark` badge, "Test Air's board voted to remove you. Losing
+  majority control while the share price languished cost you the airline.", the recap
+  stats, and "Start a New Airline". The second game-over path, on screen.
+
+**`-devScenario <publicGate|listed|activist|ouster>` — the harness that made it possible,
+and it is COMMITTED (like `-backdropTest`, not a throwaway seed).** `Simulation.DevScenario`
++ `devSeed(_:)` live in `Simulation.swift` under `#if DEBUG`, next to `devInjectCash` —
+they have to be in that file to write `private(set)` state and call the private monthly
+ticks. ContentView reads the arg and skips splash/load-menu/naming straight to FINANCE.
+Two details are load-bearing:
+- **`currentSlot` deliberately stays nil**, so a seeded session can never autosave over a
+  real save. Confirmed by accident and then on purpose: the app got backgrounded mid-run
+  and wrote nothing.
+- **`.ouster` brings the monthly board tick forward to `tick + 240` (~60s at 1×), not 60.**
+  The "Board patience" bar only exists BEFORE the removal, so the window has to be long
+  enough to navigate to FUNDING and still watch the ouster land. At 60 ticks the recap beat
+  us to the screen twice.
+
+**SIMULATOR GOTCHAS (both cost real time; neither is an app bug):**
+- **Typing via the automation `text` action repeatedly kicked the app to the background**
+  (a sibling Architect app came forward instead), even with the caret visibly in the field.
+  The reliable fix is the SOFTWARE keyboard — `defaults write com.apple.iphonesimulator
+  ConnectHardwareKeyboard -bool false`, restart the Simulator app, then TAP the keys. That
+  also tests the path a real player uses. (Reverted to default afterwards; killing the
+  Simulator app re-boots a different default device, so re-`boot` the one you installed to.)
+- **The input channel dies mid-session** — the already-documented glitch. It shows up as
+  `Input send … timed out; the simulator likely rebooted`, `machPortNotConnected`, or a tap
+  that silently does nothing. A lost tap is indistinguishable from a no-op button, so
+  **re-screenshot before concluding a control is broken** — a "failed" Refuse turned out to
+  be a dropped tap, and the state was intact when the app was foregrounded again (same PID).
+  Prefer one decisive tap per screenshot over tap bursts.
 
 ## Decided — Hubs & Clubs (built to the designer-reviewed spec)
 
