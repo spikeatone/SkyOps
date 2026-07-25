@@ -9,6 +9,29 @@ version — cleaner to debut on the build that fixes the known bugs than to ship
 with no conversation history) can pick this up cold. `CLAUDE.md` holds the
 technical/design context; this file is ONLY the release-and-store state.
 
+## Update (25 Jul 2026) — 1.1 (33) REJECTED on 3.1.2, fixed + resubmitted
+
+Apple rejected 1.1 (33) under **Guideline 3.1.2 (Business: Payments –
+Subscriptions)**: an auto-renewable-subscription app with **no functional Terms of
+Use (EULA) link in the app's METADATA**. Automated rejection; nothing else flagged.
+The 3 subscription products were collateral-returned ("returned because the app was
+rejected" — they auto re-review on resubmit, no separate fix).
+
+- **FIX (metadata only, NO new build): added the standard Apple EULA + Privacy links
+  to the App Description** — a "LEGAL" block with
+  `https://www.apple.com/legal/internet-services/itunes/dev/stdeula/` + the
+  privacy.html URL. Resubmitted **build 33 unchanged**; confirmed all 4 items
+  (app + Airline Architect Pro group + Yearly + Monthly) back to "Waiting for
+  Review". The Privacy Policy URL metadata field was already set — it was purely the
+  EULA link that was missing.
+- **BACKUP — build 34 archived (NOT uploaded):** 33 + two in-app paywall `Link`s
+  (Terms of Use / Privacy Policy) so a human reviewer can't ding the missing
+  *in-binary* 3.1.2 links on re-review, + a plan-badge layout fix ("Save 30%" moved
+  to the cadence line; the old "Best value · save 30%" wrapped to two lines and
+  squeezed the title). Verified live on the paywall (both themes). In Organizer,
+  ready to Distribute **only if 33 gets bounced on the in-app links.**
+  `CURRENT_PROJECT_VERSION = 34` across all 6 configs.
+
 **Current state (21 Jul 2026):**
 - **App Store:** 1.1 (build 33) submitted for review. Build 32 was swapped OUT for
   33 before submission (33 = 32 + the save-loss-on-update fix + Glasgow airport +

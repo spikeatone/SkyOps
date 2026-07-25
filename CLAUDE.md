@@ -2510,6 +2510,19 @@ where numbers are involved.
     badge, Continue, Restore Purchases, fine print, close X). Theme-aware.
     Presented as a ContentView overlay (`showPaywall`/`paywallReason`) via an
     `upgrade(reason:)` helper.
+  - **3.1.2 COMPLIANCE (added build 34, after 1.1(33) was App-Store-REJECTED for a
+    missing metadata EULA link — see RELEASE_STATUS.md).** The paywall fine print now
+    carries **functional Terms of Use (EULA) + Privacy Policy `Link`s**
+    (`PaywallView.termsURL` = Apple's standard EULA, `privacyURL` = the support-site
+    privacy page) — required IN THE BINARY for auto-renewable subs; the App
+    Description carries the same two links for the METADATA half. Valid `URL(string:)`
+    force-unwraps (a bad URL would trap on load, so a clean launch proves them
+    parseable). The SAME pass fixed the plan **"Save 30%" badge**: it was
+    `"Best value · save 30%"` in `Store.swift` (2 spots — fallback + RevenueCat-
+    derived), which wrapped to two lines and, once pinned with `.fixedSize()`, shoved
+    the title into wrapping ("Annua/l"). Fix: shortened to "Save 30%" AND moved the
+    badge to the CADENCE line (`per year · [Save 30%]`) so title and badge never share
+    a row → can't wrap on any device. Verified live on the paywall, both themes.
   - **Gating is at the UI entry points** (single-player local game, no server —
     UI-level is sufficient; sim methods unchanged): Network "Open Route" button,
     the ACQUIRE panel's Buy/Lease/Used rows (`AircraftProfileCard.gated`), and

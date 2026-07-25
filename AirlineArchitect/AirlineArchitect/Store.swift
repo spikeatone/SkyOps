@@ -82,7 +82,7 @@ final class Store {
         let note: String?
     }
     private static let fallbackPlans: [Plan] = [
-        .init(id: "annual",  title: "Annual",  price: "$49.99", cadence: "per year",  note: "Best value · save 30%"),
+        .init(id: "annual",  title: "Annual",  price: "$49.99", cadence: "per year",  note: "Save 30%"),
         .init(id: "monthly", title: "Monthly", price: "$5.99",  cadence: "per month", note: nil),
     ]
     private(set) var plans: [Plan] = Store.fallbackPlans
@@ -122,7 +122,7 @@ final class Store {
         if let annual = current.annual ?? current.package(identifier: "yearly") {
             built.append(.init(id: "annual", title: "Annual",
                                price: annual.storeProduct.localizedPriceString,
-                               cadence: "per year", note: "Best value · save 30%"))
+                               cadence: "per year", note: "Save 30%"))
         }
         if let monthly = current.monthly ?? current.package(identifier: "monthly") {
             built.append(.init(id: "monthly", title: "Monthly",

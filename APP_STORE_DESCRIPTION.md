@@ -36,6 +36,10 @@ A WORLD THAT FEELS ALIVE
 Speed time up to 25×, watch the revenue roll in, and keep the whole network flying.
 
 Build the sky.
+
+LEGAL
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy Policy: https://spikeatone.github.io/airline-architect/privacy.html
 ------------------------------------------------------------------------------
 
 

@@ -63,6 +63,12 @@ struct PaywallView: View {
         ("chart.line.uptrend.xyaxis", "The full economy", "Every aircraft, airport, event, and market — no walls."),
     ]
 
+    // Functional legal links required on the subscription screen by App Store
+    // Guideline 3.1.2. Terms of Use is Apple's standard EULA (also linked in the
+    // App Store description); Privacy Policy is the published support-site page.
+    static let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
+    static let privacyURL = URL(string: "https://spikeatone.github.io/airline-architect/privacy.html")!
+
     var body: some View {
         VStack(spacing: 0) {
             // Header badge + title
@@ -144,6 +150,16 @@ struct PaywallView: View {
                     .font(.karla(10)).foregroundStyle(secondary.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
+
+                // Terms of Use (EULA) + Privacy Policy — required in the binary
+                // for auto-renewable subscriptions (App Store Guideline 3.1.2).
+                HStack(spacing: 6) {
+                    Link("Terms of Use", destination: Self.termsURL)
+                    Text("·").foregroundStyle(secondary.opacity(0.6))
+                    Link("Privacy Policy", destination: Self.privacyURL)
+                }
+                .font(.karla(11, .semibold))
+                .foregroundStyle(secondary)
             }
             .padding(20)
         }
@@ -166,16 +182,20 @@ struct PaywallView: View {
             HStack(spacing: 12) {
                 Image(systemName: on ? "largecircle.fill.circle" : "circle")
                     .font(.system(size: 20)).foregroundStyle(on ? Sky.coreGreen : secondary)
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
-                        Text(plan.title).font(.karla(16, .bold)).foregroundStyle(primary)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(plan.title).font(.karla(16, .bold)).foregroundStyle(primary)
+                        .lineLimit(1)
+                    // Cadence + discount pill share the second line, so neither
+                    // competes with the title for width (no wrap on any device).
+                    HStack(spacing: 6) {
+                        Text(plan.cadence).font(.karla(12)).foregroundStyle(secondary)
                         if let note = plan.note {
                             Text(note).font(.karla(10, .bold)).foregroundStyle(.white)
+                                .lineLimit(1).fixedSize()          // never wrap the pill
                                 .padding(.horizontal, 6).padding(.vertical, 2)
                                 .background(Sky.coreGreen).clipShape(Capsule())
                         }
                     }
-                    Text(plan.cadence).font(.karla(12)).foregroundStyle(secondary)
                 }
                 Spacer()
                 Text(plan.price).font(.karla(18, .heavy)).foregroundStyle(primary)
