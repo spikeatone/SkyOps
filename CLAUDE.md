@@ -4297,6 +4297,20 @@ Two details are load-bearing:
     began competing with the form fields, 0.08 sits behind the content the way the
     dark 0.10 does. Verified live on the naming screen AND the real no-arg light cold
     launch (load menu).
+  - **CROSS-SERIES: AA's light 0.08 is DELIBERATE, not an outlier to "unify" (revisited
+    2026-07-24, designer confirmed — KEEP 0.08).** The sibling apps have genuinely
+    DIVERGED, on more than one axis, so there is no single series standard to conform to:
+    AA = 0.08 light (`Sky.darkBlue` ink) / 0.10 dark; Golf Course Architect = 0.10 BOTH
+    themes (`Palette.darkGreen` ink, one `resolvedOpacity` = `figmaOpacity`); Vineyard =
+    0.10 light / **0.18** dark. Two reasons matching GCA's number would be WRONG, not
+    consistent: (1) the series was already non-uniform BEFORE this (Vineyard's 0.18 dark),
+    each app tuned to its own pages; (2) the LIGHT INK COLOURS differ (AA medium blue
+    #4E67A0 vs GCA deep green), so identical alpha does NOT read as identical presence — a
+    lighter ink reads fainter at the same opacity. AA's 0.08 was device-tuned to AA's own
+    light naming screen (above); bumping it to 0.10 would re-enter the range the on-device
+    tuning already rejected as competing with the form fields. So this is settled, not a
+    pending cosmetic call — do not re-flag it as "the one number that differs across the
+    series."
   - **A harness bug worth remembering (it masqueraded as a design finding):** the
     test view's naming/sequence modes called `AirlineNamingView(backdropOpacity:)`
     without passing the tint, so it defaulted to `.white` → white ink on a white page

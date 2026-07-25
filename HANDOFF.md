@@ -53,9 +53,14 @@ nil and why `.ouster` uses `tick + 240` — is in CLAUDE.md's Go Public section.
    (CLAUDE.md "Open" section). Go Public is driven, but the full 30-type fleet /
    48 airports / events / crew systems have still never run together in one
    sustained session. That list has a long, real catch rate.
-5. Optional polish: the motif's light opacity is **0.08** in AA but **0.10** in
-   Golf Course Architect. May be correct (different pages), but it's the one
-   number that differs across the series if you want them identical.
+5. ~~Motif light-opacity polish~~ **RESOLVED (2026-07-24): keep 0.08.** The
+   framing "one number that differs across the series" turned out to be
+   incomplete — the siblings have diverged on more than one axis (Vineyard runs
+   **0.18** dark; GCA collapses both themes to 0.10) AND the light ink colours
+   differ (AA blue #4E67A0 vs GCA green), so identical alpha ≠ identical presence.
+   There's no single series standard to conform to, and AA's 0.08 was device-tuned
+   to its own light naming screen. Not a pending call. Full record in CLAUDE.md's
+   motif note ("CROSS-SERIES" bullet).
 
 ## KEY DECISIONS (don't relitigate)
 
@@ -68,6 +73,10 @@ nil and why `.ouster` uses `tick + 240` — is in CLAUDE.md's Go Public section.
   value) vs `lightOpacity` 0.08. Dark ink on white carries further than white
   line-art on `#2B303D` — equal alpha does not read equal. Tuned by eye on
   device: 0.06 vanished, 0.12 competed with the form fields. **Don't "unify" them.**
+  This applies across the SERIES too, not just AA's own light-vs-dark: the sibling
+  apps have diverged (Vineyard 0.18 dark, GCA 0.10 both) and use different light ink
+  colours, so AA's 0.08 is deliberate — matching GCA's 0.10 would regress it, not
+  make it consistent. Settled 2026-07-24; see CLAUDE.md's "CROSS-SERIES" motif bullet.
 - **Geometry is FRACTIONAL, not fixed points.** Figma's frame is 440 wide; real
   devices are 402/430/iPad. Hard-coded points would drift off-screen.
 - **Load menu got the motif too** (a judgment call, easily reverted — one
