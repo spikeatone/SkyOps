@@ -5,9 +5,11 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 23 July 2026. **1.1 (build 33)** in App Store review; build 34
+_Snapshot: 24 July 2026. **1.1 (build 33)** in App Store review; build 34
 accumulating (Game Clock + the architect's-tools brand motif + the Go Public
-live tap-through)._
+live tap-through + a headless soak harness). Clean working tree on `main`; nothing
+half-finished. (Two doc commits this session — `91f7f07` + this one — are local; push
+when ready.)_
 
 ## GOAL
 
@@ -16,7 +18,21 @@ headless-verified only, and CLAUDE.md flagged a live Simulator run as the thing
 standing between it and a beta cut. **Done: every surface driven, both themes,
 no defects found.** Build 34 is the open cut; nothing is half-finished.
 
-## DONE — verified live this session
+## DONE — landed on the build-34 cut (newest first)
+
+**Motif light-opacity settled (doc only, `91f7f07`).** Confirmed AA's `0.08` light
+value is deliberate, not a series outlier to "unify" — the siblings diverged on more
+than one axis (Vineyard 0.18 dark, GCA 0.10 both) and use different light ink colours.
+Recorded in CLAUDE.md's motif "CROSS-SERIES" bullet. No code change.
+
+**Headless soak harness (`cc4464d`, `aa-1.1.x/SoakMain.swift`).** Drives ONE
+`Simulation` through a multi-year game with randomised-but-plausible play (buy/lease/
+sell across the fleet, routes, crew, loans, events, hubs, IPO + levers, draining the
+decision queue), asserting the cross-system invariants every check — cash residual,
+crew integrity, duty/rest bounds, ownership scoping, route/fleet consistency, save/load
+round-trip. **8/8 seeds × 2 sim-years clean (~7.9M ticks), no game bugs.** Run per
+`aa-1.1.x/README.md` (`swiftc -O -DDEBUG` on the real `Sim/*.swift`); re-run after any
+economy change. This NARROWS the "never played end-to-end" concern — see NEXT.
 
 **The Go Public live tap-through, in full.** Every number reconciled on screen;
 the 78/78 headless suite turned out to be right about all of it.
@@ -49,10 +65,14 @@ nil and why `.ouster` uses `tick + 240` — is in CLAUDE.md's Go Public section.
    to 34 across **6 configs** → archive → Organizer. **The DESIGNER does the
    credentialed Distribute/upload — Claude cannot.**
 3. If Apple responds on build 33, that takes priority over everything.
-4. **The standing "never played end-to-end" concern** is now the top open item
-   (CLAUDE.md "Open" section). Go Public is driven, but the full 30-type fleet /
-   48 airports / events / crew systems have still never run together in one
-   sustained session. That list has a long, real catch rate.
+4. **The standing "never played end-to-end" concern — now NARROWED, top hands-on
+   item.** The soak harness (`cc4464d`) closed the half a machine can reach: the
+   numeric / state-integrity side (cash invariant, crew, ownership scoping,
+   save/load) is green across 8 seeds × 2 sim-years. The RESIDUAL is the UI /
+   "does it feel right" half — the panel/dropdown flicker class a headless harness
+   can't see — which still needs a real, sustained Simulator session with eyes
+   (full 30-type fleet / 48 airports / events / crew all running together). That
+   list has a long, real catch rate. See CLAUDE.md's "Open" section for the split.
 5. ~~Motif light-opacity polish~~ **RESOLVED (2026-07-24): keep 0.08.** The
    framing "one number that differs across the series" turned out to be
    incomplete — the siblings have diverged on more than one axis (Vineyard runs
