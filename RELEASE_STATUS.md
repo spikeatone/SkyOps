@@ -24,13 +24,19 @@ rejected" — they auto re-review on resubmit, no separate fix).
   (app + Airline Architect Pro group + Yearly + Monthly) back to "Waiting for
   Review". The Privacy Policy URL metadata field was already set — it was purely the
   EULA link that was missing.
-- **BACKUP — build 34 archived (NOT uploaded):** 33 + two in-app paywall `Link`s
-  (Terms of Use / Privacy Policy) so a human reviewer can't ding the missing
-  *in-binary* 3.1.2 links on re-review, + a plan-badge layout fix ("Save 30%" moved
-  to the cadence line; the old "Best value · save 30%" wrapped to two lines and
-  squeezed the title). Verified live on the paywall (both themes). In Organizer,
-  ready to Distribute **only if 33 gets bounced on the in-app links.**
-  `CURRENT_PROJECT_VERSION = 34` across all 6 configs.
+- **BACKUP builds — 34 AND 35 uploaded to ASC (Jul 25, not released to testing):**
+  both carry 33 + two in-app paywall `Link`s (Terms of Use / Privacy Policy) so a
+  human reviewer can't ding the missing *in-binary* 3.1.2 links on re-review. **Build
+  35 is the latest and the good one** — it also has the plan-badge layout fix
+  ("Save 30%" on the cadence line; the old "Best value · save 30%" wrapped and
+  squeezed the title). If a backup is ever needed for the submission, **use 35, not
+  34.** Verified live on the paywall (both themes).
+- **The review itself is on build 33** (metadata-only EULA fix); 34/35 are uploaded
+  backups, not attached to the "Waiting for Review" submission unless deliberately
+  swapped in.
+- **Repo build number synced to Apple: `CURRENT_PROJECT_VERSION = 35` across all 6
+  configs** (was 34; Apple's latest upload is 35). **The next NEW build must be 36+**
+  — 33/34/35 are all taken in ASC and build numbers can't repeat.
 
 **Current state (21 Jul 2026):**
 - **App Store:** 1.1 (build 33) submitted for review. Build 32 was swapped OUT for
