@@ -5,11 +5,12 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 24 July 2026. **1.1 (build 33)** in App Store review; build 34
-accumulating (Game Clock + the architect's-tools brand motif + the Go Public
-live tap-through + a headless soak harness). Clean working tree on `main`; nothing
-half-finished. (Two doc commits this session — `91f7f07` + this one — are local; push
-when ready.)_
+_Snapshot: 25 July 2026. **1.1 (build 33)** was REJECTED on Guideline 3.1.2 (missing
+Terms of Use / EULA link), fixed via a metadata-only App Description edit and
+RESUBMITTED (build 33 unchanged, "Waiting for Review"). **Build 34** is cut + archived
+as a backup (adds the in-app paywall Terms/Privacy links + a plan-badge fix). Clean
+working tree on `main`, all pushed; nothing half-finished. Full rejection→fix record
+in `RELEASE_STATUS.md`._
 
 ## GOAL
 
@@ -19,6 +20,16 @@ standing between it and a beta cut. **Done: every surface driven, both themes,
 no defects found.** Build 34 is the open cut; nothing is half-finished.
 
 ## DONE — landed on the build-34 cut (newest first)
+
+**1.1 (33) App Store rejection (Guideline 3.1.2) — handled (`2e506b6`).** Apple
+bounced 33 for a missing metadata Terms of Use (EULA) link on an auto-renewable-
+subscription app. Fixed metadata-only (standard Apple EULA + Privacy links in the
+App Description) and resubmitted build 33 — no new binary. **Build 34** cut as the
+backup: the paywall now has functional Terms of Use + Privacy `Link`s (the in-binary
+3.1.2 half, in case a reviewer flags it on re-review) + a plan-badge fix ("Best value
+· save 30%" wrapped and squeezed the title → "Save 30%" on the cadence line). Verified
+live both themes; archived in Organizer. Distribute 34 ONLY if 33 gets re-rejected.
+Full detail in `RELEASE_STATUS.md`.
 
 **Motif light-opacity settled (doc only, `91f7f07`).** Confirmed AA's `0.08` light
 value is deliberate, not a series outlier to "unify" — the siblings diverged on more
