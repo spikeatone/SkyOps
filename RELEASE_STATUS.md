@@ -9,7 +9,34 @@ version — cleaner to debut on the build that fixes the known bugs than to ship
 with no conversation history) can pick this up cold. `CLAUDE.md` holds the
 technical/design context; this file is ONLY the release-and-store state.
 
-## Update (25 Jul 2026) — 1.1 (33) REJECTED on 3.1.2, fixed + resubmitted
+## Update (27 Jul 2026) — 1.1 (33) REJECTED AGAIN on 3.1.2(c) (in-app links), swapped to build 35 + resubmitted
+
+Apple re-reviewed **build 33** (device: iPad Air 11" M3) and rejected again under
+**Guideline 3.1.2(c)** — this time the IN-APP half: the Terms of Use (EULA) +
+Privacy Policy links must appear WITHIN THE APP (in the binary), not just in
+metadata. Build 33 predated the in-app links, so the 25 Jul metadata-only fix wasn't
+sufficient on its own. This was exactly the scenario the build-34/35 backups were cut
+for.
+
+- **FIX: swapped the submission to build 35** (which HAS the in-app paywall Terms of
+  Use + Privacy Policy links — verified live). Metadata was already compliant, so the
+  submission now covers BOTH halves of 3.1.2(c): in-binary + metadata.
+- **Reviewer notes updated** (App Review Information → Notes): added a "SUBSCRIPTION
+  INFORMATION (GUIDELINE 3.1.2)" section itemizing what the subscription screen shows
+  (title/length/price per plan — $5.99/mo, $49.99/yr; auto-renew terms; functional
+  Terms/Privacy links) + the reach path (Finance tab → FREE PLAN card → Upgrade).
+- **Screen recording attached to the App Review REPLY** (Apple explicitly requested
+  one; reply goes in the ASC message thread, NOT the email): drives Finance → Upgrade
+  → subscription screen, then taps Terms of Use (opens Apple's Standard EULA) and
+  Privacy Policy (opens the published privacy.html) to prove both links are functional.
+  Recorded on the iPhone 17 Pro sim from the build-35 code; saved at
+  `~/Desktop/AirlineArchitect-subscription-links-demo.mp4`.
+- **Resubmitted** with build 35 + the notes + the reply/recording. Back in the queue.
+- **No code changes this round** — build 35 already had everything; this was
+  verification + an ASC build swap. (The temp `-showPaywall` launch hook used to drive
+  the recording was never committed; working tree clean.)
+
+## Update (25 Jul 2026) — 1.1 (33) REJECTED on 3.1.2 (metadata EULA link), fixed + resubmitted
 
 Apple rejected 1.1 (33) under **Guideline 3.1.2 (Business: Payments –
 Subscriptions)**: an auto-renewable-subscription app with **no functional Terms of
@@ -31,9 +58,10 @@ rejected" — they auto re-review on resubmit, no separate fix).
   ("Save 30%" on the cadence line; the old "Best value · save 30%" wrapped and
   squeezed the title). If a backup is ever needed for the submission, **use 35, not
   34.** Verified live on the paywall (both themes).
-- **The review itself is on build 33** (metadata-only EULA fix); 34/35 are uploaded
-  backups, not attached to the "Waiting for Review" submission unless deliberately
-  swapped in.
+- **(SUPERSEDED 27 Jul — build 35 is now the submitted build; see the 27 Jul update
+  above.)** As of the 25 Jul metadata fix the review was on build 33, with 34/35 as
+  un-attached backups. The 27 Jul re-rejection on the in-app links is what prompted
+  swapping build 35 into the submission.
 - **Repo build number synced to Apple: `CURRENT_PROJECT_VERSION = 35` across all 6
   configs** (was 34; Apple's latest upload is 35). **The next NEW build must be 36+**
   — 33/34/35 are all taken in ASC and build numbers can't repeat.
