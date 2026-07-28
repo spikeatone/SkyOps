@@ -2,8 +2,8 @@
 //  AircraftType.swift
 //  Airline Architect — Phase 2 (fleet) + Phase 5 (economy fields)
 //
-//  The fleet catalogue, ported from AIRCRAFT_TYPES. 30 real named variants
-//  across 15 crew-type-rating families. `costPerHour` is real direct operating
+//  The fleet catalogue, ported from AIRCRAFT_TYPES. 35 real named variants
+//  across 18 crew-type-rating families. `costPerHour` is real direct operating
 //  cost/hour (SimpleFlying/AirInsight-tier, 2025-26); `holdCostPerTick` derives
 //  it per sim-minute. Spawn `weight` is real-world-proportional. This is DATA,
 //  not logic — ported verbatim; don't re-round "for cleanliness."
