@@ -86,7 +86,7 @@ struct MapView: View {
                 var w = ctx
                 w.translateBy(x: dx, y: 0)
                 drawBasemap(w)
-                drawNightShade(w)   // day/night terminator — dims the geography, under the live network
+                drawNightShade(w, size)   // day/night terminator — dims the geography, under the live network
                 drawRoutes(w)
                 drawAirports(w)
                 drawAircraft(w)
@@ -104,13 +104,17 @@ struct MapView: View {
     /// longitude = longitude of local noon). Longitude-based (no seasonal polar
     /// tilt — a future refinement); drawn under the live network so it dims the
     /// geography but the aircraft/routes still glow over it. Tiles with the map.
-    private func drawNightShade(_ ctx: GraphicsContext) {
+    private func drawNightShade(_ ctx: GraphicsContext, _ size: CGSize) {
         let maxDark = isDark ? 0.55 : 0.18
         let nightColor = isDark ? Color(red: 0x0A/255, green: 0x12/255, blue: 0x34/255)   // deep twilight blue
                                 : Color(red: 0x1A/255, green: 0x24/255, blue: 0x38/255)
         let subLon = 180.0 - Double(tick % 1440) / 1440.0 * 360.0   // subsolar longitude, deg
-        let topY = sim.project(GeoProjection.unit(lat: GeoProjection.latMax, lon: 0)).y
-        let botY = sim.project(GeoProjection.unit(lat: GeoProjection.latMin, lon: 0)).y
+        // Fill the FULL viewport height, not just the world's lat band. Nightness
+        // is longitude-only, so the vertical extent is purely cosmetic — bounding
+        // it to latMax (71°N)…latMin left a hard horizontal seam against the empty
+        // Arctic margin when the map is panned north. Spanning the viewport makes
+        // the terminator a continuous vertical column (no seam, no downside at the
+        // default CONUS zoom where the world already fills the frame).
         let strips = 60
         let step = (GeoProjection.lonMax - GeoProjection.lonMin) / Double(strips)
         for i in 0..<strips {
@@ -120,7 +124,7 @@ struct MapView: View {
             if nightness <= 0.02 { continue }
             let xA = sim.project(GeoProjection.unit(lat: 0, lon: lonA)).x
             let xB = sim.project(GeoProjection.unit(lat: 0, lon: lonA + step)).x
-            let rect = CGRect(x: min(xA, xB), y: topY, width: abs(xB - xA) + 1, height: botY - topY)
+            let rect = CGRect(x: min(xA, xB), y: 0, width: abs(xB - xA) + 1, height: size.height)
             ctx.fill(Path(rect), with: .color(nightColor.opacity(maxDark * nightness)))
         }
     }
