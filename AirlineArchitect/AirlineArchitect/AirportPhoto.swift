@@ -15,7 +15,7 @@ import SwiftUI
 import UIKit
 
 enum AirportArchetype: String, CaseIterable {
-    case metro, tropicalIsland, snowyNorth, desert, alpine, coastal, tropical, plains
+    case metro, tropicalIsland, snowyNorth, desert, savanna, alpine, coastal, tropical, plains
 
     var label: String {
         switch self {
@@ -23,6 +23,7 @@ enum AirportArchetype: String, CaseIterable {
         case .tropicalIsland: return "Tropical island"
         case .snowyNorth:     return "Northern winter"
         case .desert:         return "Desert"
+        case .savanna:        return "Savanna"
         case .alpine:         return "Alpine"
         case .coastal:        return "Coastal"
         case .tropical:       return "Tropics"
@@ -38,6 +39,7 @@ enum AirportArchetype: String, CaseIterable {
         case .tropicalIsland: return [c(0x186C7C), c(0x33B4AE), c(0xF3D28C)]
         case .snowyNorth:     return [c(0x3A597F), c(0x8AA9C6), c(0xEAF0F6)]
         case .desert:         return [c(0x7C4A2C), c(0xD68C4C), c(0xF6D289)]
+        case .savanna:        return [c(0x6E5A2E), c(0xC7A14E), c(0xF0DC94)]
         case .alpine:         return [c(0x3A4B79), c(0x8090C1), c(0xDBE1EE)]
         case .coastal:        return [c(0x235C7E), c(0x3E9BC4), c(0xF3D8A2)]
         case .tropical:       return [c(0x2C6A38), c(0x5BA85B), c(0xF1D688)]
@@ -62,7 +64,13 @@ enum AirportPhoto {
         if absLat >= 54 { return .snowyNorth }
 
         switch Airline.region(code) {
-        case .africa, .middleEast:        return absLat <= 20 ? .desert : .coastal
+        case .africa, .middleEast:
+            // Equatorial Africa + the Sahel + the East-African plateau are golden
+            // grassland, not dune desert — the old `absLat <= 20 -> desert` put a
+            // Sahara scene on Lagos/Nairobi/Accra. Split that green band off to
+            // savanna; the 15–20° dry belt (Sahara edge) stays desert; >20 as before.
+            if absLat <= 15 { return .savanna }
+            return absLat <= 20 ? .desert : .coastal
         case .asia:                       return absLat <= 23 ? .tropical : .plains
         case .caribbean, .centralAmerica: return .tropicalIsland
         case .southAmerica:               return absLat <= 12 ? .tropical : .plains

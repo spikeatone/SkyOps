@@ -11,11 +11,13 @@ bundle. Instead, each airport maps to one of a **curated set of region/terrain
 archetypes**. Art is **Midjourney-generated in the VA style** (series
 consistency), bundled, offline. A curated set (~8 now → target ~50) is ~10–15 MB.
 
-## Archetype set (v1 = 8; expand toward ~50)
+## Archetype set (v1 = 9; expand toward ~50)
 
-`metro · tropicalIsland · snowyNorth · desert · alpine · coastal · tropical ·
-plains`. Expand later (split island into Caribbean/Pacific, add jungle, savanna,
-fjord, and a handful of distinct **marquee-city skylines**).
+`metro · tropicalIsland · snowyNorth · desert · savanna · alpine · coastal ·
+tropical · plains`. `savanna` split off equatorial-Africa/Sahel (abs lat ≤ 15° in
+the africa/middleEast region) so the golden-grassland belt no longer gets a Sahara
+scene. Expand later (split island into Caribbean/Pacific, add jungle, fjord, and a
+handful of distinct **marquee-city skylines**).
 
 ## Mapping — self-contained, no sim (`AirportPhoto.archetype(for:)`)
 
