@@ -2897,6 +2897,33 @@ where numbers are involved.
   sync. Verified here: the pure merge logic (7/7 headless) + offline-first
   no-crash launch. The designer confirms the actual cross-device sync on
   real hardware.
+- **BREAK-GLASS: CloudKit was considered and DELIBERATELY DECLINED (2026-07-27,
+  designer asked "should we upgrade to CloudKit?"). Stay on KVS.** The current stack
+  (local Codable JSON in Documents as source of truth + `NSUbiquitousKeyValueStore`
+  mirror) is well-matched to what this app IS: single-player, ~1–7 KB saves × 3 slots,
+  no account system, no sharing/server-queries/push. CloudKit's strengths (large data,
+  cross-user sharing, queries, push-on-change) are all things this app doesn't use, so
+  migrating would take on a full cloud-DB dependency for zero benefit — and a storage-
+  layer rewrite of a WORKING save system on a shipping app is exactly where save-loss
+  regressions get reintroduced (the opposite of the goal). Two things to keep straight:
+  (1) **CloudKit would NOT have fixed the original lost-saves-on-new-build bug** — that
+  was a `Codable` decode failure, and the fix (tolerant `decodeSafe` decoders) is
+  transport-agnostic; switching sync layers buys nothing there. (2) The genuinely
+  valuable open step is NOT CloudKit but **validating the current KVS cross-device sync
+  on two real devices** (only the headless merge logic is verified) — don't rewrite a
+  system not yet confirmed inadequate.
+  - **THE ONE TRIGGER to revisit:** the KVS **1 MB total quota** (across all keys) is
+    the only hard ceiling CloudKit would lift. Already engineered around (`Route.history`
+    capped at 60 + `mirrorToCloud` skips the KVS write above ~900 KB); today a save is
+    ~21 KB, enormous headroom. So the trigger is specific — a real save creeping toward
+    ~1 MB from future persisted-state growth. Glance at save size as you add persisted
+    fields; until it approaches the cap, this is a non-issue.
+  - **IF the trigger is ever hit, the least-risky path is NOT a SwiftData +
+    `NSPersistentCloudKitContainer` rewrite.** Keep the local Codable files as source of
+    truth AND the tolerant decoders, and swap ONLY the mirror transport: one `CKRecord`
+    per slot holding the same JSON blob, in place of a KVS key. That's a contained sync-
+    layer change that preserves the offline-first + decode-tolerance guarantees, instead
+    of re-architecting the whole persistence model.
 
 ## Decided — iPad Adaptation (native app; universal, one codebase)
 
