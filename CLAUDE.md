@@ -2497,6 +2497,21 @@ where numbers are involved.
   custom SwiftUI paywall (not RevenueCatUI), and build the whole gating
   experience NOW behind a local stub so it's testable before the account is
   wired.
+  - **UPDATE (2026-07-27): RevenueCat is now WIRED AND LIVE — the "stub / wiring
+    deferred" framing below is HISTORICAL.** Shipped in 1.1 (build 35), which Apple
+    APPROVED with both subscriptions + the "Airline Architect Pro" group. Concretely:
+    the **RevenueCat + RevenueCatUI SPM packages are added** to the target (in
+    `Package.resolved`), `Store.apiKey` is a **real public SDK key**,
+    `Purchases.configure(withAPIKey:)` runs at launch, and `isPro` is driven by the
+    LIVE `customerInfo` entitlement — the `#if canImport(RevenueCat)` branch compiles,
+    so the `#else` stub (`purchase(){ isPro = true }`) is NO LONGER the active path.
+    **CORRECTION to the old note's guess: the entitlement identifier is
+    `"Airline Architect Pro"` (`Store.entitlementID`), NOT `"pro"`.** Verified in the
+    RevenueCat dashboard: the entitlement's IDENTIFIER matches that string exactly, and
+    the real App Store Monthly + Yearly products (under the "Airline Architect" app —
+    plus RevenueCat Test-Store equivalents for test purchases) are attached to it, so a
+    real purchase activates the entitlement → `isPro` flips. Still-open verification
+    (not blocking): a real SANDBOX purchase to prove the unlock end-to-end on device.
   - **`Store.swift`** (`@MainActor @Observable`): `isPro` (STUB flag),
     `freeFleetCap = 3` / `freeRouteCap = 2`, `canAcquireAircraft(sim)` /
     `canOpenRoute(sim)` (= `isPro || count < cap`), `capMessage(.fleet/.route)`,

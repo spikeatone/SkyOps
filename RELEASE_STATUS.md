@@ -1,4 +1,4 @@
-# RELEASE STATUS — v1.1 (build 33, in App Store review — the PUBLIC DEBUT)
+# RELEASE STATUS — v1.1 (build 35) — APPROVED ✅, eligible for distribution (PUBLIC DEBUT)
 
 Snapshot as of **21 July 2026**. **1.1 (build 33) is submitted to App Store review
 and is the public debut.** 1.0 was NEVER released: **1.0 (build 27) was pulled from
@@ -8,6 +8,32 @@ version — cleaner to debut on the build that fixes the known bugs than to ship
 1.0 and immediately fast-follow. Written so a future session (or a remote session
 with no conversation history) can pick this up cold. `CLAUDE.md` holds the
 technical/design context; this file is ONLY the release-and-store state.
+
+## Update (27 Jul 2026) — APPROVED ✅ (1.1, all 4 items; eligible for distribution)
+
+Apple **approved** the resubmission — "Review of your submission has been completed.
+It is now eligible for distribution." All **4 items** accepted: **App Version 1.1 for
+iOS** + **Yearly** + **Monthly** subscriptions + the **Airline Architect Pro**
+subscription group. The 3.1.2(c) resolution worked: build 35 (in-app Terms/Privacy
+links) + reviewer notes + the screen recording attached to the App Review reply.
+App Store listing: https://apps.apple.com/app/airline-architect/id6790569697
+
+**Still to do before it's actually PUBLIC (eligible ≠ live):**
+- **RELEASE the version** — if the version's release option is MANUAL, click Release in
+  ASC; if AUTO, it's already publishing. Apple: up to 24 h to propagate after release.
+- **Sandbox-test the purchase path** — buy a plan with a Sandbox Apple Account on device
+  and confirm the app flips to Pro (caps lift). The only end-to-end proof of the money
+  path; not blocking release, but do it around go-live.
+
+**Monetization is wired and its config is confirmed** (was previously stubbed): RevenueCat
++ RevenueCatUI SPM packages are in the build, real API key, `Purchases.configure` runs,
+and `isPro` is driven by the live entitlement. The RevenueCat dashboard entitlement
+IDENTIFIER is exactly `Airline Architect Pro` (matches `Store.entitlementID`), with the
+real App Store Monthly + Yearly products attached. See CLAUDE.md's IAP section.
+
+**This file can be DELETED once 1.1 is actually LIVE on the store** (per the header intent)
+— it's release-tracking scaffolding, and the whole rejection→approval arc is now also in
+git history + CLAUDE.md.
 
 ## Update (27 Jul 2026) — 1.1 (33) REJECTED AGAIN on 3.1.2(c) (in-app links), swapped to build 35 + resubmitted
 
