@@ -43,6 +43,18 @@ hub (`annualPassengers ≥ 30M`) → metro; `|lat| ≥ 54` → snowyNorth; else 
   airfields convincingly and viewers who know them notice (a gorgeous city reads as
   "evocative"; a wrong airport reads as "wrong"). Same principle as the archetypes: a
   sense of place, never a building.
+- **Marquee overrides ONLY for GLOBALLY-ultra-iconic landmarks MJ renders faithfully**
+  (Eiffel Tower, Sydney Opera House, Big Ben / Tower Bridge, the Hollywood Sign, Statue
+  of Liberty, Golden Gate…). **REGIONALLY-iconic landmarks come out WRONG** — MJ invents
+  a plausible-but-inaccurate version and locals/visitors catch it instantly (Red Rocks
+  for Denver was flat-out wrong per a Colorado native — the real tilted monoliths and
+  steep straight seating are nothing like MJ's guess). Rule of thumb: the more
+  recognizable a place is to your players, the more a wrong render hurts — so **if MJ
+  won't nail it, DON'T override; fall back to the generic archetype** (generic on
+  purpose, so it can't be "wrong"). For a place with a strong regional identity but no
+  MJ-faithful landmark (e.g. Denver), an evocative *landscape* works instead — the
+  snow-capped Front Range behind the distant city — accurate in feel, with no fragile
+  specific structure to get wrong.
 
 ## Card layout
 
