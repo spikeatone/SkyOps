@@ -92,20 +92,37 @@ enum AirportPhoto {
 /// styled placeholder keyed to the airport's archetype.
 struct AirportHero: View {
     let airport: Airport
-    var height: CGFloat = 138
+    /// Hero height scales with the card's WIDTH so the band keeps a pleasant
+    /// proportion at any size. A fixed height reads ~2.5:1 on iPhone but a thin
+    /// strip on the wide iPad-portrait card — this clamps it to a sensible band
+    /// everywhere (iPhone/iPad-landscape land near `minHeight`; the wide
+    /// iPad-portrait card grows toward `maxHeight`).
+    var aspect: CGFloat = 2.5          // target width : height
+    var minHeight: CGFloat = 132
+    var maxHeight: CGFloat = 220
+    @State private var measuredWidth: CGFloat = 0
+
+    private var height: CGFloat {
+        guard measuredWidth > 0 else { return minHeight }
+        return min(max(measuredWidth / aspect, minHeight), maxHeight)
+    }
 
     var body: some View {
-        let arch = AirportPhoto.archetype(for: airport)
         ZStack {
             if let img = AirportPhoto.image(for: airport) {
                 img.resizable().scaledToFill()
             } else {
-                AirportPhotoPlaceholder(archetype: arch)
+                AirportPhotoPlaceholder(archetype: AirportPhoto.archetype(for: airport))
             }
         }
-        .frame(height: height)
         .frame(maxWidth: .infinity)
+        .frame(height: height)
         .clipped()
+        .background(GeometryReader { g in
+            Color.clear
+                .onAppear { measuredWidth = g.size.width }
+                .onChange(of: g.size.width) { _, w in measuredWidth = w }
+        })
     }
 }
 

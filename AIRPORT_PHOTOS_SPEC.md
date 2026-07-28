@@ -27,18 +27,31 @@ hub (`annualPassengers ≥ 30M`) → metro; `|lat| ≥ 54` → snowyNorth; else 
 
 - **Lock a style** — reuse VA's `--sref` (or a fixed prompt suffix) so all AA
   images share that warm, painterly-photo look.
-- **Fixed `--ar 16:9`**, and **no baked-in text** — the card overlays the
-  city/country itself, so the art stays reusable.
+- **`--ar 16:9`** (or up to ~2:1). The hero band runs ~2.5:1 (iPhone / iPad-landscape)
+  → ~3.6:1 (iPad portrait), so a 16:9 source crops top/bottom; 2:1 wastes a little
+  less. **Keep the subject in the center ~50% vertically** — the tightest crop is
+  iPad-portrait at ~3.6:1.
+- **Downscale each export to ~1500 px wide** before bundling — the hero never
+  displays wider than ~1200 px, so a full MJ export is mostly wasted bytes. THIS,
+  not the aspect ratio, is the real file-size lever.
+- **No baked-in text** — the card overlays the city/country itself, so the art stays
+  reusable.
 - One image per archetype → drop into `Resources/AirportPhotos/airport_<archetype>.jpg`
   (files under `Resources/` flatten to the bundle root, like the fonts/illustrations).
-- **Optional later:** per-airport marquee overrides (`airport_<CODE>.jpg`) for
-  famous skylines, checked before the archetype fallback.
+- **Marquee overrides** (`airport_<CODE>.jpg`, checked before the archetype fallback)
+  depict the **city / skyline, NOT the airport itself** — MJ can't render famous
+  airfields convincingly and viewers who know them notice (a gorgeous city reads as
+  "evocative"; a wrong airport reads as "wrong"). Same principle as the archetypes: a
+  sense of place, never a building.
 
 ## Card layout
 
-Hero band (~138 pt, full-bleed, `scaledToFill` + `clipped`) at the **top** of
-`AirportInfoCard`; the existing header/stats sit below. Top corners come from the
-card's own `clipShape` (corner radius is a tweakable — VA's is rounder).
+Hero band at the **top** of `AirportInfoCard` (`AirportHero`, `scaledToFill` +
+`clipped`); header/stats below. **Height is RESPONSIVE to card width**
+(`width / 2.5`, clamped 132–220 pt) so the band holds ~2.5:1 on iPhone /
+iPad-landscape and grows to a proper ~3.6:1 banner on the wide iPad-portrait card —
+a fixed height read as a thin ~8:1 strip there. Top corners come from the card's own
+`clipShape` (radius is a tweakable — VA's is rounder).
 
 ## Placeholder (ships now, for design approval)
 
