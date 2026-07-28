@@ -88,14 +88,31 @@ struct ArchitectBackdrop: View {
     /// its own brand colour without re-exporting the PNG.
     var tint: Color = .white
 
+    @Environment(\.horizontalSizeClass) private var hSize
+
     /// Source aspect ratio (892 × 1200 original, and the Figma box 603.274 ×
     /// 811.579 — both 0.7433, so the art is never distorted).
     private static let aspect: CGFloat = 603.274 / 811.579
 
+    /// On a REGULAR-width canvas (iPad, wide split-view) the raw width-scale would
+    /// balloon the motif far past the phone-sized UI furniture AND upscale the 892px
+    /// source ~3× into visible pixelation. Cap the art's absolute width there and
+    /// centre it, so it reads as a contained, crisp emblem behind the content rather
+    /// than a ballooned full-bleed texture (ported from Vineyard Architect). Phone
+    /// (compact) is unchanged — it still bleeds off the edges as a crop.
+    private static let maxRegularArtWidth: CGFloat = 840
+
     var body: some View {
         GeometryReader { geo in
-            let w = geo.size.width * widthScale
+            // Compact (phone): scale to width so the motif bleeds off the edges as a
+            // crop of a larger drawing. Regular (iPad): cap to a contained size and
+            // centre it, so it's a crisp faint emblem rather than a ballooned texture.
+            let regular = hSize == .regular
+            let w = regular ? min(geo.size.width * widthScale, Self.maxRegularArtWidth)
+                            : geo.size.width * widthScale
             let h = w / Self.aspect
+            let cx: CGFloat = regular ? 0.5 : centre.x
+            let cy: CGFloat = regular ? 0.5 : centre.y
             if let art = ArchitectArt.toolsImage {
                 art
                     .resizable()
@@ -104,8 +121,8 @@ struct ArchitectBackdrop: View {
                     .foregroundStyle(tint)
                     .frame(width: w, height: h)
                     .rotationEffect(.degrees(angle))
-                    .position(x: geo.size.width * centre.x,
-                              y: geo.size.height * centre.y)
+                    .position(x: geo.size.width * cx,
+                              y: geo.size.height * cy)
                     .opacity(opacity)
             }
         }
