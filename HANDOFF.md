@@ -5,197 +5,85 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 25 July 2026. **1.1 (build 33)** was REJECTED on Guideline 3.1.2 (missing
-Terms of Use / EULA link), fixed via a metadata-only App Description edit and
-RESUBMITTED (build 33 unchanged, "Waiting for Review"). **Build 34** is cut + archived
-as a backup (adds the in-app paywall Terms/Privacy links + a plan-badge fix). Clean
-working tree on `main`, all pushed; nothing half-finished. Full rejection→fix record
-in `RELEASE_STATUS.md`._
+_Snapshot: 28 July 2026. **1.1 (build 35) is LIVE on the App Store** — the public
+debut. <https://apps.apple.com/us/app/airline-architect/id6790569697>. Clean tree on
+`main`, all pushed; nothing in flight._
 
-## GOAL
+## WHERE THINGS STAND
 
-Close the **Go Public pre-beta gate** — the whole IPO feature (steps 2–5) was
-headless-verified only, and CLAUDE.md flagged a live Simulator run as the thing
-standing between it and a beta cut. **Done: every surface driven, both themes,
-no defects found.** Build 34 is the open cut; nothing is half-finished.
+- **Shipped & live.** 1.1 (build 35) is public. It cleared review after a two-round
+  Guideline **3.1.2** subscription saga (missing Terms-of-Use / EULA link — first in
+  METADATA, then the IN-APP links). Resolved by shipping the in-app paywall Terms +
+  Privacy `Link`s (build 35) + reviewer notes + a screen recording of the flow. The
+  full rejection→approval arc is in git history (the old `RELEASE_STATUS.md` was
+  retired at launch — see the git log around this date).
+- **Monetization is LIVE and wired** (was previously a local stub): RevenueCat +
+  RevenueCatUI SPM packages are in the build, real API key, `Purchases.configure`
+  runs, and `isPro` is driven by the live entitlement **`Airline Architect Pro`**
+  (dashboard identifier confirmed to match `Store.entitlementID`, with the real App
+  Store Monthly + Yearly products attached). Two tiers ($5.99/mo, $49.99/yr); free
+  tier caps at **3 aircraft / 2 routes**. Not-yet-run: a real sandbox purchase to
+  prove the unlock on device (config checks out; this is confirmation, not a worry).
+- **Build numbers:** repo is at `CURRENT_PROJECT_VERSION = 35` (Apple's latest). ASC
+  has 31–35 uploaded; **the next NEW build must be 36+** (numbers can't repeat).
 
-## DONE — landed on the build-34 cut (newest first)
+## NEXT — nothing is in flight; pick anywhere
 
-**1.1 (33) App Store rejection (Guideline 3.1.2) — handled (`2e506b6`).** Apple
-bounced 33 for a missing metadata Terms of Use (EULA) link on an auto-renewable-
-subscription app. Fixed metadata-only (standard Apple EULA + Privacy links in the
-App Description) and resubmitted build 33 — no new binary. **Build 34** cut as the
-backup: the paywall now has functional Terms of Use + Privacy `Link`s (the in-binary
-3.1.2 half, in case a reviewer flags it on re-review) + a plan-badge fix ("Best value
-· save 30%" wrapped and squeezed the title → "Save 30%" on the cadence line). Verified
-live both themes; archived in Organizer. Distribute 34 ONLY if 33 gets re-rejected.
-Full detail in `RELEASE_STATUS.md`.
-
-**Motif light-opacity settled (doc only, `91f7f07`).** Confirmed AA's `0.08` light
-value is deliberate, not a series outlier to "unify" — the siblings diverged on more
-than one axis (Vineyard 0.18 dark, GCA 0.10 both) and use different light ink colours.
-Recorded in CLAUDE.md's motif "CROSS-SERIES" bullet. No code change.
-
-**Headless soak harness (`cc4464d`, `aa-1.1.x/SoakMain.swift`).** Drives ONE
-`Simulation` through a multi-year game with randomised-but-plausible play (buy/lease/
-sell across the fleet, routes, crew, loans, events, hubs, IPO + levers, draining the
-decision queue), asserting the cross-system invariants every check — cash residual,
-crew integrity, duty/rest bounds, ownership scoping, route/fleet consistency, save/load
-round-trip. **8/8 seeds × 2 sim-years clean (~7.9M ticks), no game bugs.** Run per
-`aa-1.1.x/README.md` (`swiftc -O -DDEBUG` on the real `Sim/*.swift`); re-run after any
-economy change. This NARROWS the "never played end-to-end" concern — see NEXT.
-
-**The Go Public live tap-through, in full.** Every number reconciled on screen;
-the 78/78 headless suite turned out to be right about all of it.
-
-1. **IPO flow (light theme)** — gate card → ticker → float slider → List.
-   Valuation/proceeds/cash-after all tie out exactly; the ≤4-letter ticker clamp
-   was verified AT THE FIELD; dragging past majority flips the summary red
-   ("Minority — little protection"); listing fired the `went_public` milestone
-   toast and the ticker came up at **$31.00** (spec predicted $25–31 at the gate).
-2. **The three levers (light)** — dividend **−$14.7M**, buyback **−$73.5M** with
-   the stake rising **75.0% → 80.0%**, secondary **+$110.3M** with it falling to
-   **72.7%**. All exact.
-3. **Activist card (dark), BOTH paths** — Refuse: cleared, cash unchanged,
-   escalation logged. Comply: **exactly −$10.0M** and two ops entries (dividend +
-   "activist stands down").
-4. **The board (dark)** — the red **"Board patience · Weighing your removal"** bar,
-   then the **OUSTED** recap dropping over it in the same run. Second game-over
-   path, on screen.
-
-**New, and committed:** `-devScenario <publicGate|listed|activist|ouster>`
-(`Simulation.DevScenario` + `devSeed(_:)`, `#if DEBUG`). The feature gates on a
-$500M airline and an activist needs 3 sim-months of slump, so its UI was
-otherwise unreachable by hand. Full detail — including why `currentSlot` stays
-nil and why `.ouster` uses `tick + 240` — is in CLAUDE.md's Go Public section.
-
-## NEXT — concrete, in order
-
-1. **Nothing is in flight.** Safe to start anywhere.
-2. **Cut build 34** when the designer is ready: bump `CURRENT_PROJECT_VERSION`
-   to 34 across **6 configs** → archive → Organizer. **The DESIGNER does the
-   credentialed Distribute/upload — Claude cannot.**
-3. If Apple responds on build 33, that takes priority over everything.
-4. **The standing "never played end-to-end" concern — now NARROWED, top hands-on
-   item.** The soak harness (`cc4464d`) closed the half a machine can reach: the
-   numeric / state-integrity side (cash invariant, crew, ownership scoping,
-   save/load) is green across 8 seeds × 2 sim-years. The RESIDUAL is the UI /
-   "does it feel right" half — the panel/dropdown flicker class a headless harness
-   can't see — which still needs a real, sustained Simulator session with eyes
-   (full 30-type fleet / 48 airports / events / crew all running together). That
-   list has a long, real catch rate. See CLAUDE.md's "Open" section for the split.
-5. ~~Motif light-opacity polish~~ **RESOLVED (2026-07-24): keep 0.08.** The
-   framing "one number that differs across the series" turned out to be
-   incomplete — the siblings have diverged on more than one axis (Vineyard runs
-   **0.18** dark; GCA collapses both themes to 0.10) AND the light ink colours
-   differ (AA blue #4E67A0 vs GCA green), so identical alpha ≠ identical presence.
-   There's no single series standard to conform to, and AA's 0.08 was device-tuned
-   to its own light naming screen. Not a pending call. Full record in CLAUDE.md's
-   motif note ("CROSS-SERIES" bullet).
-
-## KEY DECISIONS (don't relitigate)
-
-- **Each cold-launch screen draws its OWN `ArchitectBackdrop` instance** — NOT
-  one shared layer. The geometry is a pure function of container size, so all
-  three land pixel-identically and the tools never shift on handoff, while each
-  screen keeps its own opaque background. Sharing one layer would force screens
-  to give up their backgrounds for no visual gain.
-- **The two opacities differ ON PURPOSE.** `figmaOpacity` 0.10 (dark, the Figma
-  value) vs `lightOpacity` 0.08. Dark ink on white carries further than white
-  line-art on `#2B303D` — equal alpha does not read equal. Tuned by eye on
-  device: 0.06 vanished, 0.12 competed with the form fields. **Don't "unify" them.**
-  This applies across the SERIES too, not just AA's own light-vs-dark: the sibling
-  apps have diverged (Vineyard 0.18 dark, GCA 0.10 both) and use different light ink
-  colours, so AA's 0.08 is deliberate — matching GCA's 0.10 would regress it, not
-  make it consistent. Settled 2026-07-24; see CLAUDE.md's "CROSS-SERIES" motif bullet.
-- **Geometry is FRACTIONAL, not fixed points.** Figma's frame is 440 wide; real
-  devices are 402/430/iPad. Hard-coded points would drift off-screen.
-- **Load menu got the motif too** (a judgment call, easily reverted — one
-  parameter). Without it a *returning* player gets splash → load menu and
-  watches the motif pop away.
-- **One PNG, both themes**, because the art is a `.template` image tinted at
-  draw time. This is also what makes it portable across the series.
-- HANDOFF lives in `HANDOFF.md`, not a GitHub issue — CLAUDE.md records the
-  deliberate "TASKS.md, not GitHub Issues" choice (designer isn't a dev by
-  background). `gh` IS authenticated if that ever changes.
-- **`-devScenario` is a KEEPER, not a throwaway seed.** The "never commit seed
-  hooks" rule targets ad-hoc `TEMPVERIFY`/`AA_*` scaffolding. This is the
-  `-backdropTest` pattern: a durable, documented `#if DEBUG` harness for a
-  feature whose UI is otherwise unreachable by hand. It compiles out of Release.
-- **A seeded session must never touch a real save** — `currentSlot` stays nil, so
-  the autosave path can't fire. Keep that if you add scenarios.
-
-## FILES TOUCHED
-
-Nothing half-done; every file below builds.
-
-| File | What changed |
-|---|---|
-| `Sim/Simulation.swift` | **NEW, `#if DEBUG`:** `DevScenario` + `devSeed(_:)`, beside `devInjectCash`. In-file because it writes `private(set)` state and calls the private monthly ticks. |
-| `ContentView.swift` | **NEW, `#if DEBUG`:** reads `-devScenario`, skips splash/load-menu/naming, opens FINANCE, leaves `currentSlot` nil. |
-| `CLAUDE.md` | Go Public "LIVE TAP-THROUGH STILL PENDING" → the verified results + the harness + two simulator gotchas. |
-| `HANDOFF.md` | This file. |
-| _(previous session, already on `origin/main`)_ | `ArchitectBackdrop.swift`, `ArchitectBackdropTestView.swift`, `Resources/Brand/ArchitectTools.png`, `SplashView.swift`, `AirlineNamingView.swift`, `SaveSlotsView.swift`, `NetworkView.swift` — the brand motif. |
-
-## GOTCHAS (real traps hit this session)
-
-- **The automation `text` action repeatedly kicked the app to the BACKGROUND** —
-  a sibling Architect app came forward — even with the caret visibly in the
-  field. Fix: use the SOFTWARE keyboard (`defaults write
-  com.apple.iphonesimulator ConnectHardwareKeyboard -bool false`, restart the
-  Simulator app, then TAP the keys), which is also the path a real player uses.
-  Two wrinkles: restarting the Simulator app boots a DIFFERENT default device, so
-  re-`boot` the one you installed to; and reverting the default is polite (done).
-- **The simulator's input channel dies mid-session** (the already-documented
-  glitch). It surfaces as `Input send … timed out; the simulator likely
-  rebooted`, `machPortNotConnected`, or a tap that silently does nothing. **A
-  dropped tap looks exactly like a broken button** — re-screenshot before
-  concluding anything. A "failed" Refuse was a lost tap; foregrounding the app
-  showed the same PID with state intact. One decisive tap per screenshot.
-- **A price that moves between render and tap is the sim working, not a bug.**
-  The 5% dividend chip read −$13.9M and charged −$14.7M because a sim-day passed
-  while the screen sat idle and `displaySharePrice` eased toward target. Levers
-  transact at the LIVE price. Don't "fix" it.
-- **A preview harness that wraps a real view will LIE to you if you don't thread
-  every styling input through it.** My harness's naming mode didn't pass the
-  tint → drew white-on-white → looked like "the light treatment doesn't work."
-  The shipping path was correct the whole time. Cost a full debug round.
-- **Figma export bakes in an opaque frame background** — use the `rawImages`
-  entry from `download_assets`, never `export`. (Documented previously for the
-  aircraft art; it bit again here.)
-- **`backdropOpacity` is declared BEFORE the trailing closure** (`onLaunch` /
-  `onDone`) on those views, purely so trailing-closure call syntax compiles.
-  Reordering them will break call sites.
-- **Splash screenshots:** `simctl io screenshot` takes ~1s and the splash is
-  only ~3.3s including cold start, so polling for a mid-animation frame is
-  unreliable — you'll usually catch the launch-zoom or the post-splash screen.
-  The live attached panel is the honest way to judge motion.
-- **`simctl ui <dev> appearance light|dark` does not repaint reliably while the
-  app is foregrounded** — relaunch fresh in the target appearance.
-- **Portability:** `ArchitectBackdrop.swift` + the PNG is a two-file drop-in for
-  sibling apps (GCA and Vineyard Architect already have it). `ArchitectBackdropLayer`
-  is the ONE place that references an app token (`Sky.darkBG`) — strip that when copying.
+1. **Post-launch watch (designer-side):** the sandbox purchase confirming Pro unlocks
+   end-to-end, and an eye on early reviews / RevenueCat Overview for the first days.
+2. **Top hands-on engineering item — the standing "never played end-to-end" concern.**
+   The soak harness (`aa-1.1.x/SoakMain.swift`, 8/8 seeds × 2 sim-years) closed the
+   numeric / state-integrity half (cash invariant, crew, ownership scoping, save/load).
+   The RESIDUAL is the UI / "does it feel right" half — the panel/dropdown-flicker
+   class a headless harness can't see — which still needs a real, sustained Simulator
+   session with eyes. See CLAUDE.md's "Open" section.
+3. **Future features / 1.2:** whatever's next goes in build 36+. The big systems
+   (Go Public, Competitor Acquisition, Hubs & Clubs) are COMPLETE; their specs
+   (`GO_PUBLIC_SPEC.md`, `ACQUISITIONS_SPEC.md`, `HUBS_AND_CLUBS_SPEC.md`) remain as
+   reference.
 
 ## Standing conventions (unchanged, still bite)
 
 - **Verify by DRIVING, not just building.** A clean `xcodebuild` proves nothing.
-  Headless sim harness examples live in `aa-1.1.x/`; entry file must be `main.swift`.
+  Headless sim harnesses live in `aa-1.1.x/` (entry file must be `main.swift`); for UI,
+  drive the Simulator (`simctl` + the iOS-Simulator MCP tool) and watch it.
 - **The Finance cash invariant is SACRED.** Any new cash flow joins it,
   `PeriodFigures`, `FinanceSnapshot`, `FinanceSave`, AND the headless harness.
-- **TEMPVERIFY / TEMPSHOT / `AA_*` seed hooks are NEVER committed** — grep before
-  every commit.
+- **TEMPVERIFY / TEMPSHOT / `AA_*` / temp launch-arg hooks are NEVER committed** — grep
+  before every commit. (Durable `#if DEBUG` harnesses like `-devScenario` /
+  `-backdropTest` ARE keepers; the rule targets ad-hoc scaffolding.)
 - **Update CLAUDE.md in the SAME commit as the code it describes.**
 - **Balance changes need a MULTI-SEED sweep**, never a single run; measure NET WORTH.
-- A new persisted field needs one `decodeSafe` line in `Persistence.swift`; a new
-  nested Codable save type needs its own tolerant `init(from:)`.
+- **A new persisted field needs one `decodeSafe` line in `Persistence.swift`**; a new
+  nested Codable save type needs its own tolerant `init(from:)`. This is what fixed the
+  lost-saves-on-new-build bug — never trust a bare `var x = 0` to survive decode.
+- **Storage: staying on iCloud KVS, NOT CloudKit** (break-glass note in CLAUDE.md's
+  iCloud section; the only trigger to revisit is a real save approaching the 1 MB KVS
+  quota — today ~21 KB).
+
+## Simulator gotchas that still bite
+
+- **The sim's input channel dies mid-session** — surfaces as `Input send … timed out`,
+  `machPortNotConnected`, or a tap that silently does nothing. A dropped tap looks
+  exactly like a broken button; re-screenshot before concluding anything. One decisive
+  tap per screenshot.
+- **Tap coordinates are in POINTS** (iPhone 17 Pro = 402×874), NOT screenshot pixels —
+  convert, or taps land off-screen.
+- **`simctl ui <dev> appearance light|dark` doesn't repaint a foregrounded app** —
+  relaunch fresh in the target appearance.
+- **Typing via the automation `text` action can kick the app to the background** — use
+  the software keyboard and tap keys, or seed state via a `#if DEBUG` launch arg.
+- **SourceKit "cannot find X in scope" on a single file = false positive** (cross-file
+  symbols); trust the full `xcodebuild`, not the per-file linter.
+- **`simctl io recordVideo`** stops/finalizes cleanly only on **SIGINT** (`pkill -INT`),
+  not SIGTERM — the exit-code-1 on interrupt is expected, the mp4 still writes.
 
 ## Orientation for a cold reader
 
 1. `CLAUDE.md` — the persistent design/technical context. Long because it's thorough.
-2. `RELEASE_STATUS.md` — live App Store / TestFlight state.
-3. `APP_STORE_DESCRIPTION.md`, then the big feature specs (`GO_PUBLIC_SPEC.md`,
+2. `APP_STORE_DESCRIPTION.md`, then the big feature specs (`GO_PUBLIC_SPEC.md`,
    `ACQUISITIONS_SPEC.md`, `HUBS_AND_CLUBS_SPEC.md`) — all COMPLETE.
-4. `git log --oneline -25`.
+3. `git log --oneline -30` — the rejection→approval→live arc is here.
 
 Branch: everything on **`main`**, pushed to `origin/main` (GitHub `spikeatone/SkyOps`).
 Open the Xcode project at `SkyOps/AirlineArchitect/AirlineArchitect.xcodeproj`.
