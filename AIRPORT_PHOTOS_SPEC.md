@@ -55,6 +55,13 @@ hub (`annualPassengers ≥ 30M`) → metro; `|lat| ≥ 54` → snowyNorth; else 
   MJ-faithful landmark (e.g. Denver), an evocative *landscape* works instead — the
   snow-capped Front Range behind the distant city — accurate in feel, with no fragile
   specific structure to get wrong.
+- **Chosen marquee landmarks** (all globally-iconic, MJ-faithful, no fragile text):
+  LHR → Big Ben / Tower Bridge · CDG → Eiffel Tower · SYD → Opera House · SFO →
+  Golden Gate Bridge · SEA → Space Needle · **JFK / LGA / EWR → Statue of Liberty**
+  (one shared `airport_NYC.jpg` via `AirportPhoto.sharedOverride`) · LAX → Griffith
+  Observatory. **Dropped:** the Hollywood Sign for LAX — MJ misspells "HOLLYWOOD" and
+  misplaces the sign-to-city geography. **DEN** has no MJ-faithful landmark → use the
+  archetype, or the Front-Range-behind-the-city landscape.
 
 ## Card layout
 

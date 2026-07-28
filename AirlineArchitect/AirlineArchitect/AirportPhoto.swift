@@ -72,11 +72,22 @@ enum AirportPhoto {
         }
     }
 
-    /// Bundled MJ art if present (`airport_<archetype>.<ext>` at the bundle
-    /// root); nil → the styled placeholder renders. A per-airport override
-    /// (`airport_<CODE>.<ext>`) is checked first, for marquee skylines later.
+    /// Airports that SHARE one override image because several codes serve a single
+    /// metro (e.g. NYC = JFK/LGA/EWR → `airport_NYC`). A per-airport `airport_<CODE>`
+    /// file still wins if present; otherwise the shared image is used. Extend as
+    /// needed (Bay Area, LA-area, …).
+    static let sharedOverride: [String: String] = [
+        "JFK": "NYC", "LGA": "NYC", "EWR": "NYC",
+    ]
+
+    /// Bundled MJ art if present; nil → the styled placeholder renders. Lookup
+    /// order: per-airport override (`airport_<CODE>`) → shared-metro override
+    /// (`airport_<shared>`, e.g. `airport_NYC`) → archetype (`airport_<archetype>`).
     static func image(for airport: Airport) -> Image? {
-        for name in ["airport_\(airport.code)", "airport_\(archetype(for: airport).rawValue)"] {
+        var names = ["airport_\(airport.code)"]
+        if let shared = sharedOverride[airport.code] { names.append("airport_\(shared)") }
+        names.append("airport_\(archetype(for: airport).rawValue)")
+        for name in names {
             for ext in ["jpg", "png", "heic"] {
                 if let path = Bundle.main.path(forResource: name, ofType: ext),
                    let ui = UIImage(contentsOfFile: path) {
