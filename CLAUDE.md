@@ -110,7 +110,7 @@ one contradicts the design thesis.)
   chosen for zero-setup simplicity given the designer isn't a dev by
   background. Revisit if that becomes limiting.
 
-## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 30 / 15)
+## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 35 / 18)
 
 - **TURBOPROP TIER — ADDED (designer supplied Figma side-view art). 35 types
   now (was 31).** A brand-new `BodyType.turboprop` (the first non-jet
@@ -217,12 +217,13 @@ one contradicts the design thesis.)
     carriers, none in the US roster), so `ARJ21_FAMILY` is gone too.
     (Sukhoi Superjet 100 / `SSJ100_FAMILY` was in this standalone category too,
     before its earlier removal — see stale-comment note below.)
-  - **Net result: 14 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
+  - **Net result: 18 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
     `A220_FAMILY`, `B777`, `B787`, `A330`, `A350`, `B747`, `A380`, `A340`,
-    `E170_FAMILY`, `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY` — `ARJ21_FAMILY`
-    removed with the ARJ21). The `B787` family now covers THREE variants
-    (787-8 `B788`, 787-9 `B789`, 787-10 `B78J`) on one type rating.
-    Covering 31 aircraft types — verified via script, not hand-counted,
+    `E170_FAMILY`, `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY`, plus the four
+    turboprop families `B1900_FAMILY`, `ATR42_FAMILY`, `D328_FAMILY`,
+    `DASH8_FAMILY` — `ARJ21_FAMILY` removed with the ARJ21). The `B787` family
+    now covers THREE variants (787-8 `B788`, 787-9 `B789`, 787-10 `B78J`) on one
+    type rating. Covering 35 aircraft types — verified via script, not hand-counted,
     after this count went stale at least once before (see the
     `TYPE_WEIGHT_TOTAL` note). `CREW_FAMILIES` is auto-derived from
     `AIRCRAFT_TYPES.map(t => t.family)` — adding or removing an aircraft
