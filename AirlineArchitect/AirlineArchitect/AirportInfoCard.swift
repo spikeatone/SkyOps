@@ -23,7 +23,12 @@ struct AirportInfoCard: View {
     private var valueColor: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x0EA5E9) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(spacing: 0) {
+            // Hero image band (archetype-mapped; a styled placeholder until the
+            // MJ art lands — see AIRPORT_PHOTOS_SPEC.md).
+            AirportHero(airport: airport)
+
+            VStack(alignment: .leading, spacing: 6) {
             // Header: full name + location (falls back to the code when a name
             // isn't sourced yet).
             VStack(alignment: .leading, spacing: 2) {
@@ -90,8 +95,9 @@ struct AirportInfoCard: View {
 
             if let sim { hubSection(sim) }
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
