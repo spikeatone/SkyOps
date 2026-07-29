@@ -1131,6 +1131,16 @@ one contradicts the design thesis.)
     happen while the view is already alive. Found by a live Simulator test-drive
     (the headless 41/41 can't see gesture/lifecycle wiring); the sim seed used a
     throwaway `-devScenario reassign` (2 flying jets), stripped after.
+    - **SWEEP DONE — this was the ONLY instance.** Audited every `.onChange(of:)`
+      in the view layer for the same pattern (adopts sim state that could be set
+      before the view is (re)created, with no matching `.onAppear`). All clear:
+      NetworkView's `pendingSuggestion`+`pendingAssignment` and OpsView's
+      `opsEventLog`+`playerRoutes.count` each have their action mirrored in the
+      view's `.onAppear`; AirportPhoto's width-measure likewise; ContentView's
+      `scenePhase`/celebration/decisionQueue/isBankrupt handlers are ROOT-view
+      event reactions (the root is never recreated, and those haptics must NOT
+      fire on appear); AirlineNamingView `tailCode` / GoPublicView `ticker` are
+      local input validation with no preset intent. So no other latent no-ops.
 
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
