@@ -146,7 +146,11 @@ struct NetworkView: View {
         // (it survives the tab switch). Drive the existing .confirm flow with
         // it, so opening/buying reuses all the normal machinery; the panel
         // relabels its buttons and the map draws the dashed preview.
-        .onAppear { adoptSuggestionIfAny() }
+        // Adopt BOTH on appear: the custom tab bar RECREATES this view on a tab
+        // switch, and both intents are set (in Ops / Fleet) BEFORE the switch —
+        // so .onChange won't fire on the fresh instance (the value's already set).
+        // Missing this on the assignment path made ASSIGN TO NEW ROUTE a no-op.
+        .onAppear { adoptSuggestionIfAny(); adoptAssignmentIfAny() }
         .onChange(of: sim.pendingSuggestion) { _, _ in adoptSuggestionIfAny() }
         // Fleet → ASSIGN TO NEW ROUTE arrives as sim.pendingAssignment; start the
         // pick flow immediately so the tab switch visibly does something.
