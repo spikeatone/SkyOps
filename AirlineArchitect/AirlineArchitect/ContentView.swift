@@ -332,11 +332,15 @@ struct ContentView: View {
 
 
 
-/// "$28k" / "$1.2M" compact money for tight decision-card buttons.
+/// "$28k" / "$1.2M" / "$30.1B" compact money for tight decision-card buttons and
+/// the Finance ledger. The billions tier matters late game: an exact-dollar
+/// cumulative total ($30,145,662,958) churns its trailing digits every refresh at
+/// 25×; "$30.1B" only moves once every few sim-minutes, so it reads as stable.
 func compactMoney(_ v: Int) -> String {
     let a = abs(v), sign = v < 0 ? "−" : ""
-    if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-    if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
+    if a >= 1_000_000_000 { return sign + "$" + String(format: "%.1fB", Double(a) / 1_000_000_000) }
+    if a >= 1_000_000     { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
+    if a >= 1_000         { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
     return sign + "$\(a)"
 }
 

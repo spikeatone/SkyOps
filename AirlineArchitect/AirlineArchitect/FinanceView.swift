@@ -713,9 +713,9 @@ struct FinanceView: View {
         let text: String
         let color: Color
         switch sign {
-        case .plus:  text = "+" + money(value); color = value == 0 ? secondary : green
-        case .minus: text = "−" + money(value); color = value == 0 ? secondary : red
-        case .net:   text = signedMoney(value); color = value < 0 ? red : green
+        case .plus:  text = "+" + ledgerMoney(value); color = value == 0 ? secondary : green
+        case .minus: text = "−" + ledgerMoney(value); color = value == 0 ? secondary : red
+        case .net:   text = (value < 0 ? "−" : "+") + ledgerMoney(value); color = value < 0 ? red : green
         }
         return HStack {
             Text(label).font(.karla(bold ? 15 : 14, bold ? .bold : .regular)).foregroundStyle(primary)
@@ -745,8 +745,14 @@ struct FinanceView: View {
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
-    // MARK: Money formatting (full grouped figures — a finance screen wants
-    // precision, unlike the compact hero/header numbers).
+    // MARK: Money formatting
+    /// Ledger rows use COMPACT figures (B/M/k) so the multi-billion cumulative
+    /// totals don't churn their trailing digits every refresh at 25× — the
+    /// "numbers jiggling all over the place" a late-game player reported. The
+    /// values were always correct and monotonic; this is purely display.
+    private func ledgerMoney(_ v: Int) -> String { compactMoney(abs(v)) }
+    /// Full grouped figures — kept for the per-flight average, where a few
+    /// hundred/thousand dollars is small enough to want the exact number.
     private func money(_ v: Int) -> String { "$" + abs(v).formatted(.number.grouping(.automatic)) }
     private func signedMoney(_ v: Int) -> String { (v < 0 ? "−$" : "+$") + abs(v).formatted(.number.grouping(.automatic)) }
 }
