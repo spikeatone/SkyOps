@@ -85,7 +85,9 @@ enum AirportPhoto {
     /// file still wins if present; otherwise the shared image is used. Extend as
     /// needed (Bay Area, LA-area, …).
     static let sharedOverride: [String: String] = [
-        "JFK": "NYC", "LGA": "NYC", "EWR": "NYC",
+        "JFK": "NYC", "LGA": "NYC", "EWR": "NYC",   // New York → airport_NYC
+        "HND": "TYO", "NRT": "TYO",                 // Tokyo    → airport_TYO
+        "ORD": "CHI", "MDW": "CHI",                 // Chicago  → airport_CHI
     ]
 
     /// Bundled MJ art if present; nil → the styled placeholder renders. Lookup
