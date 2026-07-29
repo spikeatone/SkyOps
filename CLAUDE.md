@@ -1115,6 +1115,22 @@ one contradicts the design thesis.)
   case, inert failures, no aircraft pointing at a closed route, no teleport, the
   route-stealing guard, completion on arrival, immediate move for idle spares, and
   a save/load round-trip of a pending move) plus live in the Simulator.
+  - **REGRESSED then RE-FIXED (native app) — the whole flow silently no-op'd after
+    the TabView→custom-`SkyTabBar` refactor.** The tab bar RECREATES the tab-content
+    view on every switch (documented in the NETWORK-view note). `NetworkView` adopted
+    a pending assignment ONLY via `.onChange(sim.pendingAssignment?.id)` — and
+    SwiftUI `.onChange` never fires on a freshly-created view whose value was already
+    set (here `beginAssignment` runs in Fleet BEFORE the switch). So the fresh
+    NetworkView never entered `.pickOrigin`: tapping ASSIGN TO NEW ROUTE switched to
+    Network and did nothing, and tapping an airport just opened its info card. The
+    Ops route-SUGGESTION path survived because `adoptSuggestionIfAny()` was ALSO on
+    `.onAppear`; the assignment path was missing that same hook. **Fix: call
+    `adoptAssignmentIfAny()` in `.onAppear` too** (one line). GENERAL RULE for this
+    codebase: any intent set BEFORE a tab switch (which recreates the view) must be
+    adopted in `.onAppear`, NOT only in `.onChange` — `.onChange` is for changes that
+    happen while the view is already alive. Found by a live Simulator test-drive
+    (the headless 41/41 can't see gesture/lifecycle wiring); the sim seed used a
+    throwaway `-devScenario reassign` (2 flying jets), stripped after.
 
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
@@ -2426,6 +2442,19 @@ where numbers are involved.
     launch" delta vs `startingCapital`.
   - **FLIGHT OPERATIONS** stacked ledger (revenue − fees − op-cost = operating
     profit/loss) + flights-flown and avg net/flight.
+  - **Ledger figures are COMPACT (B/M/k), not exact dollars — a late-game/25×
+    fix.** A player deep in the game (~$2.6B, public + loans) reported the numbers
+    "jiggling all over the place." Diagnosed from their screen recording: the
+    values were correct and climbing MONOTONICALLY — the ledger just printed
+    cumulative totals to the exact dollar (10–11 digits), so at 25× the trailing
+    6–7 digits churned every `displayTick` refresh. Fix: route `ledgerRow` through
+    `compactMoney` (given a new **billions tier**), so `$30,145,662,958` → `$30.1B`
+    (moves once every few sim-minutes = visually stable). The NET WORTH hero shares
+    `compactMoney` so it reads in B too. The per-flight AVERAGE stays exact
+    (`money()`/`signedMoney()` untouched — small numbers, precision matters there).
+    The always-visible top HEADER still uses `cashLabel` ($M) — deliberately left
+    as-is; unify it to B only if a divergence between header ($2,618.1M) and ledger
+    ($2.6B) ever bugs someone.
   - **OVERHEAD & CAPITAL** itemized: lease / insurance / maintenance+crew, then
     acquisition / route openings / fuel hedges (out), then sales / slot
     buybacks (in).
