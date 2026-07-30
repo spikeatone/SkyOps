@@ -2259,6 +2259,46 @@ final class Simulation {
     func beginAssignment(_ ac: Aircraft) { pendingAssignment = ac }
     func clearAssignment() { pendingAssignment = nil }
 
+    // MARK: Replacement intent (Fleet SELL → keep the route by swapping aircraft)
+
+    /// A routed aircraft the player chose to sell but wants to REPLACE first, so
+    /// the route survives. Carried across the tab switch into the Acquire panel;
+    /// `handleBought` completes the swap+sell. Transient (not persisted).
+    var pendingReplacement: Aircraft?
+    func beginReplacement(_ ac: Aircraft) { pendingReplacement = ac }
+    func clearReplacement() { pendingReplacement = nil }
+
+    /// The open route an aircraft is currently assigned to (nil for a spare).
+    func currentRoute(of ac: Aircraft) -> Route? {
+        guard let id = ac.assignedRouteId else { return nil }
+        return playerRoutes.first { $0.id == id }
+    }
+
+    /// Idle spares that could take over `r` (in range + runway OK). Drives the
+    /// "assign from your fleet" picker AND whether that option is offered at all.
+    func spareCandidates(for r: Route) -> [Aircraft] {
+        guard let o = airport(r.originCode), let d = airport(r.destCode) else { return [] }
+        return idleSpares.filter { routeBlock(for: $0, from: o, to: d) == nil }
+    }
+
+    /// Put `newAC` (an idle spare or a just-acquired jet) onto `oldAC`'s route,
+    /// then sell/return `oldAC` — so selling a routed aircraft need NOT close its
+    /// route. Detaches oldAC WITHOUT archiving the route, assigns newAC in its
+    /// place, then liquidates oldAC (whose route is now nil, so the route stands).
+    /// Returns false and changes NOTHING if newAC can't physically fly the route
+    /// (out of range / runway too short), so the caller can warn instead.
+    @discardableResult
+    func replaceRouteAircraft(sell oldAC: Aircraft, with newAC: Aircraft) -> Bool {
+        guard newAC !== oldAC, let r = currentRoute(of: oldAC),
+              let o = airport(r.originCode), let d = airport(r.destCode),
+              routeBlock(for: newAC, from: o, to: d) == nil else { return false }
+        oldAC.assignedRouteId = nil          // detach WITHOUT archiving the route
+        oldAC.pendingRouteId = nil           // drop any scheduled move — it's leaving the fleet
+        assign(newAC, to: r, origin: o, dest: d)
+        oldAC.isLeased ? terminateLease(oldAC) : sellAircraft(oldAC)
+        return true
+    }
+
     /// Why a pending route hasn't been auto-staffed yet, in one short player-
     /// facing phrase (nil once staffed). `assignSpareToPendingRoutes` assigns
     /// the first idle spare that clears the route every tick — so a route that's

@@ -121,7 +121,8 @@ struct FleetView: View {
                                         onBack: { detailID = nil },
                                         onAssignRoute: { sim.beginAssignment(ac); detailID = nil; tab = 0 },
                                         onSold: { detailID = nil },
-                                        onBell: onBell)
+                                        onBell: onBell,
+                                        onAcquireReplacement: { detailID = nil; tab = 0 })
                             .transition(.move(edge: .trailing).combined(with: .opacity))
                     } else {
                         stackedLayout
@@ -171,6 +172,7 @@ struct FleetView: View {
                                         onAssignRoute: { sim.beginAssignment(ac); tab = 0 },
                                         onSold: { detailID = nil },
                                         onBell: onBell,
+                                        onAcquireReplacement: { tab = 0 },
                                         embedded: true)
                     }
                 }

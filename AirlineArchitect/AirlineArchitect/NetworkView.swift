@@ -150,11 +150,23 @@ struct NetworkView: View {
         // switch, and both intents are set (in Ops / Fleet) BEFORE the switch —
         // so .onChange won't fire on the fresh instance (the value's already set).
         // Missing this on the assignment path made ASSIGN TO NEW ROUTE a no-op.
-        .onAppear { adoptSuggestionIfAny(); adoptAssignmentIfAny() }
+        .onAppear {
+            adoptSuggestionIfAny(); adoptAssignmentIfAny()
+            // Fleet SELL → "Acquire a replacement" lands here with a pending
+            // replacement — drop the player straight into the Acquire panel.
+            if sim.pendingReplacement != nil { panel = .acquire }
+        }
         .onChange(of: sim.pendingSuggestion) { _, _ in adoptSuggestionIfAny() }
         // Fleet → ASSIGN TO NEW ROUTE arrives as sim.pendingAssignment; start the
         // pick flow immediately so the tab switch visibly does something.
         .onChange(of: sim.pendingAssignment?.id) { _, _ in adoptAssignmentIfAny() }
+        // If the player opened Acquire to replace-a-route-aircraft but closed it
+        // WITHOUT buying, drop the pending replacement so their next normal
+        // purchase isn't hijacked into a swap+sell. (A completed buy clears it in
+        // handleBought before setting panel = .none, so this only fires on abandon.)
+        .onChange(of: panel) { _, new in
+            if new != .acquire, sim.pendingReplacement != nil { sim.clearReplacement() }
+        }
     }
 
     /// True when the iPad side rail actually has something to show — used to
@@ -765,6 +777,19 @@ struct NetworkView: View {
 
     private func handleBought(_ ac: Aircraft) {
         Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1)
+        // Replacement flow (Fleet SELL → "Acquire a replacement"): put the new jet
+        // on the doomed aircraft's route and sell that aircraft, so the route
+        // survives. If the new jet can't fly the route, it just stays a spare.
+        if let old = sim.pendingReplacement {
+            let oldTail = old.tail, gone = old.isLeased ? "returned" : "sold"
+            if sim.replaceRouteAircraft(sell: old, with: ac) {
+                showFlash("\(ac.tail) took over \(oldTail)'s route — \(oldTail) \(gone)")
+            } else {
+                showFlash("\(ac.type.name) can't fly \(oldTail)'s route — kept as a spare")
+            }
+            sim.clearReplacement(); panel = .none
+            return
+        }
         let verb = ac.isLeased ? "Leased" : "Bought"
         showFlash("\(verb) \(ac.type.name) — now a spare")
         if case .confirm(let o, let d) = routeMode,

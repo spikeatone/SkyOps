@@ -18,6 +18,9 @@ struct FleetDetailView: View {
     let onAssignRoute: () -> Void
     let onSold: () -> Void
     var onBell: () -> Void = {}
+    /// SELL → "Acquire a replacement": go to the Network Acquire panel (a pending
+    /// replacement is set first, so buying there swaps + sells in one step).
+    var onAcquireReplacement: () -> Void = {}
     /// When shown in the iPad landscape list+detail split, the list side already
     /// carries the cash/FLEET header, so the detail pane hides its own header
     /// (no back button either — you switch aircraft by tapping the list).
@@ -26,6 +29,10 @@ struct FleetDetailView: View {
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     @State private var confirmSell = false
+    /// Selling a ROUTE-ASSIGNED aircraft routes through this replace-or-close
+    /// modal instead of the plain confirm, so the player can keep the route.
+    @State private var showReplaceOrClose = false
+    @State private var showSparePicker = false
 
     // Theme tokens (light Figma / dark Sky) — matches FleetView.
     private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
@@ -70,9 +77,32 @@ struct FleetDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
+            // Only idle spares reach this confirm now (route-assigned aircraft use
+            // the replace-or-close modal below), so there's no route to warn about.
             Text(aircraft.isLeased
-                 ? "Early termination hands the jet back and costs a \(money(sim.leaseTerminationPenalty(aircraft))) penalty (≈3 months' lease). Closes its route; crew returns to the pool."
-                 : "This closes its route and returns its crew to the pool.")
+                 ? "Early termination hands the jet back and costs a \(money(sim.leaseTerminationPenalty(aircraft))) penalty (≈3 months' lease). Crew returns to the pool."
+                 : "Returns its crew to the pool.")
+        }
+        // Route-assigned SELL → keep the route by swapping in another aircraft, or
+        // knowingly close it. Custom AA-styled modal (not the native action sheet).
+        .overlay {
+            if showReplaceOrClose {
+                ReplaceOrCloseModal(
+                    sim: sim, aircraft: aircraft,
+                    onAssignFromFleet: { showReplaceOrClose = false; showSparePicker = true },
+                    onAcquire: { showReplaceOrClose = false; sim.beginReplacement(aircraft); onAcquireReplacement() },
+                    onSellClose: {
+                        showReplaceOrClose = false; Feedback.impact(.light)
+                        aircraft.isLeased ? sim.terminateLease(aircraft) : sim.sellAircraft(aircraft)
+                        onSold()
+                    },
+                    onCancel: { showReplaceOrClose = false })
+                .transition(.opacity)
+            }
+        }
+        .animation(Motion.glide, value: showReplaceOrClose)
+        .sheet(isPresented: $showSparePicker) {
+            ReplacementPicker(sim: sim, sell: aircraft, onDone: onSold)
         }
     }
 
@@ -253,7 +283,12 @@ struct FleetDetailView: View {
                     .frame(maxWidth: .infinity).frame(height: 48)
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(skyHex: 0xC9C9C9), lineWidth: 1))
             }.buttonStyle(.plain)
-            Button { confirmSell = true } label: {
+            Button {
+                // A route-assigned aircraft opens the replace-or-close modal; an
+                // idle spare (no route to lose) uses the plain confirm.
+                if sim.currentRoute(of: aircraft) != nil { showReplaceOrClose = true }
+                else { confirmSell = true }
+            } label: {
                 Text(aircraft.isLeased ? "TERMINATE LEASE" : "SELL AIRCRAFT")
                     .font(.karla(15, .medium)).foregroundStyle(.white)
                     .frame(maxWidth: .infinity).frame(height: 48)
@@ -401,4 +436,146 @@ struct FleetDetailView: View {
     }
 
     private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+}
+
+/// The replace-or-close choice when selling a route-assigned aircraft, in AA's
+/// own card/button language (Karla + Sky tokens) rather than the native action
+/// sheet: a dimmed backdrop + a centered card with the keep-the-route options.
+private struct ReplaceOrCloseModal: View {
+    let sim: Simulation
+    let aircraft: Aircraft
+    var onAssignFromFleet: () -> Void
+    var onAcquire: () -> Void
+    var onSellClose: () -> Void
+    var onCancel: () -> Void
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke.opacity(0.6) : Color(skyHex: 0xC9C9C9) }
+    private var primary: Color    { isDark ? .white : .black }
+    private var secondary: Color  { isDark ? Sky.lightBlue.opacity(0.8) : Color(skyHex: 0x64748B) }
+    private var stroke: Color     { isDark ? Sky.onDarkStroke : Color(skyHex: 0xC9C9C9) }
+    private var red: Color        { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
+    private let blue = Color(skyHex: 0x497AA5)
+
+    private enum Style { case filled, outlined, destructive, plain }
+
+    var body: some View {
+        let route = sim.currentRoute(of: aircraft)
+        let code = route.map { "\($0.originCode)–\($0.destCode)" } ?? "a route"
+        let hasSpares = route.map { !sim.spareCandidates(for: $0).isEmpty } ?? false
+        ZStack {
+            Color.black.opacity(0.5).ignoresSafeArea().onTapGesture(perform: onCancel)
+            VStack(alignment: .leading, spacing: 12) {
+                Text(aircraft.isLeased ? "Return \(aircraft.tail)?" : "Sell \(aircraft.tail)?")
+                    .font(.karla(22, .heavy)).foregroundStyle(primary)
+                Text("\(aircraft.tail) is flying \(code). If you don't put another aircraft on the route, it closes when you \(aircraft.isLeased ? "hand this one back" : "sell it").")
+                    .font(.karla(14)).foregroundStyle(secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                VStack(spacing: 10) {
+                    if hasSpares { button("Assign one from your fleet", .filled, onAssignFromFleet) }
+                    button("Acquire a replacement", .outlined, onAcquire)
+                    button(aircraft.isLeased ? "End lease & close route" : "Sell & close the route", .destructive, onSellClose)
+                    button("Cancel", .plain, onCancel)
+                }
+                .padding(.top, 4)
+            }
+            .padding(20)
+            .frame(maxWidth: 360)
+            .background(cardBG)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(cardBorder, lineWidth: 1))
+            .shadow(color: .black.opacity(isDark ? 0.45 : 0.18), radius: 22, y: 8)
+            .padding(.horizontal, 24)
+        }
+    }
+
+    private func button(_ title: String, _ style: Style, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.karla(15, .bold))
+                .foregroundStyle(style == .filled ? .white : style == .destructive ? red : style == .plain ? secondary : primary)
+                .frame(maxWidth: .infinity).frame(height: 48)
+                .background(style == .filled ? blue : .clear)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(
+                    style == .outlined ? stroke : style == .destructive ? red.opacity(0.7) : .clear, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// "Assign one from your fleet" — the idle spares that can take over the route
+/// being vacated (only in-range spares are listed). Tap one to swap it onto the
+/// route and sell/return the original in a single step.
+private struct ReplacementPicker: View {
+    let sim: Simulation
+    let sell: Aircraft
+    let onDone: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
+    private var cardBG: Color      { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color  { isDark ? Sky.onDarkStroke.opacity(0.6) : Color(skyHex: 0xE6E6E6) }
+    private var primary: Color     { isDark ? .white : .black }
+    private var secondary: Color   { isDark ? Sky.lightBlue.opacity(0.75) : Color(skyHex: 0x64748B) }
+    private var titleColor: Color  { isDark ? Sky.lightBlue : Color(skyHex: 0x4E67A0) }
+
+    var body: some View {
+        let route = sim.currentRoute(of: sell)
+        let spares = route.map { sim.spareCandidates(for: $0) } ?? []
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("ASSIGN FROM FLEET").font(.karla(12, .bold)).foregroundStyle(titleColor).tracking(0.5)
+                    if let r = route {
+                        Text("Take over \(r.originCode)–\(r.destCode)").font(.karla(20, .heavy)).foregroundStyle(primary)
+                    }
+                }
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 26)).foregroundStyle(secondary)
+                }.buttonStyle(.plain)
+            }
+            Text("The picked aircraft takes the route; \(sell.tail) is \(sell.isLeased ? "handed back" : "sold").")
+                .font(.karla(13)).foregroundStyle(secondary)
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(spares, id: \.id) { spare in
+                        Button {
+                            sim.replaceRouteAircraft(sell: sell, with: spare)
+                            Feedback.impact(.medium)
+                            dismiss(); onDone()
+                        } label: { spareCard(spare) }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(bg.ignoresSafeArea())
+        .presentationDetents([.medium, .large])
+    }
+
+    private func spareCard(_ ac: Aircraft) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(ac.tail).font(.karla(17, .heavy)).foregroundStyle(primary)
+                Text(ac.type.name).font(.karla(13)).foregroundStyle(secondary)
+                Text("\(ac.type.seats) seats · \(ac.type.rangeNM.formatted()) nm · \(ac.isLeased ? "leased" : "owned")")
+                    .font(.karla(12)).foregroundStyle(secondary)
+            }
+            Spacer(minLength: 8)
+            Text("ASSIGN").font(.karla(13, .bold)).foregroundStyle(.white)
+                .padding(.horizontal, 14).frame(height: 34)
+                .background(Color(skyHex: 0x497AA5))
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(cardBorder, lineWidth: 1))
+    }
 }
