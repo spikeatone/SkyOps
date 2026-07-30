@@ -1142,6 +1142,36 @@ one contradicts the design thesis.)
       fire on appear); AirlineNamingView `tailCode` / GoPublicView `ticker` are
       local input validation with no preset intent. So no other latent no-ops.
 
+- **SELL A ROUTE-ASSIGNED AIRCRAFT → REPLACE-OR-CLOSE (native app; designer
+  request).** Selling a routed aircraft used to silently ARCHIVE its route (it
+  warned "This closes its route", but the only choice was Sell or Cancel — no way
+  to KEEP the route). Now the Fleet-detail SELL of a route-assigned aircraft opens
+  a custom **AA-styled modal** (Karla + Sky tokens + the app's card/button chrome
+  — NOT a native `confirmationDialog`; the native action sheet was the first cut
+  and the designer flagged it as off-brand, so it was rebuilt as a dimmed-backdrop
+  card `.overlay`): **Assign one from your fleet** (a `.sheet` picker of the idle,
+  IN-RANGE spares, styled like the marketplace cards) · **Acquire a replacement**
+  (jumps to the Network Acquire panel; buying there swaps the new jet onto the
+  route and sells the old one in one step) · **Sell & close the route** (the old
+  behavior) · Cancel. Idle spares (no route to lose) keep the plain confirm.
+  - **Sim core** (Simulation.swift): `replaceRouteAircraft(sell:with:)` clears the
+    old aircraft's `assignedRouteId` WITHOUT archiving the route, `assign`s the
+    replacement in its place, then liquidates the old one (whose route is now nil,
+    so the route STANDS); returns false and changes nothing if the replacement
+    can't physically fly the route (range/runway), so the caller warns.
+    `spareCandidates(for:)` = idle spares that pass `routeBlock`. Works for leased
+    aircraft too (routes to `terminateLease`).
+  - **`pendingReplacement`** is the cross-tab intent for the acquire path — set
+    before the Fleet→Network switch, adopted in NetworkView `.onAppear` (opens the
+    `.acquire` panel), completed in `handleBought`, and CLEARED via
+    `.onChange(of: panel)` when the player leaves Acquire without buying (so a
+    later normal purchase isn't hijacked into a swap+sell). Transient (not
+    persisted). Reinforces the standing rule: an intent set BEFORE a tab switch is
+    adopted in `.onAppear`, not `.onChange` (see the ASSIGN-TO-NEW-ROUTE note).
+  - Verified live on the iPhone sim via a throwaway `-devScenario sellrep` (1 jet
+    on a route + 2 idle spares, stripped after): modal + picker render on-brand,
+    and the swap keeps the route flying while selling the original.
+
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
 - **Airport positions are real**, not hand-placed. Each airport carries
