@@ -48,10 +48,12 @@ enum ArchitectArt {
 struct ArchitectBackdrop: View {
     /// Dark-theme opacity (splash + dark naming/load-menu). The invert+screen
     /// blend reads HARDER per unit opacity than the light multiply, so this sits
-    /// LOWER than the light value. Tuned by eye on device against the Figma.
-    static let darkOpacity: Double = 0.35
-    /// Light-theme opacity (multiply on white). Tuned by eye on device.
-    static let lightOpacity: Double = 0.4
+    /// LOWER than the light value. Tuned by eye on device against the Figma —
+    /// pulled back from 0.35 so the sketch stays behind the UI, not competing.
+    static let darkOpacity: Double = 0.25
+    /// Light-theme opacity (multiply on white). Pulled back from 0.40 for the
+    /// same reason (kept slightly above dark; multiply reads softer on white).
+    static let lightOpacity: Double = 0.28
 
     /// Final opacity applied to the blended art. Callers pass the per-theme value
     /// (or one of the constants above); nil-gated on/off at the call site.
