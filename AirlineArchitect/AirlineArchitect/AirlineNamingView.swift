@@ -17,7 +17,6 @@ struct AirlineNamingView: View {
     var backdropOpacity: Double? = nil
     /// Tint for that motif — white line-art on the dark theme, brand ink on the
     /// light one (the art is a template image, so one PNG serves both).
-    var backdropTint: Color = .white
     /// Called with the entered airline name, 2-letter fleet tail code, and the
     /// chosen home region when the player launches their airline.
     let onLaunch: (String, String, Airline.PlayerRegion) -> Void
@@ -65,7 +64,7 @@ struct AirlineNamingView: View {
     var body: some View {
         ZStack {
             background.ignoresSafeArea()
-            if let o = backdropOpacity { ArchitectBackdrop(opacity: o, tint: backdropTint) }
+            if let o = backdropOpacity { ArchitectBackdrop(opacity: o) }
             // Scrolls on smaller iPhones now that the region picker adds height.
             ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {

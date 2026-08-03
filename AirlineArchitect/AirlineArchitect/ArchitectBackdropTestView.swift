@@ -51,7 +51,7 @@ struct ArchitectBackdropTestView: View {
     @State private var light = ProcessInfo.processInfo.arguments.contains("-backdropLight")
     @State private var opacity: Double = Double(arg("-backdropOpacity") ?? "")
         ?? (ProcessInfo.processInfo.arguments.contains("-backdropLight")
-            ? ArchitectBackdrop.lightOpacity : ArchitectBackdrop.figmaOpacity)
+            ? ArchitectBackdrop.lightOpacity : ArchitectBackdrop.darkOpacity)
     @State private var angle: Double = 30              // Figma
     @State private var widthScale: Double = 603.274 / 440   // Figma
     @State private var showControls = !ProcessInfo.processInfo.arguments.contains("-hideControls")
@@ -70,10 +70,7 @@ struct ArchitectBackdropTestView: View {
             // of the sequencing test: the motif is a base layer the other
             // screens composite onto, so it never re-renders or jumps.
             (light ? Color.white : Sky.darkBG).ignoresSafeArea()
-            ArchitectBackdrop(opacity: opacity,
-                              angle: angle,
-                              widthScale: CGFloat(widthScale),
-                              tint: motifTint)
+            ArchitectBackdrop(opacity: opacity)   // full-frame aviation art; theme from preferredColorScheme
 
             content
 
@@ -109,7 +106,7 @@ struct ArchitectBackdropTestView: View {
 
         case .naming:
             // The real shipping screen, with the motif switched on behind it.
-            AirlineNamingView(backdropOpacity: opacity, backdropTint: motifTint) { _, _, _ in }
+            AirlineNamingView(backdropOpacity: opacity) { _, _, _ in }
 
         case .sequence:
             // Exactly the shipping arrangement: each screen draws its OWN
@@ -122,7 +119,7 @@ struct ArchitectBackdropTestView: View {
                     .id(runID)
                     .transition(.opacity)
                 } else {
-                    AirlineNamingView(backdropOpacity: opacity, backdropTint: motifTint) { _, _, _ in }
+                    AirlineNamingView(backdropOpacity: opacity) { _, _, _ in }
                         .transition(.opacity)
                 }
             }

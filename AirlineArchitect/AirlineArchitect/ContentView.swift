@@ -37,16 +37,14 @@ struct ContentView: View {
     private var isPadLayout: Bool { hSize == .regular }
     @Environment(\.colorScheme) private var scheme
 
-    /// Architect's-tools brand motif for the cold-launch surfaces (Figma
-    /// 90:4819). ONE PNG serves both themes because the art is a template
-    /// image: white line-work on the dark page, brand ink on the light one —
-    /// drafting pencil on vellum rather than a grey smudge. The light value is
-    /// fainter on purpose; see `ArchitectBackdrop.lightOpacity`.
+    /// Aviation pencil-sketch backdrop for the cold-launch surfaces (Figma
+    /// 1:2 light / 1:456 dark). ONE grayscale PNG serves both themes — the
+    /// backdrop blends it per theme (multiply on white, invert+screen on navy);
+    /// see ArchitectBackdrop. The light value is fainter on purpose.
     private var isDark: Bool { scheme == .dark }
     private var coldLaunchBackdrop: Double {
-        isDark ? ArchitectBackdrop.figmaOpacity : ArchitectBackdrop.lightOpacity
+        isDark ? ArchitectBackdrop.darkOpacity : ArchitectBackdrop.lightOpacity
     }
-    private var coldLaunchTint: Color { isDark ? .white : Sky.darkBlue }
 
     #if DEBUG
     /// `-devScenario <publicGate|listed|activist|ouster>` — seed a Go Public
@@ -117,13 +115,12 @@ struct ContentView: View {
             // Load / slot-picker menu — takes precedence over naming.
             if showLoadMenu {
                 SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) },
-                              backdropOpacity: coldLaunchBackdrop, backdropTint: coldLaunchTint)
+                              backdropOpacity: coldLaunchBackdrop)
                     .id(cloudGen)   // rebuild (re-read slots) when iCloud merges a change
                     .transition(.opacity)
             } else if sim.playerAirlineName == nil {
                 // First-launch: name the airline before anything else.
-                AirlineNamingView(backdropOpacity: coldLaunchBackdrop,
-                                  backdropTint: coldLaunchTint) { name, tailCode, region in
+                AirlineNamingView(backdropOpacity: coldLaunchBackdrop) { name, tailCode, region in
                     if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
                     sim.setHomeRegion(region)
                     sim.nameAirline(name, tailCode: tailCode)
@@ -191,7 +188,7 @@ struct ContentView: View {
                 // The motif is drawn by the splash itself (over its navy sky,
                 // under the arcs) and again by whichever screen it fades into,
                 // at identical geometry — so it holds still across the handoff.
-                SplashView(backdropOpacity: ArchitectBackdrop.figmaOpacity) {
+                SplashView(backdropOpacity: ArchitectBackdrop.darkOpacity) {
                     withAnimation(.easeOut(duration: 0.45)) { showSplash = false }
                 }
                 .transition(.opacity)

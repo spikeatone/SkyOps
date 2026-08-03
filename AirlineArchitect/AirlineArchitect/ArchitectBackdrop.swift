@@ -1,29 +1,23 @@
 //
 //  ArchitectBackdrop.swift
-//  Airline Architect — the shared "architect's tools" brand motif.
+//  Airline Architect — the cold-launch background artwork.
 //
-//  A very faint drafting-tools still life (T-square, mechanical pencil,
-//  compass) sitting behind a dark screen. This is intended as a COMMON VISUAL
-//  THEME ACROSS THE ARCHITECT SERIES (Airline Architect, Golf Course Architect,
-//  …), so it's deliberately self-contained: one PNG + this file, no dependency
-//  on any app-specific token or model. To reuse it elsewhere, copy
-//  `Resources/Brand/ArchitectTools.png` + this file and nothing else.
+//  A faint aviation pencil-sketch (airliner, control tower, pilot's cap) sitting
+//  full-bleed behind the splash / naming / load-menu screens. Designer art from
+//  Figma (Airline-Architect-Production, "home - light" 1:2 / "home - dark" 1:456).
 //
-//  Built to the designer's Figma (Airline-Architect-Production, node 90:4819
-//  "home - dark"). The geometry there is a 603.274 × 811.579 image rotated 30°
-//  at 10% opacity, whose rotated bounding box (928.24 × 1004.485 — verified:
-//  w·cos30 + h·sin30 = 928.23, w·sin30 + h·cos30 = 1004.47) sits at (-302, 32)
-//  in a 440-wide frame. That puts the artwork's CENTRE at (162.1, 534.2).
+//  The source (LaunchBackdrop.png) is a grayscale pencil drawing on a WHITE
+//  ground, so it adapts to each theme with a BLEND MODE rather than a tint —
+//  which PRESERVES the pencil shading (a flat template-tint would fill the shapes
+//  solid and lose the drawing):
+//    • Light: .multiply drops the white ground, leaving a faint gray sketch.
+//    • Dark:  .colorInvert() (→ light lines on black) + .screen drops the black,
+//             leaving a faint light sketch on the navy.
 //
-//  Those numbers are expressed here as FRACTIONS of the container rather than
-//  fixed points, so the composition holds on any device (the Figma frame is
-//  440 wide; an iPhone 17 Pro is 402, an iPad far wider) instead of drifting
-//  off-screen. Scale is keyed to WIDTH so the tools keep their proportion to
-//  the screen furniture.
-//
-//  The art is white line-art on transparency, so it's tinted + faded at draw
-//  time rather than baked — which is what lets a sibling app re-use the same
-//  PNG over a different brand colour.
+//  This REPLACED the old "architect's drafting tools" template motif (white
+//  line-art, tinted + rotated). AA has diverged from that shared-series motif —
+//  the launch art here is aviation-specific now, and full-bleed rather than a
+//  rotated centred emblem, so the old rotation/scale/tint geometry is gone.
 //
 
 import SwiftUI
@@ -31,13 +25,12 @@ import UIKit
 
 // MARK: - The art
 
-/// Loads the bundled motif once. Files under `Resources/` are FLATTENED into
+/// Loads the bundled backdrop once. Files under `Resources/` are FLATTENED into
 /// the bundle root by the file-system-synchronized group, so this resolves by
-/// bare filename — the same mechanism as the fonts, Basemap.json and
-/// `AircraftArt`.
+/// bare filename — same as the fonts, Basemap.json and `AircraftArt`.
 enum ArchitectArt {
-    static let toolsImage: Image? = {
-        guard let path = Bundle.main.path(forResource: "ArchitectTools", ofType: "png"),
+    static let backdropImage: Image? = {
+        guard let path = Bundle.main.path(forResource: "LaunchBackdrop", ofType: "png"),
               let ui = UIImage(contentsOfFile: path) else { return nil }
         return Image(uiImage: ui)
     }()
@@ -45,105 +38,59 @@ enum ArchitectArt {
 
 // MARK: - The backdrop
 
-/// The faint drafting-tools motif, sized and placed per the Figma composition.
+/// The faint aviation sketch, full-bleed behind a cold-launch screen. Drop it in
+/// as the first layer of a `ZStack`, over the screen's background colour. It
+/// never takes touches and is hidden from VoiceOver — it's texture, not content.
 ///
-/// Drop it in as the first layer of a `ZStack`, over the screen's background
-/// colour. It never takes touches and is hidden from VoiceOver — it's texture,
-/// not content.
-///
-/// Every cold-launch surface (splash / naming / load menu) draws its OWN
-/// instance at these same defaults rather than sharing one layer. Because the
-/// geometry is purely a function of the container size, all three land
-/// pixel-identically — so the tools never shift as one screen hands off to the
-/// next, and no screen has to give up its own opaque background.
+/// The per-theme treatment lives HERE (blend mode by colour scheme). The splash
+/// is always navy regardless of the system theme, so it passes `forcedScheme:
+/// .dark`; the theme-aware naming / load-menu screens leave it nil.
 struct ArchitectBackdrop: View {
-    /// The opacity the designer specified in Figma 90:4819 (the DARK frame).
-    /// Single source of truth for the shipping surfaces — tune here, not at
-    /// each call site.
-    static let figmaOpacity: Double = 0.10
+    /// Dark-theme opacity (splash + dark naming/load-menu). The invert+screen
+    /// blend reads HARDER per unit opacity than the light multiply, so this sits
+    /// LOWER than the light value. Tuned by eye on device against the Figma.
+    static let darkOpacity: Double = 0.35
+    /// Light-theme opacity (multiply on white). Tuned by eye on device.
+    static let lightOpacity: Double = 0.4
 
-    /// Light-theme opacity. Deliberately LOWER than the dark value: the same
-    /// alpha does not read the same on the two backgrounds — dark ink on white
-    /// carries further than white line-art on #2B303D, so matching 0.10 makes
-    /// the light treatment shout while the dark one whispers.
-    ///
-    /// Tuned by eye on device over the real naming screen (the only honest way
-    /// to set it): 0.06 vanished, 0.12 started competing with the form fields,
-    /// 0.08 sits behind the content the way the dark 0.10 does.
-    static let lightOpacity: Double = 0.08
+    /// Final opacity applied to the blended art. Callers pass the per-theme value
+    /// (or one of the constants above); nil-gated on/off at the call site.
+    var opacity: Double = 0.55
+    /// Force a colour scheme (the splash is always navy → `.dark`). nil = use the
+    /// environment scheme (theme-aware naming / load-menu).
+    var forcedScheme: ColorScheme? = nil
 
-    /// How present the motif is. The Figma calls for 0.10; kept as a parameter
-    /// because this is the one value most likely to be tuned per app/screen.
-    var opacity: Double = 0.10
-    /// Rotation in degrees (Figma: 30).
-    var angle: Double = 30
-    /// Artwork width as a multiple of the container's width.
-    /// Figma: 603.274 / 440 ≈ 1.371 — i.e. the art is wider than the screen,
-    /// which is what makes it read as a crop of a larger drawing.
-    var widthScale: CGFloat = 603.274 / 440
-    /// Centre of the artwork, as a fraction of the container.
-    /// Figma: (162.1 / 440, 534.2 / 924).
-    var centre: UnitPoint = UnitPoint(x: 162.1 / 440, y: 534.2 / 924)
-    /// Tint for the line art. White matches the Figma; a sibling app can pass
-    /// its own brand colour without re-exporting the PNG.
-    var tint: Color = .white
-
-    @Environment(\.horizontalSizeClass) private var hSize
-
-    /// Source aspect ratio (892 × 1200 original, and the Figma box 603.274 ×
-    /// 811.579 — both 0.7433, so the art is never distorted).
-    private static let aspect: CGFloat = 603.274 / 811.579
-
-    /// On a REGULAR-width canvas (iPad, wide split-view) the raw width-scale would
-    /// balloon the motif far past the phone-sized UI furniture AND upscale the 892px
-    /// source ~3× into visible pixelation. Cap the art's absolute width there and
-    /// centre it, so it reads as a contained, crisp emblem behind the content rather
-    /// than a ballooned full-bleed texture (ported from Vineyard Architect). Phone
-    /// (compact) is unchanged — it still bleeds off the edges as a crop.
-    private static let maxRegularArtWidth: CGFloat = 840
+    @Environment(\.colorScheme) private var envScheme
+    private var isDark: Bool { (forcedScheme ?? envScheme) == .dark }
 
     var body: some View {
         GeometryReader { geo in
-            // Compact (phone): scale to width so the motif bleeds off the edges as a
-            // crop of a larger drawing. Regular (iPad): cap to a contained size and
-            // centre it, so it's a crisp faint emblem rather than a ballooned texture.
-            let regular = hSize == .regular
-            let w = regular ? min(geo.size.width * widthScale, Self.maxRegularArtWidth)
-                            : geo.size.width * widthScale
-            let h = w / Self.aspect
-            let cx: CGFloat = regular ? 0.5 : centre.x
-            let cy: CGFloat = regular ? 0.5 : centre.y
-            if let art = ArchitectArt.toolsImage {
+            if let art = ArchitectArt.backdropImage {
                 art
                     .resizable()
-                    .renderingMode(.template)          // tint the line art
-                    .aspectRatio(contentMode: .fit)
-                    .foregroundStyle(tint)
-                    .frame(width: w, height: h)
-                    .rotationEffect(.degrees(angle))
-                    .position(x: geo.size.width * cx,
-                              y: geo.size.height * cy)
+                    .aspectRatio(contentMode: .fill)   // full-bleed cover
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .modifier(BackdropBlend(isDark: isDark))
                     .opacity(opacity)
             }
         }
-        .clipped()                       // the Figma "Mask group" — crop to frame
         .allowsHitTesting(false)         // pure texture; never eats a tap
         .accessibilityHidden(true)
         .ignoresSafeArea()
     }
 }
 
-/// Convenience: the motif over a solid background, the pairing every screen
-/// that uses it wants. `ArchitectBackdrop` alone is transparent.
-struct ArchitectBackdropLayer: View {
-    var background: Color = Sky.darkBG   // Figma "Dark Mode BG" #2B303D
-    var opacity: Double = 0.10
-    var tint: Color = .white
-
-    var body: some View {
-        ZStack {
-            background.ignoresSafeArea()
-            ArchitectBackdrop(opacity: opacity, tint: tint)
+/// Adapt the dark-on-white pencil sketch to the theme. Light = multiply (the
+/// white ground drops out, the gray sketch remains). Dark = invert then screen
+/// (the inverted black ground drops out, the light sketch remains on the navy).
+private struct BackdropBlend: ViewModifier {
+    let isDark: Bool
+    func body(content: Content) -> some View {
+        if isDark {
+            content.colorInvert().blendMode(.screen)
+        } else {
+            content.blendMode(.multiply)
         }
     }
 }

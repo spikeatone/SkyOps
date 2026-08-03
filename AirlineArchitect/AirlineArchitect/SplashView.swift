@@ -57,7 +57,8 @@ struct SplashView: View {
                 .ignoresSafeArea()
 
             // Architect's-tools motif, under the network that draws over it.
-            if let o = backdropOpacity { ArchitectBackdrop(opacity: o) }
+            // Splash sky is always navy → force the dark (invert+screen) treatment.
+            if let o = backdropOpacity { ArchitectBackdrop(opacity: o, forcedScheme: .dark) }
 
             // The route network + the jets flying it.
             TimelineView(.animation(paused: reduceMotion)) { timeline in
