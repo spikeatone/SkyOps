@@ -4380,7 +4380,29 @@ Two details are load-bearing:
   Motion collapses it to a static network + calm logo fade. Shown once per
   process launch (ContentView `showSplash`, zIndex 10 over the load menu /
   naming screen). Verified via timed simulator frame captures.
-- **ARCHITECT'S-TOOLS BRAND MOTIF — BUILT (designer, Figma `90:4819` "home - dark").
+- **SUPERSEDED (2026-08-03) — the cold-launch backdrop is now an AVIATION PENCIL
+  SKETCH, not the drafting-tools motif.** The designer replaced the tools still
+  life with an aviation sketch (airliner + control tower + pilot's cap) on the
+  naming/splash/load-menu screens (new Figma `1:2` light / `1:456` dark).
+  `Resources/Brand/ArchitectTools.png` → `LaunchBackdrop.png` (a grayscale pencil
+  drawing on WHITE), and `ArchitectBackdrop` was rewritten: it's now **FULL-BLEED**
+  (the old rotation/scale/`centre`/`tint`/`figmaOpacity` API is GONE) and adapts
+  the one grayscale source to each theme with a **BLEND MODE** that preserves the
+  pencil shading — `.multiply` on light (drops the white ground → faint gray
+  sketch), `.colorInvert()` + `.screen` on dark (→ faint light sketch on navy).
+  New API: `ArchitectBackdrop(opacity:forcedScheme:)` — the splash passes
+  `forcedScheme: .dark` (always navy); naming/load-menu read the environment
+  scheme. Opacity constants are now `lightOpacity = 0.40` / `darkOpacity = 0.35`
+  (device-tuned against the Figma; the screen blend reads harder per unit opacity,
+  so dark sits LOWER than light — the inverse of the old tint relationship).
+  Callers dropped the tint arg; `ArchitectBackdropLayer` was removed (unused). The
+  **cross-series portability is GONE** — AA's launch art is aviation-specific now,
+  so the sibling apps (Golf/Vineyard) keep the tools motif independently. The
+  `-backdropTest` harness still works for opacity tuning (its angle/scale sliders
+  are now dead — the art is full-frame). Everything below in this bullet describes
+  the OLD tools motif and its geometry/opacity/portability — kept for history but
+  NO LONGER how the AA backdrop works.
+- **(HISTORICAL) ARCHITECT'S-TOOLS BRAND MOTIF — BUILT (designer, Figma `90:4819` "home - dark").
   A faint drafting-tools still life behind the cold-launch screens, intended as a
   COMMON VISUAL THEME ACROSS THE WHOLE ARCHITECT SERIES** (Airline Architect, Golf
   Course Architect, Vineyard Architect…). `ArchitectBackdrop.swift` +
