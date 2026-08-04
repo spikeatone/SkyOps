@@ -1,4 +1,19 @@
-# AIRPORT PHOTOS — spec (1.2 feature)
+# AIRPORT PHOTOS — spec (1.2 feature) — **BUILT, 34 images shipped**
+
+> **STATUS (2026-08-03): the art is DONE and in the app** — 9 archetypes + 25
+> per-airport overrides = **34 JPGs, ~13 MB**. Every airport in the game now
+> resolves to real art (per-code → shared-city → archetype), so the styled
+> placeholder is now only a safety net, never seen in normal play.
+>
+> - **Archetypes (9):** metro · tropicalIsland · snowyNorth · desert · **savanna**
+>   · alpine · coastal · tropical · plains.
+> - **Marquee cities (25 codes / 23 files):** LHR CDG SYD SFO SEA LAX DEN +
+>   TYO(HND,NRT) CHI(ORD,MDW) PEK DXB SIN HKG IST FCO BCN AMS PVG BKK YYZ LAS DOH
+>   MIA NYC(JFK,LGA,EWR) + **BZN** (Bozeman — designer's hometown).
+> - **Shared-city aliases** (`AirportPhoto.sharedOverride`): NYC→JFK/LGA/EWR,
+>   TYO→HND/NRT, CHI→ORD/MDW.
+> - **Next if extended:** more archetypes (jungle/fjord/steppe) or more marquee
+>   cities — both are drop-in (add the JPG; only a new shared alias needs code).
 
 Give each airport card a **hero image** (Vineyard-Architect style) so tapping an
 airport surfaces a sense of place. See VA's site card for the target look: photo

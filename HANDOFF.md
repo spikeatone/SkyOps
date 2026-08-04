@@ -5,9 +5,39 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 28 July 2026. **1.1 (build 35) is LIVE on the App Store** — the public
-debut. <https://apps.apple.com/us/app/airline-architect/id6790569697>. Clean tree on
-`main`, all pushed; nothing in flight._
+_Snapshot: 3 August 2026. **1.1 (build 35) is LIVE**
+(<https://apps.apple.com/us/app/airline-architect/id6790569697>). **1.1.1 (build 36)
+is BUILT AND ARCHIVED but NOT UPLOADED — blocked on Apple account migration**, see
+below. Clean tree on `main`, all pushed._
+
+## ⚠️ FIRST — 1.1.1 (36) is waiting to upload
+
+The repo is at **`MARKETING_VERSION = 1.1.1`, `CURRENT_PROJECT_VERSION = 36`**, and a
+signed archive sits in the Xcode Organizer. **It has NOT been uploaded**: the
+designer's personal Apple account is mid-migration to an Org account, so
+distribution signing is unavailable (Xcode shows a red "Unknown Name (D2PVU8X5Q7)"
+team). Nothing is wrong with the build — this is purely an account-side block.
+
+**When signing is restored:** quit Xcode → Settings ▸ Accounts, remove + re-add the
+Apple ID (or Download Manual Profiles) → confirm the Team resolves to a real name →
+**RE-ARCHIVE** (don't ship a stale archive; `main` keeps moving) → Distribute App ▸
+App Store Connect ▸ Upload. Then in ASC create the **1.1.1 version record** (a new
+version string, not just a new build), attach 36, add "What's New", submit.
+Check whether the Org account issues a DIFFERENT team id — `DEVELOPMENT_TEAM =
+D2PVU8X5Q7` is pinned in 6 configs and would need updating.
+
+**What's in 1.1.1 (all since build 35):**
+- **Airport hero images** — tapping an airport shows real art. 34 JPGs (~13 MB):
+  9 terrain/region archetypes + 25 marquee-city overrides (incl. Bozeman). See
+  `AIRPORT_PHOTOS_SPEC.md`.
+- **New cold-launch backdrop** — the drafting-tools motif replaced by the designer's
+  aviation pencil sketch, with a separate iPad-composed asset. See CLAUDE.md.
+- **Fix: ASSIGN TO NEW ROUTE was a silent no-op** since the custom-tab-bar refactor
+  (`.onChange` never fires on a recreated view — adopt intents in `.onAppear`).
+- **Fix: selling a route-assigned aircraft** now offers replace-or-close instead of
+  silently archiving the route.
+- **Fix: Finance ledger figures are compact (B/M/k)** so late-game totals stop
+  churning at 25×; day/night terminator seam fixed.
 
 ## WHERE THINGS STAND
 
@@ -24,20 +54,26 @@ debut. <https://apps.apple.com/us/app/airline-architect/id6790569697>. Clean tre
   Store Monthly + Yearly products attached). Two tiers ($5.99/mo, $49.99/yr); free
   tier caps at **3 aircraft / 2 routes**. Not-yet-run: a real sandbox purchase to
   prove the unlock on device (config checks out; this is confirmation, not a worry).
-- **Build numbers:** repo is at `CURRENT_PROJECT_VERSION = 35` (Apple's latest). ASC
-  has 31–35 uploaded; **the next NEW build must be 36+** (numbers can't repeat).
+- **Build numbers:** repo is at **1.1.1 / build 36**, archived but not uploaded (see
+  the top section). ASC has 31–35 uploaded; **36 is the next new number** and is
+  already claimed by this archive — if 36 ever gets uploaded and superseded, go 37+.
 
-## NEXT — nothing is in flight; pick anywhere
+## NEXT
 
-1. **Post-launch watch (designer-side):** the sandbox purchase confirming Pro unlocks
+1. **Upload 1.1.1 (36) once signing is restored** — the top section has the full
+   procedure. This is the only thing actually blocked.
+2. **Post-launch watch (designer-side):** the sandbox purchase confirming Pro unlocks
    end-to-end, and an eye on early reviews / RevenueCat Overview for the first days.
-2. **Top hands-on engineering item — the standing "never played end-to-end" concern.**
+3. **Top hands-on engineering item — the standing "never played end-to-end" concern.**
    The soak harness (`aa-1.1.x/SoakMain.swift`, 8/8 seeds × 2 sim-years) closed the
    numeric / state-integrity half (cash invariant, crew, ownership scoping, save/load).
    The RESIDUAL is the UI / "does it feel right" half — the panel/dropdown-flicker
    class a headless harness can't see — which still needs a real, sustained Simulator
-   session with eyes. See CLAUDE.md's "Open" section.
-3. **Future features / 1.2:** whatever's next goes in build 36+. The big systems
+   session with eyes. See CLAUDE.md's "Open" section. (Today's session is a live
+   example of why: driving the app found the ASSIGN-TO-NEW-ROUTE no-op, which the
+   headless suite had passed 41/41.)
+4. **Future features / 1.2:** the airport-hero + backdrop work above is the 1.2 art
+   pass so far. The big systems
    (Go Public, Competitor Acquisition, Hubs & Clubs) are COMPLETE; their specs
    (`GO_PUBLIC_SPEC.md`, `ACQUISITIONS_SPEC.md`, `HUBS_AND_CLUBS_SPEC.md`) remain as
    reference.
@@ -75,6 +111,13 @@ debut. <https://apps.apple.com/us/app/airline-architect/id6790569697>. Clean tre
   the software keyboard and tap keys, or seed state via a `#if DEBUG` launch arg.
 - **SourceKit "cannot find X in scope" on a single file = false positive** (cross-file
   symbols); trust the full `xcodebuild`, not the per-file linter.
+- **LANDSCAPE captures come out ROTATED** (`simctl io screenshot` grabs the raw
+  framebuffer) — `sips -r 90` or `-r 270` to view upright; which one depends on the
+  rotation direction. Rotating the device via `osascript` keystrokes is unreliable.
+- **A capture taken right after `simctl launch` can be all-black** (grabbed mid-launch)
+  — sleep ~3s and re-capture before concluding anything is broken.
+- **`⌘⇧A` can't change the theme under `-backdropTest`** — that harness pins the scheme
+  via `.preferredColorScheme` off `-backdropLight`. Relaunch with/without the flag.
 - **`simctl io recordVideo`** stops/finalizes cleanly only on **SIGINT** (`pkill -INT`),
   not SIGTERM — the exit-code-1 on interrupt is expected, the mp4 still writes.
 

@@ -4392,16 +4392,38 @@ Two details are load-bearing:
   sketch), `.colorInvert()` + `.screen` on dark (→ faint light sketch on navy).
   New API: `ArchitectBackdrop(opacity:forcedScheme:)` — the splash passes
   `forcedScheme: .dark` (always navy); naming/load-menu read the environment
-  scheme. Opacity constants are now `lightOpacity = 0.40` / `darkOpacity = 0.35`
-  (device-tuned against the Figma; the screen blend reads harder per unit opacity,
-  so dark sits LOWER than light — the inverse of the old tint relationship).
-  Callers dropped the tint arg; `ArchitectBackdropLayer` was removed (unused). The
-  **cross-series portability is GONE** — AA's launch art is aviation-specific now,
-  so the sibling apps (Golf/Vineyard) keep the tools motif independently. The
-  `-backdropTest` harness still works for opacity tuning (its angle/scale sliders
-  are now dead — the art is full-frame). Everything below in this bullet describes
-  the OLD tools motif and its geometry/opacity/portability — kept for history but
-  NO LONGER how the AA backdrop works.
+  scheme. **Opacity settled at 0.25 for BOTH themes** (`lightOpacity` =
+  `darkOpacity` = 0.25 — device-tuned down from an initial 0.40/0.35, which the
+  designer judged as competing with the UI; the designer picked 0.25 as the sweet
+  spot for both). Callers dropped the tint arg; `ArchitectBackdropLayer` was
+  removed (unused). The **cross-series portability is GONE** — AA's launch art is
+  aviation-specific now, so the sibling apps (Golf/Vineyard) keep the tools motif
+  independently.
+  - **TWO ASSETS, ONE PER IDIOM (the designer rendered a dedicated iPad version).**
+    The phone art is a TALL composition; on the wide iPad canvas it cropped the
+    airliner's wings, so the designer re-rendered it 4:3 (Figma `116:4932` "on
+    white", 1086×1448 — matching the iPad's PORTRAIT aspect) with the full wingspan
+    in frame. `LaunchBackdropPad.png` ships alongside `LaunchBackdrop.png` and is
+    picked by **horizontal size class** (`ArchitectArt.backdropImage` /
+    `.backdropImagePad`). Scaling the phone art was tried first and rejected — a
+    purpose-composed asset beats any fit/scale compromise.
+  - **Phone = `.fill`, iPad = `.fit` at `regularScale` 0.98.** The pad art shares
+    the iPad's PORTRAIT aspect, so at ~0.98 portrait is effectively full-bleed while
+    LANDSCAPE stays contained — one constant covers both orientations, no
+    orientation branching. **A `.fill` on iPad is WRONG in landscape**: it scales the
+    drawing up to cover the width and crops the tower/cap off (the designer flagged
+    exactly this). 0.98 = 0.85 +15%, the designer's call after seeing 0.85.
+  - **The "on white" source drives BOTH themes** through the blend — the designer's
+    separate "on dark" export (`116:4936`) was NOT needed. Ask for on-white renders.
+  - **GOTCHA — `⌘⇧A` (Toggle Appearance) does nothing while `-backdropTest` is up.**
+    `ArchitectBackdropTestView` PINS the scheme via `.preferredColorScheme(...)` off
+    the `-backdropLight` arg, which overrides the system appearance. Relaunch with/
+    without `-backdropLight` to switch themes there; the real app screens follow the
+    environment normally.
+  - Verified live on iPhone (naming light+dark, load menu) and iPad (naming
+    light+dark, portrait AND landscape).
+  Everything below in this bullet describes the OLD tools motif and its
+  geometry/opacity/portability — kept for history but NO LONGER how it works.
 - **(HISTORICAL) ARCHITECT'S-TOOLS BRAND MOTIF — BUILT (designer, Figma `90:4819` "home - dark").
   A faint drafting-tools still life behind the cold-launch screens, intended as a
   COMMON VISUAL THEME ACROSS THE WHOLE ARCHITECT SERIES** (Airline Architect, Golf
