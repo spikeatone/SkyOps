@@ -67,20 +67,33 @@ struct ArchitectBackdrop: View {
     /// environment scheme (theme-aware naming / load-menu).
     var forcedScheme: ColorScheme? = nil
 
+    /// Scale for the contained iPad art. Device-tuned (0.85 → 0.98, +15% at the
+    /// designer's call). Note the pad art is 4:3 like the iPad's PORTRAIT canvas,
+    /// so at ~1.0 portrait is effectively full-bleed while LANDSCAPE stays
+    /// comfortably contained — one constant serves both orientations.
+    static let regularScale: CGFloat = 0.98
+
     @Environment(\.colorScheme) private var envScheme
     @Environment(\.horizontalSizeClass) private var hSize
     private var isDark: Bool { (forcedScheme ?? envScheme) == .dark }
 
     var body: some View {
         GeometryReader { geo in
-            // Each idiom gets art composed for its own aspect, so both just
-            // full-bleed .fill — no scaling/cropping compromise either way.
+            // Each idiom gets art composed for its own aspect.
+            // Phone: .fill (full-bleed crop) — the art is framed for that shape.
+            // iPad: .fit + a slight inset. The pad art is 4:3, so in PORTRAIT fit
+            // and fill are identical (the canvas is also ~4:3) — but in LANDSCAPE
+            // a .fill would scale the drawing up to cover the width, blowing up
+            // the airliner and cropping the tower/cap off. Containing it keeps the
+            // whole sketch centered and smaller on every orientation.
             let regular = hSize == .regular
             if let art = regular ? ArchitectArt.backdropImagePad : ArchitectArt.backdropImage {
                 art
                     .resizable()
-                    .aspectRatio(contentMode: .fill)   // full-bleed cover
+                    .aspectRatio(contentMode: regular ? .fit : .fill)
                     .frame(width: geo.size.width, height: geo.size.height)
+                    .scaleEffect(regular ? Self.regularScale : 1)
+                    .frame(width: geo.size.width, height: geo.size.height)   // re-constrain
                     .clipped()
                     .modifier(BackdropBlend(isDark: isDark))
                     .opacity(opacity)
