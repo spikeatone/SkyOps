@@ -60,16 +60,30 @@ struct ArchitectBackdrop: View {
     /// environment scheme (theme-aware naming / load-menu).
     var forcedScheme: ColorScheme? = nil
 
+    /// The sketch is a TALL portrait composition tuned to a phone. On the wider
+    /// iPad canvas a .fill crop blows the drawing up (the airliner sprawls, the
+    /// pilot's cap falls off-frame), so REGULAR width instead CONTAINS the whole
+    /// sketch (.fit) and scales it down — a smaller, complete drawing sitting
+    /// behind the content, like the old motif's contained-emblem treatment.
+    /// Phone (compact) keeps the full-bleed .fill. Tuned on device.
+    static let regularScale: CGFloat = 0.8
+
     @Environment(\.colorScheme) private var envScheme
+    @Environment(\.horizontalSizeClass) private var hSize
     private var isDark: Bool { (forcedScheme ?? envScheme) == .dark }
 
     var body: some View {
         GeometryReader { geo in
             if let art = ArchitectArt.backdropImage {
+                let regular = hSize == .regular
                 art
                     .resizable()
-                    .aspectRatio(contentMode: .fill)   // full-bleed cover
+                    // Phone: fill (full-bleed crop). iPad: fit, so the WHOLE
+                    // drawing shows, then scale it down a touch more.
+                    .aspectRatio(contentMode: regular ? .fit : .fill)
                     .frame(width: geo.size.width, height: geo.size.height)
+                    .scaleEffect(regular ? Self.regularScale : 1)
+                    .frame(width: geo.size.width, height: geo.size.height)   // re-constrain to screen
                     .clipped()
                     .modifier(BackdropBlend(isDark: isDark))
                     .opacity(opacity)
