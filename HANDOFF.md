@@ -5,14 +5,28 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 3 August 2026. **1.1.1 (build 36) is LIVE on the App Store**
-(<https://apps.apple.com/us/app/airline-architect/id6790569697>) — cleared review
-with no rejections. Clean tree on `main`, all pushed; **nothing in flight**._
+_Snapshot: 5 August 2026. **1.1.1 (build 36) is LIVE on the App Store**
+(<https://apps.apple.com/us/app/airline-architect/id6790569697>). **1.1.2 (build 37)
+is ARCHIVED and ready to upload** — see below. Clean tree on `main`, all pushed._
+
+## 1.1.2 (build 37) — archived, awaiting upload
+
+The repo is at **`MARKETING_VERSION = 1.1.2`, `CURRENT_PROJECT_VERSION = 37`**, and a
+signed archive is in the Organizer. Signing is healthy (Postmark Digital LLC, team
+`D2PVU8X5Q7`), so this is just: Organizer → Distribute App → App Store Connect →
+Upload, then create the **1.1.2 version record** in ASC (1.1.1 is released, so a new
+build needs a new version string), attach 37, add What's New, submit.
+
+**The one change in 1.1.2:** a **curated airport-archetype override table**. The
+designer spotted SLC (ringed by the Wasatch) showing `plains`; a full 385-airport
+audit found it was systemic — Europe's `lat >= 48 -> alpine` rule was INVERTED
+(Berlin/Hamburg/Warsaw "alpine", Zurich/Geneva "coastal"), and `plains`/`coastal`
+were dumping grounds (Honolulu, Cusco at 11,000 ft, Kathmandu, the whole Gulf).
+`AirportPhoto.archetypeOverrides` (108 entries) now pins the clear errors; alpine is
+override-only. Audit harness: `aa-1.1.x/archetype-audit` — **re-run it after adding
+airports**.
 
 ## What shipped in 1.1.1 (build 36)
-
-The repo is at **`MARKETING_VERSION = 1.1.1`, `CURRENT_PROJECT_VERSION = 36`**, which
-is LIVE — **the next new build must be 37+** (numbers can't repeat).
 
 **Account note (resolved):** the designer's personal Apple account migrated to an Org
 account (Postmark Digital LLC) mid-cycle, which blocked distribution signing for a
@@ -59,9 +73,10 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   ($49.99/$5.99), so correct prices do NOT prove the offering loaded** — the real
   tell is whether tapping Continue reaches Apple's sheet or errors with "That plan
   isn't available right now."
-- **Build numbers:** repo is at **1.1.1 / build 36**, which is LIVE. ASC has 31–36
-  uploaded; **the next new build must be 37+** (numbers can't repeat). A further
-  point release is 1.1.2; a feature release, 1.2.
+- **Build numbers:** repo is at **1.1.2 / build 37** (archived, not yet uploaded);
+  **1.1.1 / build 36** is what's LIVE. ASC has 31–36 uploaded, so **37 is the next
+  new number** — anything after it goes 38+. A further point release is 1.1.3; a
+  feature release, 1.2.
 
 ## NEXT — nothing is blocked; pick anywhere
 
