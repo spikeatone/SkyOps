@@ -66,9 +66,17 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
 ## NEXT — nothing is blocked; pick anywhere
 
 1. **Post-launch watch (designer-side):** early reviews and the RevenueCat Overview.
-   (The sandbox purchase is DONE — Pro unlocks end-to-end on device.) Optional
-   follow-up: delete + reinstall and tap **Restore Purchases**, the one purchase path
-   still unexercised.
+   Monetization and persistence are both PROVEN on device now (3 Aug 2026):
+   - **Sandbox purchase** → Pro unlocked end-to-end (paywall self-dismissed, cap lifted).
+   - **Delete + reinstall** → the app came back **already Pro without tapping Restore**
+     (RevenueCat syncs StoreKit 2 `Transaction.currentEntitlements` on launch), AND
+     **the saved game returned from iCloud KVS** — a container wipe proves the cloud
+     round-trip. See CLAUDE.md's iCloud section.
+   - Remaining nits, both low priority: the explicit **Restore Purchases** button is
+     still unexercised (it's a fallback now that auto-restore works — and it's
+     unreachable while Pro, since the paywall has no entry point then; to test it,
+     let the sandbox sub lapse or clear the tester's purchase history in ASC), and
+     **true cross-device** iCloud sync (two devices, one Apple ID).
 2. **Top hands-on engineering item — the standing "never played end-to-end" concern.**
    The soak harness (`aa-1.1.x/SoakMain.swift`, 8/8 seeds × 2 sim-years) closed the
    numeric / state-integrity half (cash invariant, crew, ownership scoping, save/load).

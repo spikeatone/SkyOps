@@ -2980,11 +2980,16 @@ where numbers are involved.
   newer than the tombstone that correctly wins (`mirrorToCloud` also clears
   the stale tombstone on save). Data is only removed when a delete is
   genuinely the most-recent action for the slot.
-- **VERIFICATION CAVEAT: the real iPhone↔iPad handoff needs two physical
-  devices on the same Apple ID** — the Simulator can't exercise real iCloud
-  sync. Verified here: the pure merge logic (7/7 headless) + offline-first
-  no-crash launch. The designer confirms the actual cross-device sync on
-  real hardware.
+- **PARTIALLY VERIFIED ON REAL HARDWARE (3 Aug 2026) — the cloud round-trip
+  works.** A delete-and-reinstall on a real iPhone (TestFlight, build 36) brought
+  the saved game BACK. Deleting an app wipes its Documents container, so the save
+  could only have come from iCloud KVS — which proves `mirrorToCloud` really
+  writes, and `reconcileCloud()` really adopts on a fresh install with no local
+  file. That closes the "does KVS actually work on device" half.
+  **STILL UNVERIFIED: true CROSS-DEVICE sync** (iPhone↔iPad on one Apple ID) —
+  same-device restore doesn't exercise a second device racing the same slot, which
+  is where the merge/tombstone logic earns its keep (that part is 7/7 headless).
+  Also still verified: offline-first no-crash launch with no iCloud account.
 - **BREAK-GLASS: CloudKit was considered and DELIBERATELY DECLINED (2026-07-27,
   designer asked "should we upgrade to CloudKit?"). Stay on KVS.** The current stack
   (local Codable JSON in Documents as source of truth + `NSUbiquitousKeyValueStore`
