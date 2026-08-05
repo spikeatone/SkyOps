@@ -5,28 +5,22 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 3 August 2026. **1.1 (build 35) is LIVE**
-(<https://apps.apple.com/us/app/airline-architect/id6790569697>). **1.1.1 (build 36)
-is BUILT AND ARCHIVED but NOT UPLOADED — blocked on Apple account migration**, see
-below. Clean tree on `main`, all pushed._
+_Snapshot: 3 August 2026. **1.1.1 (build 36) is LIVE on the App Store**
+(<https://apps.apple.com/us/app/airline-architect/id6790569697>) — cleared review
+with no rejections. Clean tree on `main`, all pushed; **nothing in flight**._
 
-## ⚠️ FIRST — 1.1.1 (36) is waiting to upload
+## What shipped in 1.1.1 (build 36)
 
-The repo is at **`MARKETING_VERSION = 1.1.1`, `CURRENT_PROJECT_VERSION = 36`**, and a
-signed archive sits in the Xcode Organizer. **It has NOT been uploaded**: the
-designer's personal Apple account is mid-migration to an Org account, so
-distribution signing is unavailable (Xcode shows a red "Unknown Name (D2PVU8X5Q7)"
-team). Nothing is wrong with the build — this is purely an account-side block.
+The repo is at **`MARKETING_VERSION = 1.1.1`, `CURRENT_PROJECT_VERSION = 36`**, which
+is LIVE — **the next new build must be 37+** (numbers can't repeat).
 
-**When signing is restored:** quit Xcode → Settings ▸ Accounts, remove + re-add the
-Apple ID (or Download Manual Profiles) → confirm the Team resolves to a real name →
-**RE-ARCHIVE** (don't ship a stale archive; `main` keeps moving) → Distribute App ▸
-App Store Connect ▸ Upload. Then in ASC create the **1.1.1 version record** (a new
-version string, not just a new build), attach 36, add "What's New", submit.
-Check whether the Org account issues a DIFFERENT team id — `DEVELOPMENT_TEAM =
-D2PVU8X5Q7` is pinned in 6 configs and would need updating.
+**Account note (resolved):** the designer's personal Apple account migrated to an Org
+account (Postmark Digital LLC) mid-cycle, which blocked distribution signing for a
+few days. The migration **kept the same team id `D2PVU8X5Q7`**, so no project change
+was needed and the iCloud KVS entitlement was unaffected. If a future migration
+changes the team id, it's pinned in 6 configs in the pbxproj.
 
-**What's in 1.1.1 (all since build 35):**
+**Contents (all since build 35):**
 - **Airport hero images** — tapping an airport shows real art. 34 JPGs (~13 MB):
   9 terrain/region archetypes + 25 marquee-city overrides (incl. Bozeman). See
   `AIRPORT_PHOTOS_SPEC.md`.
@@ -41,12 +35,13 @@ D2PVU8X5Q7` is pinned in 6 configs and would need updating.
 
 ## WHERE THINGS STAND
 
-- **Shipped & live.** 1.1 (build 35) is public. It cleared review after a two-round
-  Guideline **3.1.2** subscription saga (missing Terms-of-Use / EULA link — first in
-  METADATA, then the IN-APP links). Resolved by shipping the in-app paywall Terms +
-  Privacy `Link`s (build 35) + reviewer notes + a screen recording of the flow. The
-  full rejection→approval arc is in git history (the old `RELEASE_STATUS.md` was
-  retired at launch — see the git log around this date).
+- **Shipped & live.** 1.1.1 (build 36) is public — a clean review, no rejections.
+  The preceding 1.1 (build 35) debut cleared only after a two-round Guideline
+  **3.1.2** subscription saga (missing Terms-of-Use / EULA link — first in METADATA,
+  then the IN-APP links), resolved by shipping the in-app paywall Terms + Privacy
+  `Link`s + reviewer notes + a screen recording of the flow. **Those links are still
+  in the binary — don't remove them.** The full rejection→approval arc is in git
+  history (the old `RELEASE_STATUS.md` was retired at the 1.1 launch).
 - **Monetization is LIVE and wired** (was previously a local stub): RevenueCat +
   RevenueCatUI SPM packages are in the build, real API key, `Purchases.configure`
   runs, and `isPro` is driven by the live entitlement **`Airline Architect Pro`**
@@ -54,17 +49,15 @@ D2PVU8X5Q7` is pinned in 6 configs and would need updating.
   Store Monthly + Yearly products attached). Two tiers ($5.99/mo, $49.99/yr); free
   tier caps at **3 aircraft / 2 routes**. Not-yet-run: a real sandbox purchase to
   prove the unlock on device (config checks out; this is confirmation, not a worry).
-- **Build numbers:** repo is at **1.1.1 / build 36**, archived but not uploaded (see
-  the top section). ASC has 31–35 uploaded; **36 is the next new number** and is
-  already claimed by this archive — if 36 ever gets uploaded and superseded, go 37+.
+- **Build numbers:** repo is at **1.1.1 / build 36**, which is LIVE. ASC has 31–36
+  uploaded; **the next new build must be 37+** (numbers can't repeat). A further
+  point release is 1.1.2; a feature release, 1.2.
 
-## NEXT
+## NEXT — nothing is blocked; pick anywhere
 
-1. **Upload 1.1.1 (36) once signing is restored** — the top section has the full
-   procedure. This is the only thing actually blocked.
-2. **Post-launch watch (designer-side):** the sandbox purchase confirming Pro unlocks
-   end-to-end, and an eye on early reviews / RevenueCat Overview for the first days.
-3. **Top hands-on engineering item — the standing "never played end-to-end" concern.**
+1. **Post-launch watch (designer-side):** early reviews, RevenueCat Overview, and the
+   still-unrun sandbox purchase confirming Pro unlocks end-to-end on device.
+2. **Top hands-on engineering item — the standing "never played end-to-end" concern.**
    The soak harness (`aa-1.1.x/SoakMain.swift`, 8/8 seeds × 2 sim-years) closed the
    numeric / state-integrity half (cash invariant, crew, ownership scoping, save/load).
    The RESIDUAL is the UI / "does it feel right" half — the panel/dropdown-flicker
@@ -72,8 +65,8 @@ D2PVU8X5Q7` is pinned in 6 configs and would need updating.
    session with eyes. See CLAUDE.md's "Open" section. (Today's session is a live
    example of why: driving the app found the ASSIGN-TO-NEW-ROUTE no-op, which the
    headless suite had passed 41/41.)
-4. **Future features / 1.2:** the airport-hero + backdrop work above is the 1.2 art
-   pass so far. The big systems
+3. **Future features:** the airport-hero + backdrop work that shipped in 1.1.1 was the
+   art pass. The big systems
    (Go Public, Competitor Acquisition, Hubs & Clubs) are COMPLETE; their specs
    (`GO_PUBLIC_SPEC.md`, `ACQUISITIONS_SPEC.md`, `HUBS_AND_CLUBS_SPEC.md`) remain as
    reference.
