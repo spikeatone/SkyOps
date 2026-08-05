@@ -52,13 +52,84 @@ enum AirportArchetype: String, CaseIterable {
 }
 
 enum AirportPhoto {
-    /// Self-contained archetype heuristic (no sim) — leisure flag, hub size,
-    /// latitude, and carrier region. First pass; refine as desired.
+    /// Per-airport archetype CORRECTIONS — the highest-priority rule.
+    ///
+    /// The heuristic below works off latitude + carrier region, which genuinely
+    /// cannot tell a mountain city from prairie from coastline: it put Salt Lake
+    /// City (ringed by the Wasatch) on `plains`, Cusco at 11,000 ft on `plains`,
+    /// Honolulu on `plains`, and — worst — labelled Berlin/Hamburg/Warsaw `alpine`
+    /// while Zurich and Geneva fell through to `coastal`. Geography isn't derivable
+    /// from a bounding box, so anywhere the heuristic lands somewhere clearly WRONG
+    /// for a real place, it's pinned here. Curated from a full 385-airport audit
+    /// (`aa-1.1.x/archetype-audit`) — re-run it after adding airports.
+    ///
+    /// Only CLEAR errors are listed; the archetypes are deliberately generic, so
+    /// "close enough" is fine and marginal calls are left to the heuristic.
+    static let archetypeOverrides: [String: AirportArchetype] = [
+        // ── Mountains (were plains/coastal) ──────────────────────────────
+        "SLC": .alpine, "RNO": .alpine,                       // Wasatch · Sierra
+        "MTY": .alpine, "OAX": .alpine,                       // Sierra Madre
+        "CUZ": .alpine, "SCL": .alpine,                       // Andes
+        "KTM": .alpine, "PBH": .alpine, "ALA": .alpine,       // Himalaya · Tian Shan
+        "ZRH": .alpine, "GVA": .alpine,                       // the actual Alps
+        "SJJ": .alpine, "SOF": .alpine,                       // Dinarides · Vitosha
+        "ZQN": .alpine,                                       // Southern Alps, NZ
+
+        // ── Northern Europe is FLAT, not alpine (the inverted rule) ──────
+        "BER": .plains, "HAM": .plains, "DUS": .plains, "WAW": .plains,
+        "PRG": .plains, "BRU": .plains, "MSQ": .plains, "KBP": .plains,
+        "MAN": .plains, "STN": .plains, "BRS": .plains, "BTS": .plains,
+        // ── Inland central/eastern Europe (were "coastal") ───────────────
+        "BUD": .plains, "OTP": .plains, "BEG": .plains, "ZAG": .plains,
+
+        // ── Coastline (were plains) ─────────────────────────────────────
+        "SAN": .coastal, "OAK": .coastal, "SJC": .coastal, "SNA": .coastal,
+        "PVD": .coastal, "CHS": .coastal, "ORF": .coastal, "MSY": .coastal,
+        "TPA": .coastal, "RSW": .coastal,
+        "YVR": .coastal, "YYJ": .coastal, "YHZ": .coastal, "YSJ": .coastal,
+        "TIJ": .coastal, "PVR": .coastal, "SJD": .coastal, "MZT": .coastal,
+        "VER": .coastal,
+        "KIX": .coastal, "FUK": .coastal, "KOJ": .coastal, "KHI": .coastal,
+        "GIG": .coastal, "SDU": .coastal, "SSA": .coastal, "VIX": .coastal,
+        "FLN": .coastal, "LIM": .coastal,
+
+        // ── Real snow country (were plains) ──────────────────────────────
+        "BUF": .snowyNorth, "SYR": .snowyNorth, "ROC": .snowyNorth,
+        "BTV": .snowyNorth, "BGR": .snowyNorth, "PWM": .snowyNorth,
+        "YUL": .snowyNorth, "YOW": .snowyNorth, "YTZ": .snowyNorth,
+        "YQM": .snowyNorth, "YFC": .snowyNorth,
+        "CTS": .snowyNorth,                                   // Sapporo
+        "YQG": .plains,                                       // Windsor is mild + southern
+
+        // ── Islands (were plains/coastal) ───────────────────────────────
+        "HNL": .tropicalIsland, "GUM": .tropicalIsland,
+        "CZM": .tropicalIsland, "LPA": .tropicalIsland,       // Cozumel · Canaries
+
+        // ── Desert: the Gulf + Sahara were falling to "coastal" ─────────
+        "ABQ": .desert, "HMO": .desert, "CUL": .desert,
+        "AMM": .desert, "KWI": .desert, "DMM": .desert, "MED": .desert,
+        "MCT": .desert, "SHJ": .desert, "AUH": .desert, "BAH": .desert,
+        "IKA": .desert, "THR": .desert, "MHD": .desert,
+        "RAK": .desert, "AGA": .desert, "BSK": .desert,
+        "HRG": .desert, "SSH": .desert,
+        "ASB": .desert, "AMD": .desert,
+
+        // ── Grassland / tropics ─────────────────────────────────────────
+        "JNB": .savanna, "BFN": .savanna,                     // highveld
+        "BSB": .savanna,                                      // cerrado
+        "CGB": .tropical, "MID": .tropical, "DAC": .tropical,
+        "CNS": .tropical, "DRW": .tropical, "TSV": .tropical, "POM": .tropical,
+        "CHC": .plains,                                       // Canterbury Plains
+    ]
+
+    /// Self-contained archetype heuristic (no sim) — a per-airport correction
+    /// first, then leisure flag, hub size, latitude, and carrier region.
     static func archetype(for airport: Airport) -> AirportArchetype {
         let code = airport.code
         let absLat = abs(airport.lat)
         let pax = airport.info?.annualPassengers ?? 0
 
+        if let pinned = archetypeOverrides[code] { return pinned }
         if Airport.isLeisure(code) { return .tropicalIsland }
         if pax >= 30_000_000 { return .metro }
         if absLat >= 54 { return .snowyNorth }
@@ -75,7 +146,11 @@ enum AirportPhoto {
         case .caribbean, .centralAmerica: return .tropicalIsland
         case .southAmerica:               return absLat <= 12 ? .tropical : .plains
         case .oceania:                    return .coastal
-        case .europe:                     return absLat >= 48 ? .alpine : .coastal
+        // Northern Europe is the NORTH EUROPEAN PLAIN, not the Alps — the old
+        // `>= 48 -> alpine` had this exactly backwards (Berlin alpine, Zurich
+        // coastal). Alpine is now override-only, which is the honest default:
+        // a new European airport is far more likely flat than mountainous.
+        case .europe:                     return absLat >= 48 ? .plains : .coastal
         case .us, .canada, .mexico:       return absLat >= 47 ? .snowyNorth : .plains
         }
     }
