@@ -47,16 +47,28 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   runs, and `isPro` is driven by the live entitlement **`Airline Architect Pro`**
   (dashboard identifier confirmed to match `Store.entitlementID`, with the real App
   Store Monthly + Yearly products attached). Two tiers ($5.99/mo, $49.99/yr); free
-  tier caps at **3 aircraft / 2 routes**. Not-yet-run: a real sandbox purchase to
-  prove the unlock on device (config checks out; this is confirmation, not a worry).
+  tier caps at **3 aircraft / 2 routes**. **VERIFIED END-TO-END on device (3 Aug
+  2026)** via a TestFlight sandbox purchase: Apple's sheet completed, the paywall
+  dismissed ITSELF, and the fleet cap lifted — i.e. offering loaded → package
+  resolved → StoreKit purchase → RevenueCat validated → entitlement active →
+  `customerInfoStream` pushed it into the UI. Nothing about monetization is unproven
+  now. **Re-test recipe:** install the TestFlight build (orange dot next to the app
+  name = TestFlight; NO dot = the App Store copy, where a tap is a REAL charge), hit
+  a cap, tap Continue. `[Environment: Sandbox]` appears on APPLE'S sheet, never on
+  our own paywall. **GOTCHA: the fallback plan prices are identical to the real ones
+  ($49.99/$5.99), so correct prices do NOT prove the offering loaded** — the real
+  tell is whether tapping Continue reaches Apple's sheet or errors with "That plan
+  isn't available right now."
 - **Build numbers:** repo is at **1.1.1 / build 36**, which is LIVE. ASC has 31–36
   uploaded; **the next new build must be 37+** (numbers can't repeat). A further
   point release is 1.1.2; a feature release, 1.2.
 
 ## NEXT — nothing is blocked; pick anywhere
 
-1. **Post-launch watch (designer-side):** early reviews, RevenueCat Overview, and the
-   still-unrun sandbox purchase confirming Pro unlocks end-to-end on device.
+1. **Post-launch watch (designer-side):** early reviews and the RevenueCat Overview.
+   (The sandbox purchase is DONE — Pro unlocks end-to-end on device.) Optional
+   follow-up: delete + reinstall and tap **Restore Purchases**, the one purchase path
+   still unexercised.
 2. **Top hands-on engineering item — the standing "never played end-to-end" concern.**
    The soak harness (`aa-1.1.x/SoakMain.swift`, 8/8 seeds × 2 sim-years) closed the
    numeric / state-integrity half (cash invariant, crew, ownership scoping, save/load).
