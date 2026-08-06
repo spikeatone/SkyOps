@@ -57,10 +57,13 @@ struct PaywallView: View {
     private var secondary: Color { isDark ? Sky.lightBlue.opacity(0.8) : hex(0x64748B) }
     private var badgeGradient: [Color] { isDark ? [hex(0x4E67A1), hex(0x0C1A42)] : [hex(0x40588F), hex(0x101937)] }
 
+    // Sells the SYSTEMS past the cap, not "more of the same". A free player has
+    // now built one hub, so the pitch is the next rung: more hubs, the markets,
+    // and the endgame they can see coming but can't reach.
     private let features = [
-        ("point.3.connected.trianglepath.dotted", "Unlimited routes", "Build a nationwide network, not just a couple of legs."),
-        ("airplane", "Unlimited fleet", "Buy, lease, and fly as many aircraft as you can afford."),
-        ("chart.line.uptrend.xyaxis", "The full economy", "Every aircraft, airport, event, and market — no walls."),
+        ("building.2.fill", "Hubs & clubs", "Turn more airports into hubs and open lounges that keep flyers loyal."),
+        ("point.3.connected.trianglepath.dotted", "Unlimited routes & fleet", "Grow from a handful of legs to a global network, widebodies and all."),
+        ("chart.line.uptrend.xyaxis", "Take it all the way", "Go public, ride the markets, and buy out your rivals."),
     ]
 
     // Functional legal links required on the subscription screen by App Store
@@ -80,7 +83,7 @@ struct PaywallView: View {
                 .frame(width: 84, height: 84)
                 Text("Airline Architect Pro")
                     .font(.karla(24, .bold)).foregroundStyle(primary)
-                Text(reason ?? "Unlock unlimited routes and fleet — build your empire without limits.")
+                Text(reason ?? "You've built the start of something. Go Pro to grow it into a real airline.")
                     .font(.karla(14)).foregroundStyle(secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)

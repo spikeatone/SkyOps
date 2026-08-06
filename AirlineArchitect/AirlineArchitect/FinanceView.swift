@@ -389,7 +389,7 @@ struct FinanceView: View {
                         sectionTitle("FREE PLAN")
                         Text("\(sim.ownedCount)/\(Store.freeFleetCap) aircraft · \(sim.playerRoutes.count)/\(Store.freeRouteCap) routes")
                             .font(.karla(14, .semibold)).foregroundStyle(primary)
-                        Text("Upgrade for an unlimited fleet and network.")
+                        Text("Upgrade for more hubs, a global network, and the endgame.")
                             .font(.karla(11)).foregroundStyle(secondary)
                     }
                     Spacer(minLength: 0)

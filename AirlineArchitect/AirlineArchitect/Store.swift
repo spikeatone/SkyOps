@@ -56,17 +56,40 @@ final class Store {
 
     // MARK: - Free-tier caps (ignored entirely when isPro)
 
-    static let freeFleetCap = 3
-    static let freeRouteCap = 2
+    /// SIZED SO A FREE PLAYER CAN BUILD EXACTLY ONE HUB, then hits the wall.
+    ///
+    /// `Simulation.hubMinRoutes` is 5, so the old 2-route cap made hubs — and
+    /// therefore the network effect, the hub payback chart, meaningful
+    /// competition, Go Public and acquisitions — STRUCTURALLY invisible to a free
+    /// player. They were being asked to pay for depth they'd never seen, which is
+    /// the likeliest reason early conversion was poor. At 5 routes they reach the
+    /// hub, feel it start paying back, and the cap now bites when they want a
+    /// SECOND hub — the emotional peak rather than before the game opens up.
+    ///
+    /// The old 3/2 pairing was also internally inconsistent: with 2 routes a 3rd
+    /// aircraft could never be assigned, so buying it was a pure loss. Fleet is
+    /// now route-cap + 1 — enough for one spare, never a useless purchase.
+    ///
+    /// (The original 3/2 was calibrated when the cheapest aircraft was the $14M
+    /// ERJ135, i.e. "a $20M start affords ~1 jet, so CASH is the early gate."
+    /// The $2.5M turboprop tier invalidated that: 3 × B1900 = $7.5M, so both caps
+    /// were reachable within minutes of starting.)
+    static let freeFleetCap = 6
+    static let freeRouteCap = 5
 
     func canAcquireAircraft(_ sim: Simulation) -> Bool { isPro || sim.ownedCount < Self.freeFleetCap }
     func canOpenRoute(_ sim: Simulation) -> Bool { isPro || sim.playerRoutes.count < Self.freeRouteCap }
 
     enum Gate { case fleet, route }
+    /// Sells the DEPTH waiting past the cap, not the quantity. The old copy
+    /// ("Go Pro for an unlimited fleet") pitched more of what they already had;
+    /// these name the systems they can't reach yet.
     func capMessage(_ gate: Gate) -> String {
         switch gate {
-        case .fleet: return "The free preview is limited to \(Self.freeFleetCap) aircraft. Go Pro for an unlimited fleet."
-        case .route: return "The free preview is limited to \(Self.freeRouteCap) open routes. Go Pro to build a nationwide network."
+        case .fleet:
+            return "The free preview flies \(Self.freeFleetCap) aircraft. Go Pro for an unlimited fleet — widebodies, long-haul, and a network big enough to need them."
+        case .route:
+            return "The free preview opens \(Self.freeRouteCap) routes. Go Pro to expand the network, build more hubs, take the airline public, and buy out your rivals."
         }
     }
 
