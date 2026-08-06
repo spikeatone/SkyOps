@@ -174,7 +174,10 @@ final class Store {
         defer { purchasing = false }
         do {
             let (_, info, cancelled) = try await Purchases.shared.purchase(package: pkg)
-            if !cancelled { apply(info) }
+            if !cancelled {
+                apply(info)
+                if isPro { Telemetry.purchaseCompleted(plan: planID) }
+            }
         } catch {
             purchaseError = (error as NSError).localizedDescription
         }

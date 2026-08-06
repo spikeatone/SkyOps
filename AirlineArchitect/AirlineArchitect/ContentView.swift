@@ -125,6 +125,7 @@ struct ContentView: View {
                     sim.setHomeRegion(region)
                     sim.nameAirline(name, tailCode: tailCode)
                     sim.randomizeCalendarStart()   // new game starts on a random date + season
+                    Telemetry.gameStarted(region: region.rawValue)   // funnel denominator
                     if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
                     // Always run the walkthrough when NAMING a fresh airline (not
                     // when Continuing a save). No "seen once, ever" gate — that
@@ -173,7 +174,13 @@ struct ContentView: View {
                         .onTapGesture { showPaywall = false }
                     ScrollView {
                         PaywallView(store: store, reason: paywallReason,
-                                    onClose: { showPaywall = false })
+                                    onClose: {
+                                        showPaywall = false
+                                        // Closed without buying → the drop-off,
+                                        // paired with Paywall.shown. (A purchase
+                                        // reports separately from Store.)
+                                        if !store.isPro { Telemetry.paywallDismissed() }
+                                    })
                             .frame(maxWidth: 440)
                             .padding(16)
                     }
@@ -271,6 +278,14 @@ struct ContentView: View {
     private func upgrade(_ reason: String?) {
         paywallReason = reason
         showPaywall = true
+        // Which cap sent them here. Compared against the SAME generator the call
+        // sites use, so re-wording the copy can't silently break the attribution.
+        let gate = reason == store.capMessage(.fleet) ? "fleet"
+                 : reason == store.capMessage(.route) ? "route" : "other"
+        Telemetry.paywallShown(gate: gate,
+                               aircraft: sim.ownedCount,
+                               routes: sim.playerRoutes.count,
+                               simDay: Simulation.gameDay(at: sim.tick))
     }
 
     // MARK: - Save slots

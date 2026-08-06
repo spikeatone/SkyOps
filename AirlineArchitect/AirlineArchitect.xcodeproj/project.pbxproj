@@ -222,6 +222,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				AA10000000000000000000C1 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				EDC8F05D3024FDB9005AD1D8 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = ED35607830042BBE00DC0942 /* Products */;
@@ -617,6 +618,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 5.0.0;
+			};
+		};
+		EDC8F05D3024FDB9005AD1D8 /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.14.2;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

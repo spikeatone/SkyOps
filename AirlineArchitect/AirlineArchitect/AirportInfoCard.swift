@@ -140,6 +140,10 @@ struct AirportInfoCard: View {
                          enabled: sim.playerBalance >= sim.hubEstablishCost(airport)) {
                 Feedback.impact(.medium)
                 sim.establishHub(at: code)
+                // The "aha" the 5-route free cap was sized to expose — if few
+                // players ever emit this, the caps still sit below the hook.
+                Telemetry.hubEstablished(routeCount: sim.playerRoutes.count,
+                                         simDay: Simulation.gameDay(at: sim.tick))
             }
             Text("Then \(money(sim.hubMonthlyLabor(code)))/mo ground staff. Benefits suspend below \(Simulation.hubMinRoutes) routes.")
                 .font(.karla(11)).foregroundStyle(labelColor)

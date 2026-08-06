@@ -17,6 +17,10 @@ struct AirlineArchitectApp: App {
     init() {
         // Configure RevenueCat once, before anything reads Purchases.shared.
         Store.configure()
+        // Analytics (anonymous, no IDFA). TelemetryDeck asks to be initialized
+        // here in init() rather than in an .onAppear, so it's ready before the
+        // first window is built.
+        Telemetry.configure()
     }
     var body: some Scene {
         WindowGroup {

@@ -759,6 +759,8 @@ struct NetworkView: View {
         switch result {
         case .success:
             Feedback.routeOpened(airline: sim.playerAirlineName, announce: announce)
+            Telemetry.routeOpened(count: sim.playerRoutes.count,
+                                  simDay: Simulation.gameDay(at: sim.tick))
             if spare.pendingRouteId != nil {
                 showFlash("\(origin.code) ↔ \(dest.code) opened — \(spare.tail) moves over after it lands at \(spare.dest.code)")
             } else {
