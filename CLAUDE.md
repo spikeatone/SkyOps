@@ -2640,10 +2640,32 @@ where numbers are involved.
     confirmation). A **DEV "Pro (DEV)" toggle** sits under the eye-overlay dev
     row in NetworkView to flip `isPro` without a purchase (remove once RevenueCat
     drives it).
-  - **Cap reachability note**: on the $20M start a free player affords ~1
-    regional jet, so CASH is the early gate and the 3-aircraft/2-route caps are
-    the growth ceiling reached after playing — intended. Numbers are easily
-    tunable constants.
+  - **CAPS ARE NOW 6 AIRCRAFT / 5 ROUTES — sized so a free player can build
+    exactly ONE HUB (2026-08-06, after poor early conversion).** They were 3/2,
+    with this reasoning: *"on the $20M start a free player affords ~1 regional
+    jet, so CASH is the early gate and the caps are a growth ceiling reached
+    after playing."* **That reasoning went STALE when the turboprop tier landed:**
+    the cheapest aircraft dropped from the $14M ERJ135 to the **$2.5M Beechcraft
+    1900**, so 3 × B1900 = $7.5M and BOTH caps were reachable within minutes of
+    starting, with $12M still in the bank. Cash stopped being the early gate.
+    - **The bigger problem was WHERE the cap sat.** `hubMinRoutes` is 5, so a
+      2-route cap made hubs — and therefore the network effect, the hub payback
+      chart, meaningful competition, Go Public and Acquisitions — **structurally
+      invisible to a free player**. They were being asked to pay for depth they
+      had never experienced, which is the likeliest driver of weak conversion.
+      At 5 routes they reach one hub, feel it pay back, and the wall now lands
+      when they want a SECOND hub — the emotional peak instead of before it.
+    - **Fleet cap must stay ≥ route cap** (it's routeCap + 1, for one spare). The
+      old 3/2 was internally inconsistent: with 2 routes a 3rd aircraft could
+      never be assigned, so buying it was a pure loss — a punitive dead end.
+    - **RULE: any change to starting capital, aircraft prices, or `hubMinRoutes`
+      invalidates this calibration — re-run `aa-1.1.x/free-tier-probe`**, which
+      drives the REAL sim and asserts a free player can still buy a fleet, open
+      the routes, and afford a hub. Measured today: $20M buys 5 turboprops + 5
+      routes from SLC for $12.9M; SLC hits 5/5; the $3.1M hub is affordable.
+    - Cap/paywall COPY deliberately sells the systems past the wall (hubs, going
+      public, buying rivals), not "more of the same" — the old copy pitched an
+      "unlimited fleet" to someone who had never wanted a bigger one.
   - Verified: 9/9 headless (isPro bypasses both gates, predicate tracks the
     count, purchase stub flips isPro, cap messages present) + Simulator
     screenshots (paywall dark + light, Finance free-plan card with live usage).
