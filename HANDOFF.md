@@ -7,7 +7,7 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 5 August 2026. **1.1.2 (build 37) is LIVE on the App Store**
 (<https://apps.apple.com/us/app/airline-architect/id6790569697>). Clean tree on
-`main`, all pushed. **1.1.3 (build 38) is archived and ready to upload** — see below._
+`main`, all pushed. **1.1.3 (build 38) is UPLOADED and QUEUED FOR REVIEW** — see below._
 
 ## What shipped in 1.1.2 (build 37)
 
@@ -24,9 +24,12 @@ were dumping grounds (Honolulu, Cusco at 11,000 ft, Kathmandu, the whole Gulf).
 override-only. Audit harness: `aa-1.1.x/archetype-audit` — **re-run it after adding
 airports**.
 
-## 1.1.3 (build 38) — ARCHIVED, not yet uploaded
+## 1.1.3 (build 38) — UPLOADED, in review
 
-Repo is at **1.1.3 / build 38**; a signed archive is in the Organizer. Contents:
+Repo is at **1.1.3 / build 38**. Uploaded 6 Aug 2026 (VALID in ASC), version record
+created, **submitted for review**. Notable: the upload was done ENTIRELY FROM THE CLI
+with the ASC API key (export → `altool --validate-app` → `--upload-app`) — see
+CLAUDE.md's correction; the old "Claude can't upload" note was wrong. Contents:
 
 - **Free-tier caps raised 3 aircraft / 2 routes → 6 / 5**, sized so a free player can
   build exactly ONE hub (`hubMinRoutes` is 5) and hits the wall wanting a second.
@@ -97,9 +100,8 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   ($49.99/$5.99), so correct prices do NOT prove the offering loaded** — the real
   tell is whether tapping Continue reaches Apple's sheet or errors with "That plan
   isn't available right now."
-- **Build numbers:** **1.1.2 / build 37** is LIVE; the repo is at **1.1.3 / build 38**
-  (archived, not uploaded). ASC has 31–37 uploaded, so 38 is the next new number —
-  anything after it goes 39+.
+- **Build numbers:** **1.1.2 / build 37** is LIVE; **1.1.3 / build 38** is uploaded and
+  in review. ASC has 31–38 uploaded, so the next new build must be **39+**.
 
 ## NEXT — nothing is blocked; pick anywhere
 

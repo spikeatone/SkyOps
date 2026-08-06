@@ -3184,9 +3184,26 @@ both orientations) incl. the full open-a-route→acquire flow.
   the Ops incentive box), 25 (Marketplace category filter (box-style, per-class
   type counts) + Price/Seats/Range sort; My Fleet category + Owned/Leased +
   Seats/Range filters). Each
-  TestFlight cut = bump `CURRENT_PROJECT_VERSION` (6 configs) → archive →
-  Organizer → the DESIGNER does the credentialed Distribute/upload (Claude opens
-  the Organizer but can't upload).
+  TestFlight cut = bump `CURRENT_PROJECT_VERSION` (6 configs) → archive → upload.
+  - **CORRECTION (2026-08-06): the upload is SCRIPTABLE — the old "Claude opens
+    the Organizer but can't upload" note was wrong.** Build 38 was exported,
+    validated and uploaded end-to-end from the CLI using the Postmark Digital ASC
+    API key (staged at `~/.appstoreconnect/private_keys/AuthKey_25FXKWL48U.p8`,
+    key `25FXKWL48U`, issuer `55d522ad-1376-4704-a13d-3961750a4327` — the same
+    defaults `ASCTools/asc.py` uses). The chain, which is the one documented in
+    PostmarkOps' `ARCHITECT_FAMILY.md` §4:
+    ```
+    xcodebuild -exportArchive -exportOptionsPlist (method=app-store-connect,
+        teamID=D2PVU8X5Q7, signingStyle=automatic) -allowProvisioningUpdates
+        -authenticationKeyPath/-KeyID/-KeyIssuerID
+    xcrun altool --validate-app -f <ipa> -t ios --apiKey … --apiIssuer …
+    xcrun altool --upload-app   -f <ipa> -t ios --apiKey … --apiIssuer …
+    ```
+    ⚠️ `altool` can't take an explicit key PATH — the `.p8` must be staged in
+    `~/.appstoreconnect/private_keys/`. A build takes ~5 min to appear in
+    `asc.py builds <appId>` after "UPLOAD SUCCEEDED"; an empty list right after
+    uploading is normal, not a failure. Creating the VERSION record, attaching the
+    build, and submitting for review are still designer-side in ASC.
 - **A three-part RC QA pass was run and is CLEAN** (the designer owns the 4th
   part — on-device feel/fun playtest, which no automated check can cover):
   1. **Independent code review** of the iPad changes → safe to ship, no
