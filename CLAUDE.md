@@ -6,6 +6,26 @@ re-derive decisions that were already made and validated. If you're about to
 suggest something that contradicts a "Decided" item below, stop and check
 whether there's a reason logged here before overriding it.
 
+> ⭐ **THE FAMILY LAYER — `~/Architect Universe/PostmarkOps`
+> ([repo](https://github.com/spikeatone/PostmarkOps), private).** Postmark Digital's shared operating
+> layer, kept OUT of the app repos so it can't go stale in six places at once:
+> - **`ARCHITECT_FAMILY.md`** — what the family already built (an adoption matrix of which app has
+>   which system), the hard engineering rules, shared platform facts, the design language.
+> - **`WORKFLOW-ORCHESTRATION.md`** — the PMD Kitchen brigade playbook: stations, the pass, and what
+>   "tasted" means (harness + bite-test + cash invariant + *driven-verified*).
+> - **`ASCTools/`** — dependency-free App Store Connect client. **Don't rewrite it.**
+>
+> ⚠️ **Airline is the elder.** Most of what that family brief documents was *derived from this
+> codebase* — the tick engine, the cash invariant, tolerant decode, the decision-card queue, the
+> persistence model. It is also the ONE project not set up with [mise](https://github.com/emadd/mise-en-claude):
+> there is no `.mise/state.json` here and no vendored `/mise-cook` · `/mise-handoff` · `/mise-clean`
+> in `.claude/commands/`. Don't assume that scaffolding exists, and **don't run mise over this repo
+> without the designer's say-so** — this file is hand-built and load-bearing.
+>
+> Also shared: **ArchitectKit** (`~/Architect Universe/ArchitectKit`) — the Swift package holding the
+> game clock, extracted from *this* app's real-time clock. Airline predates it and still carries the
+> private original.
+
 This file has been substantially rewritten and updated multiple times
 across sessions — the fleet peaked at 32 types then settled to 30 (two
 real-world-driven removals, Sukhoi Superjet 100 and Bombardier CRJ700, per
