@@ -45,6 +45,18 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
 - **Fix: Finance ledger figures are compact (B/M/k)** so late-game totals stop
   churning at 25×; day/night terminator seam fixed.
 
+- **Analytics: TelemetryDeck is wired (1.1.3/38).** Six funnel signals answer the one
+  thing RevenueCat can't — whether players ever REACH the paywall. See
+  `Telemetry.swift`; the family-level standard + traps live in PostmarkOps'
+  `ARCHITECT_FAMILY.md`. Two things already handled, don't redo them:
+  **App Store App Privacy is declared** (Usage Data → Product Interaction, *Used for
+  Analytics*, **Data Not Linked to You** → no ATT prompt), and the SDK product IS
+  linked to the app target (it silently wasn't at first — every signal compiled to a
+  no-op). **That privacy declaration stays true only while signals carry NO
+  identifying data** — the no-PII rule in Telemetry.swift is what keeps it honest.
+  DEBUG builds tag signals as TEST MODE, so Simulator testing never pollutes the
+  production numbers — flip the dashboard's "Test Mode" chip to see them.
+
 ## WHERE THINGS STAND
 
 - **Shipped & live.** 1.1.2 (build 37) is public — as was 1.1.1 (36) before it, both
