@@ -7,7 +7,7 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 5 August 2026. **1.1.2 (build 37) is LIVE on the App Store**
 (<https://apps.apple.com/us/app/airline-architect/id6790569697>). Clean tree on
-`main`, all pushed; **nothing in flight, nothing blocked**._
+`main`, all pushed. **1.1.3 (build 38) is archived and ready to upload** — see below._
 
 ## What shipped in 1.1.2 (build 37)
 
@@ -23,6 +23,31 @@ were dumping grounds (Honolulu, Cusco at 11,000 ft, Kathmandu, the whole Gulf).
 `AirportPhoto.archetypeOverrides` (108 entries) now pins the clear errors; alpine is
 override-only. Audit harness: `aa-1.1.x/archetype-audit` — **re-run it after adding
 airports**.
+
+## 1.1.3 (build 38) — ARCHIVED, not yet uploaded
+
+Repo is at **1.1.3 / build 38**; a signed archive is in the Organizer. Contents:
+
+- **Free-tier caps raised 3 aircraft / 2 routes → 6 / 5**, sized so a free player can
+  build exactly ONE hub (`hubMinRoutes` is 5) and hits the wall wanting a second.
+  The old caps made hubs — and every system past them — structurally invisible, which
+  is the likeliest cause of weak conversion. Paywall/cap copy now sells that depth
+  rather than "more of the same". Re-verify with `aa-1.1.x/free-tier-probe` after ANY
+  change to starting capital, aircraft prices, or `hubMinRoutes`.
+- **Analytics: TelemetryDeck is wired (1.1.3/38).** Six funnel signals answer the one
+  thing RevenueCat can't — whether players ever REACH the paywall. See
+  `Telemetry.swift`; the family-level standard + traps live in PostmarkOps'
+  `ARCHITECT_FAMILY.md`. Two things already handled, don't redo them:
+  **App Store App Privacy is declared** (Usage Data → Product Interaction, *Used for
+  Analytics*, **Data Not Linked to You** → no ATT prompt), and the SDK product IS
+  linked to the app target (it silently wasn't at first — every signal compiled to a
+  no-op). **That privacy declaration stays true only while signals carry NO
+  identifying data** — the no-PII rule in Telemetry.swift is what keeps it honest.
+  DEBUG builds tag signals as TEST MODE, so Simulator testing never pollutes the
+  production numbers — flip the dashboard's "Test Mode" chip to see them (an empty
+  Overview with Test Mode OFF is the expected false negative, not a broken pipeline).
+  **CONFIRMED RECEIVING (6 Aug 2026):** a Simulator run landed 1 user / 3 events,
+  SwiftSDK 2.14.2, 0 errors. Real player data starts once 38 ships.
 
 ## What shipped in 1.1.1 (build 36)
 
@@ -45,18 +70,6 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
 - **Fix: Finance ledger figures are compact (B/M/k)** so late-game totals stop
   churning at 25×; day/night terminator seam fixed.
 
-- **Analytics: TelemetryDeck is wired (1.1.3/38).** Six funnel signals answer the one
-  thing RevenueCat can't — whether players ever REACH the paywall. See
-  `Telemetry.swift`; the family-level standard + traps live in PostmarkOps'
-  `ARCHITECT_FAMILY.md`. Two things already handled, don't redo them:
-  **App Store App Privacy is declared** (Usage Data → Product Interaction, *Used for
-  Analytics*, **Data Not Linked to You** → no ATT prompt), and the SDK product IS
-  linked to the app target (it silently wasn't at first — every signal compiled to a
-  no-op). **That privacy declaration stays true only while signals carry NO
-  identifying data** — the no-PII rule in Telemetry.swift is what keeps it honest.
-  DEBUG builds tag signals as TEST MODE, so Simulator testing never pollutes the
-  production numbers — flip the dashboard's "Test Mode" chip to see them.
-
 ## WHERE THINGS STAND
 
 - **Shipped & live.** 1.1.2 (build 37) is public — as was 1.1.1 (36) before it, both
@@ -72,7 +85,7 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   runs, and `isPro` is driven by the live entitlement **`Airline Architect Pro`**
   (dashboard identifier confirmed to match `Store.entitlementID`, with the real App
   Store Monthly + Yearly products attached). Two tiers ($5.99/mo, $49.99/yr); free
-  tier caps at **3 aircraft / 2 routes**. **VERIFIED END-TO-END on device (3 Aug
+  tier caps at **6 aircraft / 5 routes** (raised in 1.1.3 — see above). **VERIFIED END-TO-END on device (3 Aug
   2026)** via a TestFlight sandbox purchase: Apple's sheet completed, the paywall
   dismissed ITSELF, and the fleet cap lifted — i.e. offering loaded → package
   resolved → StoreKit purchase → RevenueCat validated → entitlement active →
@@ -84,9 +97,9 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   ($49.99/$5.99), so correct prices do NOT prove the offering loaded** — the real
   tell is whether tapping Continue reaches Apple's sheet or errors with "That plan
   isn't available right now."
-- **Build numbers:** repo is at **1.1.2 / build 37**, which is LIVE. ASC has 31–37
-  uploaded; **the next new build must be 38+**. A further point release is 1.1.3; a
-  feature release, 1.2.
+- **Build numbers:** **1.1.2 / build 37** is LIVE; the repo is at **1.1.3 / build 38**
+  (archived, not uploaded). ASC has 31–37 uploaded, so 38 is the next new number —
+  anything after it goes 39+.
 
 ## NEXT — nothing is blocked; pick anywhere
 
