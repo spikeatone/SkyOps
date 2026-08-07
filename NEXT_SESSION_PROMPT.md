@@ -7,7 +7,7 @@ cold, with no memory of this conversation.
 **Read first:** `HANDOFF.md` (one-read orientation) → `CLAUDE.md` (the persistent
 design/technical record; it wins on any disagreement).
 
-_Written 6 August 2026, at the end of the session that shipped 1.1.2, queued 1.1.3,
+_Written 6 August 2026, at the end of the session that shipped 1.1.1, 1.1.2 and 1.1.3,
 and rolled TelemetryDeck across the family._
 
 ---
@@ -17,16 +17,16 @@ and rolled TelemetryDeck across the family._
 > You're picking up **Airline Architect** (repo dir is `SkyOps`; the app was renamed).
 > Read `HANDOFF.md` first, then `CLAUDE.md`. Tree is clean on `main`, nothing blocked.
 >
-> **State:** 1.1.2 (build 37) is LIVE. **1.1.3 (build 38) was uploaded and queued for
-> review on 6 Aug** — check whether it's through. It carries two things worth watching
-> together: the free-tier caps went **3 aircraft/2 routes → 6/5**, and **TelemetryDeck
-> funnel analytics** shipped. Next new build must be **39+**.
+> **State:** **1.1.3 (build 38) went LIVE on 6 Aug 2026** — the third release that day,
+> all clean reviews. It carries the two things to watch together: the free-tier caps went
+> **3 aircraft/2 routes → 6/5**, and **TelemetryDeck funnel analytics** shipped. So real
+> player data has been accumulating since then. Next new build must be **39+**.
 >
 > **Priority 1 — answer the conversion question with the data now arriving.**
 > The caps were raised because `hubMinRoutes` is 5, so the old 2-route cap made hubs
 > (and everything past them) structurally invisible — players were asked to pay for
 > depth they'd never seen. Telemetry was added to find out whether that diagnosis was
-> right. Once 1.1.3 has been live ~a week, look at **`Paywall.shown` ÷ `Game.started`**
+> right. 1.1.3 went live 6 Aug — once it has ~a week of real data, look at **`Paywall.shown` ÷ `Game.started`**
 > in TelemetryDeck (production view = **Test Mode OFF**; Debug/Simulator signals are
 > quarantined in test mode):
 > - **High ratio, few purchases** → they reach the wall and decline. Pricing/value

@@ -5,9 +5,10 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 6 August 2026. **1.1.2 (build 37) is LIVE on the App Store**
-(<https://apps.apple.com/us/app/airline-architect/id6790569697>). Clean tree on
-`main`, all pushed. **1.1.3 (build 38) is UPLOADED and QUEUED FOR REVIEW** — see below._
+_Snapshot: 6 August 2026. **1.1.3 (build 38) is LIVE on the App Store**
+(<https://apps.apple.com/us/app/airline-architect/id6790569697>) — the third release
+in a day (1.1.1 → 1.1.2 → 1.1.3), all clean reviews. Clean tree on `main`, all pushed;
+**nothing in flight, nothing blocked**._
 
 ## What shipped in 1.1.2 (build 37)
 
@@ -24,10 +25,10 @@ were dumping grounds (Honolulu, Cusco at 11,000 ft, Kathmandu, the whole Gulf).
 override-only. Audit harness: `aa-1.1.x/archetype-audit` — **re-run it after adding
 airports**.
 
-## 1.1.3 (build 38) — UPLOADED, in review
+## What shipped in 1.1.3 (build 38) — LIVE
 
-Repo is at **1.1.3 / build 38**. Uploaded 6 Aug 2026 (VALID in ASC), version record
-created, **submitted for review**. Notable: the upload was done ENTIRELY FROM THE CLI
+Repo is at **1.1.3 / build 38**, which is LIVE — **the next new build must be 39+**.
+Notable: the upload was done ENTIRELY FROM THE CLI
 with the ASC API key (export → `altool --validate-app` → `--upload-app`) — see
 CLAUDE.md's correction; the old "Claude can't upload" note was wrong. Contents:
 
@@ -50,7 +51,8 @@ CLAUDE.md's correction; the old "Claude can't upload" note was wrong. Contents:
   production numbers — flip the dashboard's "Test Mode" chip to see them (an empty
   Overview with Test Mode OFF is the expected false negative, not a broken pipeline).
   **CONFIRMED RECEIVING (6 Aug 2026):** a Simulator run landed 1 user / 3 events,
-  SwiftSDK 2.14.2, 0 errors. Real player data starts once 38 ships.
+  SwiftSDK 2.14.2, 0 errors. **38 is live, so REAL PLAYER DATA is arriving now** —
+  read it in the production view (Test Mode OFF).
 
 ## What shipped in 1.1.1 (build 36)
 
@@ -75,8 +77,8 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
 
 ## WHERE THINGS STAND
 
-- **Shipped & live.** 1.1.2 (build 37) is public — as was 1.1.1 (36) before it, both
-  clean reviews with no rejections.
+- **Shipped & live.** 1.1.3 (build 38) is public — as were 1.1.1 (36) and 1.1.2 (37)
+  before it, all three clean reviews with no rejections.
   The preceding 1.1 (build 35) debut cleared only after a two-round Guideline
   **3.1.2** subscription saga (missing Terms-of-Use / EULA link — first in METADATA,
   then the IN-APP links), resolved by shipping the in-app paywall Terms + Privacy
@@ -100,8 +102,8 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   ($49.99/$5.99), so correct prices do NOT prove the offering loaded** — the real
   tell is whether tapping Continue reaches Apple's sheet or errors with "That plan
   isn't available right now."
-- **Build numbers:** **1.1.2 / build 37** is LIVE; **1.1.3 / build 38** is uploaded and
-  in review. ASC has 31–38 uploaded, so the next new build must be **39+**.
+- **Build numbers:** **1.1.3 / build 38** is LIVE. ASC has 31–38 uploaded, so the next
+  new build must be **39+**. A further point release is 1.1.4; a feature release, 1.2.
 
 ## NEXT — see `NEXT_SESSION_PROMPT.md`
 
