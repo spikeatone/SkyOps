@@ -18,7 +18,15 @@ as the work, not "later."
 
 ## 1.1.x (maintenance / polish line)
 
-### Accumulating for the NEXT build (build 34 — 1.1 (33) is in App Store review + TestFlight)
+### Shipped since (see HANDOFF.md for the current release state)
+
+**This header was stale for a long stretch** — it said "build 34" while 35→38 shipped.
+Releases are now tracked in `HANDOFF.md`, not here: **1.1 (35) → 1.1.1 (36) → 1.1.2 (37)
+are LIVE; 1.1.3 (38) is in review.** What to do next lives in `NEXT_SESSION_PROMPT.md`.
+Keep this file for in-flight TASK tracking only, and update it in the same session as
+the work — the note at the top of this file exists because it drifted badly once before.
+
+### (historical) Accumulated for build 34
 - [x] GAME CLOCK on the speed bar (designer request): a slim "Day N · Mon D, YYYY ·
       HH:MM" line above the ¼×–25× pills (Network tab). Game Day is 1-INDEXED (Day 1
       at start); Game Date carries a year (start 2026) and is derived from the sim's

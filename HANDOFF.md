@@ -5,15 +5,15 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 5 August 2026. **1.1.2 (build 37) is LIVE on the App Store**
+_Snapshot: 6 August 2026. **1.1.2 (build 37) is LIVE on the App Store**
 (<https://apps.apple.com/us/app/airline-architect/id6790569697>). Clean tree on
 `main`, all pushed. **1.1.3 (build 38) is UPLOADED and QUEUED FOR REVIEW** — see below._
 
 ## What shipped in 1.1.2 (build 37)
 
-The repo is at **`MARKETING_VERSION = 1.1.2`, `CURRENT_PROJECT_VERSION = 37`**, which
-is LIVE — **the next new build must be 38+** (numbers can't repeat). Signing is
-healthy (Postmark Digital LLC, team `D2PVU8X5Q7`).
+**1.1.2 / build 37 is what's LIVE** (the repo has since moved to 1.1.3 / 38 — see the
+next section for the current build-number rule). Signing is healthy (Postmark Digital
+LLC, team `D2PVU8X5Q7`).
 
 **The one change:** a **curated airport-archetype override table**. The
 designer spotted SLC (ringed by the Wasatch) showing `plains`; a full 385-airport
@@ -103,33 +103,23 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
 - **Build numbers:** **1.1.2 / build 37** is LIVE; **1.1.3 / build 38** is uploaded and
   in review. ASC has 31–38 uploaded, so the next new build must be **39+**.
 
-## NEXT — nothing is blocked; pick anywhere
+## NEXT — see `NEXT_SESSION_PROMPT.md`
 
-1. **Post-launch watch (designer-side):** early reviews and the RevenueCat Overview.
-   Monetization and persistence are both PROVEN on device now (3 Aug 2026):
-   - **Sandbox purchase** → Pro unlocked end-to-end (paywall self-dismissed, cap lifted).
-   - **Delete + reinstall** → the app came back **already Pro without tapping Restore**
-     (RevenueCat syncs StoreKit 2 `Transaction.currentEntitlements` on launch), AND
-     **the saved game returned from iCloud KVS** — a container wipe proves the cloud
-     round-trip. See CLAUDE.md's iCloud section.
-   - Remaining nits, both low priority: the explicit **Restore Purchases** button is
-     still unexercised (it's a fallback now that auto-restore works — and it's
-     unreachable while Pro, since the paywall has no entry point then; to test it,
-     let the sandbox sub lapse or clear the tester's purchase history in ASC), and
-     **true cross-device** iCloud sync (two devices, one Apple ID).
-2. **Top hands-on engineering item — the standing "never played end-to-end" concern.**
-   The soak harness (`aa-1.1.x/SoakMain.swift`, 8/8 seeds × 2 sim-years) closed the
-   numeric / state-integrity half (cash invariant, crew, ownership scoping, save/load).
-   The RESIDUAL is the UI / "does it feel right" half — the panel/dropdown-flicker
-   class a headless harness can't see — which still needs a real, sustained Simulator
-   session with eyes. See CLAUDE.md's "Open" section. (Today's session is a live
-   example of why: driving the app found the ASSIGN-TO-NEW-ROUTE no-op, which the
-   headless suite had passed 41/41.)
-3. **Future features:** the airport-hero + backdrop work that shipped in 1.1.1 was the
-   art pass. The big systems
-   (Go Public, Competitor Acquisition, Hubs & Clubs) are COMPLETE; their specs
-   (`GO_PUBLIC_SPEC.md`, `ACQUISITIONS_SPEC.md`, `HUBS_AND_CLUBS_SPEC.md`) remain as
-   reference.
+The prioritised brief for the next session lives in **`NEXT_SESSION_PROMPT.md`** —
+a paste-ready block written to be understood cold. In short:
+
+1. **Answer the conversion question with the telemetry now arriving.** 1.1.3 raised
+   the free caps (3/2 → 6/5) so players can reach a hub, and shipped the funnel that
+   says whether that worked. The ratio to look at is **`Paywall.shown` ÷
+   `Game.started`** (production view = Test Mode OFF), plus what share reach
+   `Hub.established`. Give it ~a week of live data first.
+2. **The standing "never played end-to-end" concern** — the UI/"does it feel right"
+   half no harness can reach. It found the ASSIGN-TO-NEW-ROUTE no-op and the
+   SLC-artwork bug in the last two sessions; it keeps paying.
+3. **Resort's telemetry pointer**, once its vertical-slice pass lands (it was
+   deliberately skipped mid-flight). Verify the target linkage, don't trust a callback.
+
+Low priority: the explicit Restore Purchases button, and true cross-device iCloud sync.
 
 ## Standing conventions (unchanged, still bite)
 
@@ -176,6 +166,7 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
 
 ## Orientation for a cold reader
 
+0. **`NEXT_SESSION_PROMPT.md`** — the paste-ready brief for what to do next.
 1. `CLAUDE.md` — the persistent design/technical context. Long because it's thorough.
 2. `APP_STORE_DESCRIPTION.md`, then the big feature specs (`GO_PUBLIC_SPEC.md`,
    `ACQUISITIONS_SPEC.md`, `HUBS_AND_CLUBS_SPEC.md`) — all COMPLETE.
