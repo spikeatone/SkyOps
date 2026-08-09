@@ -10,6 +10,7 @@
 		AA10000000000000000000B1 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = AA10000000000000000000D1 /* RevenueCat */; };
 		AA10000000000000000000B2 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = AA10000000000000000000D2 /* RevenueCatUI */; };
 		EDAAE2013005EDB9004E03F2 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = EDAAE2003005EDB9004E03F2 /* AppIcon.icon */; };
+		EDC8F18A30250378005AD1D8 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = AA10000000000000000000D3 /* TelemetryDeck */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +73,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EDC8F18A30250378005AD1D8 /* TelemetryDeck in Frameworks */,
 				AA10000000000000000000B1 /* RevenueCat in Frameworks */,
 				AA10000000000000000000B2 /* RevenueCatUI in Frameworks */,
 			);

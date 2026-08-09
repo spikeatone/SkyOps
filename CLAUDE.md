@@ -4444,7 +4444,37 @@ Two details are load-bearing:
   Motion collapses it to a static network + calm logo fade. Shown once per
   process launch (ContentView `showSplash`, zIndex 10 over the load menu /
   naming screen). Verified via timed simulator frame captures.
-- **SUPERSEDED (2026-08-03) — the cold-launch backdrop is now an AVIATION PENCIL
+- **SUPERSEDED AGAIN (2026-08-09) — the cold-launch backdrop is now a full-bleed
+  AERIAL RUNWAY scene, and the blend-mode approach below is GONE.** The designer
+  supplied FOUR pre-rendered assets — one per (idiom × theme): iPhone dark (a
+  charcoal photo of a runway with a queue of airliners taxiing to line up) / iPhone
+  light (the same scene as a graphite sketch on off-white) / iPad dark / iPad light
+  (the same recomposed for 4:3). Figma `Airline-Architect-Production` nodes 122:4882
+  (iPhone dark) / 122:4883 (iPhone light) / 122:4881 (iPad dark) / 122:4887 (iPad
+  light). Files: `Resources/Brand/LaunchBackdrop{Dark,Light}.png` (phone) +
+  `LaunchBackdropPad{Dark,Light}.png` (iPad); the old single `LaunchBackdrop.png` /
+  `LaunchBackdropPad.png` were DELETED.
+  - **No more blend mode.** Each asset is already theme-correct, so `ArchitectArt.art(regular:dark:)`
+    picks the right one and it's drawn DIRECTLY (the `BackdropBlend` `.multiply`/`.colorInvert().screen`
+    modifier is removed). `ArchitectBackdrop`'s public API (`opacity`, `forcedScheme`) is unchanged, so
+    callers (SplashView/AirlineNamingView/SaveSlotsView, all via ContentView's `coldLaunchBackdrop`) are
+    untouched.
+  - **ALWAYS `.fill` (full-bleed), NOT `.fit` — and the 0.98 inset is GONE.** These are opaque full-frame
+    photos, so ANY margin (the old iPad `.fit` letterbox in landscape, or the 0.98 inset) exposed the
+    image's rectangular EDGE against the page background — a visible seam the designer flagged ("I can see
+    the image edges"). `.fill` covers every pixel so there's no edge. iPad PORTRAIT is an exact fit (4:3
+    art on 4:3 canvas, no crop); iPad LANDSCAPE center-crops the diagonal runway scene (keeps the focal
+    runway + queue) — verified edge-free in both themes.
+  - **Opacity: dark 0.25, light 0.42** (`darkOpacity`/`lightOpacity`). Light is HIGHER on purpose — the
+    graphite-on-white sketch reads fainter at a given opacity than the dark photo-on-navy, so it needs
+    more to land with equal presence (designer: "bump up light, it's too faint"). Both idioms share the
+    single `lightOpacity` via `coldLaunchBackdrop = isDark ? darkOpacity : lightOpacity`, so iPad-light ==
+    iPhone-light by construction (designer: "white iPad opacity needs to match white iPhone").
+  - Verified live on iPhone (dark+light) and iPad Pro 13" (portrait + LANDSCAPE, both themes) — all six
+    full-bleed with no visible edges. The `-backdropTest` harness still works (it uses the same
+    `ArchitectBackdrop`). Everything below in this bullet describes the OLD pencil-sketch blend approach —
+    kept for history but NO LONGER how it works.
+- **(HISTORICAL) 2026-08-03 — the cold-launch backdrop was an AVIATION PENCIL
   SKETCH, not the drafting-tools motif.** The designer replaced the tools still
   life with an aviation sketch (airliner + control tower + pilot's cap) on the
   naming/splash/load-menu screens (new Figma `1:2` light / `1:456` dark).
