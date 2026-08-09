@@ -5,10 +5,9 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 6 August 2026. **1.1.3 (build 38) is LIVE on the App Store**
-(<https://apps.apple.com/us/app/airline-architect/id6790569697>) — the third release
-in a day (1.1.1 → 1.1.2 → 1.1.3), all clean reviews. Clean tree on `main`, all pushed;
-**nothing in flight, nothing blocked**._
+_Snapshot: 9 August 2026. **1.1.3 (build 38) is LIVE**; **1.1.4 (build 39) is SUBMITTED
+FOR APPLE REVIEW** (version record created, build attached, in review). Clean tree on
+`main`, all pushed. App: <https://apps.apple.com/us/app/airline-architect/id6790569697>._
 
 ## What shipped in 1.1.2 (build 37)
 
@@ -24,6 +23,28 @@ were dumping grounds (Honolulu, Cusco at 11,000 ft, Kathmandu, the whole Gulf).
 `AirportPhoto.archetypeOverrides` (108 entries) now pins the clear errors; alpine is
 override-only. Audit harness: `aa-1.1.x/archetype-audit` — **re-run it after adding
 airports**.
+
+## 1.1.4 (build 39) — SUBMITTED FOR REVIEW (9 Aug)
+
+Repo at **1.1.4 / build 39**, uploaded + submitted 9 Aug. Version record created,
+build 39 attached, in Apple review. Next new build must be **40+**. Contents:
+
+- **Free 3-day trial on both plans (Monthly default) — the paywall UI.** "3 days free,
+  then $X" line + "Start Free Trial" CTA, eligibility-gated (once per subscription
+  group per Apple ID). The ASC introductory offers are ALREADY configured on both
+  Monthly + Yearly (Free / 3 Days / all 175 territories, end 2026-12-31) — so once 39
+  is live the trial appears for eligible new users. Decision + mechanics in
+  `PRICING_EXPERIMENT_SPEC.md`. **Shipping to everyone (trial in the default offering),
+  NOT A/B'd** — volume too low; A/B stays in reserve.
+- **New cold-launch backdrop art** — full-bleed aerial-runway scene, 4 assets
+  (iPhone/iPad × dark/light), `.fill` everywhere (no seams), light opacity 0.42 /
+  dark 0.25. Superseded the pencil-sketch blend approach. See CLAUDE.md.
+- **Two paywall fixes (from the pricing-experiment prep):** no stale-price flash
+  (`Store.pricesAreLive` gates the price), and the savings badge is computed from real
+  prices (`savingsNote`) instead of a hardcoded "Save 30%".
+- **ASC Promotional Text updated** (9 Aug, new-user hook): "Start with one jet and
+  build an airline that spans the globe. 385 real airports…". Promo text updates
+  with no review — a free lever to re-tune anytime.
 
 ## What shipped in 1.1.3 (build 38) — LIVE
 
@@ -102,8 +123,8 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   ($49.99/$5.99), so correct prices do NOT prove the offering loaded** — the real
   tell is whether tapping Continue reaches Apple's sheet or errors with "That plan
   isn't available right now."
-- **Build numbers:** **1.1.3 / build 38** is LIVE. ASC has 31–38 uploaded, so the next
-  new build must be **39+**. A further point release is 1.1.4; a feature release, 1.2.
+- **Build numbers:** **1.1.3 / build 38** is LIVE; **1.1.4 / build 39** is submitted for
+  review. ASC has 31–39 uploaded, so the next new build must be **40+**.
 
 ## NEXT — see `NEXT_SESSION_PROMPT.md`
 
