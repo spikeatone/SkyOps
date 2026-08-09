@@ -61,11 +61,46 @@ conversion lift merely to break even. Judge on revenue, never conversion rate (�
 
 ---
 
-## 3. Experiment B — free trial (probably the better first test)
+## 3. Experiment B — free trial ✅ CHOSEN as the first test (3-day)
 
+**Decision (designer, 9 Aug 2026): a 3-day Apple free trial is the first experiment.**
 At low volume, effect size decides how long you wait. A trial typically moves conversion
-far more than a $1 price change, so it reaches significance sooner. **If only one
-experiment gets run, this is the higher-information one.**
+far more than a $1 price change, so it reaches significance sooner — the higher-information
+test to spend limited traffic on.
+
+### 3z. How the Apple free trial actually works (confirmed)
+
+1. User picks the plan → **Face ID / passcode auth** → the subscription is authorized and
+   the trial starts. **Payment method captured up front** — this is the whole point.
+2. **3 days of full Pro, $0 charged.**
+3. Apple sends a **reminder** before the trial ends (Apple requires it).
+4. At day 3 it **auto-converts to the paid subscription** unless the user cancelled.
+5. Cancel any time in the 3 days → access runs to day 3, then stops, **never charged**.
+
+⚠️ **ELIGIBILITY — this is a NEW-CUSTOMER lever, not a win-back.** An introductory offer is
+**once per subscription group per Apple ID**: anyone who already subscribed or trialed in
+this group won't be offered it. So it only affects whether *fresh* users convert; don't
+expect it to move the existing/lapsed base, and read the funnel with that population in mind.
+
+### 3y. Two ways to ship the trial — this is the real decision, not "trial y/n"
+
+"Add a trial" and "A/B test a trial" use the SAME config (a trial-enabled product in an
+Offering). What differs is WHICH offering it lands in:
+
+| | **Ship to everyone** | **A/B test (Experiments)** |
+|---|---|---|
+| Config | Trial in the **`default`** offering | Trial in a **second** offering; Experiments serves 50% |
+| Who sees it | Every eligible new user | Half trial, half current paywall |
+| Learn | A before/after TREND (confounded by season, other changes) | Clean lift vs a concurrent control |
+| Backfire risk | Everyone exposed | Only half exposed |
+
+**DECISION at current volume: SHIP TO EVERYONE (trial in `default`).** An A/B needs the
+~1k-views/week from §0 to conclude; at a few subs that clean experiment isn't available
+anyway, so the practical move is to turn the lever on, watch the funnel trend, and treat it
+as **directional, not conclusive**. Keep the A/B path in reserve for when traffic earns it —
+it's the identical config, just a different offering. The rest of this doc's "experiment"
+framing (arms, decision rules) applies IF/WHEN you switch to the A/B path; for a
+ship-to-everyone rollout, the read is simply "did new-user conversion trend up after."
 
 ### 3a. Two different things, easy to conflate
 
@@ -125,6 +160,23 @@ Both would have polluted results; both are fixed in `Store.swift` / `PaywallView
 2. **Hardcoded "Save 30%".** The badge was a literal in both the fallback and the
    RevenueCat-derived path. At $4.99/$39.99 the true saving is **33%**, so the treatment
    arm would have shipped a false claim. Now computed from the two packages' real prices.
+
+### 5a. ⚠️ STILL TO BUILD for the trial (a price swap needs nothing; a trial does)
+
+The two fixes above make a **price** experiment fully code-ready — swap the offering, done.
+A **trial** needs one more thing the code doesn't do yet: **the paywall must ADVERTISE the
+trial**, or the whole lever is wasted.
+
+- Today `planRow` shows only `plan.price` ("$49.99 per year"). With a trial attached, Apple's
+  purchase sheet *does* surface "3 days free, then $49.99/year", but **our paywall wouldn't** —
+  so a user never sees a reason to tap. The point of a trial is the "**Start 3 days free**"
+  pitch on the paywall itself.
+- Work: read the package's `introductoryDiscount` (RevenueCat exposes it on `StoreProduct`),
+  show a "3 days free, then $X" line on the plan row, and change the CTA from "Continue" to
+  "**Start Free Trial**". Small, but it's real UI + a new build — it is NOT the zero-code path
+  a price swap is.
+- This is why the price experiment is "config only" and the trial is "config + a small paywall
+  change." Both are cheap; only the trial touches the binary.
 
 ---
 
