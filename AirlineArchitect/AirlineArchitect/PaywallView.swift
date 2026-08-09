@@ -192,7 +192,10 @@ struct PaywallView: View {
                     // competes with the title for width (no wrap on any device).
                     HStack(spacing: 6) {
                         Text(plan.cadence).font(.karla(12)).foregroundStyle(secondary)
-                        if let note = plan.note {
+                        // Only show the savings pill once REAL prices are in —
+                        // never a hardcoded one (a price experiment changes the
+                        // true discount). See PRICING_EXPERIMENT_SPEC.md.
+                        if store.pricesAreLive, let note = plan.note {
                             Text(note).font(.karla(10, .bold)).foregroundStyle(.white)
                                 .lineLimit(1).fixedSize()          // never wrap the pill
                                 .padding(.horizontal, 6).padding(.vertical, 2)
@@ -201,7 +204,14 @@ struct PaywallView: View {
                     }
                 }
                 Spacer()
-                Text(plan.price).font(.karla(18, .heavy)).foregroundStyle(primary)
+                // A neutral placeholder until the live offering loads, so a
+                // treatment cohort never briefly sees a stale/control price.
+                if store.pricesAreLive {
+                    Text(plan.price).font(.karla(18, .heavy)).foregroundStyle(primary)
+                } else {
+                    Text("—").font(.karla(18, .heavy)).foregroundStyle(secondary.opacity(0.5))
+                        .redacted(reason: .placeholder)
+                }
             }
             .padding(14)
             .background(panelBG)

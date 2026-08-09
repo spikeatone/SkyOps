@@ -104,11 +104,37 @@ final class Store {
         let cadence: String
         let note: String?
     }
+    // NOTE the fallback carries NO price string and NO savings note: until the
+    // real offering loads, the paywall must not show a SPECIFIC price. A
+    // RevenueCat price-experiment serves a treatment cohort a different offering,
+    // and if a network hiccup let the old hardcoded $49.99/$5.99 show through, a
+    // treatment user would see the CONTROL price they wouldn't be charged —
+    // silently polluting the experiment. `pricesAreLive` gates the price display
+    // (see PaywallView); the fallback exists only to seed the row structure +
+    // default selection. See PRICING_EXPERIMENT_SPEC.md.
     private static let fallbackPlans: [Plan] = [
-        .init(id: "annual",  title: "Annual",  price: "$49.99", cadence: "per year",  note: "Save 30%"),
-        .init(id: "monthly", title: "Monthly", price: "$5.99",  cadence: "per month", note: nil),
+        .init(id: "annual",  title: "Annual",  price: "",  cadence: "per year",  note: nil),
+        .init(id: "monthly", title: "Monthly", price: "",  cadence: "per month", note: nil),
     ]
     private(set) var plans: [Plan] = Store.fallbackPlans
+    /// True once real prices from the live RevenueCat offering are in `plans`.
+    /// The paywall shows a neutral placeholder until then.
+    private(set) var pricesAreLive: Bool = false
+
+    /// The annual savings badge, computed from the REAL prices (never hardcoded
+    /// — a price experiment changes the true saving, e.g. $4.99/$39.99 → 33%, so
+    /// a literal "Save 30%" would ship a false claim). nil when it can't be
+    /// computed or the discount is trivial.
+    static func savingsNote(annual: Decimal, monthly: Decimal) -> String? {
+        let yearOfMonthly = monthly * 12
+        guard yearOfMonthly > 0, annual > 0, annual < yearOfMonthly else { return nil }
+        let pct = ((yearOfMonthly - annual) / yearOfMonthly) * 100
+        // Round via doubleValue, NOT `(pct as NSDecimalNumber).intValue` — the
+        // latter returns 0 for a Decimal carrying a long fractional mantissa
+        // (30.4535…e-…), which would silently drop the badge for EVERYONE.
+        let rounded = Int((pct as NSDecimalNumber).doubleValue.rounded())
+        return rounded >= 5 ? "Save \(rounded)%" : nil
+    }
 
     // MARK: - RevenueCat-backed implementation (or a local stub)
 
@@ -141,18 +167,27 @@ final class Store {
     private func loadOfferings() async {
         guard let current = try? await Purchases.shared.offerings().current else { return }
         offering = current
+        let annual  = current.annual  ?? current.package(identifier: "yearly")
+        let monthly = current.monthly ?? current.package(identifier: "monthly")
+        // Savings badge from the REAL prices of THIS offering — so a price
+        // experiment's treatment cohort shows its own true discount, not a
+        // hardcoded one (see savingsNote + PRICING_EXPERIMENT_SPEC.md).
+        let note: String? = {
+            guard let a = annual?.storeProduct.price, let m = monthly?.storeProduct.price else { return nil }
+            return Self.savingsNote(annual: a, monthly: m)
+        }()
         var built: [Plan] = []
-        if let annual = current.annual ?? current.package(identifier: "yearly") {
+        if let annual {
             built.append(.init(id: "annual", title: "Annual",
                                price: annual.storeProduct.localizedPriceString,
-                               cadence: "per year", note: "Save 30%"))
+                               cadence: "per year", note: note))
         }
-        if let monthly = current.monthly ?? current.package(identifier: "monthly") {
+        if let monthly {
             built.append(.init(id: "monthly", title: "Monthly",
                                price: monthly.storeProduct.localizedPriceString,
                                cadence: "per month", note: nil))
         }
-        if !built.isEmpty { plans = built }
+        if !built.isEmpty { plans = built; pricesAreLive = true }
     }
 
     private func package(for planID: String) -> Package? {
@@ -204,7 +239,15 @@ final class Store {
     // STUB — no package present. Flips the local flag so the gating experience
     // is still testable end-to-end.
     static func configure() {}
-    func start() async {}
+    func start() async {
+        // No RevenueCat → seed representative prices so the DEV paywall renders
+        // (real prices only ever come from a live offering).
+        plans = [
+            .init(id: "annual",  title: "Annual",  price: "$49.99", cadence: "per year",  note: "Save 30%"),
+            .init(id: "monthly", title: "Monthly", price: "$5.99",  cadence: "per month", note: nil),
+        ]
+        pricesAreLive = true
+    }
     func refresh() async {}
     func purchase(planID: String) async { clearFeedback(); isPro = true }
     func restore() async {
