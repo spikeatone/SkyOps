@@ -45,11 +45,35 @@ struct PaywallView: View {
 
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
-    @State private var selected: String = "annual"
+    // Monthly is the pre-selected front-door default (palatable "3 days free,
+    // then $5.99/mo"); Annual sits below for committers. See PRICING_EXPERIMENT_SPEC.md.
+    @State private var selected: String = "monthly"
+    /// Set once the player taps a plan, so the robust auto-selection below never
+    /// overrides a deliberate choice.
+    @State private var userChoseManually = false
+
     /// True when the currently-selected plan carries an eligible free trial —
     /// drives the "Start Free Trial" CTA.
     private var selectedHasTrial: Bool {
         store.pricesAreLive && store.plans.first { $0.id == selected }?.trial != nil
+    }
+
+    /// Robust default: prefer a trial-bearing plan (display order puts Monthly
+    /// first, so it wins when both carry a trial) so the "Start Free Trial" CTA
+    /// is ALWAYS visible on open — no matter how the offer is configured in ASC.
+    /// Never overrides a manual tap. Runs from both `.onAppear` (plans already
+    /// live at launch, the common case) and `.onChange` (plans load afterward) —
+    /// the documented "adopt in onAppear too" pattern, since onChange won't fire
+    /// for a value already set when the view is created.
+    private func applyDefaultSelection() {
+        guard store.pricesAreLive, !userChoseManually else { return }
+        if let trialPlan = store.plans.first(where: { $0.trial != nil }) {
+            selected = trialPlan.id
+        } else if store.plans.contains(where: { $0.id == "monthly" }) {
+            selected = "monthly"
+        } else if let first = store.plans.first {
+            selected = first.id
+        }
     }
 
     private func hex(_ h: UInt) -> Color {
@@ -185,11 +209,15 @@ struct PaywallView: View {
             }
             .buttonStyle(.plain).padding(12)
         }
+        // Pick the best default once prices are live — both here (plans already
+        // live at launch) and on change (plans load after the paywall appears).
+        .onAppear { applyDefaultSelection() }
+        .onChange(of: store.pricesAreLive) { _, _ in applyDefaultSelection() }
     }
 
     private func planRow(_ plan: Store.Plan) -> some View {
         let on = selected == plan.id
-        return Button { selected = plan.id } label: {
+        return Button { selected = plan.id; userChoseManually = true } label: {
             HStack(spacing: 12) {
                 Image(systemName: on ? "largecircle.fill.circle" : "circle")
                     .font(.system(size: 20)).foregroundStyle(on ? Sky.coreGreen : secondary)

@@ -131,6 +131,25 @@ Apple's presets are **3 days · 1 week · 2 weeks · 1 month · 2 months · 3 mo
 **Recommended first test: 3-day trial (treatment) vs no trial (control), prices held at
 $5.99/$49.99.** Change one variable. If the trial wins, a follow-up can test 3 vs 7.
 
+### 3x. Paywall layout — DECIDED + BUILT (9 Aug 2026): trial on both, default Monthly
+
+Designer's call, built and driven-verified:
+- **Monthly is the pre-selected front-door default** — the palatable "3 days free, then
+  $5.99/month" is what a user opens to (lower day-3 charge = lower trial-cancel + far less
+  "$49.99 surprise" refund / 1-star risk while the rating is young).
+- **Annual sits right below** with "Save 30%" + its own "3 days free, then $49.99/year", so a
+  committer can still self-select the high-LTV path.
+- **Trial on BOTH plans.** Eligibility is per subscription group, so the user gets ONE trial on
+  whichever they pick — no gaming it.
+- **The honest trade (named, not hidden):** defaulting to Monthly nudges toward the
+  higher-churn / lower-LTV plan. Fine early (volume + goodwill > LTV per convert at this
+  stage); revisit via a default-Monthly-vs-Annual A/B once volume supports it (§0). This is
+  the natural FIRST thing to A/B later.
+- **Robust default in code:** the paywall auto-selects the first trial-bearing plan (Monthly
+  wins when both carry a trial), so "Start Free Trial" is always visible on open regardless of
+  how the offer is configured in ASC — it doesn't rely on a hardcoded plan id matching the
+  store config. A manual tap is never overridden.
+
 ⚠️ **Trial economics need a renewal cycle to judge.** Trials reliably lift *starts* and
 often lower *retention*; a variant can look like a big winner at day 7 and be a loser at
 day 60. Do not call it before at least one paid renewal has landed for the cohort.

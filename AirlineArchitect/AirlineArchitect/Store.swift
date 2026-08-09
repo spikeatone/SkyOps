@@ -116,9 +116,12 @@ final class Store {
     // silently polluting the experiment. `pricesAreLive` gates the price display
     // (see PaywallView); the fallback exists only to seed the row structure +
     // default selection. See PRICING_EXPERIMENT_SPEC.md.
+    // Order = DISPLAY order. Monthly first: it's the palatable "3 days free, then
+    // $5.99/mo" front-door default; Annual sits right below for committers (its
+    // "Save 30%" + its own trial). See PRICING_EXPERIMENT_SPEC.md §3.
     private static let fallbackPlans: [Plan] = [
-        .init(id: "annual",  title: "Annual",  price: "",  cadence: "per year",  note: nil),
         .init(id: "monthly", title: "Monthly", price: "",  cadence: "per month", note: nil),
+        .init(id: "annual",  title: "Annual",  price: "",  cadence: "per year",  note: nil),
     ]
     private(set) var plans: [Plan] = Store.fallbackPlans
     /// True once real prices from the live RevenueCat offering are in `plans`.
@@ -224,16 +227,17 @@ final class Store {
             return trialByProduct[pkg.storeProduct.productIdentifier]
         }
 
+        // Monthly first = display order (front-door default); Annual below.
         var built: [Plan] = []
-        if let annual {
-            built.append(.init(id: "annual", title: "Annual",
-                               price: annual.storeProduct.localizedPriceString,
-                               cadence: "per year", note: note, trial: trial(annual)))
-        }
         if let monthly {
             built.append(.init(id: "monthly", title: "Monthly",
                                price: monthly.storeProduct.localizedPriceString,
                                cadence: "per month", note: nil, trial: trial(monthly)))
+        }
+        if let annual {
+            built.append(.init(id: "annual", title: "Annual",
+                               price: annual.storeProduct.localizedPriceString,
+                               cadence: "per year", note: note, trial: trial(annual)))
         }
         if !built.isEmpty { plans = built; pricesAreLive = true }
     }
@@ -290,9 +294,11 @@ final class Store {
     func start() async {
         // No RevenueCat → seed representative prices so the DEV paywall renders
         // (real prices only ever come from a live offering).
+        // Monthly first (front-door default), both with a trial — mirrors the
+        // "trial on both, default monthly" rollout so the DEV paywall exercises it.
         plans = [
+            .init(id: "monthly", title: "Monthly", price: "$5.99",  cadence: "per month", note: nil,       trial: "3 days free"),
             .init(id: "annual",  title: "Annual",  price: "$49.99", cadence: "per year",  note: "Save 30%", trial: "3 days free"),
-            .init(id: "monthly", title: "Monthly", price: "$5.99",  cadence: "per month", note: nil),
         ]
         pricesAreLive = true
     }
