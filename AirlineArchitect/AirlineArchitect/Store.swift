@@ -103,6 +103,10 @@ final class Store {
         let price: String
         let cadence: String
         let note: String?
+        /// e.g. "3 days free" when this plan carries a free-trial intro offer the
+        /// user is ELIGIBLE for (nil otherwise). Drives the paywall trial line +
+        /// the "Start Free Trial" CTA. See PRICING_EXPERIMENT_SPEC.md §5a.
+        var trial: String? = nil
     }
     // NOTE the fallback carries NO price string and NO savings note: until the
     // real offering loads, the paywall must not show a SPECIFIC price. A
@@ -135,6 +139,24 @@ final class Store {
         let rounded = Int((pct as NSDecimalNumber).doubleValue.rounded())
         return rounded >= 5 ? "Save \(rounded)%" : nil
     }
+
+    #if canImport(RevenueCat)
+    /// "3 days free" / "1 week free" / "1 month free" from a free-trial intro
+    /// offer's period. Only ever shown when the user is eligible (checked in
+    /// loadOfferings) — an intro offer is once per subscription group per Apple ID.
+    static func freeTrialLabel(_ period: SubscriptionPeriod) -> String {
+        let n = period.value
+        let unit: String
+        switch period.unit {
+        case .day:   unit = "day"
+        case .week:  return n == 1 ? "7 days free" : "\(n) weeks free"   // "1 week" reads better as 7 days
+        case .month: unit = "month"
+        case .year:  unit = "year"
+        @unknown default: unit = "day"
+        }
+        return "\(n) \(unit)\(n == 1 ? "" : "s") free"
+    }
+    #endif
 
     // MARK: - RevenueCat-backed implementation (or a local stub)
 
@@ -176,16 +198,42 @@ final class Store {
             guard let a = annual?.storeProduct.price, let m = monthly?.storeProduct.price else { return nil }
             return Self.savingsNote(annual: a, monthly: m)
         }()
+
+        // Free-trial labels — ONLY for products with a free-trial intro offer the
+        // user is actually ELIGIBLE for. An intro offer is once per subscription
+        // group per Apple ID, so a returning user must NOT be told "3 days free"
+        // and then be charged in full — that's a misleading-offer risk. We ask
+        // StoreKit per-user rather than trusting the product's static offer.
+        let trialCandidates = [annual, monthly].compactMap { pkg -> String? in
+            guard let pkg, let intro = pkg.storeProduct.introductoryDiscount,
+                  intro.paymentMode == .freeTrial else { return nil }
+            return pkg.storeProduct.productIdentifier
+        }
+        var trialByProduct: [String: String] = [:]
+        if !trialCandidates.isEmpty {
+            let elig = await Purchases.shared.checkTrialOrIntroDiscountEligibility(productIdentifiers: trialCandidates)
+            for pkg in [annual, monthly] {
+                guard let pkg, let intro = pkg.storeProduct.introductoryDiscount,
+                      intro.paymentMode == .freeTrial,
+                      elig[pkg.storeProduct.productIdentifier]?.status == .eligible else { continue }
+                trialByProduct[pkg.storeProduct.productIdentifier] = Self.freeTrialLabel(intro.subscriptionPeriod)
+            }
+        }
+        func trial(_ pkg: Package?) -> String? {
+            guard let pkg else { return nil }
+            return trialByProduct[pkg.storeProduct.productIdentifier]
+        }
+
         var built: [Plan] = []
         if let annual {
             built.append(.init(id: "annual", title: "Annual",
                                price: annual.storeProduct.localizedPriceString,
-                               cadence: "per year", note: note))
+                               cadence: "per year", note: note, trial: trial(annual)))
         }
         if let monthly {
             built.append(.init(id: "monthly", title: "Monthly",
                                price: monthly.storeProduct.localizedPriceString,
-                               cadence: "per month", note: nil))
+                               cadence: "per month", note: nil, trial: trial(monthly)))
         }
         if !built.isEmpty { plans = built; pricesAreLive = true }
     }
@@ -243,7 +291,7 @@ final class Store {
         // No RevenueCat → seed representative prices so the DEV paywall renders
         // (real prices only ever come from a live offering).
         plans = [
-            .init(id: "annual",  title: "Annual",  price: "$49.99", cadence: "per year",  note: "Save 30%"),
+            .init(id: "annual",  title: "Annual",  price: "$49.99", cadence: "per year",  note: "Save 30%", trial: "3 days free"),
             .init(id: "monthly", title: "Monthly", price: "$5.99",  cadence: "per month", note: nil),
         ]
         pricesAreLive = true

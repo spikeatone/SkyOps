@@ -161,22 +161,31 @@ Both would have polluted results; both are fixed in `Store.swift` / `PaywallView
    RevenueCat-derived path. At $4.99/$39.99 the true saving is **33%**, so the treatment
    arm would have shipped a false claim. Now computed from the two packages' real prices.
 
-### 5a. ⚠️ STILL TO BUILD for the trial (a price swap needs nothing; a trial does)
+### 5a. Trial paywall UI — ✅ BUILT (9 Aug 2026)
 
-The two fixes above make a **price** experiment fully code-ready — swap the offering, done.
-A **trial** needs one more thing the code doesn't do yet: **the paywall must ADVERTISE the
-trial**, or the whole lever is wasted.
+The two fixes above made a **price** experiment code-ready; a **trial** also needs the paywall
+to ADVERTISE it. That UI is now built (Store.swift + PaywallView.swift):
 
-- Today `planRow` shows only `plan.price` ("$49.99 per year"). With a trial attached, Apple's
-  purchase sheet *does* surface "3 days free, then $49.99/year", but **our paywall wouldn't** —
-  so a user never sees a reason to tap. The point of a trial is the "**Start 3 days free**"
-  pitch on the paywall itself.
-- Work: read the package's `introductoryDiscount` (RevenueCat exposes it on `StoreProduct`),
-  show a "3 days free, then $X" line on the plan row, and change the CTA from "Continue" to
-  "**Start Free Trial**". Small, but it's real UI + a new build — it is NOT the zero-code path
-  a price swap is.
-- This is why the price experiment is "config only" and the trial is "config + a small paywall
-  change." Both are cheap; only the trial touches the binary.
+- `Plan` gained `trial: String?`. `loadOfferings` reads each package's `introductoryDiscount`,
+  and — critically — only sets the label when `paymentMode == .freeTrial` AND the user is
+  **ELIGIBLE** (`checkTrialOrIntroDiscountEligibility`). An intro offer is once per subscription
+  group per Apple ID, so a returning user is NEVER told "3 days free" and then charged in full.
+- The plan row shows a green "**3 days free, then $X per year**" line (full terms on the paywall,
+  which the 3.1.2 auto-renew fine print completes), and the CTA flips to "**Start Free Trial**"
+  when the selected plan carries an eligible trial (else "Continue").
+- Verified live via a temporary `-forceTrial` hook (since no real trial product exists in ASC
+  yet): the trial line + CTA render correctly; the hook was stripped before commit.
+
+**So both levers are now fully code-ready.** What remains is purely account-side and is the
+SAME work for either "ship to everyone" or "A/B":
+
+1. **App Store Connect** — add a **3-day free-trial introductory offer** to the annual product
+   (and/or monthly). New-customer eligibility is automatic (once per group per Apple ID).
+2. **Ship it** — for the chosen ship-to-everyone rollout, the trial rides the `default` offering,
+   so the next build simply picks it up. (For an A/B later, put the trial product in a second
+   offering and drive it via Experiments.)
+3. There is **no further app code** — the paywall already surfaces whatever eligible trial the
+   live offering carries.
 
 ---
 

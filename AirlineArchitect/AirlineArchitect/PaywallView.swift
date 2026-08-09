@@ -46,6 +46,11 @@ struct PaywallView: View {
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     @State private var selected: String = "annual"
+    /// True when the currently-selected plan carries an eligible free trial —
+    /// drives the "Start Free Trial" CTA.
+    private var selectedHasTrial: Bool {
+        store.pricesAreLive && store.plans.first { $0.id == selected }?.trial != nil
+    }
 
     private func hex(_ h: UInt) -> Color {
         Color(red: Double((h >> 16) & 0xFF) / 255, green: Double((h >> 8) & 0xFF) / 255, blue: Double(h & 0xFF) / 255)
@@ -123,7 +128,10 @@ struct PaywallView: View {
                     Task { await store.purchase(planID: selected); if store.isPro { onClose() } }
                 } label: {
                     ZStack {
-                        Text("Continue").font(.karla(17, .bold)).foregroundStyle(.white)
+                        // "Start Free Trial" when the selected plan carries an
+                        // eligible trial, else "Continue".
+                        Text(selectedHasTrial ? "Start Free Trial" : "Continue")
+                            .font(.karla(17, .bold)).foregroundStyle(.white)
                             .opacity(store.purchasing ? 0 : 1)
                         if store.purchasing { ProgressView().tint(.white) }
                     }
@@ -201,6 +209,15 @@ struct PaywallView: View {
                                 .padding(.horizontal, 6).padding(.vertical, 2)
                                 .background(Sky.coreGreen).clipShape(Capsule())
                         }
+                    }
+                    // Free-trial line — states the full terms on the paywall
+                    // itself ("3 days free, then $X per year"), which the trial
+                    // lever needs to convert AND 3.1.2 needs disclosed (the
+                    // auto-renew fine print below completes it).
+                    if store.pricesAreLive, let trial = plan.trial {
+                        Text("\(trial), then \(plan.price) \(plan.cadence)")
+                            .font(.karla(11, .bold)).foregroundStyle(Sky.coreGreen)
+                            .lineLimit(1).minimumScaleFactor(0.7)
                     }
                 }
                 Spacer()
