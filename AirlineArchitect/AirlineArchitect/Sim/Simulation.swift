@@ -2194,8 +2194,9 @@ final class Simulation {
     }
 
     /// Archive the aircraft's current route (if any) and free it up. Mirrors the
-    /// route half of `liquidate` — the aircraft itself is kept.
-    private func detachFromRoute(_ ac: Aircraft) {
+    /// route half of `liquidate` — the aircraft itself is kept. `note` names the
+    /// reason in the Ops log (reassigned vs parked).
+    private func detachFromRoute(_ ac: Aircraft, note: String = "reassigned") {
         guard let id = ac.assignedRouteId,
               let idx = playerRoutes.firstIndex(where: { $0.id == id }) else { return }
         ac.assignedRouteId = nil
@@ -2205,7 +2206,41 @@ final class Simulation {
         decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == id }
         airports.first { $0.code == r.originCode }?.slotsAvailable += 1
         airports.first { $0.code == r.destCode }?.slotsAvailable += 1
-        logOps(.structural, "Route closed", "\(r.originCode) ↔︎ \(r.destCode) — \(ac.tail) reassigned")
+        logOps(.structural, "Route closed", "\(r.originCode) ↔︎ \(r.destCode) — \(ac.tail) \(note)")
+    }
+
+    /// Close the aircraft's current route and leave it as an IDLE SPARE — the plane
+    /// is kept (owned or leased). This is the player's direct "close route / park
+    /// this plane" lever (Fleet detail + Routes panel). An aircraft that's airborne
+    /// finishes the leg it's flying and parks on arrival (`pendingPark`), the same
+    /// "don't teleport a jet mid-air" rule reassignment uses; an at-gate aircraft
+    /// parks immediately. Any scheduled reassignment is cancelled and its (paid,
+    /// now-unwanted) target route torn down. Returns false if the aircraft isn't on
+    /// a route to close. No cash moves — the route's opening cost is already sunk.
+    @discardableResult
+    func parkAircraft(_ ac: Aircraft) -> Bool {
+        guard ac.purchased, ac.assignedRouteId != nil else { return false }
+        // Cancel a scheduled reassignment: archive its (unstaffed, already-paid)
+        // target route so its slots free and it doesn't linger forever.
+        if let pid = ac.pendingRouteId {
+            ac.pendingRouteId = nil
+            if let idx = playerRoutes.firstIndex(where: { $0.id == pid }) {
+                let pr = playerRoutes.remove(at: idx)
+                pr.closedTick = tick
+                closedPlayerRoutes.append(pr)
+                decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == pid }
+                airports.first { $0.code == pr.originCode }?.slotsAvailable += 1
+                airports.first { $0.code == pr.destCode }?.slotsAvailable += 1
+            }
+        }
+        if isEnRoute(ac) {
+            ac.pendingPark = true
+            logOps(.structural, "Parking scheduled",
+                   "\(ac.tail) parks as a spare after it lands at \(ac.dest.code)")
+            return true
+        }
+        detachFromRoute(ac, note: "parked as spare")
+        return true
     }
 
     private func openRouteCore(from origin: Airport, to dest: Airport, using ac: Aircraft,
@@ -4013,10 +4048,12 @@ final class Simulation {
         s.totalHubSpend = totalHubSpend
         s.totalHubLabor = totalHubLabor
         s.totalClubRent = totalClubRent
+        s.fuelHedgeExpiryTick = fuelHedgeExpiryTick
         s.aircraft = aircraft.filter { $0.purchased }.map { ac in
             AircraftSave(tail: ac.tail, typeId: ac.type.id, originCode: ac.origin.code, destCode: ac.dest.code,
                          stateIndex: ac.stateIndex, stateTick: ac.stateTick, cyclesAccrued: ac.cyclesAccrued,
                          assignedRouteId: ac.assignedRouteId, pendingRouteId: ac.pendingRouteId,
+                         pendingPark: ac.pendingPark,
                          sellOfferDismissed: ac.sellOfferDismissed,
                          isLeased: ac.isLeased, leaseAccrued: ac.leaseAccrued, maint: ac.maint,
                          aogAutoClearTick: ac.aogAutoClearTick, crewId: ac.crewId,
@@ -4143,6 +4180,9 @@ final class Simulation {
         totalHubSpend = s.totalHubSpend ?? 0
         totalHubLabor = s.totalHubLabor ?? 0
         totalClubRent = s.totalClubRent ?? 0
+        // Active fuel hedge (a PAID asset — must survive app close/reopen). Absolute
+        // tick, so it stays valid because `tick` is restored above. nil in pre-fix saves.
+        fuelHedgeExpiryTick = s.fuelHedgeExpiryTick
         nextHubBillTick = s.tick + Simulation.ticksPerMonth   // re-seed like insurance
         homeFrame = Simulation.frame(for: homeRegion, airports: airports)
         cameraZoom = s.cameraZoom; cameraCenter = CGPoint(x: s.cameraCenterX, y: s.cameraCenterY)
@@ -4168,7 +4208,7 @@ final class Simulation {
             let ac = Aircraft(tail: a.tail, type: type, origin: o, dest: d, stateIndex: a.stateIndex,
                               cyclesAccrued: a.cyclesAccrued, purchased: true)
             ac.stateTick = a.stateTick; ac.assignedRouteId = a.assignedRouteId
-            ac.pendingRouteId = a.pendingRouteId
+            ac.pendingRouteId = a.pendingRouteId; ac.pendingPark = a.pendingPark
             ac.sellOfferDismissed = a.sellOfferDismissed; ac.isLeased = a.isLeased; ac.leaseAccrued = a.leaseAccrued
             ac.maint = a.maint; ac.aogAutoClearTick = a.aogAutoClearTick; ac.crewId = a.crewId
             ac.subsidiaryCode = a.subsidiaryCode
@@ -4254,8 +4294,11 @@ final class Simulation {
                 rollRevenue(for: ac)
             case .legCompleted:
                 settleLeg(ac)
-                // It has landed and settled — now honour any deferred move.
-                if ac.pendingRouteId != nil { completePendingReassignment(ac) }
+                // It has landed and settled — now honour any deferred move. Park
+                // wins if both are somehow set (parkAircraft clears pendingRouteId,
+                // so they're normally mutually exclusive).
+                if ac.pendingPark { ac.pendingPark = false; detachFromRoute(ac, note: "parked as spare") }
+                else if ac.pendingRouteId != nil { completePendingReassignment(ac) }
             case nil:                  break
             }
             // A booked aircraft still burns money while stuck at the gate

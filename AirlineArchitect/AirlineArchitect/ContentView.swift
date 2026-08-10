@@ -688,6 +688,8 @@ struct RouteConfirmPanel: View {
 struct RoutesPanel: View {
     let sim: Simulation
     @State private var expandedId: Int?
+    /// The open route the player is confirming a close+park on.
+    @State private var closeTarget: Route?
     /// Measured content height so the panel HUGS its content (one collapsed route
     /// card is short), only scrolling when the list exceeds the cap.
     @State private var contentHeight: CGFloat = 0
@@ -737,6 +739,21 @@ struct RoutesPanel: View {
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
+        .confirmationDialog(closeTarget.map { "Close \($0.originCode)–\($0.destCode)?" } ?? "Close route?",
+                            isPresented: Binding(get: { closeTarget != nil },
+                                                 set: { if !$0 { closeTarget = nil } }),
+                            titleVisibility: .visible) {
+            Button("Close route & park aircraft") {
+                if let r = closeTarget,
+                   let ac = sim.aircraft.first(where: { $0.purchased && $0.assignedRouteId == r.id }) {
+                    Feedback.impact(.light); sim.parkAircraft(ac)
+                }
+                closeTarget = nil
+            }
+            Button("Cancel", role: .cancel) { closeTarget = nil }
+        } message: {
+            Text("The aircraft is kept and becomes an idle spare you can reassign anytime. If it's mid-flight, it parks after the current leg.")
+        }
     }
 
     private func section(_ title: String, _ routes: [Route]) -> some View {
@@ -831,6 +848,17 @@ struct RoutesPanel: View {
                 Text("\(Simulation.simDate(fromTick: h.tick)): \(h.pax)/\(h.seats) (\(Int((h.loadFactor*100).rounded()))%) · net \(h.net < 0 ? "−" : "")\(compactMoney(abs(h.net)))")
                     .font(.karla(11)).foregroundStyle(h.net < 0 ? red : primaryC.opacity(0.85))
             }
+        }
+        // Close an OPEN, staffed route: park its aircraft as an idle spare (kept).
+        if r.isOpen, sim.aircraft.contains(where: { $0.purchased && $0.assignedRouteId == r.id }) {
+            Button { closeTarget = r } label: {
+                Text("Close route · park aircraft")
+                    .font(.karla(12, .semibold)).foregroundStyle(red)
+                    .frame(maxWidth: .infinity).frame(height: 36)
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(red.opacity(0.6), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
         }
     }
 

@@ -33,6 +33,8 @@ struct FleetDetailView: View {
     /// modal instead of the plain confirm, so the player can keep the route.
     @State private var showReplaceOrClose = false
     @State private var showSparePicker = false
+    /// PARK: close the route and keep the plane as an idle spare.
+    @State private var confirmPark = false
 
     // Theme tokens (light Figma / dark Sky) — matches FleetView.
     private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
@@ -82,6 +84,18 @@ struct FleetDetailView: View {
             Text(aircraft.isLeased
                  ? "Early termination hands the jet back and costs a \(money(sim.leaseTerminationPenalty(aircraft))) penalty (≈3 months' lease). Crew returns to the pool."
                  : "Returns its crew to the pool.")
+        }
+        // PARK → close the route, keep the plane as an idle spare.
+        .confirmationDialog(parkRouteLabel.map { "Close \($0) and park \(aircraft.tail)?" } ?? "Park \(aircraft.tail)?",
+                            isPresented: $confirmPark, titleVisibility: .visible) {
+            Button("Close route & park") {
+                Feedback.impact(.light); sim.parkAircraft(aircraft)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(sim.isEnRoute(aircraft)
+                 ? "The route closes and \(aircraft.tail) becomes an idle spare after it finishes the leg it's flying. You can assign it to a new route anytime; its crew stays with you."
+                 : "The route closes and \(aircraft.tail) becomes an idle spare. You can assign it to a new route anytime; its crew stays with you.")
         }
         // Route-assigned SELL → keep the route by swapping in another aircraft, or
         // knowingly close it. Custom AA-styled modal (not the native action sheet).
@@ -276,13 +290,36 @@ struct FleetDetailView: View {
 
     // MARK: Action buttons
     private var actionButtons: some View {
+        let onRoute = sim.currentRoute(of: aircraft) != nil
+        return VStack(spacing: 12) {
+            HStack(spacing: 16) {
+                outlineButton(onRoute ? "ASSIGN TO NEW ROUTE" : "ASSIGN TO ROUTE", action: onAssignRoute)
+                // PARK only makes sense for an aircraft currently on a route — an
+                // idle spare has nothing to close.
+                if onRoute { outlineButton("PARK (CLOSE ROUTE)") { confirmPark = true } }
+            }
+            sellButton
+        }
+    }
+
+    /// "ORIG–DEST" of the aircraft's current route, for the park confirm title.
+    private var parkRouteLabel: String? {
+        sim.currentRoute(of: aircraft).map { "\($0.originCode)–\($0.destCode)" }
+    }
+
+    /// Secondary outline action (matches the ASSIGN button chrome).
+    private func outlineButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.karla(15, .medium)).foregroundStyle(isDark ? .white : Color(skyHex: 0x4B4B4B))
+                .lineLimit(1).minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity).frame(height: 48)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(skyHex: 0xC9C9C9), lineWidth: 1))
+        }.buttonStyle(.plain)
+    }
+
+    private var sellButton: some View {
         HStack(spacing: 16) {
-            Button(action: onAssignRoute) {
-                Text("ASSIGN TO NEW ROUTE")
-                    .font(.karla(15, .medium)).foregroundStyle(isDark ? .white : Color(skyHex: 0x4B4B4B))
-                    .frame(maxWidth: .infinity).frame(height: 48)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(skyHex: 0xC9C9C9), lineWidth: 1))
-            }.buttonStyle(.plain)
             Button {
                 // A route-assigned aircraft opens the replace-or-close modal; an
                 // idle spare (no route to lose) uses the plain confirm.

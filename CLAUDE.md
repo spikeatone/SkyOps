@@ -1192,6 +1192,39 @@ one contradicts the design thesis.)
     on a route + 2 idle spares, stripped after): modal + picker render on-brand,
     and the swap keeps the route flying while selling the original.
 
+- **CLOSE ROUTE / PARK AIRCRAFT — BUILT (customer-reported, 2026-08-10). A direct
+  "close this route and keep the plane" lever.** A paying customer asked "is it
+  possible to close a route? or force a plane to be idle? it feels difficult to move
+  planes/routes around." It genuinely WASN'T possible: a route only closed as a
+  SIDE-EFFECT of selling its aircraft (replace-or-close), reassigning to a BRAND-NEW
+  route (ASSIGN TO NEW ROUTE archives the old one), or accepting a slot-buyback offer.
+  There was no way to close a route and keep the plane as an idle spare, and no "park"
+  action at all — so the only move-lever was the heavy reassignment flow.
+  - **`Simulation.parkAircraft(_:)`** (Simulation.swift, next to `reassign`): archives
+    the aircraft's route (P&L history kept, both slots freed) via the shared
+    `detachFromRoute` and leaves the plane as an IDLE SPARE (owned or leased — the
+    plane is KEPT). Reuses reassignment's airborne rule: an at-gate aircraft parks
+    IMMEDIATELY; an airborne one sets `Aircraft.pendingPark` and parks on arrival
+    (completed in the `.legCompleted` hook, right beside `completePendingReassignment`)
+    — the "don't teleport a jet mid-air" principle. It also CANCELS any scheduled
+    reassignment and tears down that (paid, now-unwanted) pending route so its slots
+    free. **No cash moves** — the route's opening cost is already sunk (do NOT refund).
+  - **`detachFromRoute` gained a `note:` param** (default "reassigned") so the Ops log
+    reads "parked as spare" vs "reassigned" — the two existing callers keep the default.
+  - **`pendingPark` is PERSISTED** (AircraftSave, `decodeSafe` default false) so a save
+    mid-airborne-park doesn't strand the intent — same reasoning as `pendingRouteId`.
+  - **UI, two surfaces** (designer's call): Fleet detail gets a **PARK (CLOSE ROUTE)**
+    outline button shown only when the aircraft is on a route (idle spares have nothing
+    to close), next to ASSIGN TO NEW ROUTE, with a confirm dialog (tailored copy for the
+    airborne "parks after the current leg" case). The Routes panel's route detail gets a
+    **Close route · park aircraft** button on OPEN, staffed routes, with the same confirm.
+  - Verified **28/28 headless** (`aa-1.1.x/ParkVerify.swift`): at-gate immediate park →
+    idle spare + route archived + slots freed + plane not sold, airborne deferred park,
+    idle-spare park is a no-op (returns false), park cancels + tears down a scheduled
+    reassignment, `pendingPark` survives a save/reload round-trip, and the cash invariant
+    holds through every path. Plus a clean full app build. (Live Simulator tap-through of
+    the two buttons still owed — flagged, the input-channel glitch permitting.)
+
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
 - **Airport positions are real**, not hand-placed. Each airport carries
@@ -2329,6 +2362,33 @@ where numbers are involved.
   block-re-buy/insufficient-funds). Premium magnitude is fleet-dependent (4×
   ERJ135 ≈ $200k/30d; the spec's "$1.1M/4-aircraft" anchor was a larger
   representative fleet — the FORMULA matches exactly, only the fleet differs).
+  - **FUEL HEDGE PERSISTENCE BUG — FIXED (customer-reported, 2026-08-10).** A paying
+    customer bought a 90-day hedge; on app close/reopen it VANISHED and the buy option
+    returned. Root cause: `fuelHedgeExpiryTick` was set by `buyFuelHedge` but was NEVER
+    in `GameSnapshot` / `snapshot()` / `restore()` — so the autosave→relaunch round-trip
+    silently dropped a PAID asset. This is exactly the class the persistence conventions
+    warn about, and it slipped because the hedge was ADDED after the initial snapshot
+    plumbing and never wired in. Fix: `var fuelHedgeExpiryTick: Int?` on GameSnapshot +
+    one `decodeSafeOpt` line in Persistence.swift + `s.fuelHedgeExpiryTick = …` in
+    snapshot() + `fuelHedgeExpiryTick = s.fuelHedgeExpiryTick` in restore(). It's an
+    ABSOLUTE tick and `tick` is persisted, so no relative conversion is needed and
+    `fuelHedgeActive`/`fuelHedgeDaysRemaining` read correctly after load. Ships in the
+    next build (40+). Verified `aa-1.1.x/FuelHedgeVerify.swift` 11/11 (real save path:
+    hedge survives reload, re-buy refused after reload, still expires on schedule,
+    legacy save with no field decodes gracefully) + clean full app build. **AUDIT (same
+    session, designer asked "check everything that should persist DOES"):** fuel hedge
+    was the ONLY material paid/earned gap. Everything a player pays for or earns
+    persists — aircraft, routes, crew (+ training schedule), hubs/clubs, loans, public
+    company/equity, subsidiaries, diligence, and the PAID route promotions
+    (`playerFareWarUntil`/`adCampaignUntil`/`loyaltyPushUntil`), plus every cash-invariant
+    accumulator. Deliberately-transient (correct, not bugs): background traffic (regen
+    by count), live event effects (reset to Normal by policy: economicEventTicksLeft,
+    insurance/maint/fx/fareWar/labor-action expiry timers), used market, ground-stops,
+    slots. Low-stakes remaining gaps (NOT fixed — noted): `quarterSpeedUsesToday` resets
+    on reload (a reload refills the 3 ¼× uses — minor, ¼× costs no money and resets per
+    sim-day anyway); `opsEventLog` feed history isn't kept (cosmetic, regenerates);
+    `speed` resets to the 5× default (session preference). Flag before touching any of
+    these if the designer decides they matter.
 - **A real SwiftUI note from the ROUTES detail scroll:** at high sim speed the
   recent-flights `ForEach(history.suffix(15).reversed())` churns its element
   identity every completed flight (a new flight shifts the 15-window), which

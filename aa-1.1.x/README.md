@@ -117,6 +117,13 @@ group never compiles them into the build.
   restored sim keeps running. The restored residual is `-(devInjectCash)` exactly
   (the injection isn't persisted — that's the proof of an exact restore, per the
   Acquisition-harness lesson), NOT 0.
+- **`FuelHedgeVerify.swift`** — regression guard for the customer-reported bug where a
+  paid 90-day fuel hedge VANISHED on app close/reopen (`fuelHedgeExpiryTick` was never
+  in the snapshot). Drives the real save path and asserts (11/11): the hedge survives
+  reload, re-buy is refused after reload (no phantom re-purchase), it still expires ~90
+  sim-days after purchase, and a legacy save with the field stripped decodes gracefully
+  (no active hedge). Reach for it if anything touches the fuel-hedge state or the
+  snapshot/restore of it.
 
 ## How to run
 The entry file must be named `main.swift` (top-level `MainActor.assumeIsolated {…}`).

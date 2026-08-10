@@ -85,6 +85,11 @@ final class Aircraft: Identifiable {
     /// moves to this route on arrival (real-world behaviour — an aircraft in the
     /// air doesn't teleport to a new route). nil = nothing pending.
     var pendingRouteId: Int?
+    /// The player asked to PARK this aircraft (close its route, keep the plane as
+    /// an idle spare) while it was airborne — so, like a deferred reassignment, it
+    /// finishes the current leg and parks on arrival rather than freezing mid-air.
+    /// nil/false = nothing pending. Persisted so the intent survives save/reload.
+    var pendingPark = false
     var sellOfferDismissed = false
 
     // Leasing (Phase 5). A leased aircraft is still `purchased: true` (real
