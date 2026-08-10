@@ -2669,6 +2669,34 @@ where numbers are involved.
   - Verified: 9/9 headless (isPro bypasses both gates, predicate tracks the
     count, purchase stub flips isPro, cap messages present) + Simulator
     screenshots (paywall dark + light, Finance free-plan card with live usage).
+  - **3-DAY FREE TRIAL — SHIPPED (1.1.4 / build 39, in review 2026-08-09). Full plan +
+    the two paywall bugfixes it rode on live in `PRICING_EXPERIMENT_SPEC.md`.** Designer
+    chose a 3-day Apple free trial, **trial on BOTH plans, Monthly the pre-selected
+    front-door default** (palatable "$5.99/mo" post-trial charge; Annual below with its
+    own trial + "Save 30%"). SHIPPING TO EVERYONE (trial in the `default` offering), NOT
+    A/B'd — volume too low for a clean experiment; the A/B stays in reserve.
+    - **The ASC introductory offers are LIVE and INDEPENDENT of the binary.** Free / 3
+      Days on both Monthly + Yearly, all 175 territories, `starts 2026-08-09` / **`ends
+      2026-12-31`**. Apple auto-applies the trial to any eligible new subscriber NOW —
+      confirmed by a real Yearly TRIAL in RevenueCat hours after config, even on the live
+      build 38 (whose paywall doesn't advertise it). So the trial MECHANISM is already
+      generating trials; build 39 just ADVERTISES it (the "3 days free / Start Free Trial"
+      CTA) to lift starts. ⚠️ Offer expires 2026-12-31 unless extended (can't edit an intro
+      offer — delete + recreate).
+    - **Paywall UI** (`Store.swift` + `PaywallView.swift`): `Plan.trial` set from each
+      package's `introductoryDiscount` ONLY when `paymentMode == .freeTrial` AND the user
+      is ELIGIBLE (`checkTrialOrIntroDiscountEligibility` — a returning user must never be
+      shown "3 days free" then charged full). Plan row shows "3 days free, then $X"; CTA
+      flips to "Start Free Trial". `applyDefaultSelection()` auto-selects the first
+      trial-bearing plan (Monthly wins) from `.onAppear` + `.onChange(pricesAreLive)` so
+      the CTA is always right regardless of ASC config. Eligibility is per subscription
+      group, so a user gets ONE trial on whichever plan they pick.
+    - **Two paywall bugfixes shipped alongside** (pricing-experiment prep): no stale-price
+      flash (`Store.pricesAreLive` gates the price — a treatment cohort must never briefly
+      see the control price), and the savings badge is COMPUTED from real prices
+      (`Store.savingsNote`, rounded via `.doubleValue` — `NSDecimalNumber.intValue` returns
+      0 on a long Decimal mantissa, which would have silently dropped the badge for
+      EVERYONE) instead of a hardcoded "Save 30%".
   - **What's needed to go live (designer/account side; I can't configure these):**
     RevenueCat public iOS SDK key, an entitlement id (e.g. "pro"), the two
     product ids + an Offering, the App Store Connect subscription products +

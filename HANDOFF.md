@@ -48,8 +48,8 @@ build 39 attached, in Apple review. Next new build must be **40+**. Contents:
 
 ## What shipped in 1.1.3 (build 38) — LIVE
 
-Repo is at **1.1.3 / build 38**, which is LIVE — **the next new build must be 39+**.
-Notable: the upload was done ENTIRELY FROM THE CLI
+Repo WAS at 1.1.3 / build 38 (LIVE); it has since moved to 1.1.4 / 39 — the current
+build-number rule is in the 1.1.4 section above. Notable: the upload was done ENTIRELY FROM THE CLI
 with the ASC API key (export → `altool --validate-app` → `--upload-app`) — see
 CLAUDE.md's correction; the old "Claude can't upload" note was wrong. Contents:
 
@@ -125,17 +125,27 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   isn't available right now."
 - **Build numbers:** **1.1.3 / build 38** is LIVE; **1.1.4 / build 39** is submitted for
   review. ASC has 31–39 uploaded, so the next new build must be **40+**.
+- **3-DAY FREE TRIAL is LIVE at the store level** (independent of the app binary): ASC
+  introductory offers (Free / 3 Days, both Monthly + Yearly, all 175 territories, starts
+  2026-08-09 / **ends 2026-12-31**) auto-apply to any eligible new subscriber NOW — verified
+  by a real Yearly TRIAL in RevenueCat hours after config, even on build 38 (whose paywall
+  doesn't advertise it). Build 39 ADVERTISES it (the "3 days free / Start Free Trial" CTA)
+  to lift trial STARTS. Shipping to EVERYONE (trial in the default offering), NOT A/B'd —
+  volume too low. Watch trial→paid conversion; ⚠️ the offer expires 2026-12-31 unless
+  extended (can't edit — delete + recreate). Full decision/mechanics: `PRICING_EXPERIMENT_SPEC.md`.
 
 ## NEXT — see `NEXT_SESSION_PROMPT.md`
 
 The prioritised brief for the next session lives in **`NEXT_SESSION_PROMPT.md`** —
 a paste-ready block written to be understood cold. In short:
 
-1. **Answer the conversion question with the telemetry now arriving.** 1.1.3 raised
-   the free caps (3/2 → 6/5) so players can reach a hub, and shipped the funnel that
-   says whether that worked. The ratio to look at is **`Paywall.shown` ÷
-   `Game.started`** (production view = Test Mode OFF), plus what share reach
-   `Hub.established`. Give it ~a week of live data first.
+1. **Read the monetization signals (give them ~2 weeks).** (a) RevenueCat
+   **trial→paid conversion** — trials start NOW (store-level), but conversion after the
+   3 days is the number that matters. (b) TelemetryDeck **`Paywall.shown` ÷
+   `Game.started`** (production view = Test Mode OFF) + the `Hub.established` share —
+   does the 1.1.3 free-cap change (3/2 → 6/5) fix conversion. (c) The next pricing lever
+   (`PRICING_EXPERIMENT_SPEC.md`) is a RevenueCat A/B, GATED on ~1k paywall-views/week —
+   not yet.
 2. **The standing "never played end-to-end" concern** — the UI/"does it feel right"
    half no harness can reach. It found the ASSIGN-TO-NEW-ROUTE no-op and the
    SLC-artwork bug in the last two sessions; it keeps paying.

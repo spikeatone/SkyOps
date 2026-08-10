@@ -20,9 +20,10 @@ as the work, not "later."
 
 ### Shipped since (see HANDOFF.md for the current release state)
 
-**This header was stale for a long stretch** — it said "build 34" while 35→38 shipped.
+**This header was stale for a long stretch** — it said "build 34" while 35→39 shipped.
 Releases are now tracked in `HANDOFF.md`, not here: **1.1 (35) → 1.1.1 (36) → 1.1.2 (37)
-are LIVE; 1.1.3 (38) is in review.** What to do next lives in `NEXT_SESSION_PROMPT.md`.
+→ 1.1.3 (38) are LIVE; 1.1.4 (39) is in Apple review** (3-day free-trial paywall UI + new
+cold-launch backdrop). What to do next lives in `NEXT_SESSION_PROMPT.md`.
 Keep this file for in-flight TASK tracking only, and update it in the same session as
 the work — the note at the top of this file exists because it drifted badly once before.
 
