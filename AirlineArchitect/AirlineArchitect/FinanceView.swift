@@ -375,11 +375,15 @@ struct FinanceView: View {
                     Image(systemName: "checkmark.seal.fill").font(.system(size: 20)).foregroundStyle(green)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Airline Architect Pro").font(.karla(16, .bold)).foregroundStyle(primary)
-                        Text("Unlimited routes & fleet — thanks for your support.")
+                        Text("Full game unlocked — thank you for your support.")
                             .font(.karla(12)).foregroundStyle(secondary)
                     }
                     Spacer(minLength: 0)
-                    ManageSubscriptionButton(tint: titleColor)
+                    // Only legacy SUBSCRIBERS have something to manage; a one-time
+                    // unlock buyer doesn't.
+                    if store.hasActiveSubscription {
+                        ManageSubscriptionButton(tint: titleColor)
+                    }
                 }
             }
         } else {

@@ -2,20 +2,25 @@
 //  Store.swift
 //  Airline Architect — in-app-purchase entitlement + free-tier caps
 //
-//  Monetization model: a free preview that runs the FULL core loop with every
-//  feature on, but caps the NETWORK (fleet + open routes) so upgrading unlocks
-//  scale — "build a real empire" — rather than unlocking crippled features.
-//  Two Pro tiers (monthly / annual) unlock the same thing (uncapped play).
+//  Monetization model (1.2.0): a free preview that runs the FULL core loop with
+//  every feature on, but caps the NETWORK (fleet + open routes) so upgrading
+//  unlocks scale — "build a real empire" — rather than crippled features. The
+//  upgrade is now a ONE-TIME PURCHASE (non-consumable "Full Unlock"), replacing
+//  the old monthly/annual subscriptions: premium games convert far better on a
+//  buy-once than on a rental (3 trials / 300 installs said as much).
 //
-//  RevenueCat wiring: the real SDK drives `isPro` from the "Airline Architect
-//  Pro" entitlement, with real offerings/prices and real purchase/restore. All
-//  RevenueCat code is behind `#if canImport(RevenueCat)` with a local stub
-//  fallback, so the app still compiles if the package is ever removed. The
-//  RevenueCat dashboard is fully configured: App Store app connected, `yearly`/
-//  `monthly` products imported, `Airline Architect Pro` entitlement, and a
-//  `default` offering with Annual/Monthly packages → so offerings() returns the
-//  real localized prices. Remaining before public launch: submit the two
-//  subscriptions with the first app-version App Review (sandbox already works).
+//  FOUNDING PLAYER PRICING: the unlock is $9.99 through the founding window, then
+//  rises to $19.99 (an App Store Connect SCHEDULED PRICE CHANGE — buyers in the
+//  window keep $9.99 forever, since it's non-consumable). The live price comes
+//  from StoreKit; the app only date-gates the "FOUNDING PLAYER · regularly
+//  $19.99" treatment off `foundingUntil`, which MUST match the ASC change date.
+//
+//  RevenueCat wiring: the SDK drives `isPro` from the "Airline Architect Pro"
+//  entitlement. The non-consumable is the offering's LIFETIME package. The two
+//  legacy subscription products stay attached to the entitlement (existing
+//  subscribers keep Pro until they cancel) but are REMOVED from the offering, so
+//  new users only ever see the one-time unlock. All RevenueCat code is behind
+//  `#if canImport(RevenueCat)` with a local stub fallback.
 //
 
 #if canImport(RevenueCat)
@@ -25,17 +30,15 @@ import Foundation
 
 @MainActor @Observable
 final class Store {
-    /// RevenueCat App Store public SDK key (safe to embed — it's a client key
-    /// shipped inside the app). Production key for the "Airline Architect" App
-    /// Store app; drives the real `default` offering (yearly/monthly packages)
-    /// + the `Airline Architect Pro` entitlement. (The old `test_…` Test Store
-    /// key is retained in git history if you ever need simulated purchases.)
+    /// RevenueCat App Store public SDK key (safe to embed — a client key shipped
+    /// inside the app). Production key for the "Airline Architect" App Store app.
     static let apiKey = "appl_VrQXFZPLdMiMOFAQVErmwOeVdup"
-    /// The entitlement identifier configured in the RevenueCat dashboard.
+    /// The entitlement identifier configured in the RevenueCat dashboard. Granted
+    /// by BOTH the new non-consumable AND the two legacy subscriptions.
     static let entitlementID = "Airline Architect Pro"
 
-    /// Whether the player has unlocked Pro (uncapped play). Driven by the
-    /// RevenueCat entitlement when configured; a local flag otherwise.
+    /// Whether the player has unlocked the full game (uncapped play). Driven by
+    /// the RevenueCat entitlement when configured; a local flag otherwise.
     var isPro = false
 
     /// Purchase-flow UI state (paywall reads these).
@@ -57,23 +60,11 @@ final class Store {
     // MARK: - Free-tier caps (ignored entirely when isPro)
 
     /// SIZED SO A FREE PLAYER CAN BUILD EXACTLY ONE HUB, then hits the wall.
-    ///
-    /// `Simulation.hubMinRoutes` is 5, so the old 2-route cap made hubs — and
-    /// therefore the network effect, the hub payback chart, meaningful
-    /// competition, Go Public and acquisitions — STRUCTURALLY invisible to a free
-    /// player. They were being asked to pay for depth they'd never seen, which is
-    /// the likeliest reason early conversion was poor. At 5 routes they reach the
-    /// hub, feel it start paying back, and the cap now bites when they want a
-    /// SECOND hub — the emotional peak rather than before the game opens up.
-    ///
-    /// The old 3/2 pairing was also internally inconsistent: with 2 routes a 3rd
-    /// aircraft could never be assigned, so buying it was a pure loss. Fleet is
-    /// now route-cap + 1 — enough for one spare, never a useless purchase.
-    ///
-    /// (The original 3/2 was calibrated when the cheapest aircraft was the $14M
-    /// ERJ135, i.e. "a $20M start affords ~1 jet, so CASH is the early gate."
-    /// The $2.5M turboprop tier invalidated that: 3 × B1900 = $7.5M, so both caps
-    /// were reachable within minutes of starting.)
+    /// `Simulation.hubMinRoutes` is 5, so 5 routes lets them reach one hub and
+    /// feel the game open up; the cap then bites when they want a SECOND hub —
+    /// the emotional peak. Fleet is route-cap + 1 (one spare, never a useless buy).
+    /// With a one-time unlock the free tier IS the "try before you buy" — no trial
+    /// clock, no card, which converts better for a premium game than a 3-day trial.
     static let freeFleetCap = 6
     static let freeRouteCap = 5
 
@@ -81,85 +72,57 @@ final class Store {
     func canOpenRoute(_ sim: Simulation) -> Bool { isPro || sim.playerRoutes.count < Self.freeRouteCap }
 
     enum Gate { case fleet, route }
-    /// Sells the DEPTH waiting past the cap, not the quantity. The old copy
-    /// ("Go Pro for an unlimited fleet") pitched more of what they already had;
-    /// these name the systems they can't reach yet.
+    /// Sells the DEPTH waiting past the cap, not the quantity — names the systems
+    /// they can't reach yet.
     func capMessage(_ gate: Gate) -> String {
         switch gate {
         case .fleet:
-            return "The free preview flies \(Self.freeFleetCap) aircraft. Go Pro for an unlimited fleet — widebodies, long-haul, and a network big enough to need them."
+            return "The free preview flies \(Self.freeFleetCap) aircraft. Unlock the full game for an unlimited fleet — widebodies, long-haul, and a network big enough to need them."
         case .route:
-            return "The free preview opens \(Self.freeRouteCap) routes. Go Pro to expand the network, build more hubs, take the airline public, and buy out your rivals."
+            return "The free preview opens \(Self.freeRouteCap) routes. Unlock the full game to expand the network, build more hubs, take the airline public, and buy out your rivals."
         }
     }
 
-    // MARK: - Plans (paywall display). Prices come from the live RevenueCat
-    // offering when available, else these fallbacks. `id` matches the package
-    // lookup below.
+    // MARK: - Founding Player pricing
 
-    struct Plan: Identifiable, Equatable {
-        let id: String
-        let title: String
-        let price: String
-        let cadence: String
-        let note: String?
-        /// e.g. "3 days free" when this plan carries a free-trial intro offer the
-        /// user is ELIGIBLE for (nil otherwise). Drives the paywall trial line +
-        /// the "Start Free Trial" CTA. See PRICING_EXPERIMENT_SPEC.md §5a.
-        var trial: String? = nil
-    }
-    // NOTE the fallback carries NO price string and NO savings note: until the
-    // real offering loads, the paywall must not show a SPECIFIC price. A
-    // RevenueCat price-experiment serves a treatment cohort a different offering,
-    // and if a network hiccup let the old hardcoded $49.99/$5.99 show through, a
-    // treatment user would see the CONTROL price they wouldn't be charged —
-    // silently polluting the experiment. `pricesAreLive` gates the price display
-    // (see PaywallView); the fallback exists only to seed the row structure +
-    // default selection. See PRICING_EXPERIMENT_SPEC.md.
-    // Order = DISPLAY order. Monthly first: it's the palatable "3 days free, then
-    // $5.99/mo" front-door default; Annual sits right below for committers (its
-    // "Save 30%" + its own trial). See PRICING_EXPERIMENT_SPEC.md §3.
-    private static let fallbackPlans: [Plan] = [
-        .init(id: "monthly", title: "Monthly", price: "",  cadence: "per month", note: nil),
-        .init(id: "annual",  title: "Annual",  price: "",  cadence: "per year",  note: nil),
-    ]
-    private(set) var plans: [Plan] = Store.fallbackPlans
-    /// True once real prices from the live RevenueCat offering are in `plans`.
-    /// The paywall shows a neutral placeholder until then.
-    private(set) var pricesAreLive: Bool = false
+    /// Founding Player pricing ($9.99) runs until this date, after which the App
+    /// Store price rises to `foundingRegularPrice`. This MUST match the SCHEDULED
+    /// PRICE CHANGE configured in App Store Connect — the app date-gates the
+    /// founding badge/reference off this, while StoreKit reports the real price.
+    static let foundingUntil: Date = {
+        var c = DateComponents(); c.year = 2026; c.month = 12; c.day = 1
+        c.hour = 0; c.minute = 0
+        return Calendar(identifier: .gregorian).date(from: c)!
+    }()
 
-    /// The annual savings badge, computed from the REAL prices (never hardcoded
-    /// — a price experiment changes the true saving, e.g. $4.99/$39.99 → 33%, so
-    /// a literal "Save 30%" would ship a false claim). nil when it can't be
-    /// computed or the discount is trivial.
-    static func savingsNote(annual: Decimal, monthly: Decimal) -> String? {
-        let yearOfMonthly = monthly * 12
-        guard yearOfMonthly > 0, annual > 0, annual < yearOfMonthly else { return nil }
-        let pct = ((yearOfMonthly - annual) / yearOfMonthly) * 100
-        // Round via doubleValue, NOT `(pct as NSDecimalNumber).intValue` — the
-        // latter returns 0 for a Decimal carrying a long fractional mantissa
-        // (30.4535…e-…), which would silently drop the badge for EVERYONE.
-        let rounded = Int((pct as NSDecimalNumber).doubleValue.rounded())
-        return rounded >= 5 ? "Save \(rounded)%" : nil
+    /// The regular (post-founding) price — a DISPLAY reference only. StoreKit
+    /// can't report a future price, so this is the ONE place $19.99 lives in the
+    /// binary; keep it in sync with the ASC scheduled price change.
+    static let foundingRegularPrice = "$19.99"
+
+    /// True while the founding price is in effect (drives the badge + struck-
+    /// through regular price). Not observed against the wall clock — a months-long
+    /// window; a running app that crosses the date corrects on next launch.
+    var isFoundingWindow: Bool { Date() < Self.foundingUntil }
+
+    /// "Dec 1, 2026" — the day the price rises, for the founding urgency line.
+    static var foundingChangeDateLabel: String {
+        let f = DateFormatter(); f.dateFormat = "MMM d, yyyy"
+        return f.string(from: foundingUntil)
     }
 
-    #if canImport(RevenueCat)
-    /// "3 days free" / "1 week free" / "1 month free" from a free-trial intro
-    /// offer's period. Only ever shown when the user is eligible (checked in
-    /// loadOfferings) — an intro offer is once per subscription group per Apple ID.
-    static func freeTrialLabel(_ period: SubscriptionPeriod) -> String {
-        let n = period.value
-        let unit: String
-        switch period.unit {
-        case .day:   unit = "day"
-        case .week:  return n == 1 ? "7 days free" : "\(n) weeks free"   // "1 week" reads better as 7 days
-        case .month: unit = "month"
-        case .year:  unit = "year"
-        @unknown default: unit = "day"
-        }
-        return "\(n) \(unit)\(n == 1 ? "" : "s") free"
-    }
-    #endif
+    // MARK: - Live price (from the RevenueCat offering's Lifetime package)
+
+    /// Localized price of the one-time unlock ($9.99 now, $19.99 after the
+    /// founding window), nil until the live offering loads.
+    private(set) var unlockPrice: String?
+    /// True once the real price from the live offering is in `unlockPrice`. The
+    /// paywall shows a neutral placeholder until then (never a stale/guessed price).
+    private(set) var pricesAreLive = false
+    /// Whether the active entitlement is backed by a live SUBSCRIPTION (a legacy
+    /// subscriber). Drives the Finance card's "Manage subscription" — a one-time
+    /// buyer has nothing to manage.
+    private(set) var hasActiveSubscription = false
 
     // MARK: - RevenueCat-backed implementation (or a local stub)
 
@@ -167,14 +130,13 @@ final class Store {
     private var offering: Offering?
 
     /// Configure the SDK once, before anything reads `Purchases.shared`.
-    /// Called from the App's init.
     static func configure() {
         Purchases.logLevel = .warn
         Purchases.configure(withAPIKey: apiKey)
     }
 
-    /// Load current entitlement + offerings, then observe live updates
-    /// (renewals, cross-device purchases). Call from a long-lived `.task`.
+    /// Load current entitlement + offering, then observe live updates
+    /// (cross-device purchases, restores). Call from a long-lived `.task`.
     func start() async {
         await refresh()
         for await info in Purchases.shared.customerInfoStream { apply(info) }
@@ -182,79 +144,37 @@ final class Store {
 
     func refresh() async {
         if let info = try? await Purchases.shared.customerInfo() { apply(info) }
-        await loadOfferings()
+        await loadOffering()
     }
 
     private func apply(_ info: CustomerInfo) {
         isPro = info.entitlements[Self.entitlementID]?.isActive == true
+        hasActiveSubscription = !info.activeSubscriptions.isEmpty
     }
 
-    private func loadOfferings() async {
+    /// The one-time unlock package: STRICTLY the offering's Lifetime slot (the
+    /// non-consumable). Deliberately NOT `?? availablePackages.first` — during the
+    /// subscription→one-time transition the offering may still carry the legacy
+    /// monthly/annual subscriptions, and a fallback would show/sell a subscription
+    /// under this "one-time, yours forever" UI. If Lifetime isn't configured yet,
+    /// prices stay non-live (placeholder) and purchase reports "not available".
+    private func unlockPackage(_ o: Offering?) -> Package? {
+        o?.lifetime
+    }
+
+    private func loadOffering() async {
         guard let current = try? await Purchases.shared.offerings().current else { return }
         offering = current
-        let annual  = current.annual  ?? current.package(identifier: "yearly")
-        let monthly = current.monthly ?? current.package(identifier: "monthly")
-        // Savings badge from the REAL prices of THIS offering — so a price
-        // experiment's treatment cohort shows its own true discount, not a
-        // hardcoded one (see savingsNote + PRICING_EXPERIMENT_SPEC.md).
-        let note: String? = {
-            guard let a = annual?.storeProduct.price, let m = monthly?.storeProduct.price else { return nil }
-            return Self.savingsNote(annual: a, monthly: m)
-        }()
-
-        // Free-trial labels — ONLY for products with a free-trial intro offer the
-        // user is actually ELIGIBLE for. An intro offer is once per subscription
-        // group per Apple ID, so a returning user must NOT be told "3 days free"
-        // and then be charged in full — that's a misleading-offer risk. We ask
-        // StoreKit per-user rather than trusting the product's static offer.
-        let trialCandidates = [annual, monthly].compactMap { pkg -> String? in
-            guard let pkg, let intro = pkg.storeProduct.introductoryDiscount,
-                  intro.paymentMode == .freeTrial else { return nil }
-            return pkg.storeProduct.productIdentifier
-        }
-        var trialByProduct: [String: String] = [:]
-        if !trialCandidates.isEmpty {
-            let elig = await Purchases.shared.checkTrialOrIntroDiscountEligibility(productIdentifiers: trialCandidates)
-            for pkg in [annual, monthly] {
-                guard let pkg, let intro = pkg.storeProduct.introductoryDiscount,
-                      intro.paymentMode == .freeTrial,
-                      elig[pkg.storeProduct.productIdentifier]?.status == .eligible else { continue }
-                trialByProduct[pkg.storeProduct.productIdentifier] = Self.freeTrialLabel(intro.subscriptionPeriod)
-            }
-        }
-        func trial(_ pkg: Package?) -> String? {
-            guard let pkg else { return nil }
-            return trialByProduct[pkg.storeProduct.productIdentifier]
-        }
-
-        // Monthly first = display order (front-door default); Annual below.
-        var built: [Plan] = []
-        if let monthly {
-            built.append(.init(id: "monthly", title: "Monthly",
-                               price: monthly.storeProduct.localizedPriceString,
-                               cadence: "per month", note: nil, trial: trial(monthly)))
-        }
-        if let annual {
-            built.append(.init(id: "annual", title: "Annual",
-                               price: annual.storeProduct.localizedPriceString,
-                               cadence: "per year", note: note, trial: trial(annual)))
-        }
-        if !built.isEmpty { plans = built; pricesAreLive = true }
-    }
-
-    private func package(for planID: String) -> Package? {
-        guard let offering else { return nil }
-        switch planID {
-        case "annual":  return offering.annual ?? offering.package(identifier: "yearly")
-        case "monthly": return offering.monthly ?? offering.package(identifier: "monthly")
-        default:        return nil
+        if let unlock = unlockPackage(current) {
+            unlockPrice = unlock.storeProduct.localizedPriceString
+            pricesAreLive = true
         }
     }
 
-    func purchase(planID: String) async {
+    func purchase() async {
         clearFeedback()
-        guard let pkg = package(for: planID) else {
-            purchaseError = "That plan isn’t available right now. Check back once billing is set up."
+        guard let pkg = unlockPackage(offering) else {
+            purchaseError = "The unlock isn’t available right now. Check back once billing is set up."
             return
         }
         purchasing = true
@@ -263,7 +183,7 @@ final class Store {
             let (_, info, cancelled) = try await Purchases.shared.purchase(package: pkg)
             if !cancelled {
                 apply(info)
-                if isPro { Telemetry.purchaseCompleted(plan: planID) }
+                if isPro { Telemetry.purchaseCompleted(plan: "unlock") }
             }
         } catch {
             purchaseError = (error as NSError).localizedDescription
@@ -276,39 +196,30 @@ final class Store {
         defer { purchasing = false }
         do {
             apply(try await Purchases.shared.restorePurchases())
-            // A restore with nothing to restore is a SUCCESS, not a failure —
-            // say so plainly instead of leaving the player staring at silence.
-            // When it DID restore, isPro flips and the paywall dismisses, which
-            // is its own confirmation.
+            // A restore with nothing to restore is a SUCCESS, not a failure — say
+            // so plainly. When it DID restore, isPro flips and the paywall
+            // dismisses, which is its own confirmation.
             if !isPro {
-                restoreNotice = "No previous purchase found on this Apple Account. If you subscribed with a different account, sign in to that one in Settings and try again."
+                restoreNotice = "No previous purchase found on this Apple Account. If you bought on a different account, sign in to that one in Settings and try again."
             }
         } catch {
             purchaseError = (error as NSError).localizedDescription
         }
     }
     #else
-    // STUB — no package present. Flips the local flag so the gating experience
-    // is still testable end-to-end.
+    // STUB — no package present. Flips the local flag so the gating experience is
+    // still testable end-to-end, and seeds the founding price for the DEV paywall.
     static func configure() {}
     func start() async {
-        // No RevenueCat → seed representative prices so the DEV paywall renders
-        // (real prices only ever come from a live offering).
-        // Monthly first (front-door default), both with a trial — mirrors the
-        // "trial on both, default monthly" rollout so the DEV paywall exercises it.
-        plans = [
-            .init(id: "monthly", title: "Monthly", price: "$5.99",  cadence: "per month", note: nil,       trial: "3 days free"),
-            .init(id: "annual",  title: "Annual",  price: "$49.99", cadence: "per year",  note: "Save 30%", trial: "3 days free"),
-        ]
+        unlockPrice = "$9.99"
         pricesAreLive = true
     }
     func refresh() async {}
-    func purchase(planID: String) async { clearFeedback(); isPro = true }
+    func purchase() async { clearFeedback(); isPro = true }
     func restore() async {
         clearFeedback()
-        // Mirrors the real path: nothing to restore against a local stub.
         if !isPro {
-            restoreNotice = "No previous purchase found on this Apple Account. If you subscribed with a different account, sign in to that one in Settings and try again."
+            restoreNotice = "No previous purchase found on this Apple Account. If you bought on a different account, sign in to that one in Settings and try again."
         }
     }
     #endif

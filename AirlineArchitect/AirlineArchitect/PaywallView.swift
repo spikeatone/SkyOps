@@ -4,9 +4,12 @@
 //
 //  Custom SwiftUI (not RevenueCatUI) so it matches the app's Karla/Sky design.
 //  Presented as an overlay from any in-context cap hit (Open Route / Acquire at
-//  the free limit) and from the Finance "Plan" card. Purchase/restore call the
-//  Store STUBS today; wiring RevenueCat later doesn't touch this view beyond the
-//  two calls it already makes (store.purchase / store.restore).
+//  the free limit) and from the Finance "Plan" card.
+//
+//  Monetization (1.2.0): a ONE-TIME "Full Unlock" (non-consumable), with FOUNDING
+//  PLAYER pricing ($9.99, rising to $19.99 after the founding window). The live
+//  price comes from StoreKit via Store; the founding badge + struck-through
+//  regular price are date-gated by Store.isFoundingWindow.
 //
 
 import SwiftUI
@@ -15,9 +18,9 @@ import RevenueCatUI
 #endif
 
 /// "Manage subscription" — presents RevenueCat's Customer Center (cancel,
-/// refund requests, plan changes) when the package is available; otherwise
-/// deep-links to the system subscription-management screen. Shown on the
-/// Finance Pro card for active subscribers.
+/// refund requests) when available; otherwise deep-links to the system
+/// subscription-management screen. Shown on the Finance card ONLY for legacy
+/// subscribers (a one-time buyer has nothing to manage).
 struct ManageSubscriptionButton: View {
     var tint: Color
     @State private var show = false
@@ -45,36 +48,6 @@ struct PaywallView: View {
 
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
-    // Monthly is the pre-selected front-door default (palatable "3 days free,
-    // then $5.99/mo"); Annual sits below for committers. See PRICING_EXPERIMENT_SPEC.md.
-    @State private var selected: String = "monthly"
-    /// Set once the player taps a plan, so the robust auto-selection below never
-    /// overrides a deliberate choice.
-    @State private var userChoseManually = false
-
-    /// True when the currently-selected plan carries an eligible free trial —
-    /// drives the "Start Free Trial" CTA.
-    private var selectedHasTrial: Bool {
-        store.pricesAreLive && store.plans.first { $0.id == selected }?.trial != nil
-    }
-
-    /// Robust default: prefer a trial-bearing plan (display order puts Monthly
-    /// first, so it wins when both carry a trial) so the "Start Free Trial" CTA
-    /// is ALWAYS visible on open — no matter how the offer is configured in ASC.
-    /// Never overrides a manual tap. Runs from both `.onAppear` (plans already
-    /// live at launch, the common case) and `.onChange` (plans load afterward) —
-    /// the documented "adopt in onAppear too" pattern, since onChange won't fire
-    /// for a value already set when the view is created.
-    private func applyDefaultSelection() {
-        guard store.pricesAreLive, !userChoseManually else { return }
-        if let trialPlan = store.plans.first(where: { $0.trial != nil }) {
-            selected = trialPlan.id
-        } else if store.plans.contains(where: { $0.id == "monthly" }) {
-            selected = "monthly"
-        } else if let first = store.plans.first {
-            selected = first.id
-        }
-    }
 
     private func hex(_ h: UInt) -> Color {
         Color(red: Double((h >> 16) & 0xFF) / 255, green: Double((h >> 8) & 0xFF) / 255, blue: Double(h & 0xFF) / 255)
@@ -86,18 +59,16 @@ struct PaywallView: View {
     private var secondary: Color { isDark ? Sky.lightBlue.opacity(0.8) : hex(0x64748B) }
     private var badgeGradient: [Color] { isDark ? [hex(0x4E67A1), hex(0x0C1A42)] : [hex(0x40588F), hex(0x101937)] }
 
-    // Sells the SYSTEMS past the cap, not "more of the same". A free player has
-    // now built one hub, so the pitch is the next rung: more hubs, the markets,
-    // and the endgame they can see coming but can't reach.
+    // Sells the SYSTEMS past the cap, not "more of the same".
     private let features = [
         ("building.2.fill", "Hubs & clubs", "Turn more airports into hubs and open lounges that keep flyers loyal."),
         ("point.3.connected.trianglepath.dotted", "Unlimited routes & fleet", "Grow from a handful of legs to a global network, widebodies and all."),
         ("chart.line.uptrend.xyaxis", "Take it all the way", "Go public, ride the markets, and buy out your rivals."),
     ]
 
-    // Functional legal links required on the subscription screen by App Store
-    // Guideline 3.1.2. Terms of Use is Apple's standard EULA (also linked in the
-    // App Store description); Privacy Policy is the published support-site page.
+    // Privacy Policy (published support-site page) + Terms of Use (Apple's
+    // standard EULA). Kept for a one-time purchase too — good practice, and the
+    // App Store description carries the same links.
     static let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
     static let privacyURL = URL(string: "https://spikeatone.github.io/airline-architect/privacy.html")!
 
@@ -112,7 +83,7 @@ struct PaywallView: View {
                 .frame(width: 84, height: 84)
                 Text("Airline Architect Pro")
                     .font(.karla(24, .bold)).foregroundStyle(primary)
-                Text(reason ?? "You've built the start of something. Go Pro to grow it into a real airline.")
+                Text(reason ?? "You've built the start of something. Unlock the full game to grow it into a real airline.")
                     .font(.karla(14)).foregroundStyle(secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -140,21 +111,15 @@ struct PaywallView: View {
             }
             .padding(20)
 
-            // Plan selector
-            VStack(spacing: 10) {
-                ForEach(store.plans) { plan in planRow(plan) }
-            }
-            .padding(.horizontal, 20)
+            priceBlock
 
             // CTA + restore + fine print
             VStack(spacing: 12) {
                 Button {
-                    Task { await store.purchase(planID: selected); if store.isPro { onClose() } }
+                    Task { await store.purchase(); if store.isPro { onClose() } }
                 } label: {
                     ZStack {
-                        // "Start Free Trial" when the selected plan carries an
-                        // eligible trial, else "Continue".
-                        Text(selectedHasTrial ? "Start Free Trial" : "Continue")
+                        Text("Unlock Full Game")
                             .font(.karla(17, .bold)).foregroundStyle(.white)
                             .opacity(store.purchasing ? 0 : 1)
                         if store.purchasing { ProgressView().tint(.white) }
@@ -167,7 +132,7 @@ struct PaywallView: View {
                 Button {
                     Task { await store.restore(); if store.isPro { onClose() } }
                 } label: {
-                    Text("Restore Purchases").font(.karla(13, .semibold)).foregroundStyle(secondary)
+                    Text("Restore Purchase").font(.karla(13, .semibold)).foregroundStyle(secondary)
                 }.buttonStyle(.plain).disabled(store.purchasing)
 
                 if let err = store.purchaseError {
@@ -181,13 +146,11 @@ struct PaywallView: View {
                         .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
                 }
 
-                Text("Subscriptions auto-renew until cancelled. Manage or cancel anytime in Settings. Payment is charged to your Apple Account.")
+                Text("One-time purchase — no subscription. Unlocks the full game forever and restores on any device signed in to the same Apple Account. Payment is charged to your Apple Account.")
                     .font(.karla(10)).foregroundStyle(secondary.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
 
-                // Terms of Use (EULA) + Privacy Policy — required in the binary
-                // for auto-renewable subscriptions (App Store Guideline 3.1.2).
                 HStack(spacing: 6) {
                     Link("Terms of Use", destination: Self.termsURL)
                     Text("·").foregroundStyle(secondary.opacity(0.6))
@@ -209,60 +172,45 @@ struct PaywallView: View {
             }
             .buttonStyle(.plain).padding(12)
         }
-        // Pick the best default once prices are live — both here (plans already
-        // live at launch) and on change (plans load after the paywall appears).
-        .onAppear { applyDefaultSelection() }
-        .onChange(of: store.pricesAreLive) { _, _ in applyDefaultSelection() }
     }
 
-    private func planRow(_ plan: Store.Plan) -> some View {
-        let on = selected == plan.id
-        return Button { selected = plan.id; userChoseManually = true } label: {
-            HStack(spacing: 12) {
-                Image(systemName: on ? "largecircle.fill.circle" : "circle")
-                    .font(.system(size: 20)).foregroundStyle(on ? Sky.coreGreen : secondary)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(plan.title).font(.karla(16, .bold)).foregroundStyle(primary)
-                        .lineLimit(1)
-                    // Cadence + discount pill share the second line, so neither
-                    // competes with the title for width (no wrap on any device).
-                    HStack(spacing: 6) {
-                        Text(plan.cadence).font(.karla(12)).foregroundStyle(secondary)
-                        // Only show the savings pill once REAL prices are in —
-                        // never a hardcoded one (a price experiment changes the
-                        // true discount). See PRICING_EXPERIMENT_SPEC.md.
-                        if store.pricesAreLive, let note = plan.note {
-                            Text(note).font(.karla(10, .bold)).foregroundStyle(.white)
-                                .lineLimit(1).fixedSize()          // never wrap the pill
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Sky.coreGreen).clipShape(Capsule())
-                        }
+    // MARK: The single one-time-unlock price (founding-aware)
+    @ViewBuilder private var priceBlock: some View {
+        VStack(spacing: 8) {
+            if store.pricesAreLive {
+                if store.isFoundingWindow {
+                    Text("FOUNDING PLAYER")
+                        .font(.karla(11, .bold)).foregroundStyle(.white)
+                        .tracking(0.5)
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Sky.coreGreen).clipShape(Capsule())
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text(store.unlockPrice ?? "")
+                            .font(.karla(34, .heavy)).foregroundStyle(primary)
+                        Text(Store.foundingRegularPrice)
+                            .font(.karla(20, .bold)).foregroundStyle(secondary)
+                            .strikethrough(true, color: secondary)
                     }
-                    // Free-trial line — states the full terms on the paywall
-                    // itself ("3 days free, then $X per year"), which the trial
-                    // lever needs to convert AND 3.1.2 needs disclosed (the
-                    // auto-renew fine print below completes it).
-                    if store.pricesAreLive, let trial = plan.trial {
-                        Text("\(trial), then \(plan.price) \(plan.cadence)")
-                            .font(.karla(11, .bold)).foregroundStyle(Sky.coreGreen)
-                            .lineLimit(1).minimumScaleFactor(0.7)
-                    }
-                }
-                Spacer()
-                // A neutral placeholder until the live offering loads, so a
-                // treatment cohort never briefly sees a stale/control price.
-                if store.pricesAreLive {
-                    Text(plan.price).font(.karla(18, .heavy)).foregroundStyle(primary)
+                    Text("One-time purchase · founding price rises to \(Store.foundingRegularPrice) on \(Store.foundingChangeDateLabel)")
+                        .font(.karla(12)).foregroundStyle(secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 } else {
-                    Text("—").font(.karla(18, .heavy)).foregroundStyle(secondary.opacity(0.5))
-                        .redacted(reason: .placeholder)
+                    Text(store.unlockPrice ?? "")
+                        .font(.karla(34, .heavy)).foregroundStyle(primary)
+                    Text("One-time purchase — yours forever.")
+                        .font(.karla(12)).foregroundStyle(secondary)
                 }
+            } else {
+                // Neutral placeholder until the live offering loads (never a
+                // stale/guessed price).
+                Text("—").font(.karla(34, .heavy))
+                    .foregroundStyle(secondary.opacity(0.5))
+                    .redacted(reason: .placeholder)
             }
-            .padding(14)
-            .background(panelBG)
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-            .overlay(RoundedRectangle(cornerRadius: 4)
-                .stroke(on ? Sky.coreGreen : border, lineWidth: on ? 2 : 1))
-        }.buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 4)
     }
 }
