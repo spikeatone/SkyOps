@@ -2655,42 +2655,52 @@ where numbers are involved.
   direction 2026-08-11). Everything below about "two subscription tiers" is now
   HISTORICAL for NEW users.** Trigger: dismal sub conversion (3 trials / 300+ installs,
   2 cancelled). Premium games convert far better on a buy-once than a rental. The model
-  is now a **one-time non-consumable "Full Unlock"** granting the SAME `Airline Architect
-  Pro` entitlement (so every `store.isPro` gate is unchanged), with **FOUNDING PLAYER
-  pricing: $9.99 through the founding window, then $19.99** (an ASC SCHEDULED PRICE
-  CHANGE — non-consumable, so founding buyers keep $9.99 forever). Decisions (designer):
-  founding ends **Dec 1, 2026** (`Store.foundingUntil`, MUST match the ASC scheduled
-  change); ship as **1.2.0 (build 41)** and let 1.1.5 (40) clear on its own; **keep the
-  two legacy subscriptions attached to the entitlement** (existing subscribers keep Pro
-  until they cancel) but **removed from the RevenueCat offering** so new users only see
-  the unlock. The free tier (6 aircraft / 5 routes) is UNCHANGED and is now the "try
-  before you buy" (no trial clock, no card). Code (all built + verified in a clean build,
-  paywall driven live on the sim showing $9.99 / struck $19.99 / "rises to $19.99 on Dec
-  1, 2026"):
-  - **`Store.swift`** rewritten to the one-time model: `unlockPrice` (localized, from the
-    offering's LIFETIME package ONLY — `unlockPackage` is strictly `offering.lifetime`,
-    NOT `?? availablePackages.first`; a live-drive caught the fallback grabbing the leftover
-    $5.99 monthly sub and showing it under the "one-time" UI, which could SELL a sub —
-    don't reintroduce it), `pricesAreLive`, `isFoundingWindow`, `foundingUntil`,
-    `foundingRegularPrice = "$19.99"` (the ONE place $19.99 lives in the binary — keep in
-    sync with ASC), `foundingChangeDateLabel`, `hasActiveSubscription` (drives the Finance
-    "Manage subscription"). `purchase()` (no planID) buys the lifetime package. The old
-    monthly/annual/trial/savings/`Plan` logic is GONE.
-  - **`PaywallView.swift`** — single price block (FOUNDING PLAYER badge + big live price +
-    struck-through `foundingRegularPrice` + "rises to $19.99 on Dec 1, 2026" while in
-    window; plain "$X · yours forever" after), "Unlock Full Game" CTA, "Restore Purchase",
-    one-time-purchase fine print (auto-renew disclosure removed — 3.1.2 is subscription-
-    only), Terms/Privacy kept. Plan selector removed.
+  is now a **one-time full-game unlock** granting the SAME `Airline Architect Pro`
+  entitlement (so every `store.isPro` gate is unchanged), with **FOUNDING PLAYER pricing:
+  $9.99 through the founding window, then $19.99.**
+  - **FAMILY STANDARD = TWO NON-CONSUMABLES (the "Postmark Digital founding-pricing
+    standard" — codified in `PostmarkOps/ARCHITECT_FAMILY.md`, matches FCA).** Two products,
+    both granting the entitlement: `aa_unlock_founding` ($9.99) + `aa_unlock` ($19.99). In
+    the RevenueCat `default` offering they carry the CUSTOM package identifiers `founding`
+    and `standard`. The app reads BOTH live prices, shows the founding price with the
+    standard STRUCK THROUGH during the window, and SELLS whichever the window dictates.
+    **Why two products, not one + an ASC scheduled price change** (which was the first cut,
+    reverted): with two products the struck regular price is LIVE from StoreKit — never a
+    hardcoded `$19.99` that can drift — and the flip needs NO ASC scheduled change (both
+    products stay in the offering permanently; the app picks). `Store.foundingUntil` (Dec 1,
+    2026) is the SINGLE SOURCE OF TRUTH for the flip; on that date the app auto-switches to
+    selling `aa_unlock` with no dashboard action or app update.
+  - Decisions (designer): founding ends **Dec 1, 2026**; ship as **1.2.0 (build 41)** and let
+    1.1.5 (40) clear on its own; **keep the two legacy subscriptions attached to the
+    entitlement** (existing subscribers keep Pro until they cancel) but **removed from the
+    RevenueCat offering** so new users only see the one-time unlock. Free tier (6 aircraft /
+    5 routes) UNCHANGED — now the "try before you buy" (no trial clock, no card). Code built +
+    clean build + paywall DRIVEN LIVE on the sim ($9.99 / struck $19.99 / "rises to $19.99 on
+    Dec 1, 2026"; both prices live from StoreKit).
+  - **`Store.swift`** (two-product model): `foundingPrice`/`standardPrice` (both localized,
+    from `offering.package(identifier: "founding"/"standard")`), computed `currentPrice`
+    (founding during window else standard) + `strikePrice` (standard, only during window),
+    `pricesAreLive` (= `currentPrice != nil`), `isFoundingWindow`, `foundingUntil`,
+    `foundingChangeDateLabel`, `hasActiveSubscription`. `purchase()` re-checks the window at
+    TAP time and buys `activePackage()`. The old monthly/annual/trial/savings/`Plan` logic is
+    GONE. **NO hardcoded price anywhere** (a deliberate correction of the reverted one-product
+    cut, which had `foundingRegularPrice = "$19.99"`).
+  - **`PaywallView.swift`** — single price block (FOUNDING PLAYER badge + big `currentPrice`
+    + struck-through `strikePrice` (LIVE) + "rises to $X on Dec 1, 2026" while in window;
+    plain "$X · yours forever" after), "Unlock Full Game" CTA, "Restore Purchase", one-time
+    fine print (auto-renew disclosure removed — 3.1.2 is subscription-only), Terms/Privacy
+    kept. Plan selector removed.
   - **`FinanceView.swift`** plan card — Pro state reads "Full game unlocked — thank you";
-    "Manage subscription" shown ONLY when `store.hasActiveSubscription` (a one-time buyer
-    has nothing to manage).
+    "Manage subscription" shown ONLY when `store.hasActiveSubscription`.
   - **STILL NEEDED before build 41 works (designer/account side — see the ASC + RevenueCat
-    guides in this session's chat):** create the non-consumable IAP in ASC ($9.99 + a
-    scheduled $19.99 change on Dec 1), attach it to the `Airline Architect Pro` entitlement
-    in RevenueCat as the **Lifetime** package, and remove monthly/annual from the `default`
-    offering. Until the Lifetime package exists, the paywall safely shows a "—" placeholder
-    and purchase reports "not available" (no accidental sub sale). Build 41 archive/upload
-    waits on that config.
+    guides in this session's chat + the family standard in `ARCHITECT_FAMILY.md`):** create
+    BOTH non-consumables in ASC (`aa_unlock` $19.99, `aa_unlock_founding` $9.99, each with a
+    review note that they're founding/standard variants of the same unlock); attach both to
+    the `Airline Architect Pro` entitlement in RevenueCat; add them to the `default` offering
+    under the custom package identifiers **`founding`** and **`standard`**; and remove
+    monthly/annual from that offering. Until the packages exist, the paywall safely shows a
+    "—" placeholder and purchase reports "not available" (no accidental sub sale). Build 41
+    archive/upload waits on that config.
 - **(HISTORICAL — superseded by the 1.2.0 pivot above for NEW users) IN-APP PURCHASES —
   scaffolded behind a stub (native app). Designer has a
   RevenueCat account; two tiers ($5.99/mo, $49.99/yr) + a free preview.**

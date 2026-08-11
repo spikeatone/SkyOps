@@ -4,23 +4,27 @@
 //
 //  Monetization model (1.2.0): a free preview that runs the FULL core loop with
 //  every feature on, but caps the NETWORK (fleet + open routes) so upgrading
-//  unlocks scale — "build a real empire" — rather than crippled features. The
-//  upgrade is now a ONE-TIME PURCHASE (non-consumable "Full Unlock"), replacing
-//  the old monthly/annual subscriptions: premium games convert far better on a
-//  buy-once than on a rental (3 trials / 300 installs said as much).
+//  unlocks scale. The upgrade is a ONE-TIME PURCHASE (non-consumable "Full
+//  Unlock"), replacing the old monthly/annual subscriptions — premium games
+//  convert far better on a buy-once than a rental.
 //
-//  FOUNDING PLAYER PRICING: the unlock is $9.99 through the founding window, then
-//  rises to $19.99 (an App Store Connect SCHEDULED PRICE CHANGE — buyers in the
-//  window keep $9.99 forever, since it's non-consumable). The live price comes
-//  from StoreKit; the app only date-gates the "FOUNDING PLAYER · regularly
-//  $19.99" treatment off `foundingUntil`, which MUST match the ASC change date.
+//  FOUNDING PLAYER PRICING — the POSTMARK DIGITAL FAMILY STANDARD (two products;
+//  see PostmarkOps/ARCHITECT_FAMILY.md). There are TWO non-consumables, both
+//  granting the SAME entitlement:
+//    • `aa_unlock_founding`  ($9.99)  — the founding price
+//    • `aa_unlock`           ($19.99) — the standard price
+//  In the RevenueCat `default` offering they carry the custom package identifiers
+//  `founding` and `standard`. The app reads BOTH live prices, shows the founding
+//  price with the standard struck through DURING the founding window, and — the
+//  key — SELLS whichever the window dictates (`foundingUntil`, the single source
+//  of truth for the flip; NO ASC scheduled price change). Two products means the
+//  struck-through regular price is LIVE from StoreKit, never a hardcoded number.
 //
 //  RevenueCat wiring: the SDK drives `isPro` from the "Airline Architect Pro"
-//  entitlement. The non-consumable is the offering's LIFETIME package. The two
-//  legacy subscription products stay attached to the entitlement (existing
-//  subscribers keep Pro until they cancel) but are REMOVED from the offering, so
-//  new users only ever see the one-time unlock. All RevenueCat code is behind
-//  `#if canImport(RevenueCat)` with a local stub fallback.
+//  entitlement. The two legacy subscription products stay attached to the
+//  entitlement (existing subscribers keep Pro until they cancel) but are REMOVED
+//  from the offering, so new users only see the one-time unlock. All RevenueCat
+//  code is behind `#if canImport(RevenueCat)` with a local stub fallback.
 //
 
 #if canImport(RevenueCat)
@@ -34,8 +38,13 @@ final class Store {
     /// inside the app). Production key for the "Airline Architect" App Store app.
     static let apiKey = "appl_VrQXFZPLdMiMOFAQVErmwOeVdup"
     /// The entitlement identifier configured in the RevenueCat dashboard. Granted
-    /// by BOTH the new non-consumable AND the two legacy subscriptions.
+    /// by BOTH one-time products AND the two legacy subscriptions.
     static let entitlementID = "Airline Architect Pro"
+
+    /// Custom package identifiers in the RevenueCat `default` offering for the two
+    /// one-time products (family convention — see ARCHITECT_FAMILY.md).
+    static let foundingPackageID = "founding"   // → aa_unlock_founding ($9.99)
+    static let standardPackageID = "standard"   // → aa_unlock ($19.99)
 
     /// Whether the player has unlocked the full game (uncapped play). Driven by
     /// the RevenueCat entitlement when configured; a local flag otherwise.
@@ -44,14 +53,10 @@ final class Store {
     /// Purchase-flow UI state (paywall reads these).
     var purchasing = false
     var purchaseError: String?
-    /// Non-error feedback from a completed restore. A restore that finds no
-    /// entitlement SUCCEEDS at the StoreKit level — it just returns customer
-    /// info with nothing active — so without this the paywall said nothing at
-    /// all and the button read as broken. Neutral copy, not an error.
+    /// Non-error feedback from a completed restore (a restore that finds nothing
+    /// SUCCEEDS at the StoreKit level — neutral copy, not an error).
     var restoreNotice: String?
 
-    /// Clear stale feedback before a new purchase/restore attempt, so a message
-    /// from a previous attempt can't be mistaken for the result of this one.
     private func clearFeedback() {
         purchaseError = nil
         restoreNotice = nil
@@ -61,10 +66,9 @@ final class Store {
 
     /// SIZED SO A FREE PLAYER CAN BUILD EXACTLY ONE HUB, then hits the wall.
     /// `Simulation.hubMinRoutes` is 5, so 5 routes lets them reach one hub and
-    /// feel the game open up; the cap then bites when they want a SECOND hub —
-    /// the emotional peak. Fleet is route-cap + 1 (one spare, never a useless buy).
-    /// With a one-time unlock the free tier IS the "try before you buy" — no trial
-    /// clock, no card, which converts better for a premium game than a 3-day trial.
+    /// feel the game open up; the cap then bites when they want a SECOND hub.
+    /// Fleet is route-cap + 1 (one spare, never a useless buy). With a one-time
+    /// unlock the free tier IS the "try before you buy" — no trial clock, no card.
     static let freeFleetCap = 6
     static let freeRouteCap = 5
 
@@ -72,8 +76,7 @@ final class Store {
     func canOpenRoute(_ sim: Simulation) -> Bool { isPro || sim.playerRoutes.count < Self.freeRouteCap }
 
     enum Gate { case fleet, route }
-    /// Sells the DEPTH waiting past the cap, not the quantity — names the systems
-    /// they can't reach yet.
+    /// Sells the DEPTH waiting past the cap, not the quantity.
     func capMessage(_ gate: Gate) -> String {
         switch gate {
         case .fleet:
@@ -83,26 +86,21 @@ final class Store {
         }
     }
 
-    // MARK: - Founding Player pricing
+    // MARK: - Founding Player pricing (in-app date-gate — no ASC scheduled change)
 
-    /// Founding Player pricing ($9.99) runs until this date, after which the App
-    /// Store price rises to `foundingRegularPrice`. This MUST match the SCHEDULED
-    /// PRICE CHANGE configured in App Store Connect — the app date-gates the
-    /// founding badge/reference off this, while StoreKit reports the real price.
+    /// Founding Player pricing runs until this date, after which the app sells the
+    /// STANDARD product instead of the FOUNDING one. This app constant is the ONLY
+    /// thing that controls the flip (both products stay in the offering the whole
+    /// time), so no App Store Connect scheduled price change is involved.
     static let foundingUntil: Date = {
         var c = DateComponents(); c.year = 2026; c.month = 12; c.day = 1
         c.hour = 0; c.minute = 0
         return Calendar(identifier: .gregorian).date(from: c)!
     }()
 
-    /// The regular (post-founding) price — a DISPLAY reference only. StoreKit
-    /// can't report a future price, so this is the ONE place $19.99 lives in the
-    /// binary; keep it in sync with the ASC scheduled price change.
-    static let foundingRegularPrice = "$19.99"
-
-    /// True while the founding price is in effect (drives the badge + struck-
-    /// through regular price). Not observed against the wall clock — a months-long
-    /// window; a running app that crosses the date corrects on next launch.
+    /// True while founding pricing is in effect. Not observed against the wall
+    /// clock — a months-long window; a running app that crosses the date corrects
+    /// on next launch (and `purchase()` re-checks it at tap time regardless).
     var isFoundingWindow: Bool { Date() < Self.foundingUntil }
 
     /// "Dec 1, 2026" — the day the price rises, for the founding urgency line.
@@ -111,18 +109,24 @@ final class Store {
         return f.string(from: foundingUntil)
     }
 
-    // MARK: - Live price (from the RevenueCat offering's Lifetime package)
+    // MARK: - Live prices (both products, from the RevenueCat offering)
 
-    /// Localized price of the one-time unlock ($9.99 now, $19.99 after the
-    /// founding window), nil until the live offering loads.
-    private(set) var unlockPrice: String?
-    /// True once the real price from the live offering is in `unlockPrice`. The
-    /// paywall shows a neutral placeholder until then (never a stale/guessed price).
+    /// Localized founding price ($9.99), nil until the live offering loads.
+    private(set) var foundingPrice: String?
+    /// Localized standard price ($19.99), nil until the live offering loads.
+    private(set) var standardPrice: String?
+    /// True once the price the app will actually CHARGE this window is loaded (the
+    /// paywall shows a neutral placeholder until then — never a stale/guessed price).
     private(set) var pricesAreLive = false
     /// Whether the active entitlement is backed by a live SUBSCRIPTION (a legacy
-    /// subscriber). Drives the Finance card's "Manage subscription" — a one-time
-    /// buyer has nothing to manage.
+    /// subscriber). Drives the Finance card's "Manage subscription".
     private(set) var hasActiveSubscription = false
+
+    /// The price the player pays right now (founding during the window, else standard).
+    var currentPrice: String? { isFoundingWindow ? foundingPrice : standardPrice }
+    /// The struck-through reference — the standard price, shown only during the
+    /// founding window (and only if it loaded). Live from StoreKit, never hardcoded.
+    var strikePrice: String? { isFoundingWindow ? standardPrice : nil }
 
     // MARK: - RevenueCat-backed implementation (or a local stub)
 
@@ -152,28 +156,26 @@ final class Store {
         hasActiveSubscription = !info.activeSubscriptions.isEmpty
     }
 
-    /// The one-time unlock package: STRICTLY the offering's Lifetime slot (the
-    /// non-consumable). Deliberately NOT `?? availablePackages.first` — during the
-    /// subscription→one-time transition the offering may still carry the legacy
-    /// monthly/annual subscriptions, and a fallback would show/sell a subscription
-    /// under this "one-time, yours forever" UI. If Lifetime isn't configured yet,
-    /// prices stay non-live (placeholder) and purchase reports "not available".
-    private func unlockPackage(_ o: Offering?) -> Package? {
-        o?.lifetime
+    /// The package the app should SELL this window (founding during, standard after).
+    private func activePackage() -> Package? {
+        offering?.package(identifier: isFoundingWindow ? Self.foundingPackageID : Self.standardPackageID)
     }
 
     private func loadOffering() async {
         guard let current = try? await Purchases.shared.offerings().current else { return }
         offering = current
-        if let unlock = unlockPackage(current) {
-            unlockPrice = unlock.storeProduct.localizedPriceString
-            pricesAreLive = true
-        }
+        foundingPrice = current.package(identifier: Self.foundingPackageID)?.storeProduct.localizedPriceString
+        standardPrice = current.package(identifier: Self.standardPackageID)?.storeProduct.localizedPriceString
+        // Live once the price we'll actually CHARGE this window is present. (The
+        // strikethrough — the OTHER price — is optional; its absence just hides it.)
+        pricesAreLive = currentPrice != nil
     }
 
     func purchase() async {
         clearFeedback()
-        guard let pkg = unlockPackage(offering) else {
+        // Re-checks the window at tap time, so the product sold always matches the
+        // window even if the paywall was left open across the flip date.
+        guard let pkg = activePackage() else {
             purchaseError = "The unlock isn’t available right now. Check back once billing is set up."
             return
         }
@@ -196,9 +198,6 @@ final class Store {
         defer { purchasing = false }
         do {
             apply(try await Purchases.shared.restorePurchases())
-            // A restore with nothing to restore is a SUCCESS, not a failure — say
-            // so plainly. When it DID restore, isPro flips and the paywall
-            // dismisses, which is its own confirmation.
             if !isPro {
                 restoreNotice = "No previous purchase found on this Apple Account. If you bought on a different account, sign in to that one in Settings and try again."
             }
@@ -208,10 +207,11 @@ final class Store {
     }
     #else
     // STUB — no package present. Flips the local flag so the gating experience is
-    // still testable end-to-end, and seeds the founding price for the DEV paywall.
+    // still testable, and seeds both prices for the DEV paywall.
     static func configure() {}
     func start() async {
-        unlockPrice = "$9.99"
+        foundingPrice = "$9.99"
+        standardPrice = "$19.99"
         pricesAreLive = true
     }
     func refresh() async {}

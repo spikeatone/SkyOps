@@ -174,10 +174,10 @@ struct PaywallView: View {
         }
     }
 
-    // MARK: The single one-time-unlock price (founding-aware)
+    // MARK: The one-time-unlock price (founding-aware; both prices live from StoreKit)
     @ViewBuilder private var priceBlock: some View {
         VStack(spacing: 8) {
-            if store.pricesAreLive {
+            if store.pricesAreLive, let price = store.currentPrice {
                 if store.isFoundingWindow {
                     Text("FOUNDING PLAYER")
                         .font(.karla(11, .bold)).foregroundStyle(.white)
@@ -185,18 +185,23 @@ struct PaywallView: View {
                         .padding(.horizontal, 10).padding(.vertical, 4)
                         .background(Sky.coreGreen).clipShape(Capsule())
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(store.unlockPrice ?? "")
+                        Text(price)
                             .font(.karla(34, .heavy)).foregroundStyle(primary)
-                        Text(Store.foundingRegularPrice)
-                            .font(.karla(20, .bold)).foregroundStyle(secondary)
-                            .strikethrough(true, color: secondary)
+                        // The struck-through standard price — LIVE from StoreKit,
+                        // shown only if it loaded (never a hardcoded number).
+                        if let strike = store.strikePrice {
+                            Text(strike)
+                                .font(.karla(20, .bold)).foregroundStyle(secondary)
+                                .strikethrough(true, color: secondary)
+                        }
                     }
-                    Text("One-time purchase · founding price rises to \(Store.foundingRegularPrice) on \(Store.foundingChangeDateLabel)")
+                    Text(store.strikePrice.map { "One-time purchase · founding price rises to \($0) on \(Store.foundingChangeDateLabel)" }
+                         ?? "One-time purchase · founding price ends \(Store.foundingChangeDateLabel)")
                         .font(.karla(12)).foregroundStyle(secondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
-                    Text(store.unlockPrice ?? "")
+                    Text(price)
                         .font(.karla(34, .heavy)).foregroundStyle(primary)
                     Text("One-time purchase — yours forever.")
                         .font(.karla(12)).foregroundStyle(secondary)
