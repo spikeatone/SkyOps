@@ -5,9 +5,11 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 9 August 2026. **1.1.3 (build 38) is LIVE**; **1.1.4 (build 39) is SUBMITTED
-FOR APPLE REVIEW** (version record created, build attached, in review). Clean tree on
-`main`, all pushed. App: <https://apps.apple.com/us/app/airline-architect/id6790569697>._
+_Snapshot: 11 August 2026. **1.1.4 (build 39) is LIVE** (approved 11 Aug); **1.1.5
+(build 40) is SUBMITTED FOR APPLE REVIEW** — a fuel-hedge persistence fix + the new
+close-route/park-aircraft action (both customer-reported). Next new build must be
+**41+**. Clean tree on `main`, all pushed. App:
+<https://apps.apple.com/us/app/airline-architect/id6790569697>._
 
 ## What shipped in 1.1.2 (build 37)
 
@@ -24,10 +26,30 @@ were dumping grounds (Honolulu, Cusco at 11,000 ft, Kathmandu, the whole Gulf).
 override-only. Audit harness: `aa-1.1.x/archetype-audit` — **re-run it after adding
 airports**.
 
-## 1.1.4 (build 39) — SUBMITTED FOR REVIEW (9 Aug)
+## 1.1.5 (build 40) — SUBMITTED FOR REVIEW (11 Aug)
 
-Repo at **1.1.4 / build 39**, uploaded + submitted 9 Aug. Version record created,
-build 39 attached, in Apple review. Next new build must be **40+**. Contents:
+Repo at **1.1.5 / build 40**, uploaded from the CLI (export → `altool --validate-app`
+→ `--upload-app`, VERIFY + UPLOAD both clean, Delivery UUID `f54fd353-…`) and submitted
+for review by the designer 11 Aug. Next new build must be **41+**. Two customer-reported
+items:
+
+- **Fuel-hedge persistence fix.** A paying customer's bought 90-day hedge VANISHED on
+  app close/reopen — `fuelHedgeExpiryTick` was set by `buyFuelHedge` but never in
+  `GameSnapshot`/`snapshot()`/`restore()`, so the autosave→relaunch round-trip dropped a
+  PAID asset. Fixed (field + `decodeSafeOpt` + snapshot + restore). A full persistence
+  AUDIT found this was the ONLY material paid/earned gap. Guard: `aa-1.1.x/FuelHedgeVerify.swift` (11/11).
+- **Close route / park aircraft — new lever.** There was NO way to close a route and
+  keep the plane, or force a plane idle (only sell / reassign-to-a-new-route / accept a
+  slot buyback). `Simulation.parkAircraft(_:)` archives the route (history kept, slots
+  freed) and leaves the plane an idle spare — at-gate immediately, airborne deferred to
+  arrival (`pendingPark`, persisted). UI on Fleet detail (**PARK (CLOSE ROUTE)**) + the
+  Routes panel (**Close route · park aircraft**). Guard: `aa-1.1.x/ParkVerify.swift`
+  (28/28); driven live on the sim (Fleet-detail flow confirmed; deferred park executes).
+
+## 1.1.4 (build 39) — LIVE (approved 11 Aug)
+
+Repo was at **1.1.4 / build 39**, uploaded + submitted 9 Aug, **approved and live 11 Aug**.
+Contents:
 
 - **Free 3-day trial on both plans (Monthly default) — the paywall UI.** "3 days free,
   then $X" line + "Start Free Trial" CTA, eligibility-gated (once per subscription
@@ -98,8 +120,9 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
 
 ## WHERE THINGS STAND
 
-- **Shipped & live.** 1.1.3 (build 38) is public — as were 1.1.1 (36) and 1.1.2 (37)
-  before it, all three clean reviews with no rejections.
+- **Shipped & live.** 1.1.4 (build 39) is public (approved 11 Aug) — as were 1.1.3 (38),
+  1.1.1 (36) and 1.1.2 (37) before it, all clean reviews with no rejections.
+  **1.1.5 (build 40) is uploaded + submitted for review** (fuel-hedge fix + close-route/park).
   The preceding 1.1 (build 35) debut cleared only after a two-round Guideline
   **3.1.2** subscription saga (missing Terms-of-Use / EULA link — first in METADATA,
   then the IN-APP links), resolved by shipping the in-app paywall Terms + Privacy
@@ -123,8 +146,8 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   ($49.99/$5.99), so correct prices do NOT prove the offering loaded** — the real
   tell is whether tapping Continue reaches Apple's sheet or errors with "That plan
   isn't available right now."
-- **Build numbers:** **1.1.3 / build 38** is LIVE; **1.1.4 / build 39** is submitted for
-  review. ASC has 31–39 uploaded, so the next new build must be **40+**.
+- **Build numbers:** **1.1.4 / build 39** is LIVE; **1.1.5 / build 40** is submitted for
+  review. ASC has 31–40 uploaded, so the next new build must be **41+**.
 - **3-DAY FREE TRIAL is LIVE at the store level** (independent of the app binary): ASC
   introductory offers (Free / 3 Days, both Monthly + Yearly, all 175 territories, starts
   2026-08-09 / **ends 2026-12-31**) auto-apply to any eligible new subscriber NOW — verified

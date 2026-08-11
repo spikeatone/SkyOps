@@ -1222,8 +1222,14 @@ one contradicts the design thesis.)
     idle spare + route archived + slots freed + plane not sold, airborne deferred park,
     idle-spare park is a no-op (returns false), park cancels + tears down a scheduled
     reassignment, `pendingPark` survives a save/reload round-trip, and the cash invariant
-    holds through every path. Plus a clean full app build. (Live Simulator tap-through of
-    the two buttons still owed — flagged, the input-channel glitch permitting.)
+    holds through every path. Plus a clean full app build. **Driven live on the iPhone 17
+    Pro sim** via a throwaway `-devScenario park` (1 routed jet + 2 idle spares, stripped
+    before commit): the Fleet-detail PARK button rendered next to ASSIGN, the confirm
+    dialog showed the correct airborne copy, and confirming DEFERRED the park — the jet
+    finished its leg (cycles 6→7) then went IDLE, with the PARK button correctly gone on
+    the now-spare. The Routes-panel button uses the identical `parkAircraft` + confirm and
+    was not separately driven (same call; button-in-card taps fine in SwiftUI). Shipped in
+    **1.1.5 (build 40)**, submitted for review 2026-08-11.
 
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
@@ -2372,8 +2378,9 @@ where numbers are involved.
     one `decodeSafeOpt` line in Persistence.swift + `s.fuelHedgeExpiryTick = …` in
     snapshot() + `fuelHedgeExpiryTick = s.fuelHedgeExpiryTick` in restore(). It's an
     ABSOLUTE tick and `tick` is persisted, so no relative conversion is needed and
-    `fuelHedgeActive`/`fuelHedgeDaysRemaining` read correctly after load. Ships in the
-    next build (40+). Verified `aa-1.1.x/FuelHedgeVerify.swift` 11/11 (real save path:
+    `fuelHedgeActive`/`fuelHedgeDaysRemaining` read correctly after load. Shipped in
+    **1.1.5 (build 40)**, submitted for review 2026-08-11 (1.1.4/39 approved & live same
+    day). Verified `aa-1.1.x/FuelHedgeVerify.swift` 11/11 (real save path:
     hedge survives reload, re-buy refused after reload, still expires on schedule,
     legacy save with no field decodes gracefully) + clean full app build. **AUDIT (same
     session, designer asked "check everything that should persist DOES"):** fuel hedge
