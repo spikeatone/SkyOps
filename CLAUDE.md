@@ -2692,14 +2692,25 @@ where numbers are involved.
     kept. Plan selector removed.
   - **`FinanceView.swift`** plan card — Pro state reads "Full game unlocked — thank you";
     "Manage subscription" shown ONLY when `store.hasActiveSubscription`.
+  - **ASC PRODUCTS — CREATED (2026-08-11), both Non-Consumable, "Ready for Review":**
+    standard = **`aa_unlock_standard`** ($19.99), founding = **`aa_unlock_founding_player`**
+    ($9.99). (The first-try IDs `aa_unlock`/`aa_unlock_founding` were BURNED — an IAP product
+    id is permanent per team even after deletion, and the Type can't be changed post-creation,
+    so a mis-typed Consumable had to be deleted + recreated under a fresh id. See the IAP
+    gotchas in `ARCHITECT_FAMILY.md`.) The app never references these ids — it reads the
+    RevenueCat PACKAGE identifiers `standard`/`founding` — so the exact ids are a pure
+    ASC↔RevenueCat mapping detail.
   - **STILL NEEDED before build 41 works (designer/account side — see the ASC + RevenueCat
-    guides in this session's chat + the family standard in `ARCHITECT_FAMILY.md`):** create
-    BOTH non-consumables in ASC (`aa_unlock` $19.99, `aa_unlock_founding` $9.99, each with a
-    review note that they're founding/standard variants of the same unlock); attach both to
-    the `Airline Architect Pro` entitlement in RevenueCat; add them to the `default` offering
-    under the custom package identifiers **`founding`** and **`standard`**; and remove
-    monthly/annual from that offering. Until the packages exist, the paywall safely shows a
-    "—" placeholder and purchase reports "not available" (no accidental sub sale). Build 41
+    guides in this session's chat + the family standard in `ARCHITECT_FAMILY.md`):** in
+    RevenueCat, attach both products to the `Airline Architect Pro` entitlement and add them to
+    the `default` offering under package identifiers **`founding`** (`aa_unlock_founding_player`)
+    and **`standard`** (`aa_unlock_standard`) — the offering config MUST be live before build 41
+    goes to review (the reviewer tests the purchase through the offering). Keep monthly/annual
+    in the offering during the coexistence window (the live pre-pivot build reads them), remove
+    them only once 1.2 dominates; NEVER delete the sub products. The two IAPs must be submitted
+    WITH build 41 (the build whose paywall uses them) — not alone or with 1.1.5. Until the
+    packages exist, the paywall safely shows a "—" placeholder and purchase reports "not
+    available" (no accidental sub sale). Build 41
     archive/upload waits on that config.
 - **(HISTORICAL — superseded by the 1.2.0 pivot above for NEW users) IN-APP PURCHASES —
   scaffolded behind a stub (native app). Designer has a
