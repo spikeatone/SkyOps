@@ -5,16 +5,16 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 11 August 2026. **1.1.4 (build 39) is LIVE** (approved 11 Aug). **1.1.5
-(build 40) is IN REVIEW** — fuel-hedge persistence fix + close-route/park action (both
-customer-reported). **1.2.0 (build 41) is UPLOADED and PARKED** — the MONETIZATION
-PIVOT (subscription → one-time "Full Unlock" with $9.99 founding pricing rising to
-$19.99 on Dec 1, 2026; two non-consumables `aa_unlock_founding_player`/`aa_unlock_standard`
-under RevenueCat offering packages `founding`/`standard`; see CLAUDE.md's "MONETIZATION
-PIVOT" note + PostmarkOps `ARCHITECT_FAMILY.md`). **Plan A sequencing:** let 1.1.5 clear
-first, THEN create the 1.2.0 version + attach build 41 + both IAPs + submit. Build 41
-already CONTAINS 1.1.5's fixes (built from later code), so it can also ship instead of
-1.1.5 if wanted. Next new build must be **42+**. Clean tree on `main`, all pushed. App:
+_Snapshot: 11 August 2026. **1.1.4 (39) and 1.1.5 (40) are BOTH LIVE** (1.1.5 = fuel-hedge
+persistence fix + close-route/park action, both customer-reported). **1.2.0 (build 41,
+VALID) is UPLOADED and READY TO SUBMIT** — the MONETIZATION PIVOT (subscription → one-time
+"Full Unlock", $9.99 founding pricing rising to $19.99 on Dec 1, 2026; two non-consumables
+`aa_unlock_founding_player`/`aa_unlock_standard` under RevenueCat offering packages
+`founding`/`standard`; see CLAUDE.md's "MONETIZATION PIVOT" note + PostmarkOps
+`ARCHITECT_FAMILY.md`). RevenueCat is fully configured (entitlement + products + offering
+with the subs retained for coexistence). **Remaining (designer, ASC UI):** create the 1.2.0
+version → attach build 41 → What's New → add both IAPs to the submission → submit. Next new
+build must be **42+**. Clean tree on `main`, all pushed. App:
 <https://apps.apple.com/us/app/airline-architect/id6790569697>._
 
 ## What shipped in 1.1.2 (build 37)
