@@ -37,10 +37,21 @@
 >   look), `titleCX = 0.33` pushed forward toward the nose (designer call — reads better,
 >   leaves long names room). Don't nudge titleCY off the window row.
 >
-> **Still Phase-2 / open (designer calls):** per-type placement for the other ~33 types
-> (only the 737/A320/DH8B families are tuned; everything else uses a heuristic default);
-> whether the Marketplace should preview the livery; a livery-edit screen post-launch
-> (today it's set once at creation). See "To finish" below.
+> **PER-TYPE PLACEMENT — DONE (all 35 illustrated types).** `LiveryPlacement.forType`
+> now has a case per type, MEASURED from each illustration (a Python pass detects the
+> dashed cabin-window row → `titleCY`, the forward cabin → `titleCX`, the fin body →
+> the emblem). The turboprops + small commuters (AT46 / B1900 / D328 / DH8B / ERJ135 /
+> ERJ140) and MAX9 are HAND-TUNED (marked `// tuned`) — their titles push forward toward
+> the nose so they clear the wing/prop, and sit on the real (higher) window row. New
+> types fall through to a narrowbody default. **Verified in the REAL SwiftUI renderer**
+> via the `-liveryGallery` DEBUG harness (a keeper, like `-liveryPreview`): every type
+> walked through on the iPhone 17 Pro sim, all clean. To re-tune after an art/type
+> change: run the measure script (in git history of this session) or launch
+> `-liveryGallery` and adjust the one case.
+>
+> **Still Phase-2 / open (designer calls):** whether the Marketplace should preview the
+> livery (today only owned aircraft in Fleet detail wear it); a livery-edit screen
+> post-launch (today it's set once at creation). See "To finish" below.
 >
 > ---
 > _Original prototype spec preserved below for reference._

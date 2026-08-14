@@ -278,3 +278,29 @@ struct LiveryDesignView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
+
+#if DEBUG
+/// DEBUG (-liveryGallery): every illustrated type wearing a livery, for verifying
+/// per-type placement in the REAL SwiftUI renderer (not the Python approximation).
+struct LiveryGalleryView: View {
+    let ids = ["A220100","A220300","A319","A319NEO","A320","A320NEO","A321","A321NEO",
+               "A339","A340","A359","A380","AT46","B1900","B737700","B737800","B739",
+               "B747","B773","B788","B789","B78J","CRJ1000","CRJ900","D328","DH8B",
+               "E170","E175","E190","E195","ERJ135","ERJ140","ERJ145","MAX8","MAX9"]
+    let livery = Livery(fontIndex: 1, paletteIndex: 0, tailArtIndex: 1)   // Bebas · Atlantic · wing
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 6) {
+                ForEach(ids, id: \.self) { id in
+                    VStack(spacing: 0) {
+                        Text(id).font(.system(size: 10, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading)
+                        AircraftLiveryImage(typeID: id, name: "ASTER AIR", livery: livery)
+                    }
+                }
+            }
+            .padding(8)
+        }
+        .background(Color(white: 0.93))
+    }
+}
+#endif

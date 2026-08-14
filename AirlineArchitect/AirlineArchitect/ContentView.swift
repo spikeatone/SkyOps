@@ -22,6 +22,7 @@ struct ContentView: View {
     @State private var paywallReason: String?
     @State private var showPaywall = false
     @State private var showLiveryPreview = false   // DEBUG (-liveryPreview): open the livery design screen directly
+    @State private var showLiveryGallery = false   // DEBUG (-liveryGallery): all types wearing a livery
     /// After naming, the livery design screen shows (font / palette / tail emblem)
     /// before the game starts. Holds the just-entered name so the preview can paint
     /// it; nil = not in the livery step.
@@ -86,6 +87,9 @@ struct ContentView: View {
             #if DEBUG
             if CommandLine.arguments.contains("-liveryPreview") {   // DEBUG: drive the livery screen directly
                 showSplash = false; showLiveryPreview = true; return
+            }
+            if CommandLine.arguments.contains("-liveryGallery") {   // DEBUG: all types wearing a livery
+                showSplash = false; showLiveryGallery = true; return
             }
             if let scenario = Self.devScenario {
                 sim.devSeed(scenario)
@@ -235,6 +239,9 @@ struct ContentView: View {
                 }
                 .ignoresSafeArea()
             }
+            #if DEBUG
+            if showLiveryGallery { LiveryGalleryView().ignoresSafeArea() }
+            #endif
         }
         .animation(.easeOut(duration: 0.3), value: sim.isBankrupt)
     }
