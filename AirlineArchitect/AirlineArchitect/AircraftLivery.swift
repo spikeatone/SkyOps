@@ -47,13 +47,13 @@ struct LiveryPlacement {
         // punch through the letters as cutouts via the multiply blend — the United look.
         case "A319", "A320", "A321", "A319NEO", "A320NEO", "A321NEO":
             return .init(titleCX: 0.34, titleCY: 0.62, titleW: 0.38, titleScale: 0.17,
-                         tailCX: 0.84, tailCY: 0.38, tailScale: 0.24)
+                         tailCX: 0.865, tailCY: 0.36, tailScale: 0.28)
         case "DH8B":
             return .init(titleCX: 0.25, titleCY: 0.73, titleW: 0.22, titleScale: 0.095,
-                         tailCX: 0.84, tailCY: 0.33, tailScale: 0.24)
+                         tailCX: 0.865, tailCY: 0.31, tailScale: 0.28)
         default:
             return .init(titleCX: 0.35, titleCY: 0.62, titleW: 0.34, titleScale: 0.15,
-                         tailCX: 0.845, tailCY: 0.37, tailScale: 0.24)
+                         tailCX: 0.87, tailCY: 0.35, tailScale: 0.28)
         }
     }
 }
