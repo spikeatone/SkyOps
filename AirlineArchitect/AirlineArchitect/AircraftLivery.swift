@@ -46,14 +46,14 @@ struct LiveryPlacement {
         // titleCY sits ON the window line (fuselage vertical centre) so the windows
         // punch through the letters as cutouts via the multiply blend — the United look.
         case "A319", "A320", "A321", "A319NEO", "A320NEO", "A321NEO":
-            return .init(titleCX: 0.37, titleCY: 0.62, titleW: 0.38, titleScale: 0.17,
-                         tailCX: 0.885, tailCY: 0.24, tailScale: 0.18)
+            return .init(titleCX: 0.34, titleCY: 0.62, titleW: 0.38, titleScale: 0.17,
+                         tailCX: 0.86, tailCY: 0.30, tailScale: 0.24)
         case "DH8B":
-            return .init(titleCX: 0.575, titleCY: 0.66, titleW: 0.28, titleScale: 0.13,
-                         tailCX: 0.875, tailCY: 0.19, tailScale: 0.19)
+            return .init(titleCX: 0.25, titleCY: 0.73, titleW: 0.22, titleScale: 0.095,
+                         tailCX: 0.85, tailCY: 0.25, tailScale: 0.24)
         default:
-            return .init(titleCX: 0.38, titleCY: 0.62, titleW: 0.34, titleScale: 0.15,
-                         tailCX: 0.88, tailCY: 0.22, tailScale: 0.18)
+            return .init(titleCX: 0.35, titleCY: 0.62, titleW: 0.34, titleScale: 0.15,
+                         tailCX: 0.855, tailCY: 0.28, tailScale: 0.24)
         }
     }
 }
