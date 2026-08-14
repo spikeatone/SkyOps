@@ -21,6 +21,7 @@ struct ContentView: View {
     @State private var showAlerts = false
     @State private var paywallReason: String?
     @State private var showPaywall = false
+    @State private var showLiveryPreview = false   // PROTOTYPE (-liveryPreview)
     /// Which save slot the current game occupies (autosave / SAVE target).
     @State private var currentSlot: Int?
     /// Showing the load / slot-picker menu (cold launch with saves, or QUIT).
@@ -79,6 +80,9 @@ struct ContentView: View {
         // through to the naming screen for a fresh airline in slot 0.
         .onAppear {
             #if DEBUG
+            if CommandLine.arguments.contains("-liveryPreview") {   // PROTOTYPE
+                showSplash = false; showLiveryPreview = true; return
+            }
             if let scenario = Self.devScenario {
                 sim.devSeed(scenario)
                 showSplash = false
@@ -235,6 +239,7 @@ struct ContentView: View {
         .animation(.easeOut(duration: 0.25), value: showLoadMenu)
         .animation(.easeOut(duration: 0.2), value: showAlerts)
         .animation(.easeOut(duration: 0.2), value: showPaywall)
+        .overlay { if showLiveryPreview { LiveryPrototypeView().ignoresSafeArea() } }   // PROTOTYPE
         .animation(.easeOut(duration: 0.3), value: sim.isBankrupt)
     }
 
