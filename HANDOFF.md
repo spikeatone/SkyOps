@@ -167,6 +167,16 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
 
 ## NEXT — see `NEXT_SESSION_PROMPT.md`
 
+> **⭐ IN-FLIGHT FEATURE: personalized aircraft LIVERY** (surprise-&-delight). A
+> designer-approved prototype lives on the **`livery-prototype`** branch (pushed to
+> origin), NOT on `main` — the player's airline name is painted on the fuselage (window-
+> line titles with the windows cutting through them) + a recolourable tail emblem, all
+> palette-driven. **`git checkout livery-prototype` and read `LIVERY_SPEC.md`** (on that
+> branch). The designer set the next-session plan: **(1) normalize the 5 tail emblem PNGs
+> (trim to artwork bounds + centre), (2) build the livery creation flow** (2-colour +
+> emblem picker on the naming screen, persistence, wire into Fleet/Acquire). Keep `main`
+> clean until 1.2 is live; ship the livery as its own later version.
+
 The prioritised brief for the next session lives in **`NEXT_SESSION_PROMPT.md`** —
 a paste-ready block written to be understood cold. In short:
 
