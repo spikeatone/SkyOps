@@ -1,12 +1,49 @@
 # Personalized Livery — Phase 1 (prototype spec)
 
-> **▶ NEXT SESSION STARTS HERE (designer, this branch `livery-prototype`):**
-> **(1) Normalize the tail emblem images** — trim each of the 5 rasterised PNGs to its
-> own artwork bounds + centre, so all emblems drop in centred at one placement (ends
-> the per-emblem nudging; see "To finish Phase 1" §2). **(2) Then build the livery
-> creation flow in the app** — the 2-colour + emblem picker on the naming screen,
-> persistence, and wiring `AircraftLiveryImage` into the real Fleet/Acquire views.
-> Work on THIS branch; keep `main` clean until 1.2 is live.
+> **▶ STATUS (this branch `livery-prototype`, 14 Aug 2026): THE CREATION FLOW IS
+> BUILT.** Naming → **livery design screen** → Launch. Both prior "next session"
+> items are done: emblems normalised (see below) AND the full picker + persistence +
+> Fleet-detail wiring shipped. Debug + Release both build clean; driven live on the
+> iPhone 17 Pro sim (both themes, owned-aircraft livery confirmed). What's built:
+>
+> - **`LiveryDesignView.swift`** — the one-screen creator (designer's spec): a live
+>   **737 MAX 9** preview + four inputs: **fuselage text** (separate from the airline
+>   name — capped at `Livery.maxTextLength` = 16, seeded from the name), **title font**
+>   (5 bundled OFL faces), **color palette** (the 10 designer packs), **tail emblem**
+>   (10 normalised emblems). "Launch Airline" commits + starts the game. Reached in the
+>   cold-launch flow via `ContentView.firstLaunchFlow` (naming sets the name → livery
+>   step → launch). DEBUG harness: `-liveryPreview` opens it directly.
+> - **`Livery.swift`** — the model + three catalogs: `LiveryFont.all` (5 faces,
+>   PostScript names + per-face `sizeAdjust`), `LiveryPalette.all` (the 10 packs —
+>   Atlantic/Cardinal/Pacific/Meridian/Evergreen/Copper/Azure/Tropic/Burgundy/Velocity;
+>   colour 1 = titles, colour 2 = tail), `TailArt` (10 tintable emblems). To retune
+>   palettes edit the hex literals here — nothing else references the colours.
+> - **Fonts** — 5 static OFL TTFs in `Resources/Fonts/` (ArchivoBlack, BebasNeue,
+>   Poppins-SemiBold, Righteous, DMSerifDisplay) + `OFL-LiveryFonts.txt`, registered in
+>   Info.plist `UIAppFonts`. Static instances on purpose (variable-font weight is fragile).
+> - **Emblems** — the designer's 10 SVGs (`art-source/tail-logos/`) rasterised, **trimmed
+>   to artwork bounds + centred in a square** (the normalisation the old spec asked for),
+>   bundled as `Resources/TailArt/tailart1…10.png`. One fin placement now centres any of
+>   them.
+> - **Persistence** — `liveryFontIndex` / `liveryPaletteIndex` / `liveryTailArtIndex` /
+>   `liveryText` on `Simulation` + `GameSnapshot` (each `decodeSafe`, nil/legacy-safe,
+>   like `playerTailCode`). `sim.liveryTitle` = the text if set, else the airline name.
+> - **Painted where** — owned-aircraft illustration in **Fleet detail** (`sim.liveryTitle`
+>   + `sim.livery`). The Marketplace/Acquire CATALOG stays plain white (a livery on a
+>   plane you don't own yet reads wrong) — deliberate; revisit if the designer wants a
+>   "preview in your colours" there.
+> - **MAX 9 name placement** — `titleCY = 0.665` is the MEASURED window-row centre of
+>   `MAX9.png` (the multiply blend punches the windows through the letters — the United
+>   look), `titleCX = 0.33` pushed forward toward the nose (designer call — reads better,
+>   leaves long names room). Don't nudge titleCY off the window row.
+>
+> **Still Phase-2 / open (designer calls):** per-type placement for the other ~33 types
+> (only the 737/A320/DH8B families are tuned; everything else uses a heuristic default);
+> whether the Marketplace should preview the livery; a livery-edit screen post-launch
+> (today it's set once at creation). See "To finish" below.
+>
+> ---
+> _Original prototype spec preserved below for reference._
 
 
 Surprise-&-delight: the player's **airline name is painted on the fuselage** and a

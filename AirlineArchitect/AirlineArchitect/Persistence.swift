@@ -22,6 +22,12 @@ struct GameSnapshot: Codable {
     // Identity + economy
     var playerAirlineName: String?
     var playerTailCode = "ZQ"
+    // Livery (font / palette / tail-emblem indices; defaults = first-of-each, so
+    // a pre-livery save loads a sensible default rather than nothing).
+    var liveryFontIndex = 0
+    var liveryPaletteIndex = 0
+    var liveryTailArtIndex = 1
+    var liveryText = ""
     var playerBalance = 0
     var tick = 0
     var calendarStartDay = 0   // randomized calendar start-of-year offset (0–359)
@@ -251,6 +257,10 @@ extension GameSnapshot {
         savedAtEpoch = c.decodeSafe(.savedAtEpoch, default: 0.0)
         playerAirlineName = c.decodeSafeOpt(String.self, .playerAirlineName)
         playerTailCode = c.decodeSafe(.playerTailCode, default: "ZQ")
+        liveryFontIndex = c.decodeSafe(.liveryFontIndex, default: 0)
+        liveryPaletteIndex = c.decodeSafe(.liveryPaletteIndex, default: 0)
+        liveryTailArtIndex = c.decodeSafe(.liveryTailArtIndex, default: 1)
+        liveryText = c.decodeSafe(.liveryText, default: "")
         playerBalance = c.decodeSafe(.playerBalance, default: 0)
         tick = c.decodeSafe(.tick, default: 0)
         calendarStartDay = c.decodeSafe(.calendarStartDay, default: 0)

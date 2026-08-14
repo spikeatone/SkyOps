@@ -21,7 +21,11 @@ struct ContentView: View {
     @State private var showAlerts = false
     @State private var paywallReason: String?
     @State private var showPaywall = false
-    @State private var showLiveryPreview = false   // PROTOTYPE (-liveryPreview)
+    @State private var showLiveryPreview = false   // DEBUG (-liveryPreview): open the livery design screen directly
+    /// After naming, the livery design screen shows (font / palette / tail emblem)
+    /// before the game starts. Holds the just-entered name so the preview can paint
+    /// it; nil = not in the livery step.
+    @State private var pendingLiveryName: String?
     /// Which save slot the current game occupies (autosave / SAVE target).
     @State private var currentSlot: Int?
     /// Showing the load / slot-picker menu (cold launch with saves, or QUIT).
@@ -80,7 +84,7 @@ struct ContentView: View {
         // through to the naming screen for a fresh airline in slot 0.
         .onAppear {
             #if DEBUG
-            if CommandLine.arguments.contains("-liveryPreview") {   // PROTOTYPE
+            if CommandLine.arguments.contains("-liveryPreview") {   // DEBUG: drive the livery screen directly
                 showSplash = false; showLiveryPreview = true; return
             }
             if let scenario = Self.devScenario {
@@ -104,10 +108,16 @@ struct ContentView: View {
         // Returning to the foreground unpauses only if we're actually in a game
         // (not sitting on the load menu).
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active, sim.playerAirlineName != nil, !sim.isBankrupt, let s = currentSlot {
+            let inactive: Bool = (phase != .active)
+            let inLiveryStep: Bool = (pendingLiveryName != nil)
+            // Don't autosave while the livery-design step is up (name is set but the
+            // game hasn't launched) — otherwise a background there would skip livery
+            // design forever.
+            if inactive, sim.playerAirlineName != nil, !inLiveryStep,
+               !sim.isBankrupt, let s = currentSlot {
                 GameStore.save(sim.snapshot(), slot: s)
             }
-            sim.isPaused = (phase != .active) || showLoadMenu
+            sim.isPaused = inactive || showLoadMenu || inLiveryStep
         }
         // Haptics on the big observed moments (the delight layer). Player-initiated
         // actions (buy / open route) tap at their own call sites; these are the
@@ -115,30 +125,7 @@ struct ContentView: View {
         .onChange(of: sim.celebrations.first?.id) { _, id in if id != nil { Feedback.milestone() } }
         .onChange(of: sim.decisionQueue.count) { old, new in if new > old { Feedback.alert() } }
         .onChange(of: sim.isBankrupt) { _, bankrupt in if bankrupt { Feedback.gameOver() } }
-        .overlay {
-            // Load / slot-picker menu — takes precedence over naming.
-            if showLoadMenu {
-                SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) },
-                              backdropOpacity: coldLaunchBackdrop)
-                    .id(cloudGen)   // rebuild (re-read slots) when iCloud merges a change
-                    .transition(.opacity)
-            } else if sim.playerAirlineName == nil {
-                // First-launch: name the airline before anything else.
-                AirlineNamingView(backdropOpacity: coldLaunchBackdrop) { name, tailCode, region in
-                    if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
-                    sim.setHomeRegion(region)
-                    sim.nameAirline(name, tailCode: tailCode)
-                    sim.randomizeCalendarStart()   // new game starts on a random date + season
-                    Telemetry.gameStarted(region: region.rawValue)   // funnel denominator
-                    if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
-                    // Always run the walkthrough when NAMING a fresh airline (not
-                    // when Continuing a save). No "seen once, ever" gate — that
-                    // kept it from re-showing for returning testers; it's skippable.
-                    tab = tutorialSteps[0].tab; tutorialStep = 0
-                }
-                .transition(.opacity)
-            }
-        }
+        .overlay { firstLaunchFlow }
         // First-play walkthrough — bottom coach card that navigates the tabs.
         .overlay(alignment: .bottom) {
             if let step = tutorialStep, step < tutorialSteps.count {
@@ -236,11 +223,56 @@ struct ContentView: View {
             }
         }
         .animation(.easeOut(duration: 0.25), value: sim.playerAirlineName)
+        .animation(.easeOut(duration: 0.25), value: pendingLiveryName)
         .animation(.easeOut(duration: 0.25), value: showLoadMenu)
         .animation(.easeOut(duration: 0.2), value: showAlerts)
         .animation(.easeOut(duration: 0.2), value: showPaywall)
-        .overlay { if showLiveryPreview { LiveryPrototypeView().ignoresSafeArea() } }   // PROTOTYPE
+        // DEBUG (-liveryPreview): drive/tune the livery design screen directly.
+        .overlay {
+            if showLiveryPreview {
+                LiveryDesignView(airlineName: "Aster Air", backdropOpacity: coldLaunchBackdrop) { _, _, _, _ in
+                    showLiveryPreview = false
+                }
+                .ignoresSafeArea()
+            }
+        }
         .animation(.easeOut(duration: 0.3), value: sim.isBankrupt)
+    }
+
+    /// Cold-launch flow: load menu → name → design livery → game. Extracted from
+    /// the body overlay so the type-checker doesn't choke on the chain.
+    @ViewBuilder private var firstLaunchFlow: some View {
+        if showLoadMenu {
+            // Load / slot-picker menu — takes precedence over naming.
+            SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) },
+                          backdropOpacity: coldLaunchBackdrop)
+                .id(cloudGen)   // rebuild (re-read slots) when iCloud merges a change
+                .transition(.opacity)
+        } else if sim.playerAirlineName == nil {
+            // Step 1: name the airline (+ tail code + region). Does NOT start the
+            // game — it advances to the livery design screen.
+            AirlineNamingView(backdropOpacity: coldLaunchBackdrop) { name, tailCode, region in
+                if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
+                sim.setHomeRegion(region)
+                sim.nameAirline(name, tailCode: tailCode)
+                pendingLiveryName = sim.playerAirlineName   // → livery design screen
+            }
+            .transition(.opacity)
+        } else if let liveryName = pendingLiveryName {
+            // Step 2: design the livery, then start the game.
+            LiveryDesignView(airlineName: liveryName, backdropOpacity: coldLaunchBackdrop) { fontI, palI, tailI, text in
+                sim.setLivery(fontIndex: fontI, paletteIndex: palI, tailArtIndex: tailI, text: text)
+                sim.randomizeCalendarStart()   // new game starts on a random date + season
+                Telemetry.gameStarted(region: sim.homeRegion.rawValue)   // funnel denominator
+                if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
+                pendingLiveryName = nil
+                // Always run the walkthrough when creating a fresh airline (not when
+                // Continuing a save). No "seen once, ever" gate — that kept it from
+                // re-showing for returning testers; it's skippable.
+                tab = tutorialSteps[0].tab; tutorialStep = 0
+            }
+            .transition(.opacity)
+        }
     }
 
     /// iPad (regular width) → a persistent left sidebar rail; iPhone (compact)
@@ -320,6 +352,7 @@ struct ContentView: View {
         gameID = UUID()
         currentSlot = slot
         tab = 0
+        pendingLiveryName = nil   // a restored game skips the naming/livery flow
         showLoadMenu = false
     }
 
@@ -329,6 +362,7 @@ struct ContentView: View {
         gameID = UUID()
         currentSlot = slot
         tab = 0
+        pendingLiveryName = nil   // the naming → livery flow re-runs from scratch
         showLoadMenu = false   // naming screen shows next (playerAirlineName == nil)
     }
 

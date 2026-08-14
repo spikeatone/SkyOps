@@ -1883,6 +1883,32 @@ final class Simulation {
         if code.count == 2 && Airline.realCodes[code] == nil { playerTailCode = code }
     }
 
+    /// The player's chosen livery: title font, 2-colour palette, and tail emblem,
+    /// stored as indices into the Livery.swift catalogs. Set on the livery design
+    /// screen (right after naming). Defaults to the first-of-each so a legacy save
+    /// or a skipped-design game still paints a sensible livery.
+    private(set) var liveryFontIndex = 0
+    private(set) var liveryPaletteIndex = 0
+    private(set) var liveryTailArtIndex = 1     // 1-based; 0 = no emblem
+    /// The text PAINTED on the fuselage — separate from `playerAirlineName` (the
+    /// company name). Chosen on the livery screen, capped at `Livery.maxTextLength`
+    /// so it fits the window line. Empty → the illustration falls back to the name.
+    private(set) var liveryText = ""
+    /// The resolved livery, for the Fleet / Acquire / tooltip illustrations.
+    var livery: Livery {
+        Livery(fontIndex: liveryFontIndex, paletteIndex: liveryPaletteIndex, tailArtIndex: liveryTailArtIndex)
+    }
+    /// What actually gets painted: the livery text if set, else the airline name.
+    var liveryTitle: String {
+        liveryText.isEmpty ? (playerAirlineName ?? "") : liveryText
+    }
+    func setLivery(fontIndex: Int, paletteIndex: Int, tailArtIndex: Int, text: String) {
+        liveryFontIndex = max(0, min(LiveryFont.all.count - 1, fontIndex))
+        liveryPaletteIndex = max(0, min(LiveryPalette.all.count - 1, paletteIndex))
+        liveryTailArtIndex = max(0, min(TailArt.count, tailArtIndex))   // allow 0 = none
+        liveryText = String(text.trimmingCharacters(in: .whitespaces).prefix(Livery.maxTextLength))
+    }
+
     private(set) var playerBalance = startingCapital
     private(set) var playerRoutes: [Route] = []
     /// Routes archived (not deleted) when their aircraft was sold — full
@@ -3998,6 +4024,10 @@ final class Simulation {
         s.savedAtTick = tick
         s.playerAirlineName = playerAirlineName
         s.playerTailCode = playerTailCode
+        s.liveryFontIndex = liveryFontIndex
+        s.liveryPaletteIndex = liveryPaletteIndex
+        s.liveryTailArtIndex = liveryTailArtIndex
+        s.liveryText = liveryText
         s.playerBalance = playerBalance
         s.tick = tick
         s.calendarStartDay = calendarStartDay
@@ -4117,6 +4147,10 @@ final class Simulation {
     func restore(from s: GameSnapshot) {
         playerAirlineName = s.playerAirlineName
         playerTailCode = s.playerTailCode
+        liveryFontIndex = s.liveryFontIndex
+        liveryPaletteIndex = s.liveryPaletteIndex
+        liveryTailArtIndex = s.liveryTailArtIndex
+        liveryText = s.liveryText
         playerBalance = s.playerBalance
         tick = s.tick
         calendarStartDay = s.calendarStartDay

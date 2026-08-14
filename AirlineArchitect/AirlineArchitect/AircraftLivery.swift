@@ -1,71 +1,65 @@
 //
 //  AircraftLivery.swift
-//  Airline Architect — PROTOTYPE (Phase 1 surprise-&-delight). Branch-only.
+//  Airline Architect — the livery OVERLAY that paints the player's chosen name +
+//  tail emblem onto a side-view aircraft illustration.
 //
-//  v3 — after the "they float" feedback + the United reference:
-//   • TITLES: solid primary colour, sized to sit WITHIN the upper-fuselage band
-//     ABOVE the window line (not above the crown), MULTIPLY-blended so the metal's
-//     shading shows through. No outline, no pill — those read as stickers.
-//   • TAIL LOGO: one of the designer's emblems (rasterised from the SVGs to a
-//     template PNG via rsvg-convert), TINTED to a palette colour and placed on the
-//     fin. "Just add a chosen logo and tint it", not repaint the whole tail.
+//  The two techniques that make it read as a real paint job (from the prototype):
+//   1. TITLES on the WINDOW LINE with .blendMode(.multiply) — placed at the
+//      fuselage vertical centre (not above the windows), the multiply blend makes
+//      the illustration's own dark windows punch through the letters as cutouts
+//      (the United look). No per-window masking needed.
+//   2. TAIL EMBLEM tinted (.renderingMode(.template)) + placed on the fin.
 //
-//  Still open (needs per-type fuselage MASKS from the Figma source): clipping the
-//  titles to the fuselage + masking the window row so titles can sit LOWER without
-//  covering windows. This prototype places titles ABOVE the windows to sidestep that.
+//  Model lives in Livery.swift (LiveryFont / LiveryPalette / TailArt / Livery).
 //
 
 import SwiftUI
 
-struct LiveryColors: Equatable {
-    var primary: Color     // titles + (by default) the tail logo
-    var secondary: Color   // accent (unused in v3's minimal treatment; reserved)
-}
-
-/// The recolourable tail emblems (rasterised from Resources/Tail logos/SVG → the
-/// bundled tailart<N>.png template images). Tinted at render time.
-enum TailArt {
-    static let count = 5
-    private static var cache: [Int: UIImage?] = [:]
-    static func uiImage(_ n: Int) -> UIImage? {
-        if let hit = cache[n] { return hit }
-        let ui = Bundle.main.path(forResource: "tailart\(n)", ofType: "png").flatMap { UIImage(contentsOfFile: $0) }
-        cache[n] = ui
-        return ui
-    }
-}
-
-/// Per-type placement: titles on the fuselage + the tail emblem on the fin.
-/// Fractions of the fitted-image rect (0…1). `scale` = size as a fraction of height.
+/// Per-type placement of the titles + tail emblem, as fractions (0…1) of the
+/// fitted-image rect. `scale` is a fraction of image height.
+///
+/// The emblems are now NORMALISED (each trimmed to its artwork + centred in a
+/// square), so `tailScale` is a consistent visual weight across all 10 and a
+/// single fin placement centres any of them.
 struct LiveryPlacement {
     var titleCX: CGFloat, titleCY: CGFloat, titleW: CGFloat, titleScale: CGFloat
     var tailCX: CGFloat, tailCY: CGFloat, tailScale: CGFloat
 
     static func forType(_ id: String) -> LiveryPlacement {
         switch id {
-        // titleCY sits ON the window line (fuselage vertical centre) so the windows
-        // punch through the letters as cutouts via the multiply blend — the United look.
+        // 737 MAX 9 — the livery-design REFERENCE (tuned against MAX9.png). The
+        // fin sits high-right; titles run forward over the fuselage window line.
+        // titleCY = 0.665 is the MEASURED window-row centre of MAX9.png (the
+        // dashed cabin-window line), so the multiply blend punches the windows
+        // through the letters — the "United" look. Don't nudge it off the row.
+        // titleCX pushed forward (toward the nose) per designer — reads better and
+        // leaves long airline names more room before they reach the wing box.
+        case "MAX9", "MAX8", "B737700", "B737800", "B739":
+            return .init(titleCX: 0.33, titleCY: 0.665, titleW: 0.42, titleScale: 0.16,
+                         tailCX: 0.848, tailCY: 0.34, tailScale: 0.19)
+        // A320 family — the prototype's locked reference.
         case "A319", "A320", "A321", "A319NEO", "A320NEO", "A321NEO":
-            return .init(titleCX: 0.34, titleCY: 0.62, titleW: 0.38, titleScale: 0.17,
-                         tailCX: 0.865, tailCY: 0.36, tailScale: 0.28)
+            return .init(titleCX: 0.34, titleCY: 0.62, titleW: 0.38, titleScale: 0.16,
+                         tailCX: 0.865, tailCY: 0.34, tailScale: 0.26)
         case "DH8B":
-            return .init(titleCX: 0.25, titleCY: 0.73, titleW: 0.22, titleScale: 0.095,
-                         tailCX: 0.865, tailCY: 0.31, tailScale: 0.28)
+            return .init(titleCX: 0.25, titleCY: 0.73, titleW: 0.22, titleScale: 0.10,
+                         tailCX: 0.865, tailCY: 0.30, tailScale: 0.26)
         default:
-            return .init(titleCX: 0.35, titleCY: 0.62, titleW: 0.34, titleScale: 0.15,
-                         tailCX: 0.87, tailCY: 0.35, tailScale: 0.28)
+            return .init(titleCX: 0.36, titleCY: 0.61, titleW: 0.36, titleScale: 0.15,
+                         tailCX: 0.87, tailCY: 0.33, tailScale: 0.25)
         }
     }
 }
 
+/// Overlays the chosen livery on a type's side-view illustration. Every Fleet /
+/// Acquire surface routes its aircraft art through `AircraftArt`, so swapping this
+/// in is a one-line change per surface.
 struct AircraftLiveryImage: View {
     let typeID: String
     let name: String
-    let colors: LiveryColors
-    /// 1…5, or nil for no tail emblem.
-    var tailArt: Int? = 1
-    /// Which palette colour tints the emblem.
-    var tailUsesSecondary: Bool = false
+    let livery: Livery
+    /// Set false to draw only the illustration (e.g. a type with no art).
+    var showLivery: Bool = true
 
     var body: some View {
         let ui = AircraftArt.uiImage(for: typeID)
@@ -74,70 +68,37 @@ struct AircraftLiveryImage: View {
             .aspectRatio(aspect, contentMode: .fit)
             .overlay { if let ui { Image(uiImage: ui).resizable().scaledToFit() } }
             .overlay {
-                GeometryReader { geo in
-                    let p = LiveryPlacement.forType(typeID)
-                    // Titles — solid primary, multiply so the fuselage shading shows through.
-                    Text(name.uppercased())
-                        .font(.karla(geo.size.height * p.titleScale, .heavy))
-                        .kerning(geo.size.height * p.titleScale * 0.02)
-                        .foregroundStyle(colors.primary)
-                        .lineLimit(1).minimumScaleFactor(0.4)
-                        .frame(width: geo.size.width * p.titleW)
-                        .blendMode(.multiply)
-                        .position(x: geo.size.width * p.titleCX, y: geo.size.height * p.titleCY)
+                if showLivery, ui != nil {
+                    GeometryReader { geo in
+                        let p = LiveryPlacement.forType(typeID)
+                        let pal = livery.palette
 
-                    // Tail emblem — tinted template, placed on the fin.
-                    if let n = tailArt, let tail = TailArt.uiImage(n) {
-                        Image(uiImage: tail)
-                            .renderingMode(.template)
-                            .resizable().scaledToFit()
-                            .foregroundStyle(tailUsesSecondary ? colors.secondary : colors.primary)
-                            .frame(width: geo.size.height * p.tailScale,
-                                   height: geo.size.height * p.tailScale)
-                            .position(x: geo.size.width * p.tailCX, y: geo.size.height * p.tailCY)
+                        // Titles — colour 1, multiply so the fuselage shading + the
+                        // window row show through the letters.
+                        Text(name.uppercased())
+                            .font(livery.font.font(geo.size.height * p.titleScale))
+                            .kerning(geo.size.height * p.titleScale * 0.02)
+                            .foregroundStyle(pal.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                            .frame(width: geo.size.width * p.titleW)
+                            .blendMode(.multiply)
+                            .position(x: geo.size.width * p.titleCX,
+                                      y: geo.size.height * p.titleCY)
+
+                        // Tail emblem — colour 2 tint, on the fin.
+                        if livery.tailArtIndex > 0, let tail = TailArt.uiImage(livery.tailArtIndex) {
+                            Image(uiImage: tail)
+                                .renderingMode(.template)
+                                .resizable().scaledToFit()
+                                .foregroundStyle(pal.secondary)
+                                .frame(width: geo.size.height * p.tailScale,
+                                       height: geo.size.height * p.tailScale)
+                                .position(x: geo.size.width * p.tailCX,
+                                          y: geo.size.height * p.tailCY)
+                        }
                     }
                 }
             }
-    }
-}
-
-// MARK: - Prototype preview (branch-only; reached via -liveryPreview)
-
-struct LiveryPrototypeView: View {
-    let name = "Aster Air"
-    let colors = LiveryColors(primary: Color(red: 0.09, green: 0.20, blue: 0.42),
-                              secondary: Color(red: 0.89, green: 0.66, blue: 0.24))
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                Text("Titles above the window line + a tinted tail emblem")
-                    .font(.system(size: 14, weight: .bold))
-                    .multilineTextAlignment(.center).padding(.top, 6)
-
-                // A320 with each of the 5 tail emblems.
-                ForEach(1...TailArt.count, id: \.self) { n in
-                    card("A320 · tail emblem \(n)") {
-                        AircraftLiveryImage(typeID: "A320", name: name, colors: colors, tailArt: n)
-                    }
-                }
-                // Turboprop with emblem 1.
-                card("Dash-8 · tail emblem 1") {
-                    AircraftLiveryImage(typeID: "DH8B", name: name, colors: colors, tailArt: 1)
-                }
-            }
-            .padding(14)
-        }
-        .background(Color(white: 0.93))
-    }
-
-    private func card<V: View>(_ label: String, @ViewBuilder _ content: () -> V) -> some View {
-        VStack(spacing: 4) {
-            Text(label).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
-            content().frame(height: 128)
-        }
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.white))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(white: 0.85)))
     }
 }
