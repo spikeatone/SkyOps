@@ -37,17 +37,21 @@
 >   look), `titleCX = 0.33` pushed forward toward the nose (designer call — reads better,
 >   leaves long names room). Don't nudge titleCY off the window row.
 >
-> **PER-TYPE PLACEMENT — DONE (all 35 illustrated types).** `LiveryPlacement.forType`
-> now has a case per type, MEASURED from each illustration (a Python pass detects the
-> dashed cabin-window row → `titleCY`, the forward cabin → `titleCX`, the fin body →
-> the emblem). The turboprops + small commuters (AT46 / B1900 / D328 / DH8B / ERJ135 /
-> ERJ140) and MAX9 are HAND-TUNED (marked `// tuned`) — their titles push forward toward
-> the nose so they clear the wing/prop, and sit on the real (higher) window row. New
-> types fall through to a narrowbody default. **Verified in the REAL SwiftUI renderer**
-> via the `-liveryGallery` DEBUG harness (a keeper, like `-liveryPreview`): every type
-> walked through on the iPhone 17 Pro sim, all clean. To re-tune after an art/type
-> change: run the measure script (in git history of this session) or launch
-> `-liveryGallery` and adjust the one case.
+> **PER-TYPE PLACEMENT — DONE + DESIGNER-DIALED (all 35 illustrated types).**
+> `LiveryPlacement.forType` has a case per type. First cut was MEASURED from each
+> illustration (a Python pass detects the dashed cabin-window row → `titleCY`, the
+> forward cabin → `titleCX`, the fin body → the emblem). Then the DESIGNER hand-dialed
+> EVERY type on the iPhone-sim gallery, screenshot by screenshot (title size/position +
+> emblem size/position, per airframe) — almost all cases are now `// tuned`. Key
+> patterns that emerged: titles sit on the window line so the multiply blend punches the
+> windows through the letters; emblems are sized to the fin and seated on the fin BODY
+> (the auto-measure put them too small + too high/aft on many types — especially the
+> widebodies, CRJ T-tails, ERJ T-tails, and turboprops, which all got much larger
+> emblems pulled down/forward). New types fall through to a narrowbody default. **Verified
+> in the REAL SwiftUI renderer** via the `-liveryGallery` DEBUG harness (a keeper, like
+> `-liveryPreview`). To re-tune after an art/type change: launch `-liveryGallery` and
+> adjust the one case (or re-run the measure script in this session's git history for a
+> new type's starting values).
 >
 > **Still Phase-2 / open (designer calls):** whether the Marketplace should preview the
 > livery (today only owned aircraft in Fleet detail wear it); a livery-edit screen

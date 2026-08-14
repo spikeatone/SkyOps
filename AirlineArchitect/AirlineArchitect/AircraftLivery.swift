@@ -32,41 +32,41 @@ struct LiveryPlacement {
         // turboprops + small ERJs (AT46/B1900/DH8B/ERJ135/ERJ140) and MAX9 are
         // hand-tuned (marked). New types fall through to the narrowbody default.
         switch id {
-        case "A220100": return .init(titleCX: 0.33, titleCY: 0.633, titleW: 0.42, titleScale: 0.16, tailCX: 0.844, tailCY: 0.303, tailScale: 0.193)
-        case "A220300": return .init(titleCX: 0.33, titleCY: 0.633, titleW: 0.42, titleScale: 0.16, tailCX: 0.844, tailCY: 0.303, tailScale: 0.193)
-        case "A319": return .init(titleCX: 0.339, titleCY: 0.616, titleW: 0.42, titleScale: 0.16, tailCX: 0.763, tailCY: 0.27, tailScale: 0.22)
-        case "A319NEO": return .init(titleCX: 0.339, titleCY: 0.616, titleW: 0.42, titleScale: 0.16, tailCX: 0.763, tailCY: 0.27, tailScale: 0.22)
-        case "A320": return .init(titleCX: 0.318, titleCY: 0.614, titleW: 0.42, titleScale: 0.16, tailCX: 0.852, tailCY: 0.271, tailScale: 0.172)
-        case "A320NEO": return .init(titleCX: 0.318, titleCY: 0.614, titleW: 0.42, titleScale: 0.16, tailCX: 0.852, tailCY: 0.271, tailScale: 0.172)
-        case "A321": return .init(titleCX: 0.302, titleCY: 0.6, titleW: 0.42, titleScale: 0.16, tailCX: 0.782, tailCY: 0.284, tailScale: 0.22)
-        case "A321NEO": return .init(titleCX: 0.302, titleCY: 0.6, titleW: 0.42, titleScale: 0.16, tailCX: 0.782, tailCY: 0.284, tailScale: 0.22)
-        case "A339": return .init(titleCX: 0.277, titleCY: 0.63, titleW: 0.42, titleScale: 0.16, tailCX: 0.894, tailCY: 0.295, tailScale: 0.194)
-        case "A340": return .init(titleCX: 0.292, titleCY: 0.653, titleW: 0.42, titleScale: 0.16, tailCX: 0.852, tailCY: 0.3, tailScale: 0.19)
-        case "A359": return .init(titleCX: 0.301, titleCY: 0.632, titleW: 0.42, titleScale: 0.16, tailCX: 0.859, tailCY: 0.275, tailScale: 0.162)
-        case "A380": return .init(titleCX: 0.308, titleCY: 0.62, titleW: 0.42, titleScale: 0.16, tailCX: 0.875, tailCY: 0.302, tailScale: 0.22)
-        case "AT46": return .init(titleCX: 0.245, titleCY: 0.615, titleW: 0.22, titleScale: 0.105, tailCX: 0.83, tailCY: 0.24, tailScale: 0.15) // tuned
-        case "B1900": return .init(titleCX: 0.295, titleCY: 0.585, titleW: 0.24, titleScale: 0.095, tailCX: 0.855, tailCY: 0.275, tailScale: 0.16) // tuned
-        case "B737700": return .init(titleCX: 0.328, titleCY: 0.671, titleW: 0.42, titleScale: 0.16, tailCX: 0.808, tailCY: 0.302, tailScale: 0.186)
-        case "B737800": return .init(titleCX: 0.298, titleCY: 0.674, titleW: 0.42, titleScale: 0.16, tailCX: 0.866, tailCY: 0.291, tailScale: 0.188)
-        case "B739": return .init(titleCX: 0.306, titleCY: 0.661, titleW: 0.42, titleScale: 0.16, tailCX: 0.865, tailCY: 0.292, tailScale: 0.17)
-        case "B747": return .init(titleCX: 0.255, titleCY: 0.673, titleW: 0.42, titleScale: 0.16, tailCX: 0.887, tailCY: 0.287, tailScale: 0.215)
-        case "B773": return .init(titleCX: 0.275, titleCY: 0.668, titleW: 0.42, titleScale: 0.16, tailCX: 0.894, tailCY: 0.3, tailScale: 0.166)
-        case "B788": return .init(titleCX: 0.295, titleCY: 0.649, titleW: 0.42, titleScale: 0.16, tailCX: 0.885, tailCY: 0.296, tailScale: 0.201)
-        case "B789": return .init(titleCX: 0.295, titleCY: 0.645, titleW: 0.42, titleScale: 0.16, tailCX: 0.886, tailCY: 0.294, tailScale: 0.184)
-        case "B78J": return .init(titleCX: 0.298, titleCY: 0.654, titleW: 0.42, titleScale: 0.16, tailCX: 0.888, tailCY: 0.3, tailScale: 0.159)
-        case "CRJ1000": return .init(titleCX: 0.291, titleCY: 0.589, titleW: 0.42, titleScale: 0.16, tailCX: 0.91, tailCY: 0.29, tailScale: 0.182)
-        case "CRJ900": return .init(titleCX: 0.287, titleCY: 0.58, titleW: 0.42, titleScale: 0.16, tailCX: 0.915, tailCY: 0.263, tailScale: 0.197)
-        case "D328": return .init(titleCX: 0.30, titleCY: 0.675, titleW: 0.30, titleScale: 0.13, tailCX: 0.854, tailCY: 0.28, tailScale: 0.19) // tuned
-        case "DH8B": return .init(titleCX: 0.255, titleCY: 0.6, titleW: 0.26, titleScale: 0.1, tailCX: 0.865, tailCY: 0.28, tailScale: 0.17) // tuned
-        case "E170": return .init(titleCX: 0.323, titleCY: 0.644, titleW: 0.42, titleScale: 0.16, tailCX: 0.866, tailCY: 0.291, tailScale: 0.198)
-        case "E175": return .init(titleCX: 0.323, titleCY: 0.644, titleW: 0.42, titleScale: 0.16, tailCX: 0.866, tailCY: 0.291, tailScale: 0.198)
-        case "E190": return .init(titleCX: 0.302, titleCY: 0.632, titleW: 0.42, titleScale: 0.16, tailCX: 0.883, tailCY: 0.305, tailScale: 0.166)
-        case "E195": return .init(titleCX: 0.328, titleCY: 0.608, titleW: 0.42, titleScale: 0.16, tailCX: 0.89, tailCY: 0.293, tailScale: 0.15)
-        case "ERJ135": return .init(titleCX: 0.3, titleCY: 0.615, titleW: 0.34, titleScale: 0.13, tailCX: 0.855, tailCY: 0.3, tailScale: 0.17) // tuned
-        case "ERJ140": return .init(titleCX: 0.3, titleCY: 0.615, titleW: 0.34, titleScale: 0.13, tailCX: 0.87, tailCY: 0.29, tailScale: 0.17) // tuned
-        case "ERJ145": return .init(titleCX: 0.333, titleCY: 0.613, titleW: 0.42, titleScale: 0.16, tailCX: 0.895, tailCY: 0.297, tailScale: 0.179)
-        case "MAX8": return .init(titleCX: 0.3, titleCY: 0.655, titleW: 0.42, titleScale: 0.16, tailCX: 0.867, tailCY: 0.297, tailScale: 0.186)
-        case "MAX9": return .init(titleCX: 0.33, titleCY: 0.665, titleW: 0.42, titleScale: 0.16, tailCX: 0.848, tailCY: 0.34, tailScale: 0.19) // tuned
+        case "A220100": return .init(titleCX: 0.33, titleCY: 0.65, titleW: 0.42, titleScale: 0.125, tailCX: 0.858, tailCY: 0.325, tailScale: 0.283) // tuned
+        case "A220300": return .init(titleCX: 0.33, titleCY: 0.65, titleW: 0.42, titleScale: 0.125, tailCX: 0.858, tailCY: 0.325, tailScale: 0.283) // tuned
+        case "A319": return .init(titleCX: 0.339, titleCY: 0.63, titleW: 0.42, titleScale: 0.135, tailCX: 0.822, tailCY: 0.285, tailScale: 0.246) // tuned
+        case "A319NEO": return .init(titleCX: 0.339, titleCY: 0.63, titleW: 0.42, titleScale: 0.135, tailCX: 0.822, tailCY: 0.285, tailScale: 0.246) // tuned
+        case "A320": return .init(titleCX: 0.318, titleCY: 0.628, titleW: 0.42, titleScale: 0.135, tailCX: 0.863, tailCY: 0.286, tailScale: 0.277) // tuned
+        case "A320NEO": return .init(titleCX: 0.318, titleCY: 0.628, titleW: 0.42, titleScale: 0.135, tailCX: 0.863, tailCY: 0.286, tailScale: 0.277) // tuned
+        case "A321": return .init(titleCX: 0.302, titleCY: 0.615, titleW: 0.42, titleScale: 0.135, tailCX: 0.878, tailCY: 0.284, tailScale: 0.253) // tuned
+        case "A321NEO": return .init(titleCX: 0.302, titleCY: 0.615, titleW: 0.42, titleScale: 0.135, tailCX: 0.878, tailCY: 0.284, tailScale: 0.253) // tuned
+        case "A339": return .init(titleCX: 0.277, titleCY: 0.63, titleW: 0.42, titleScale: 0.144, tailCX: 0.895, tailCY: 0.335, tailScale: 0.279) // tuned
+        case "A340": return .init(titleCX: 0.292, titleCY: 0.653, titleW: 0.42, titleScale: 0.144, tailCX: 0.855, tailCY: 0.34, tailScale: 0.342) // tuned
+        case "A359": return .init(titleCX: 0.301, titleCY: 0.632, titleW: 0.42, titleScale: 0.145, tailCX: 0.859, tailCY: 0.315, tailScale: 0.292) // tuned
+        case "A380": return .init(titleCX: 0.308, titleCY: 0.665, titleW: 0.42, titleScale: 0.115, tailCX: 0.875, tailCY: 0.33, tailScale: 0.253) // tuned
+        case "AT46": return .init(titleCX: 0.28, titleCY: 0.665, titleW: 0.24, titleScale: 0.105, tailCX: 0.81, tailCY: 0.32, tailScale: 0.27) // tuned
+        case "B1900": return .init(titleCX: 0.36, titleCY: 0.585, titleW: 0.30, titleScale: 0.115, tailCX: 0.83, tailCY: 0.34, tailScale: 0.288) // tuned
+        case "B737700": return .init(titleCX: 0.328, titleCY: 0.671, titleW: 0.42, titleScale: 0.125, tailCX: 0.822, tailCY: 0.322, tailScale: 0.245) // tuned
+        case "B737800": return .init(titleCX: 0.298, titleCY: 0.674, titleW: 0.42, titleScale: 0.125, tailCX: 0.882, tailCY: 0.311, tailScale: 0.249) // tuned
+        case "B739": return .init(titleCX: 0.306, titleCY: 0.675, titleW: 0.42, titleScale: 0.125, tailCX: 0.86, tailCY: 0.312, tailScale: 0.291) // tuned
+        case "B747": return .init(titleCX: 0.255, titleCY: 0.673, titleW: 0.42, titleScale: 0.145, tailCX: 0.885, tailCY: 0.31, tailScale: 0.309) // tuned
+        case "B773": return .init(titleCX: 0.275, titleCY: 0.668, titleW: 0.42, titleScale: 0.145, tailCX: 0.927, tailCY: 0.35, tailScale: 0.40) // tuned
+        case "B788": return .init(titleCX: 0.295, titleCY: 0.649, titleW: 0.42, titleScale: 0.135, tailCX: 0.902, tailCY: 0.34, tailScale: 0.40) // tuned
+        case "B789": return .init(titleCX: 0.282, titleCY: 0.645, titleW: 0.42, titleScale: 0.145, tailCX: 0.895, tailCY: 0.32, tailScale: 0.331) // tuned
+        case "B78J": return .init(titleCX: 0.285, titleCY: 0.654, titleW: 0.42, titleScale: 0.16, tailCX: 0.895, tailCY: 0.325, tailScale: 0.318) // tuned
+        case "CRJ1000": return .init(titleCX: 0.291, titleCY: 0.61, titleW: 0.42, titleScale: 0.16, tailCX: 0.875, tailCY: 0.335, tailScale: 0.328) // tuned
+        case "CRJ900": return .init(titleCX: 0.287, titleCY: 0.605, titleW: 0.42, titleScale: 0.16, tailCX: 0.88, tailCY: 0.31, tailScale: 0.355) // tuned
+        case "D328": return .init(titleCX: 0.30, titleCY: 0.69, titleW: 0.30, titleScale: 0.11, tailCX: 0.866, tailCY: 0.30, tailScale: 0.285) // tuned
+        case "DH8B": return .init(titleCX: 0.255, titleCY: 0.63, titleW: 0.22, titleScale: 0.085, tailCX: 0.85, tailCY: 0.30, tailScale: 0.34) // tuned
+        case "E170": return .init(titleCX: 0.323, titleCY: 0.644, titleW: 0.42, titleScale: 0.112, tailCX: 0.878, tailCY: 0.315, tailScale: 0.297) // tuned
+        case "E175": return .init(titleCX: 0.323, titleCY: 0.644, titleW: 0.42, titleScale: 0.112, tailCX: 0.878, tailCY: 0.315, tailScale: 0.297) // tuned
+        case "E190": return .init(titleCX: 0.302, titleCY: 0.632, titleW: 0.42, titleScale: 0.112, tailCX: 0.893, tailCY: 0.325, tailScale: 0.249) // tuned
+        case "E195": return .init(titleCX: 0.328, titleCY: 0.625, titleW: 0.42, titleScale: 0.14, tailCX: 0.90, tailCY: 0.325, tailScale: 0.30) // tuned
+        case "ERJ135": return .init(titleCX: 0.33, titleCY: 0.615, titleW: 0.34, titleScale: 0.13, tailCX: 0.84, tailCY: 0.33, tailScale: 0.306) // tuned
+        case "ERJ140": return .init(titleCX: 0.33, titleCY: 0.615, titleW: 0.34, titleScale: 0.13, tailCX: 0.855, tailCY: 0.32, tailScale: 0.306) // tuned
+        case "ERJ145": return .init(titleCX: 0.333, titleCY: 0.63, titleW: 0.42, titleScale: 0.16, tailCX: 0.88, tailCY: 0.33, tailScale: 0.322) // tuned
+        case "MAX8": return .init(titleCX: 0.3, titleCY: 0.655, titleW: 0.42, titleScale: 0.14, tailCX: 0.878, tailCY: 0.32, tailScale: 0.298) // tuned
+        case "MAX9": return .init(titleCX: 0.32, titleCY: 0.665, titleW: 0.42, titleScale: 0.16, tailCX: 0.848, tailCY: 0.34, tailScale: 0.323) // tuned
         default:
             return .init(titleCX: 0.32, titleCY: 0.63, titleW: 0.42, titleScale: 0.16,
                          tailCX: 0.87, tailCY: 0.30, tailScale: 0.18)
