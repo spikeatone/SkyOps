@@ -43,15 +43,17 @@ struct LiveryPlacement {
 
     static func forType(_ id: String) -> LiveryPlacement {
         switch id {
+        // titleCY sits ON the window line (fuselage vertical centre) so the windows
+        // punch through the letters as cutouts via the multiply blend — the United look.
         case "A319", "A320", "A321", "A319NEO", "A320NEO", "A321NEO":
-            return .init(titleCX: 0.36, titleCY: 0.47, titleW: 0.30, titleScale: 0.135,
-                         tailCX: 0.85, tailCY: 0.26, tailScale: 0.26)
+            return .init(titleCX: 0.37, titleCY: 0.62, titleW: 0.38, titleScale: 0.17,
+                         tailCX: 0.885, tailCY: 0.24, tailScale: 0.18)
         case "DH8B":
-            return .init(titleCX: 0.585, titleCY: 0.47, titleW: 0.24, titleScale: 0.11,
-                         tailCX: 0.865, tailCY: 0.20, tailScale: 0.24)
+            return .init(titleCX: 0.575, titleCY: 0.66, titleW: 0.28, titleScale: 0.13,
+                         tailCX: 0.875, tailCY: 0.19, tailScale: 0.19)
         default:
-            return .init(titleCX: 0.38, titleCY: 0.47, titleW: 0.30, titleScale: 0.12,
-                         tailCX: 0.85, tailCY: 0.24, tailScale: 0.26)
+            return .init(titleCX: 0.38, titleCY: 0.62, titleW: 0.34, titleScale: 0.15,
+                         tailCX: 0.88, tailCY: 0.22, tailScale: 0.18)
         }
     }
 }
