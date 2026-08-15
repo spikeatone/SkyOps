@@ -1,46 +1,88 @@
 # Personalized Livery — Phase 1 (prototype spec)
 
-> ## ▶▶ NEXT SESSION STARTS HERE — TAIL EMBLEM PLACEMENT (14 Aug 2026, `livery-prototype`)
+> ## ▶▶ CURRENT STATE (15 Aug 2026, `livery-prototype`) — PAINTED TAIL, FEATURE COMPLETE
 >
-> **The tail-emblem-on-fin placement is AUTO-COMPUTED and CLOSE but not perfect.**
-> The designer wants it finished. It is NOT hand-tuned per plane anymore — do NOT go
-> back to that. It's a repeatable script:
+> The livery feature is **built and looks like a real airline**. All pushed to
+> `origin/livery-prototype`; **`main` untouched** (keep it clean until 1.2 is live).
+> Debug + Release both build clean.
 >
-> **`aa-livery/fin_place.py`** — for every `Resources/Illustrations/<TYPE>.png` it
-> detects the FIN silhouette, finds the **largest square that fits fully INSIDE the fin
-> outline** (so the emblem can NEVER exceed the fin edge — the designer's explicit
-> requirement: "outline the edge of each tail, the logo never exceeds it, sits
-> comfortably within it"), detects **T-tails** (biases the emblem LOWER, off the
-> horizontal stab), and gives big tall fins a height-based minimum size. It writes
-> `tailCX/tailCY/tailScale` into `AircraftLivery.swift` (TITLE values are separately
-> hand-tuned — leave them). Tunables + full notes are in the script's docstring.
+> ### The livery model (as shipped on this branch)
+> A player picks a **font**, a **2-colour palette**, a **tail emblem**, and the
+> **fuselage text**. On every side-view illustration:
+> - **PAINTED TAIL** — the whole fin is filled with the palette's **secondary** colour
+>   and the emblem is drawn **WHITE**, both **CLIPPED to the fin silhouette** (United /
+>   Delta / Lufthansa look). *This replaced the old "small emblem on a white metal fin"
+>   and SOLVED the emblem-fit problem for good:* an oversized emblem simply clips at the
+>   fin edge, which reads as intentional. **Overflow is impossible by construction — do
+>   NOT reintroduce per-plane emblem-size/position nudging to "make it fit".**
+> - **TITLE** — the fuselage name in the palette's **primary** colour, on the window
+>   line, `.blendMode(.multiply)` so the illustration's own windows punch through the
+>   letters (the painted-on look). Two-tone livery: both palette colours used.
 >
-> **WORKFLOW to iterate:**
-> 1. Edit a tunable (or add a per-type override) in `aa-livery/fin_place.py`.
-> 2. `python3 aa-livery/fin_place.py` (rewrites the Swift values) — or `--report` to
->    just print detected values + which types classified as `[T-TAIL]`.
-> 3. **CLEAN build** (`xcodebuild … clean build` — plain build caches stale art/values;
->    this bit us repeatedly) → **uninstall + install** → launch `-liveryGallery`
->    (shows ALL 10 emblems on one aircraft; `-galleryType <ID>` to switch; there's also
->    a Python compositor pattern in this session's git history that matches the SwiftUI
->    render for fast off-sim previews).
+> ### How the painted tail is implemented (don't relearn this the hard way)
+> - **Fin masks**: `Resources/FinMasks/<TYPE>_fin.png`, one per illustration, **RGBA
+>   with alpha = the fin shape** (white RGB). Generated from each illustration by the
+>   fin-detection pass. ⚠️ **They MUST be RGBA** — SwiftUI `.mask` clips by ALPHA; an
+>   `L`-mode (grayscale, no-alpha) mask loads fully opaque and fills the whole card
+>   (this bug cost real time). `FinMask.uiImage(for:)` in Livery.swift loads them.
+> - **Render** (`AircraftLiveryImage`): `ZStack { secondaryFill; whiteEmblem }.mask(finImage)`
+>   over the illustration; title drawn separately. Mask + illustration are the same
+>   pixel size and both `scaledToFit` in the same frame, so they align.
+> - **Emblem placement** (`LiveryPlacement.forType`): `tailCX/tailCY/tailScale` are
+>   LARGE and fin-bbox-centred (fills the tail; clipping at the edge is the point).
+>   TITLE values in the same table are separately hand-tuned — leave them.
+> - **Per-emblem re-centre**: `TailArt.nudge(_ n:)` in Livery.swift — a few emblems
+>   (3 eagle / 4 shield / 5 swoosh / 7 heart) carry their mass forward, so a small +dx
+>   pushes them back to sit centred. Add cases here if a new emblem reads off-centre.
+> - **`aa-livery/fin_place.py`** — the reusable script that detects each fin and emits
+>   the placement (and documents regenerating the masks). Header note explains the
+>   painted-tail model + tunables. Re-run after new/changed aircraft art.
 >
-> **KNOWN REMAINING IMPERFECTIONS (what "not quite perfect" means):**
-> - **T-tail detector misses some.** The width-ratio heuristic correctly caught
->   CRJ900/ERJ145/DH8B but MISSED **CRJ1000, ERJ135, ERJ140** (they came out with a
->   high `cy` = placed too high, not lowered). Run `--report` and check the `[T-TAIL]`
->   flags — fix the heuristic or add those ids to a T-tail set.
-> - **AT46 (ATR 42)** — stubby T-tail; round emblems (globe) kiss the horizontal stab.
->   Wants a smaller emblem and/or lower centre for this one type.
-> - **A couple of big jets** were reading small — the height-based min size helped
->   (A380/777/747 now bigger); eyeball whether they're now right.
-> - Likely cleanest endgame: keep the auto pass for the ~30 that are good, add a small
->   **per-type override table** (layered on top) for the 3-4 stubborn T-tails/turboprops.
->   Don't chase global constants into breaking the good ones.
+> ### Re-customise (existing players can restyle their fleet)
+> A **"Livery" button in the FLEET HOME header** opens `LiveryDesignView` in **EDIT
+> mode**: pre-filled from the current livery (`initialLivery`/`initialText`), header
+> reads "Customise your livery", commit button says **"Save Livery"**, a back chevron
+> (`onCancel`) returns without saving. Save applies `sim.setLivery(...)` live to the
+> whole fleet and persists immediately. **A pre-livery save opens on the defaults**
+> (font0 / palette0 / wing) — so every player, new or existing, can style their fleet.
+> The first-launch flow (naming → livery → launch) is unchanged.
 >
-> **Everything else about the livery feature is DONE** (creation flow, fonts, palettes,
-> emblem normalisation, persistence, Fleet-detail painting, screen layout). Both Debug
-> + Release build clean. `main` untouched; all work on `livery-prototype`.
+> ### DEBUG harnesses (all `#if DEBUG`, in ContentView / LiveryDesignView)
+> - **`-freshFlow`** — jump straight into the first-launch flow (naming → livery →
+>   tutorial → game) on a clean sim, **bypassing the splash AND the load menu**,
+>   regardless of saved games. The way to walk the whole first-run flow.
+> - **`-liveryPreview`** — open the livery design screen directly (fresh-create).
+> - **`-liveryGallery`** — EMBLEM FIT TEST: all 10 emblems on one aircraft, then a
+>   fin-shape spread. Args: `-galleryType <ID>`, `-galleryName "AIR TINA"`,
+>   `-galleryPalette <0-9>`. (Its background is fixed light-grey, so it does NOT show
+>   the app's dark theme — use `-liveryPreview` for a true dark-theme check.)
+>
+> ### ⚠️ Build gotcha (bit us repeatedly)
+> After changing **bundled art** (fin masks, emblem PNGs, fonts) OR the placement
+> values, do a **`xcodebuild … clean build` + `simctl uninstall` + `install`**. A
+> plain incremental build/install caches the old art and you'll be looking at a STALE
+> binary. You CANNOT judge staleness by file hash — Xcode re-encodes PNGs to Apple's
+> CgBI format at build time, so the hash always differs; judge by the build timestamp
+> or just clean-build when in doubt.
+>
+> ### Open / possible next
+> - **⭐ TURBOPROP (+ some T-tail) FIN MASKS need HAND-AUTHORED shapes.** The auto fin
+>   detector nails the JETS (~30 types, what players mostly fly) but gets the
+>   **turboprops wrong** — on a high-wing prop (Dash-8 / ATR-42 / Do-328 / B1900) the
+>   fuselage is low, so cutting the fin at the mid-body crown leaves a flat/jagged
+>   painted edge that "doesn't map right" (designer flagged). The mechanism is READY:
+>   `aa-livery/make_fin_masks.py` has a `FIN_POLYGONS` dict — add a hand-traced fin
+>   outline (fractional (x,y) corners: tip → trailing edge → base → leading edge) per
+>   exception type, run the script (it intersects the polygon with the airframe
+>   silhouette so paint can't spill), CLEAN build, check in `-liveryGallery
+>   -galleryType DH8B`. Candidates to trace: **AT46, B1900, D328, DH8B** first; eyeball
+>   the CRJ/ERJ T-tails too. The jets need no polygon.
+> - **Walk the full first-run flow end-to-end** on a real device (sim text-typing was
+>   flaky — `-freshFlow` reaches the naming screen reliably, but typing into the field
+>   via the automation `text` action can background the app; a real device or the sim
+>   SOFTWARE keyboard avoids it). The transitions/pieces are all individually verified;
+>   the designer walked most of it live (Spikeair/Pacific/shield).
+> - Ship as its own version AFTER 1.2 is live, then merge `livery-prototype` → main.
 >
 > ---
 
