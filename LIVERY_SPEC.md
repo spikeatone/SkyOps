@@ -179,7 +179,18 @@
 >   via the automation `text` action can background the app; a real device or the sim
 >   SOFTWARE keyboard avoids it). The transitions/pieces are all individually verified;
 >   the designer walked most of it live (Spikeair/Pacific/shield).
-> - Ship as its own version AFTER 1.2 is live, then merge `livery-prototype` → main.
+> - **SHIPS AS 1.3 (designer, 15 Aug 2026).** Merge `livery-prototype` → main only AFTER
+>   1.2 is LIVE in the App Store, then cut 1.3. Merging earlier is the thing to avoid:
+>   1.2.0 (build 41) is the one-time-unlock pivot and is waiting on RevenueCat offering
+>   config, so if the paywall needs a hotfix build, `main` must be able to produce one
+>   WITHOUT dragging the livery feature into review with it. Verified 15 Aug: the branch
+>   merges into main with ZERO conflicts (main is 1 doc commit ahead), so waiting costs
+>   nothing — it stays a trivial merge.
+> - **Two gates before the 1.3 cut** (neither blocks the merge, both block shipping):
+>   walk the FULL first-run flow (naming → livery → launch) on a REAL DEVICE — sim text
+>   entry keeps backgrounding the app, so it has never been done end-to-end — and check
+>   the livery on the **Fleet detail** screen, which is where players actually meet it
+>   (all the fin verification so far was done in the `-liveryGallery` harness).
 >
 > ---
 
