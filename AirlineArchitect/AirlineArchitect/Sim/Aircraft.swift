@@ -117,6 +117,15 @@ final class Aircraft: Identifiable {
     var aogAutoClearTick: Int?
     var holdLogged: Bool = false
 
+    /// FLEET REPAINT. Tick this airframe comes OUT of the paint shop, or nil if
+    /// it isn't being repainted. Like `maint` it blocks at the PARKED gate, so an
+    /// airborne aircraft finishes its leg first and only then goes into the shop —
+    /// the same "don't teleport a flying jet" rule reassignment and parking use.
+    /// The real cost of a repaint is this downtime, not the paint bill: a grounded
+    /// jet earns nothing for the 1–2 weeks it's in the shop.
+    var repaintUntilTick: Int?
+    var inPaintShop: Bool { repaintUntilTick != nil }
+
     /// Assigned crew's id within its family pool (nil = none assigned yet).
     var crewId: Int?
 
@@ -179,6 +188,9 @@ final class Aircraft: Identifiable {
         if stateTick >= duration - 1 {
             switch state {
             case .parked:
+                // in the paint shop — nothing moves until it comes out. Checked
+                // BEFORE maint so a repaint can't be masked by an AOG card.
+                if inPaintShop { return event }
                 // grounded for maintenance — nothing moves until resolved
                 if maint {
                     holdReason = .aog

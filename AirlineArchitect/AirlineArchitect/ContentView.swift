@@ -102,7 +102,7 @@ struct ContentView: View {
             if let scenario = Self.devScenario {
                 sim.devSeed(scenario)
                 showSplash = false
-                tab = 4                     // FINANCE — where Go Public lives
+                tab = scenario == .fleet ? 1 : 4   // FLEET for livery, else FINANCE (Go Public)
                 return
             }
             #endif
@@ -413,8 +413,12 @@ func compactMoney(_ v: Int) -> String {
 /// Cash-on-hand display — MORE precise than compactMoney near thresholds so a
 /// balance a hair under a price doesn't read as if it's at it. 2 decimals under
 /// $10M (where early acquire decisions live), 1 decimal above, $1k below $1M.
+/// Past $1B it switches to BILLIONS — "$1136.0M" is hard to read at a glance and
+/// stops looking like money; 3 decimals keeps ~$1M of precision, which is still
+/// finer than the aircraft prices this number gets compared against.
 func cashLabel(_ v: Int) -> String {
     let a = abs(v), sign = v < 0 ? "−" : ""
+    if a >= 1_000_000_000 { return sign + "$" + String(format: "%.3fB", Double(a) / 1_000_000_000) }
     if a >= 10_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
     if a >= 1_000_000  { return sign + "$" + String(format: "%.2fM", Double(a) / 1_000_000) }
     if a >= 1_000      { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }

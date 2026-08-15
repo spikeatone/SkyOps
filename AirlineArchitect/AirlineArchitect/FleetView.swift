@@ -35,6 +35,11 @@ struct FleetView: View {
     @State private var detailID: UUID?
     /// Presents the livery designer in EDIT mode (re-customise the fleet's livery).
     @State private var showLivery = false
+    /// A livery chosen on the design screen, waiting on the repaint quote. Held
+    /// here so backing out of the quote returns to the design screen with the
+    /// choice intact. A struct (not a tuple) so it can drive `.animation(value:)`.
+    struct PendingLivery: Equatable { let font: Int, palette: Int, tailArt: Int; let text: String }
+    @State private var pendingLivery: PendingLivery?
     /// Fleet-list status filter, driven by tapping a status box (nil = all).
     @State private var fleetFilter: FleetStatus?
     enum Segment: Hashable { case myFleet, marketplace }
@@ -140,17 +145,42 @@ struct FleetView: View {
                 LiveryDesignView(airlineName: sim.playerAirlineName ?? "",
                                  initialLivery: sim.livery,
                                  initialText: sim.liveryTitle,
-                                 commitTitle: "Save Livery",
+                                 commitTitle: sim.ownedCount > 0 ? "Repaint Fleet" : "Save Livery",
                                  onCancel: { showLivery = false }) { fontI, palI, tailI, text in
-                    sim.setLivery(fontIndex: fontI, paletteIndex: palI, tailArtIndex: tailI, text: text)
-                    if isFirstLiverySaveNeeded { onSave() }   // persist immediately
-                    showLivery = false
+                    // With aircraft on the books a livery change is a REPAINT: it
+                    // costs real money and grounds the fleet, so it goes through an
+                    // itemized quote first. With no fleet there's nothing to repaint,
+                    // so the choice is free and applies straight away.
+                    if sim.ownedCount > 0 {
+                        pendingLivery = PendingLivery(font: fontI, palette: palI, tailArt: tailI, text: text)
+                    } else {
+                        sim.setLivery(fontIndex: fontI, paletteIndex: palI, tailArtIndex: tailI, text: text)
+                        onSave()
+                        showLivery = false
+                    }
                 }
                 .transition(.opacity)
                 .zIndex(5)
             }
+
+            // Itemized repaint quote — shown over the design screen so backing out
+            // returns to the design, not to the fleet list.
+            if let p = pendingLivery {
+                RepaintConfirmView(sim: sim, onCancel: { pendingLivery = nil }) {
+                    if sim.repaintFleet(fontIndex: p.font, paletteIndex: p.palette,
+                                        tailArtIndex: p.tailArt, text: p.text) {
+                        Feedback.success()
+                        onSave()                 // a paid repaint must survive a kill
+                        pendingLivery = nil
+                        showLivery = false
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(6)
+            }
         }
         .animation(.easeInOut(duration: 0.2), value: showLivery)
+        .animation(.easeInOut(duration: 0.2), value: pendingLivery != nil)
     }
 
     /// Always persist a livery change right away so it survives even if the app is

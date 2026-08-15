@@ -73,6 +73,7 @@ struct GameSnapshot: Codable {
     var totalDividendsPaid: Int? = nil
     var totalBuybackSpend: Int? = nil
     var totalMarketingSpend: Int? = nil
+    var totalRepaintSpend: Int? = nil
     // Player route promotions (routeId → expiry tick). Empty for pre-1.1 saves.
     var playerFareWarUntil: [Int: Int] = [:]
     var adCampaignUntil: [Int: Int] = [:]
@@ -126,6 +127,7 @@ struct AircraftSave: Codable {
     /// A deferred park (airborne aircraft parks on arrival). Defaults false in
     /// saves written before the park action existed.
     var pendingPark: Bool = false
+    var repaintUntilTick: Int? = nil
     var sellOfferDismissed: Bool
     var isLeased: Bool
     var leaseAccrued: Double
@@ -303,6 +305,7 @@ extension GameSnapshot {
         totalDividendsPaid = c.decodeSafeOpt(Int.self, .totalDividendsPaid)
         totalBuybackSpend = c.decodeSafeOpt(Int.self, .totalBuybackSpend)
         totalMarketingSpend = c.decodeSafeOpt(Int.self, .totalMarketingSpend)
+        totalRepaintSpend = c.decodeSafeOpt(Int.self, .totalRepaintSpend)
         playerFareWarUntil = c.decodeSafe(.playerFareWarUntil, default: [:])
         adCampaignUntil = c.decodeSafe(.adCampaignUntil, default: [:])
         loyaltyPushUntil = c.decodeSafe(.loyaltyPushUntil, default: [:])
@@ -344,6 +347,7 @@ extension AircraftSave {
         assignedRouteId = c.decodeSafeOpt(Int.self, .assignedRouteId)
         pendingRouteId = c.decodeSafeOpt(Int.self, .pendingRouteId)
         pendingPark = c.decodeSafe(.pendingPark, default: false)
+        repaintUntilTick = c.decodeSafeOpt(Int.self, .repaintUntilTick)
         sellOfferDismissed = c.decodeSafe(.sellOfferDismissed, default: false)
         isLeased = c.decodeSafe(.isLeased, default: false)
         leaseAccrued = c.decodeSafe(.leaseAccrued, default: 0)
