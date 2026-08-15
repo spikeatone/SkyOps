@@ -112,6 +112,7 @@ enum TailArt {
         case 4: return (0.10, 0)   // shield
         case 5: return (0.10, 0)   // swoosh-arrow
         case 7: return (0.10, 0)   // heart
+        case 9: return (0.10, 0)   // leaf — push back within the fin
         default: return (0, 0)
         }
     }
