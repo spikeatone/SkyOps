@@ -1942,6 +1942,15 @@ final class Simulation {
     /// company name). Chosen on the livery screen, capped at `Livery.maxTextLength`
     /// so it fits the window line. Empty → the illustration falls back to the name.
     private(set) var liveryText = ""
+    /// Has the player ever CHOSEN a livery? A new game sets this at the design step;
+    /// a save from before the livery feature decodes it false, because those players
+    /// were never asked. Until it's true the fleet is wearing DEFAULTS nobody picked,
+    /// so the first real choice is FREE — charging for it would bill an existing
+    /// player for the initial pick every new player gets free at naming. Every
+    /// change after that is a paid repaint.
+    private(set) var liveryChosen = false
+    /// True when the player still owes their one free livery choice.
+    var needsFirstLivery: Bool { !liveryChosen }
     /// The resolved livery, for the Fleet / Acquire / tooltip illustrations.
     var livery: Livery {
         Livery(fontIndex: liveryFontIndex, paletteIndex: liveryPaletteIndex, tailArtIndex: liveryTailArtIndex)
@@ -2169,6 +2178,7 @@ final class Simulation {
     }
 
     func setLivery(fontIndex: Int, paletteIndex: Int, tailArtIndex: Int, text: String) {
+        liveryChosen = true
         liveryFontIndex = max(0, min(LiveryFont.all.count - 1, fontIndex))
         liveryPaletteIndex = max(0, min(LiveryPalette.all.count - 1, paletteIndex))
         liveryTailArtIndex = max(0, min(TailArt.count, tailArtIndex))   // allow 0 = none
@@ -4294,6 +4304,7 @@ final class Simulation {
         s.liveryFontIndex = liveryFontIndex
         s.liveryPaletteIndex = liveryPaletteIndex
         s.liveryTailArtIndex = liveryTailArtIndex
+        s.liveryChosen = liveryChosen
         s.liveryText = liveryText
         s.playerBalance = playerBalance
         s.tick = tick
@@ -4422,6 +4433,7 @@ final class Simulation {
         liveryFontIndex = s.liveryFontIndex
         liveryPaletteIndex = s.liveryPaletteIndex
         liveryTailArtIndex = s.liveryTailArtIndex
+        liveryChosen = s.liveryChosen
         liveryText = s.liveryText
         playerBalance = s.playerBalance
         tick = s.tick

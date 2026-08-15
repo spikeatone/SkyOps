@@ -1,27 +1,3 @@
-//  RepaintVerify.swift — FLEET REPAINT (42/42)
-//
-//  Covers: cost bands vs the designer's real-world figures, the itemized quote,
-//  the SHOP QUEUE (slots, longest-job-first, program length scaling with fleet
-//  size), stage/progress reporting, LOST REVENUE (idle spares contribute none,
-//  it equals dailyNet x shop days, it is NEVER charged), refusal paths being
-//  inert, the cash invariant, and a save/load round-trip.
-//
-//  RUN (entry file must be named main.swift):
-//    mkdir -p /tmp/rpv && cp aa-1.1.x/RepaintVerify.swift /tmp/rpv/main.swift
-//    cp aa-1.1.x/RepaintVerifyStubs.swift /tmp/rpv/
-//    swiftc -O -DDEBUG -o /tmp/rpv/rpv \
-//      AirlineArchitect/AirlineArchitect/Sim/*.swift \
-//      AirlineArchitect/AirlineArchitect/Persistence.swift \
-//      /tmp/rpv/RepaintVerifyStubs.swift /tmp/rpv/main.swift && /tmp/rpv/rpv
-//
-//  Stubs exist because Livery.swift imports SwiftUI; they mirror catalog sizes only.
-//
-//  NOTE: SIX "failures" during authoring were all WRONG ASSERTIONS, not bugs — an
-//  A380 owner is not broke; buying jets raises the bill as fast as it drains cash;
-//  a RESTORED sim is off by the un-persisted injection but a LIVE one is off by
-//  ZERO (devInjectCash is a tracked term); and on a 4-aircraft fleet the two
-//  longest jobs are 14d and 10d. Check a finding against the real contract first.
-
 import Foundation
 
 @MainActor func run() {
@@ -163,6 +139,30 @@ import Foundation
     check("invariant holds with lost revenue in play",
           lr.cashInvariantResidual() == 0,
           "residual \(lr.cashInvariantResidual())")
+
+    // ---- EXISTING PLAYERS: the first livery choice is FREE
+    // A pre-livery save decodes to default indices, so the fleet is already wearing
+    // a livery nobody picked. Charging for the first real choice would bill an
+    // existing player for the pick every new player gets free at naming.
+    let ex = Simulation()
+    ex.nameAirline("Legacy Air", tailCode: "LG")
+    ex.devInjectCash(300_000_000)
+    if let t = AircraftType.all.first(where: { $0.id == "A320" }) { _ = ex.buyAircraft(t) }
+    // simulate the legacy decode: never chose
+    var exSnap = ex.snapshot()
+    exSnap.liveryChosen = false
+    let ex2 = Simulation(); ex2.restore(from: exSnap)
+    check("pre-livery save needs a first choice", ex2.needsFirstLivery)
+    let exBal = ex2.playerBalance
+    ex2.setLivery(fontIndex: 1, paletteIndex: 5, tailArtIndex: 3, text: "LEGACY")
+    check("first choice is free", ex2.playerBalance == exBal)
+    check("first choice marks it chosen", !ex2.needsFirstLivery)
+    check("choice survives reload (can't be farmed)",
+          { let r = Simulation(); r.restore(from: ex2.snapshot()); return !r.needsFirstLivery }())
+    // and now a change is a real, billed repaint
+    let exBal2 = ex2.playerBalance, exBill = ex2.repaintTotal
+    _ = ex2.repaintFleet(fontIndex: 0, paletteIndex: 2, tailArtIndex: 1, text: "PAID")
+    check("a later change is billed", ex2.playerBalance == exBal2 - exBill, "bill \(exBill)")
 
     // ---- PERSISTENCE: a paid repaint must survive save/load. This is the exact
     // class of bug the fuel hedge shipped with (paid asset dropped on reload).

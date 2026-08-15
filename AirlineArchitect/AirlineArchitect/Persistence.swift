@@ -28,6 +28,9 @@ struct GameSnapshot: Codable {
     var liveryPaletteIndex = 0
     var liveryTailArtIndex = 1
     var liveryText = ""
+    /// nil / false = a pre-livery save: the player never chose, so their first
+    /// choice must be free (see Simulation.needsFirstLivery).
+    var liveryChosen: Bool = false
     var playerBalance = 0
     var tick = 0
     var calendarStartDay = 0   // randomized calendar start-of-year offset (0–359)
@@ -266,6 +269,7 @@ extension GameSnapshot {
         liveryPaletteIndex = c.decodeSafe(.liveryPaletteIndex, default: 0)
         liveryTailArtIndex = c.decodeSafe(.liveryTailArtIndex, default: 1)
         liveryText = c.decodeSafe(.liveryText, default: "")
+        liveryChosen = c.decodeSafe(.liveryChosen, default: false)
         playerBalance = c.decodeSafe(.playerBalance, default: 0)
         tick = c.decodeSafe(.tick, default: 0)
         calendarStartDay = c.decodeSafe(.calendarStartDay, default: 0)

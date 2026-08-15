@@ -98,29 +98,61 @@
 >
 > ### ✅ FLEET REPAINT — BUILT (15 Aug 2026, designer request)
 > Changing the livery once you own aircraft is a **repaint**, not a free restyle: the
-> Livery button's commit routes through an **itemized quote** (one line per type —
-> count × per-airframe cost + days each). With no aircraft owned there's nothing to
-> repaint, so the choice stays free.
+> Livery button's commit routes through an **itemized quote**. With no aircraft owned
+> there's nothing to repaint, so the choice stays free.
 > - **Costs are the designer's real-world bands** (`Simulation.repaintCost`): narrowbody
 >   **$130k** (a real 737-900ER refresh is ~$131k), widebody **$225k**, jumbo **$400k**;
 >   turboprop $35k / RJ $60k sit below the narrowbody floor.
-> - **DOWNTIME is the bigger cost and gets equal billing** (`repaintDays`, 7–14d by size).
->   Aircraft reuse the **parked-gate block** AOG uses, so an airborne jet finishes its leg
->   before going in — the same "don't teleport a flying aircraft" rule as reassignment and
->   parking. The fleet repaints **in PARALLEL**, so the headline is the LONGEST single job,
->   never the sum (`repaintLongestDays`).
-> - **`totalRepaintSpend` is a new capital-out term in the cash invariant**, and both it
->   and each aircraft's `repaintUntilTick` PERSIST — a paid repaint vanishing on reload is
->   exactly the fuel-hedge bug class.
-> - A failed repaint (unaffordable, or one already running) is **INERT** — it returns
->   before charging or applying, so it can never half-apply a livery or half-charge.
-> - Verified **30/30 headless** (`aa-1.1.x/RepaintVerify.swift` + its stub file — note
->   `Livery.swift` imports SwiftUI so the headless harness needs the catalog stubs) and
->   driven live: quote rendered with correct per-type lines, $555k charged on a 5-type
->   fleet, whole fleet repainted.
-> - **`-devScenario fleet`** (new, `#if DEBUG`) seeds a named airline + livery + one
->   aircraft per class and opens the Fleet tab — this is what makes the Fleet-detail and
->   repaint checks drivable at all.
+> - **SCHEDULED THROUGH A SHOP QUEUE, not all at once** (`repaintShopSlots` = 2). A real
+>   airline cycles its fleet through in ones and twos, so **calendar time scales with
+>   FLEET SIZE**: 20 aircraft ≈ **103 days**, not the 18 days of the longest single job.
+>   Booked aircraft keep flying and earning until their slot opens (`repaintQueued`);
+>   `fillPaintShop()` pulls the LONGEST jobs in first, which is both what minimises the
+>   program and what makes `repaintProgramDays` match what the player is shown.
+> - **Durations are total HANGAR OCCUPANCY** (`repaintDays`: 7 / 10 / 14 / 18d by size) —
+>   occupancy is what costs revenue. Real: narrowbody 3–7d active but 5–10d occupancy;
+>   widebody 7–14d / 10–21d. The four real stages (strip 1–3d · prep+prime 1–3d ·
+>   paint 1–7d · clear coat+cure 1–3d = 4–16d) corroborate those totals and drive the
+>   fleet-card DISPLAY, but are deliberately **not four tracked phases** — the player
+>   never schedules around a stage, so splitting it would be detail with no decision.
+> - **LOST REVENUE (opportunity cost) is shown per line and totalled.** Each type's line
+>   carries, in amber, the revenue those airframes won't earn while grounded; the footer
+>   sums **Paint cost + Revenue lost while grounded = True cost**. On a 20-aircraft fleet
+>   that's $2.7M paint vs **$9.2M forgone** — the downtime is ~3.4× the bill, which is the
+>   whole point. ⚠️ **It is an ESTIMATE, never a charge** — income that never arrives, so
+>   it is NOT a cash-invariant term and the button bills only the paint cost. Idle spares
+>   and loss-making legs contribute zero (grounding them costs no revenue).
+>   - `dailyNet` reads the route's REALISED average (`cumulativeNet / flights`), not the
+>     leg in the air: a single leg carries a random fare/load spread, which made the same
+>     fleet quote a ~4% different total every time the card opened. The average holds ~1%.
+> - **Fleet cards explain themselves**: an aircraft in the shop shows a purple
+>   **LIVERY UPDATE** chip with its current stage and days left; a queued one shows
+>   "Scheduled for repaint" and keeps flying.
+> - **`totalRepaintSpend` is a capital-out term in the cash invariant**; it and each
+>   aircraft's `repaintUntilTick` / `repaintStartTick` / `repaintQueued` PERSIST — a paid
+>   repaint vanishing on reload is exactly the fuel-hedge bug class. A failed repaint
+>   (unaffordable, or one already running) is **INERT**.
+> - Card uses **4px corners** (family spec) and names the amber figure three ways — intro
+>   sentence, a "REVENUE LOST WHILE GROUNDED" column header, and "Not billed — it's income
+>   the fleet won't earn, not a charge."
+> - Verified **47/47 headless** (`aa-1.1.x/RepaintVerify.swift` + its stub file — note
+>   `Livery.swift` imports SwiftUI, so a headless harness needs the catalog stubs) and
+>   driven live on the 20-aircraft fleet.
+> - **`-devScenario fleet` / `-devScenario bigfleet`** (new, `#if DEBUG`) seed a livery +
+>   a fleet (1 per class / 20 mixed) **with routes opened** — without routes every aircraft
+>   is an idle spare and the lost-revenue estimate is correctly zero, with nothing to see.
+>
+> ### ✅ EXISTING PLAYERS (pre-livery saves) — the first choice is FREE
+> A save from before this feature decodes to the DEFAULT indices, so an existing player's
+> fleet is already wearing a livery **they never picked** (Atlantic + wing emblem). Left
+> alone, the first time they opened the design screen they'd be billed a full repaint for
+> the initial choice every new player gets free at naming. Fixed with
+> **`Simulation.liveryChosen`** (persisted, `decodeSafe` default **false**):
+> - `needsFirstLivery` → the Fleet header button reads **"Add Livery"** with a green dot
+>   (an existing player otherwise has no idea the feature exists), the commit button says
+>   **"Save Livery"** rather than promising a paid repaint, and the apply is **free**.
+> - `setLivery` sets the flag, so every change after that is a normal billed repaint.
+>   The flag persists, so the free choice can't be farmed by reloading.
 >
 > ### ✅ FLEET-DETAIL LIVERY CHECK — DONE (one of the two 1.3 gates)
 > The livery was verified on the REAL Fleet detail screen (not just the `-liveryGallery`

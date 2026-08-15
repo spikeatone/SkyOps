@@ -145,13 +145,20 @@ struct FleetView: View {
                 LiveryDesignView(airlineName: sim.playerAirlineName ?? "",
                                  initialLivery: sim.livery,
                                  initialText: sim.liveryTitle,
-                                 commitTitle: sim.ownedCount > 0 ? "Repaint Fleet" : "Save Livery",
+                                 // A player who has never chosen (a save from before
+                                 // the livery feature) is picking for the FIRST time —
+                                 // that's free, so don't promise a paid repaint.
+                                 commitTitle: (sim.ownedCount > 0 && !sim.needsFirstLivery)
+                                     ? "Repaint Fleet" : "Save Livery",
                                  onCancel: { showLivery = false }) { fontI, palI, tailI, text in
                     // With aircraft on the books a livery change is a REPAINT: it
                     // costs real money and grounds the fleet, so it goes through an
                     // itemized quote first. With no fleet there's nothing to repaint,
                     // so the choice is free and applies straight away.
-                    if sim.ownedCount > 0 {
+                    // FREE when the player has never chosen: their fleet is wearing
+                    // defaults nobody picked, so billing the first real choice would
+                    // charge an existing player for the pick new players get free.
+                    if sim.ownedCount > 0 && !sim.needsFirstLivery {
                         pendingLivery = PendingLivery(font: fontI, palette: palI, tailArt: tailI, text: text)
                     } else {
                         sim.setLivery(fontIndex: fontI, paletteIndex: palI, tailArtIndex: tailI, text: text)
@@ -256,7 +263,15 @@ struct FleetView: View {
                 Button { showLivery = true } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "paintbrush.fill").font(.system(size: 12, weight: .semibold))
-                        Text("Livery").font(.karla(13, .semibold))
+                        // An existing player (pre-livery save) has no idea the feature
+                        // exists and is currently wearing defaults nobody picked, so
+                        // the button ASKS rather than sitting there unlabelled — and a
+                        // dot marks that their one free choice is still waiting.
+                        Text(sim.needsFirstLivery ? "Add Livery" : "Livery")
+                            .font(.karla(13, .semibold))
+                        if sim.needsFirstLivery {
+                            Circle().fill(Sky.coreGreen).frame(width: 6, height: 6)
+                        }
                     }
                     .foregroundStyle(titleColor)
                 }
