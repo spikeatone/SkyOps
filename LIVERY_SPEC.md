@@ -97,23 +97,45 @@
 > FIRST — a player is far more likely to fly a CRJ/ERJ than a Dornier.
 >
 > ### Open / possible next
-> - **⭐ NEXT ITEM: HAND-AUTHOR FIN MASKS FOR 9 TYPES — T-TAIL JETS FIRST, then the
->   turboprops.** Scope confirmed by the contact sheet + live gallery (see above):
->   **CRJ900, CRJ1000, ERJ135, ERJ140, ERJ145** (stabilizer bleed — do these first, they
->   fly far more than the props), then **AT46, B1900, D328, DH8B** (rectangular block /
->   flat cut). The auto fin detector nails the ~26 conventional-tail jets; it fails
->   wherever a horizontal stab crosses the fin or the fuselage sits low (high-wing prop),
->   because cutting at the mid-body crown leaves a flat/jagged edge that "doesn't map
->   right" (designer flagged). The mechanism is READY:
+> - **✅ T-TAIL STABILIZER BLEED — FIXED (15 Aug 2026). CRJ900 · CRJ1000 · ERJ135 ·
+>   ERJ140 · ERJ145 now paint the FIN ONLY**; the horizontal stabilizer stays white, so
+>   the tail reads as a painted fin with the stab crossing it instead of a solid teal T.
+>   Driven live in `-liveryGallery` on CRJ900 + ERJ145 across ALL 10 emblems.
+>   - **HOW — `aa-livery/trim_stab.py`, a SUBTRACT-ONLY edit of the COMMITTED mask, NOT
+>     a regeneration.** A T-tail's stab reads column-by-column as a THIN top-run
+>     continuing aft of the fin's trailing edge while the fin blade is DEEP; walking aft
+>     from the deepest column, the first column thinner than `STAB_RATIO` (0.45) of that
+>     depth starts the stab — cut there. Measured profiles: fin peaks ~0.34h, stab tapers
+>     0.24 → 0.03, so 0.45 sits mid-gap. A `MAX_TRIM` 45% guard means a mis-detect
+>     degrades to "unchanged", never to a destroyed fin. Removed 8–12% per type.
+>   - **⚠️ WHY NOT `make_fin_masks.py`: its auto path NO LONGER REPRODUCES THE COMMITTED
+>     MASKS — measured, all 35 differ, jets included** (A320 ~8.8k px). The committed
+>     masks came from a better pass. Regenerating any existing type DOWNGRADES it. That's
+>     the "improved auto pass broke the jets" trap, now confirmed with numbers and
+>     documented at the top of that script. **Verified this fix touched exactly 5 masks;
+>     the other 30 are byte-identical.**
+>   - **`tailCX` moved for these 5** (0.904→0.872, 0.900→0.870, 0.813→0.794, 0.840→0.821,
+>     0.862→0.843). The old values were the fin bbox centre INCLUDING the stab, so once
+>     the stab was removed every emblem sat too far aft. New values are the new bbox
+>     centre. `tailCY`/`tailScale` unchanged (fin height didn't move); titles untouched.
+>     **Any future mask change that alters a fin's bbox must re-check `tailCX` the same
+>     way** — `contact_sheet.py` makes the error obvious immediately.
+>   - **`aa-livery/fin_probe.py`** (new) is the tracing aid: zooms a tail with a
+>     fractional coordinate grid + the current mask in red, which is how the geometry
+>     above was read off. Use it for the turboprops.
+> - **⭐ NEXT ITEM: THE 4 TURBOPROPS — AT46, B1900, D328, DH8B** (rectangular block /
+>   flat cut / detached wedge; B1900 + AT46 are worst). These need the HAND-POLYGON path,
+>   not `trim_stab.py` — their masks are wrong in SHAPE, not merely too long, so there's
+>   nothing to subtract. The auto detector fails here because a high-wing prop's fuselage
+>   sits low, so cutting at the mid-body crown chops the fin and leaves the flat edge that
+>   "doesn't map right" (designer flagged). The mechanism is READY:
 >   `aa-livery/make_fin_masks.py` has a `FIN_POLYGONS` dict — add a hand-traced fin
 >   outline (fractional (x,y) corners: tip → trailing edge → base → leading edge) per
 >   exception type, run the script (it intersects the polygon with the airframe
 >   silhouette so paint can't spill), CLEAN build, check in `-liveryGallery
->   -galleryType DH8B`. For a T-tail the polygon's job is to stop ABOVE/BELOW the
->   stabilizer so the cross-arm stays unpainted. ⚠️ **Do NOT regenerate the
->   CONVENTIONAL-TAIL JET masks** — an "improved" auto pass broke them once (jagged
->   fins); the good ones are committed and the contact sheet confirms they're right.
->   Only add polygons for the 9 exception types; run the script with an explicit type
+>   -galleryType DH8B`. ⚠️ **Do NOT regenerate ANY already-good mask** — the auto path
+>   downgrades every one of them (measured; see the T-tail note above). Only add polygons
+>   for these 4 remaining types; run the script with an explicit type
 >   list (`make_fin_masks.py DH8B AT46 …`) so it can't touch the rest. **Re-run
 >   `contact_sheet.py` after each pass** — it's the fastest way to see all 35 at once.
 > - **Walk the full first-run flow end-to-end** on a real device (sim text-typing was

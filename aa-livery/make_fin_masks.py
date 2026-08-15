@@ -19,6 +19,20 @@ TO ADD/FIX an exception: open the illustration, read off the fin-outline corners
 fractions (there's a corner-probe snippet in this session's git history), add a
 FIN_POLYGONS[<TYPE>] entry, run this script, CLEAN build, check in -liveryGallery.
 
+⚠️ THIS SCRIPT'S AUTO PATH NO LONGER REPRODUCES THE COMMITTED MASKS — VERIFIED
+   (2026-08-15). Regenerating was diffed against every committed mask: ALL 35 differ,
+   the jets included (e.g. A320 ~8.8k px). The committed masks came from a BETTER pass
+   than `auto_mask` below. So running this over an existing type DOWNGRADES it — which
+   is exactly the "an improved auto pass broke the jets once" regression LIVERY_SPEC.md
+   warns about. Treat auto_mask as legacy.
+   • To FIX an existing mask, prefer `aa-livery/trim_stab.py`, which EDITS the committed
+     mask (subtract-only) instead of regenerating it — that's how the CRJ/ERJ T-tail
+     stabilizer bleed was fixed without touching the fin blades.
+   • Only use THIS script for a type that has NO good mask yet, or with a FIN_POLYGONS
+     entry (the hand-traced path, which ignores auto_mask entirely).
+   • Always pass explicit type names so it can't touch anything else, and diff the
+     result against the previous mask before committing.
+
 USAGE:  python3 aa-livery/make_fin_masks.py [TYPE ...]   # all, or just the named types
 """
 import glob, os, sys
