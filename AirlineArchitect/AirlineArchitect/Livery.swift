@@ -102,6 +102,37 @@ enum TailArt {
         cache[n] = ui
         return ui
     }
+
+    /// Per-emblem re-centring nudge on the fin, as a fraction of the emblem box.
+    /// Some emblems carry their visual mass forward/high; a small +dx pushes them
+    /// back (toward the fin trailing edge), +dy pushes them down. 1-based index.
+    static func nudge(_ n: Int) -> (dx: CGFloat, dy: CGFloat) {
+        switch n {
+        case 3: return (0.10, 0)   // eagle — mass is forward, push back
+        case 4: return (0.10, 0)   // shield
+        case 5: return (0.10, 0)   // swoosh-arrow
+        case 7: return (0.10, 0)   // heart
+        default: return (0, 0)
+        }
+    }
+}
+
+// MARK: - Fin masks (painted-tail livery)
+
+/// The per-aircraft FIN silhouette (white fin shape on transparent), generated from
+/// each illustration by `aa-livery/fin_place.py` and bundled as `<TYPE>_fin.png`.
+/// Used to (1) paint the fin the palette's secondary colour and (2) CLIP the white
+/// emblem to the fin shape — a solid-tail livery (United / Delta / Lufthansa style)
+/// where an oversized emblem simply clips at the fin edge instead of overflowing.
+enum FinMask {
+    private static var cache: [String: UIImage?] = [:]
+    static func uiImage(for typeID: String) -> UIImage? {
+        if let hit = cache[typeID] { return hit }
+        let ui = Bundle.main.path(forResource: "\(typeID)_fin", ofType: "png")
+            .flatMap { UIImage(contentsOfFile: $0) }
+        cache[typeID] = ui
+        return ui
+    }
 }
 
 // MARK: - The resolved selection

@@ -1,3 +1,12 @@
+# NOTE (2026-08-15): the livery is now a PAINTED TAIL — the whole fin is filled with
+# the palette secondary colour and the emblem is drawn WHITE and CLIPPED to the fin
+# shape (United/Delta/Lufthansa style). This file's job is now: (1) emit large,
+# fin-bbox-centred tailCX/CY/Scale so the emblem fills the tail (clipping at the edge
+# is intentional), and (2) the fin MASKS live in Resources/FinMasks/<TYPE>_fin.png
+# (RGBA, alpha = fin shape) — regenerate them if illustrations change (see the
+# mask-gen snippet in git history of this session). Per-emblem re-centre nudges (for
+# emblems whose art is unbalanced, e.g. 3/4/7) live in TailArt.nudge() in Livery.swift.
+
 #!/usr/bin/env python3
 """
 Auto-place livery tail emblems on each aircraft's fin.

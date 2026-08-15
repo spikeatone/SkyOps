@@ -35,41 +35,41 @@ struct LiveryPlacement {
         // below are that pass's output, baked in as constants (no runtime image work).
         // Re-run the pass after new/changed art. New types → narrowbody default.
         switch id {
-        case "A220100": return .init(titleCX: 0.33, titleCY: 0.65, titleW: 0.42, titleScale: 0.125, tailCX: 0.85, tailCY: 0.401, tailScale: 0.275) // tuned
-        case "A220300": return .init(titleCX: 0.33, titleCY: 0.65, titleW: 0.42, titleScale: 0.125, tailCX: 0.85, tailCY: 0.401, tailScale: 0.275) // tuned
-        case "A319": return .init(titleCX: 0.339, titleCY: 0.63, titleW: 0.42, titleScale: 0.135, tailCX: 0.817, tailCY: 0.358, tailScale: 0.276) // tuned
-        case "A319NEO": return .init(titleCX: 0.339, titleCY: 0.63, titleW: 0.42, titleScale: 0.135, tailCX: 0.817, tailCY: 0.358, tailScale: 0.276) // tuned
-        case "A320": return .init(titleCX: 0.318, titleCY: 0.628, titleW: 0.42, titleScale: 0.135, tailCX: 0.859, tailCY: 0.356, tailScale: 0.277) // tuned
-        case "A320NEO": return .init(titleCX: 0.318, titleCY: 0.628, titleW: 0.42, titleScale: 0.135, tailCX: 0.859, tailCY: 0.356, tailScale: 0.277) // tuned
-        case "A321": return .init(titleCX: 0.302, titleCY: 0.615, titleW: 0.42, titleScale: 0.135, tailCX: 0.894, tailCY: 0.331, tailScale: 0.256) // tuned
-        case "A321NEO": return .init(titleCX: 0.302, titleCY: 0.615, titleW: 0.42, titleScale: 0.135, tailCX: 0.894, tailCY: 0.331, tailScale: 0.256) // tuned
-        case "A339": return .init(titleCX: 0.277, titleCY: 0.63, titleW: 0.42, titleScale: 0.144, tailCX: 0.896, tailCY: 0.407, tailScale: 0.291) // tuned
-        case "A340": return .init(titleCX: 0.292, titleCY: 0.653, titleW: 0.42, titleScale: 0.144, tailCX: 0.859, tailCY: 0.381, tailScale: 0.281) // tuned
-        case "A359": return .init(titleCX: 0.301, titleCY: 0.632, titleW: 0.42, titleScale: 0.145, tailCX: 0.861, tailCY: 0.336, tailScale: 0.241) // tuned
-        case "A380": return .init(titleCX: 0.295, titleCY: 0.685, titleW: 0.42, titleScale: 0.125, tailCX: 0.872, tailCY: 0.397, tailScale: 0.27) // tuned
-        case "AT46": return .init(titleCX: 0.28, titleCY: 0.665, titleW: 0.24, titleScale: 0.105, tailCX: 0.833, tailCY: 0.192, tailScale: 0.241) // tuned
-        case "B1900": return .init(titleCX: 0.36, titleCY: 0.585, titleW: 0.30, titleScale: 0.115, tailCX: 0.835, tailCY: 0.263, tailScale: 0.292) // tuned
-        case "B737700": return .init(titleCX: 0.328, titleCY: 0.671, titleW: 0.42, titleScale: 0.125, tailCX: 0.812, tailCY: 0.425, tailScale: 0.276) // tuned
-        case "B737800": return .init(titleCX: 0.298, titleCY: 0.674, titleW: 0.42, titleScale: 0.125, tailCX: 0.871, tailCY: 0.419, tailScale: 0.287) // tuned
-        case "B739": return .init(titleCX: 0.306, titleCY: 0.675, titleW: 0.42, titleScale: 0.125, tailCX: 0.871, tailCY: 0.4, tailScale: 0.27) // tuned
-        case "B747": return .init(titleCX: 0.255, titleCY: 0.673, titleW: 0.42, titleScale: 0.145, tailCX: 0.894, tailCY: 0.374, tailScale: 0.305) // tuned
-        case "B773": return .init(titleCX: 0.262, titleCY: 0.668, titleW: 0.42, titleScale: 0.145, tailCX: 0.897, tailCY: 0.373, tailScale: 0.25) // tuned
-        case "B788": return .init(titleCX: 0.282, titleCY: 0.649, titleW: 0.42, titleScale: 0.135, tailCX: 0.884, tailCY: 0.405, tailScale: 0.258) // tuned
-        case "B789": return .init(titleCX: 0.27, titleCY: 0.645, titleW: 0.42, titleScale: 0.145, tailCX: 0.882, tailCY: 0.418, tailScale: 0.264) // tuned
-        case "B78J": return .init(titleCX: 0.285, titleCY: 0.654, titleW: 0.42, titleScale: 0.16, tailCX: 0.887, tailCY: 0.404, tailScale: 0.247) // tuned
-        case "CRJ1000": return .init(titleCX: 0.291, titleCY: 0.61, titleW: 0.42, titleScale: 0.16, tailCX: 0.899, tailCY: 0.228, tailScale: 0.241) // tuned
-        case "CRJ900": return .init(titleCX: 0.287, titleCY: 0.605, titleW: 0.42, titleScale: 0.16, tailCX: 0.894, tailCY: 0.282, tailScale: 0.282) // tuned
-        case "D328": return .init(titleCX: 0.30, titleCY: 0.71, titleW: 0.30, titleScale: 0.11, tailCX: 0.864, tailCY: 0.348, tailScale: 0.275) // tuned
-        case "DH8B": return .init(titleCX: 0.27, titleCY: 0.69, titleW: 0.22, titleScale: 0.072, tailCX: 0.863, tailCY: 0.24, tailScale: 0.339) // tuned
-        case "E170": return .init(titleCX: 0.34, titleCY: 0.644, titleW: 0.42, titleScale: 0.112, tailCX: 0.877, tailCY: 0.405, tailScale: 0.291) // tuned
-        case "E175": return .init(titleCX: 0.34, titleCY: 0.644, titleW: 0.42, titleScale: 0.112, tailCX: 0.877, tailCY: 0.405, tailScale: 0.291) // tuned
-        case "E190": return .init(titleCX: 0.302, titleCY: 0.632, titleW: 0.42, titleScale: 0.112, tailCX: 0.893, tailCY: 0.387, tailScale: 0.263) // tuned
-        case "E195": return .init(titleCX: 0.328, titleCY: 0.64, titleW: 0.42, titleScale: 0.13, tailCX: 0.898, tailCY: 0.374, tailScale: 0.254) // tuned
-        case "ERJ135": return .init(titleCX: 0.33, titleCY: 0.615, titleW: 0.34, titleScale: 0.13, tailCX: 0.848, tailCY: 0.262, tailScale: 0.28) // tuned
-        case "ERJ140": return .init(titleCX: 0.33, titleCY: 0.615, titleW: 0.34, titleScale: 0.13, tailCX: 0.875, tailCY: 0.239, tailScale: 0.284) // tuned
-        case "ERJ145": return .init(titleCX: 0.333, titleCY: 0.645, titleW: 0.42, titleScale: 0.144, tailCX: 0.896, tailCY: 0.284, tailScale: 0.289) // tuned
-        case "MAX8": return .init(titleCX: 0.3, titleCY: 0.655, titleW: 0.42, titleScale: 0.14, tailCX: 0.871, tailCY: 0.418, tailScale: 0.272) // tuned
-        case "MAX9": return .init(titleCX: 0.32, titleCY: 0.665, titleW: 0.42, titleScale: 0.144, tailCX: 0.855, tailCY: 0.364, tailScale: 0.253) // tuned
+        case "A220100": return .init(titleCX: 0.33, titleCY: 0.65, titleW: 0.42, titleScale: 0.125, tailCX: 0.83, tailCY: 0.301, tailScale: 0.811) // tuned
+        case "A220300": return .init(titleCX: 0.33, titleCY: 0.65, titleW: 0.42, titleScale: 0.125, tailCX: 0.83, tailCY: 0.301, tailScale: 0.811) // tuned
+        case "A319": return .init(titleCX: 0.339, titleCY: 0.63, titleW: 0.42, titleScale: 0.135, tailCX: 0.801, tailCY: 0.269, tailScale: 0.734) // tuned
+        case "A319NEO": return .init(titleCX: 0.339, titleCY: 0.63, titleW: 0.42, titleScale: 0.135, tailCX: 0.801, tailCY: 0.269, tailScale: 0.734) // tuned
+        case "A320": return .init(titleCX: 0.318, titleCY: 0.628, titleW: 0.42, titleScale: 0.135, tailCX: 0.843, tailCY: 0.27, tailScale: 0.737) // tuned
+        case "A320NEO": return .init(titleCX: 0.318, titleCY: 0.628, titleW: 0.42, titleScale: 0.135, tailCX: 0.843, tailCY: 0.27, tailScale: 0.737) // tuned
+        case "A321": return .init(titleCX: 0.302, titleCY: 0.615, titleW: 0.42, titleScale: 0.135, tailCX: 0.88, tailCY: 0.252, tailScale: 0.65) // tuned
+        case "A321NEO": return .init(titleCX: 0.302, titleCY: 0.615, titleW: 0.42, titleScale: 0.135, tailCX: 0.88, tailCY: 0.252, tailScale: 0.65) // tuned
+        case "A339": return .init(titleCX: 0.277, titleCY: 0.63, titleW: 0.42, titleScale: 0.144, tailCX: 0.876, tailCY: 0.293, tailScale: 1.018) // tuned
+        case "A340": return .init(titleCX: 0.292, titleCY: 0.653, titleW: 0.42, titleScale: 0.144, tailCX: 0.838, tailCY: 0.298, tailScale: 0.979) // tuned
+        case "A359": return .init(titleCX: 0.301, titleCY: 0.632, titleW: 0.42, titleScale: 0.145, tailCX: 0.852, tailCY: 0.273, tailScale: 0.849) // tuned
+        case "A380": return .init(titleCX: 0.295, titleCY: 0.685, titleW: 0.42, titleScale: 0.125, tailCX: 0.864, tailCY: 0.3, tailScale: 0.875) // tuned
+        case "AT46": return .init(titleCX: 0.28, titleCY: 0.665, titleW: 0.24, titleScale: 0.105, tailCX: 0.817, tailCY: 0.195, tailScale: 0.603) // tuned
+        case "B1900": return .init(titleCX: 0.36, titleCY: 0.585, titleW: 0.30, titleScale: 0.115, tailCX: 0.84, tailCY: 0.261, tailScale: 1.006) // tuned
+        case "B737700": return .init(titleCX: 0.328, titleCY: 0.671, titleW: 0.42, titleScale: 0.125, tailCX: 0.784, tailCY: 0.3, tailScale: 0.872) // tuned
+        case "B737800": return .init(titleCX: 0.298, titleCY: 0.674, titleW: 0.42, titleScale: 0.125, tailCX: 0.843, tailCY: 0.289, tailScale: 0.91) // tuned
+        case "B739": return .init(titleCX: 0.306, titleCY: 0.675, titleW: 0.42, titleScale: 0.125, tailCX: 0.851, tailCY: 0.283, tailScale: 0.807) // tuned
+        case "B747": return .init(titleCX: 0.255, titleCY: 0.673, titleW: 0.42, titleScale: 0.145, tailCX: 0.877, tailCY: 0.286, tailScale: 0.94) // tuned
+        case "B773": return .init(titleCX: 0.262, titleCY: 0.668, titleW: 0.42, titleScale: 0.145, tailCX: 0.886, tailCY: 0.299, tailScale: 0.804) // tuned
+        case "B788": return .init(titleCX: 0.282, titleCY: 0.649, titleW: 0.42, titleScale: 0.135, tailCX: 0.872, tailCY: 0.294, tailScale: 0.861) // tuned
+        case "B789": return .init(titleCX: 0.27, titleCY: 0.645, titleW: 0.42, titleScale: 0.145, tailCX: 0.873, tailCY: 0.293, tailScale: 0.895) // tuned
+        case "B78J": return .init(titleCX: 0.285, titleCY: 0.654, titleW: 0.42, titleScale: 0.16, tailCX: 0.878, tailCY: 0.298, tailScale: 0.812) // tuned
+        case "CRJ1000": return .init(titleCX: 0.291, titleCY: 0.61, titleW: 0.42, titleScale: 0.16, tailCX: 0.9, tailCY: 0.287, tailScale: 1.186) // tuned
+        case "CRJ900": return .init(titleCX: 0.287, titleCY: 0.605, titleW: 0.42, titleScale: 0.16, tailCX: 0.904, tailCY: 0.261, tailScale: 1.241) // tuned
+        case "D328": return .init(titleCX: 0.30, titleCY: 0.71, titleW: 0.30, titleScale: 0.11, tailCX: 0.818, tailCY: 0.287, tailScale: 1.138) // tuned
+        case "DH8B": return .init(titleCX: 0.27, titleCY: 0.69, titleW: 0.22, titleScale: 0.072, tailCX: 0.849, tailCY: 0.218, tailScale: 0.728) // tuned
+        case "E170": return .init(titleCX: 0.34, titleCY: 0.644, titleW: 0.42, titleScale: 0.112, tailCX: 0.844, tailCY: 0.29, tailScale: 0.904) // tuned
+        case "E175": return .init(titleCX: 0.34, titleCY: 0.644, titleW: 0.42, titleScale: 0.112, tailCX: 0.844, tailCY: 0.29, tailScale: 0.904) // tuned
+        case "E190": return .init(titleCX: 0.302, titleCY: 0.632, titleW: 0.42, titleScale: 0.112, tailCX: 0.871, tailCY: 0.303, tailScale: 0.756) // tuned
+        case "E195": return .init(titleCX: 0.328, titleCY: 0.64, titleW: 0.42, titleScale: 0.13, tailCX: 0.871, tailCY: 0.291, tailScale: 0.826) // tuned
+        case "ERJ135": return .init(titleCX: 0.33, titleCY: 0.615, titleW: 0.34, titleScale: 0.13, tailCX: 0.813, tailCY: 0.277, tailScale: 1.337) // tuned
+        case "ERJ140": return .init(titleCX: 0.33, titleCY: 0.615, titleW: 0.34, titleScale: 0.13, tailCX: 0.84, tailCY: 0.268, tailScale: 1.342) // tuned
+        case "ERJ145": return .init(titleCX: 0.333, titleCY: 0.645, titleW: 0.42, titleScale: 0.144, tailCX: 0.862, tailCY: 0.295, tailScale: 1.373) // tuned
+        case "MAX8": return .init(titleCX: 0.3, titleCY: 0.655, titleW: 0.42, titleScale: 0.14, tailCX: 0.843, tailCY: 0.295, tailScale: 0.863) // tuned
+        case "MAX9": return .init(titleCX: 0.32, titleCY: 0.665, titleW: 0.42, titleScale: 0.144, tailCX: 0.834, tailCY: 0.276, tailScale: 0.767) // tuned
         default:
             return .init(titleCX: 0.32, titleCY: 0.63, titleW: 0.42, titleScale: 0.16,
                          tailCX: 0.87, tailCY: 0.30, tailScale: 0.18)
@@ -98,6 +98,35 @@ struct AircraftLiveryImage: View {
                     GeometryReader { geo in
                         let p = LiveryPlacement.forType(typeID)
                         let pal = livery.palette
+                        let finMask = FinMask.uiImage(for: typeID)
+
+                        // PAINTED TAIL — the whole fin filled with the secondary colour,
+                        // and the WHITE emblem oversized on top, both CLIPPED to the fin
+                        // silhouette (United / Delta / Lufthansa style). An emblem larger
+                        // than the fin simply clips at the edge instead of overflowing.
+                        if let finMask {
+                            ZStack {
+                                pal.secondary                    // fill the fin
+                                if livery.tailArtIndex > 0, let tail = TailArt.uiImage(livery.tailArtIndex) {
+                                    // Per-emblem nudge: some emblems carry their visual
+                                    // weight forward/high, so a small offset (fraction of
+                                    // the emblem box) re-centres them on the fin.
+                                    let nudge = TailArt.nudge(livery.tailArtIndex)
+                                    let emSize = geo.size.height * p.tailScale
+                                    Image(uiImage: tail)
+                                        .renderingMode(.template)
+                                        .resizable().scaledToFit()
+                                        .foregroundStyle(.white)  // white emblem on the coloured tail
+                                        .frame(width: emSize, height: emSize)
+                                        .position(x: geo.size.width * p.tailCX + emSize * nudge.dx,
+                                                  y: geo.size.height * p.tailCY + emSize * nudge.dy)
+                                }
+                            }
+                            .mask(
+                                Image(uiImage: finMask).resizable().scaledToFit()
+                                    .frame(width: geo.size.width, height: geo.size.height)
+                            )
+                        }
 
                         // Titles — colour 1, multiply so the fuselage shading + the
                         // window row show through the letters.
@@ -111,18 +140,6 @@ struct AircraftLiveryImage: View {
                             .blendMode(.multiply)
                             .position(x: geo.size.width * p.titleCX,
                                       y: geo.size.height * p.titleCY)
-
-                        // Tail emblem — colour 2 tint, on the fin.
-                        if livery.tailArtIndex > 0, let tail = TailArt.uiImage(livery.tailArtIndex) {
-                            Image(uiImage: tail)
-                                .renderingMode(.template)
-                                .resizable().scaledToFit()
-                                .foregroundStyle(pal.secondary)
-                                .frame(width: geo.size.height * p.tailScale,
-                                       height: geo.size.height * p.tailScale)
-                                .position(x: geo.size.width * p.tailCX,
-                                          y: geo.size.height * p.tailCY)
-                        }
                     }
                 }
             }

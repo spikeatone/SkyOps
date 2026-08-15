@@ -284,23 +284,27 @@ struct LiveryDesignView: View {
 /// (MAX9 by default; `-galleryType <ID>` to change) so we can nail the fin fit in
 /// the REAL SwiftUI renderer. Then a per-airframe spread across fin shapes.
 struct LiveryGalleryView: View {
-    var previewType: String {
-        if let i = CommandLine.arguments.firstIndex(of: "-galleryType"),
-           i + 1 < CommandLine.arguments.count { return CommandLine.arguments[i+1] }
-        return "MAX9"
+    private func arg(_ flag: String) -> String? {
+        if let i = CommandLine.arguments.firstIndex(of: flag), i + 1 < CommandLine.arguments.count {
+            return CommandLine.arguments[i+1]
+        }
+        return nil
     }
+    var previewType: String { arg("-galleryType") ?? "MAX9" }
+    var name: String { arg("-galleryName") ?? "ASTER AIR" }
+    var palette: Int { Int(arg("-galleryPalette") ?? "0") ?? 0 }
     // A spread of fin shapes: swept, T-tail, turboprop, widebody.
     let spread = ["A320","A380","B773","CRJ900","ERJ145","DH8B","AT46","E190"]
     var body: some View {
         ScrollView {
             VStack(spacing: 8) {
-                Text("ALL 10 EMBLEMS ON \(previewType)")
+                Text("ALL 10 EMBLEMS · \(name) · \(LiveryPalette.at(palette).name)")
                     .font(.system(size: 12, weight: .heavy)).frame(maxWidth: .infinity, alignment: .leading)
                 ForEach(1...TailArt.count, id: \.self) { n in
                     HStack(spacing: 4) {
                         Text("\(n)").font(.system(size: 11, weight: .bold)).frame(width: 18)
-                        AircraftLiveryImage(typeID: previewType, name: "ASTER AIR",
-                                            livery: Livery(fontIndex: 1, paletteIndex: 0, tailArtIndex: n))
+                        AircraftLiveryImage(typeID: previewType, name: name,
+                                            livery: Livery(fontIndex: 1, paletteIndex: palette, tailArtIndex: n))
                     }
                 }
                 Divider().padding(.vertical, 4)
@@ -309,8 +313,8 @@ struct LiveryGalleryView: View {
                 ForEach(spread, id: \.self) { id in
                     VStack(spacing: 0) {
                         Text(id).font(.system(size: 10, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading)
-                        AircraftLiveryImage(typeID: id, name: "ASTER AIR",
-                                            livery: Livery(fontIndex: 1, paletteIndex: 0, tailArtIndex: 1))
+                        AircraftLiveryImage(typeID: id, name: name,
+                                            livery: Livery(fontIndex: 1, paletteIndex: palette, tailArtIndex: 1))
                     }
                 }
             }
