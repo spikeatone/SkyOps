@@ -1473,6 +1473,23 @@ final class Simulation {
             for id in (scenario == .bigfleet ? big : small) {
                 if let t = AircraftType.all.first(where: { $0.id == id }) { _ = buyAircraft(t) }
             }
+            // Put the fleet to WORK — an idle spare earns nothing, so without
+            // routes the repaint quote's lost-revenue estimate is (correctly) zero
+            // and there'd be nothing to look at. Each spare takes the first pair
+            // it can physically fly.
+            let hubs = ["JFK", "LAX", "ORD", "DFW", "ATL", "DEN", "SFO", "SEA", "MIA", "BOS"]
+            let pool = hubs.compactMap { code in airports.first { $0.code == code } }
+            var pair = 0
+            for ac in aircraft where ac.purchased && ac.assignedRouteId == nil {
+                var opened = false
+                var tries = 0
+                while !opened && tries < pool.count * 2 {
+                    let o = pool[pair % pool.count], d = pool[(pair + 1 + tries / pool.count) % pool.count]
+                    pair += 1; tries += 1
+                    if o.code != d.code, routeBlock(for: ac, from: o, to: d) == nil,
+                       case .success = openRoute(from: o, to: d, using: ac) { opened = true }
+                }
+            }
             return
         }
         nameAirline("Test Air", tailCode: "TS")
@@ -1991,7 +2008,45 @@ final class Simulation {
         let count: Int
         let eachCost: Int
         let days: Int
+        /// Revenue this type's aircraft won't earn while they're in the shop —
+        /// per airframe, for the whole time it's grounded.
+        let eachLostRevenue: Int
         var lineCost: Int { eachCost * count }
+        var lineLostRevenue: Int { eachLostRevenue * count }
+        /// What the repaint really costs for this line: paint + forgone revenue.
+        var lineTotal: Int { lineCost + lineLostRevenue }
+    }
+
+    /// One full flight cycle (parked → … → turnaround) in ticks, i.e. how long an
+    /// aircraft takes to earn one leg's net. Sum of `FlightState.durationTicks`.
+    static let legCycleTicks = 409
+
+    /// Net revenue one aircraft earns per sim-day IN SERVICE, from its own route.
+    /// An idle spare earns nothing, so grounding it costs nothing — the estimate
+    /// only counts aircraft actually flying a route.
+    ///
+    /// Prefers the route's REALISED average (`cumulativeNet / flights`) over the
+    /// in-flight leg: a single leg is noisy — fares and load carry a per-flight
+    /// random spread — so quoting from it makes the same fleet show a different
+    /// number every time the card opens. Falls back to the current leg for a route
+    /// that hasn't completed a flight yet.
+    func dailyNet(for ac: Aircraft) -> Int {
+        guard ac.purchased, let rid = ac.assignedRouteId else { return 0 }
+        let route = playerRoutes.first { $0.id == rid }
+        let perLeg: Int
+        if let r = route, r.flights > 0 {
+            perLeg = r.cumulativeNet / r.flights
+        } else {
+            perLeg = legEconomics(for: ac).net
+        }
+        guard perLeg > 0 else { return 0 }   // grounding a loss-making leg costs no revenue
+        let legsPerDay = 1440.0 / Double(Simulation.legCycleTicks)
+        return Int((Double(perLeg) * legsPerDay).rounded())
+    }
+
+    /// Revenue forgone by grounding this aircraft for its whole paint job.
+    func repaintLostRevenue(for ac: Aircraft) -> Int {
+        dailyNet(for: ac) * Simulation.repaintDays(for: ac.type)
     }
 
     /// The itemized quote for repainting the whole owned fleet, grouped by type
@@ -2001,13 +2056,23 @@ final class Simulation {
         let byType = Dictionary(grouping: owned, by: { $0.type.id })
         return byType.compactMap { id, group -> RepaintLine? in
             guard let t = group.first?.type else { return nil }
+            // Lost revenue is averaged across this type's aircraft: some may be
+            // routed and earning, others idle spares that cost nothing to ground.
+            let lost = group.reduce(0) { $0 + repaintLostRevenue(for: $1) }
             return RepaintLine(typeID: id, typeName: t.name, count: group.count,
                                eachCost: Simulation.repaintCost(for: t),
-                               days: Simulation.repaintDays(for: t))
+                               days: Simulation.repaintDays(for: t),
+                               eachLostRevenue: lost / max(1, group.count))
         }
         .sorted { $0.lineCost == $1.lineCost ? $0.typeName < $1.typeName : $0.lineCost > $1.lineCost }
     }
     var repaintTotal: Int { repaintQuote.reduce(0) { $0 + $1.lineCost } }
+    /// Total revenue the fleet won't earn while it cycles through the shop.
+    /// NOT charged — it's revenue that simply never arrives, so it can't be a
+    /// cash-invariant term; it's shown so the player sees the real cost.
+    var repaintLostRevenueTotal: Int { repaintQuote.reduce(0) { $0 + $1.lineLostRevenue } }
+    /// Paint bill + forgone revenue — what the repaint actually costs.
+    var repaintTrueCost: Int { repaintTotal + repaintLostRevenueTotal }
     /// Longest single-aircraft downtime — the fleet is repainted in parallel, so
     /// this is when the LAST jet is back, not the sum.
     /// Calendar days to get the WHOLE fleet through the shop, given it only holds

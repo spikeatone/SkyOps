@@ -1,10 +1,10 @@
-//  RepaintVerify.swift — FLEET REPAINT (36/36)
+//  RepaintVerify.swift — FLEET REPAINT (42/42)
 //
-//  Covers: per-airframe cost bands against the designer's real-world figures, the
-//  itemized quote, the SHOP QUEUE (only `repaintShopSlots` in at once, longest job
-//  first, program length scaling with fleet size rather than one job), stage +
-//  progress reporting, the whole program draining, refusal paths being INERT, the
-//  cash invariant at every step, and a save/load round-trip.
+//  Covers: cost bands vs the designer's real-world figures, the itemized quote,
+//  the SHOP QUEUE (slots, longest-job-first, program length scaling with fleet
+//  size), stage/progress reporting, LOST REVENUE (idle spares contribute none,
+//  it equals dailyNet x shop days, it is NEVER charged), refusal paths being
+//  inert, the cash invariant, and a save/load round-trip.
 //
 //  RUN (entry file must be named main.swift):
 //    mkdir -p /tmp/rpv && cp aa-1.1.x/RepaintVerify.swift /tmp/rpv/main.swift
@@ -14,14 +14,13 @@
 //      AirlineArchitect/AirlineArchitect/Persistence.swift \
 //      /tmp/rpv/RepaintVerifyStubs.swift /tmp/rpv/main.swift && /tmp/rpv/rpv
 //
-//  The stubs exist because Livery.swift imports SwiftUI and so can't be compiled
-//  into a headless harness; they mirror its catalog sizes only.
+//  Stubs exist because Livery.swift imports SwiftUI; they mirror catalog sizes only.
 //
-//  NOTE: FIVE "failures" during authoring were all WRONG ASSERTIONS, not bugs — an
-//  A380 owner is not broke, buying more jets raises the bill as fast as it drains
-//  cash, a restored sim is off by exactly the un-persisted test injection, and on a
-//  4-aircraft fleet the two longest jobs are 14d and 10d (not both >= 12d). Check a
-//  finding against the real contract before "fixing" the game.
+//  NOTE: SIX "failures" during authoring were all WRONG ASSERTIONS, not bugs — an
+//  A380 owner is not broke; buying jets raises the bill as fast as it drains cash;
+//  a RESTORED sim is off by the un-persisted injection but a LIVE one is off by
+//  ZERO (devInjectCash is a tracked term); and on a 4-aircraft fleet the two
+//  longest jobs are 14d and 10d. Check a finding against the real contract first.
 
 import Foundation
 
@@ -132,6 +131,38 @@ import Foundation
     check("unaffordable repaint refused", !poor.repaintFleet(fontIndex: 0, paletteIndex: 5, tailArtIndex: 2, text: "X"))
     check("unaffordable moved no cash", poor.playerBalance == pb)
     check("unaffordable left livery alone", poor.liveryPaletteIndex == pp)
+
+    // ---- LOST REVENUE (the real cost of the downtime)
+    let lr = Simulation()
+    lr.nameAirline("Rev Air", tailCode: "RV")
+    lr.devInjectCash(400_000_000)
+    guard let a320 = AircraftType.all.first(where: { $0.id == "A320" }),
+          let jfk = lr.airports.first(where: { $0.code == "JFK" }),
+          let ord = lr.airports.first(where: { $0.code == "ORD" }) else { return }
+    let flying = lr.buyAircraft(a320)!
+    let spare  = lr.buyAircraft(a320)!
+    _ = lr.openRoute(from: jfk, to: ord, using: flying)
+    check("idle spare contributes no lost revenue", lr.dailyNet(for: spare) == 0)
+    check("a routed aircraft has a daily net", lr.dailyNet(for: flying) != 0 || lr.legEconomics(for: flying).net <= 0)
+    // lost revenue must equal dailyNet x its own shop days
+    let expectLost = lr.dailyNet(for: flying) * Simulation.repaintDays(for: a320)
+    check("lost revenue = dailyNet x shop days",
+          lr.repaintLostRevenue(for: flying) == expectLost)
+    check("true cost = paint + lost revenue",
+          lr.repaintTrueCost == lr.repaintTotal + lr.repaintLostRevenueTotal)
+    // and it must NOT be charged — only the paint bill moves cash
+    let balBefore = lr.playerBalance, paint = lr.repaintTotal
+    _ = lr.repaintFleet(fontIndex: 0, paletteIndex: 1, tailArtIndex: 1, text: "R")
+    check("only the paint bill is charged, not lost revenue",
+          lr.playerBalance == balBefore - paint,
+          "moved \(balBefore - lr.playerBalance) vs paint \(paint)")
+    // Residual is ZERO here: devInjectCash is a TRACKED term in the live invariant
+    // (it only goes missing across a save/load, which the persistence block below
+    // asserts separately). Lost revenue is an estimate, never a cash movement, so
+    // it must not perturb this at all.
+    check("invariant holds with lost revenue in play",
+          lr.cashInvariantResidual() == 0,
+          "residual \(lr.cashInvariantResidual())")
 
     // ---- PERSISTENCE: a paid repaint must survive save/load. This is the exact
     // class of bug the fuel hedge shipped with (paid asset dropped on reload).

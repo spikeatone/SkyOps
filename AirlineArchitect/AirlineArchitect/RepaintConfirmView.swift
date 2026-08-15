@@ -9,9 +9,18 @@
 //  bigger fleet is a bigger commitment.
 //
 //  The DOWNTIME is given equal billing with the money, because in reality it IS
-//  the larger cost: a jet in the paint shop for 1–2 weeks earns nothing. The
-//  fleet repaints in PARALLEL, so the headline figure is the longest single
-//  aircraft, not the sum.
+//  the larger cost: a jet in the paint shop earns nothing while it's there. So
+//  each line carries its LOST REVENUE alongside the paint bill, and the two are
+//  summed into a TRUE COST at the bottom.
+//
+//  Lost revenue is an estimate, not a charge — it's income that never arrives,
+//  so it is deliberately NOT a cash-invariant term and the confirm button bills
+//  only the paint cost. Idle spares contribute nothing (grounding a jet that
+//  wasn't flying costs no revenue), which is why the figure tracks the fleet the
+//  player is actually working.
+//
+//  Aircraft go through the shop `repaintShopSlots` at a time, so the program
+//  spans MONTHS on a big fleet rather than the length of one paint job.
 //
 
 import SwiftUI
@@ -29,6 +38,9 @@ struct RepaintConfirmView: View {
     private var bodyColor: Color  { isDark ? .white : Color(skyHex: 0x1C2028) }
     private var secondary: Color  { isDark ? Sky.lightBlue.opacity(0.75) : Color(skyHex: 0x64748B) }
     private var red: Color        { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
+    /// Forgone revenue is a real cost but NOT a charge, so it reads amber (a
+    /// warning) rather than red (unaffordable).
+    private var amber: Color      { isDark ? Color(skyHex: 0xFFAB44) : Color(skyHex: 0xB45309) }
 
     private var quote: [Simulation.RepaintLine] { sim.repaintQuote }
     private var total: Int { sim.repaintTotal }
@@ -62,8 +74,14 @@ struct RepaintConfirmView: View {
                                         .font(.karla(12)).foregroundStyle(secondary)
                                 }
                                 Spacer(minLength: 8)
-                                Text(money(line.lineCost))
-                                    .font(.karla(14, .semibold)).foregroundStyle(bodyColor)
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text(money(line.lineCost))
+                                        .font(.karla(14, .semibold)).foregroundStyle(bodyColor)
+                                    if line.lineLostRevenue > 0 {
+                                        Text("− " + money(line.lineLostRevenue) + " rev")
+                                            .font(.karla(11)).foregroundStyle(amber)
+                                    }
+                                }
                             }
                             .padding(.vertical, 8)
                             if line.id != quote.last?.id {
@@ -77,11 +95,27 @@ struct RepaintConfirmView: View {
                 Divider().overlay(cardBorder).padding(.vertical, 10)
 
                 HStack {
-                    Text("Total").font(.karla(15, .bold)).foregroundStyle(bodyColor)
+                    Text("Paint cost").font(.karla(14)).foregroundStyle(secondary)
                     Spacer()
                     Text(money(total))
-                        .font(.karla(17, .bold))
+                        .font(.karla(15, .semibold))
                         .foregroundStyle(affordable ? bodyColor : red)
+                }
+                if sim.repaintLostRevenueTotal > 0 {
+                    HStack {
+                        Text("Lost revenue (grounded)").font(.karla(14)).foregroundStyle(secondary)
+                        Spacer()
+                        Text(money(sim.repaintLostRevenueTotal))
+                            .font(.karla(15, .semibold)).foregroundStyle(amber)
+                    }
+                    .padding(.top, 2)
+                    Divider().overlay(cardBorder).padding(.vertical, 8)
+                    HStack {
+                        Text("True cost").font(.karla(15, .bold)).foregroundStyle(bodyColor)
+                        Spacer()
+                        Text(money(sim.repaintTrueCost))
+                            .font(.karla(17, .bold)).foregroundStyle(bodyColor)
+                    }
                 }
                 HStack {
                     Text("Program length").font(.karla(13)).foregroundStyle(secondary)
