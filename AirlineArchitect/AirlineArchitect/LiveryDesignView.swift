@@ -74,7 +74,7 @@ struct LiveryDesignView: View {
                 .frame(maxWidth: 620)
                 .frame(maxWidth: .infinity)
             }
-            .safeAreaPadding(.top, 16)   // clear the status bar / notch
+            .safeAreaPadding(.top, 52)   // clear the status bar / notch — header sits below the clock
         }
         .onAppear {
             // Seed the fuselage text from the airline name (trimmed to the cap) the
