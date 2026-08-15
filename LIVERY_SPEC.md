@@ -65,39 +65,57 @@
 > CgBI format at build time, so the hash always differs; judge by the build timestamp
 > or just clean-build when in doubt.
 >
-> ### ▶ NEXT SESSION — TOP ITEM: FULL-FLEET CONTACT SHEET (designer's request)
-> **First thing: generate a contact sheet showing EVERY aircraft type (all 35) with the
-> painted livery, so the designer can see where the whole fleet stands in one view.**
-> Don't do it in the sim (one type per launch is slow) — use the **Python compositor**
-> that mirrors the SwiftUI render (it reads the REAL `tailCX/tailCY/tailScale` + title
-> values out of `AircraftLivery.swift`, the RGBA fin masks from `Resources/FinMasks/`,
-> the emblems from `Resources/TailArt/`, and applies the SAME painted-tail math:
-> `secondary`-fill the fin masked by the fin shape, WHITE emblem sized `tailScale`
-> nudged by `TailArt.nudge`, then clip the whole tail to the fin mask; TITLE in
-> `primary` on the window line via multiply). The exact compositor is in THIS session's
-> git history (search the transcript for `/tmp/all_props.png` and `/tmp/new10.png` —
-> those scripts already do painted-tail + mask-clip + title correctly; just loop over
-> all 35 ids instead of a subset, one row per type, labelled). Render it with the wing
-> emblem (1) + Atlantic palette as the baseline, ~1180px wide, one 2-part sheet like the
-> earlier `/tmp/fleet_A*.png` / `fleet_B*.png` pattern. Deliver it via SendUserFile.
-> Purpose: a single at-a-glance status of all 35 fins so the designer can spot which
-> ones still need work (expect the turboprops to look off — see the next item).
+> ### ✅ FULL-FLEET CONTACT SHEET — DONE (15 Aug 2026), and it CHANGED THE PRIORITY
+> The compositor is now a committed, reusable script: **`aa-livery/contact_sheet.py`**
+> (no longer a throwaway in the transcript). It parses the REAL values straight out of
+> the Swift source — the per-type placement table in `AircraftLivery.swift`, the
+> palettes and `TailArt.nudge()` in `Livery.swift` — so the sheet can't drift from the
+> app; change the app and re-run. Flags: `--emblem/--palette/--font/--name/--types/
+> --parts/--width/--rowheight/--out`.
+> ```
+> python3 aa-livery/contact_sheet.py --parts 2 --width 1400 --rowheight 140
+> ```
+> **FIDELITY VERIFIED against the real renderer, not assumed** — the same CRJ900 was
+> rendered in `-liveryGallery` on the iPhone 17 Pro sim and matches the compositor's row
+> (identical fin fill, emblem shape/size, and the same stabilizer bleed). Only known gap:
+> title glyph widths differ slightly (CoreText vs Pillow rasterisation); tail geometry is
+> exact. So the sheet is a valid stand-in for judging fins without 35 build/launch cycles.
+>
+> **WHAT THE SHEET SHOWED (and it's worse in scope than the old note assumed):** the ~26
+> conventional-tail JETS are clean and consistent — Airbus, 737/MAX, 747/777/787, A380,
+> E-Jets all read like a real airline. **The bad masks are NOT just the 4 turboprops:**
+> - **T-TAILS BLEED ONTO THE HORIZONTAL STABILIZER** — CRJ900, CRJ1000, ERJ135, ERJ140,
+>   ERJ145 paint the cross-arm teal, so the tail reads as a solid teal T instead of a
+>   painted fin. Confirmed in the live gallery across ALL 10 emblems (it's the mask, not
+>   the emblem). This was only a "eyeball them too" aside before; it's a real defect.
+> - **TURBOPROPS ARE A HARD RECTANGULAR BLOCK** — DH8B/D328 (and AT46/B1900 worst of all)
+>   show a box with a flat bottom edge slicing across the fin, lower fin left unpainted,
+>   paint spilling past the trailing edge. AT46's lands on the stabilizer; B1900's is a
+>   detached floating wedge.
+>
+> So the fix list below is **9 types, not 4**, and the T-tail jets should arguably come
+> FIRST — a player is far more likely to fly a CRJ/ERJ than a Dornier.
 >
 > ### Open / possible next
-> - **⭐ TURBOPROP (+ some T-tail) FIN MASKS need HAND-AUTHORED shapes.** The auto fin
->   detector nails the JETS (~30 types, what players mostly fly) but gets the
->   **turboprops wrong** — on a high-wing prop (Dash-8 / ATR-42 / Do-328 / B1900) the
->   fuselage is low, so cutting the fin at the mid-body crown leaves a flat/jagged
->   painted edge that "doesn't map right" (designer flagged). The mechanism is READY:
+> - **⭐ NEXT ITEM: HAND-AUTHOR FIN MASKS FOR 9 TYPES — T-TAIL JETS FIRST, then the
+>   turboprops.** Scope confirmed by the contact sheet + live gallery (see above):
+>   **CRJ900, CRJ1000, ERJ135, ERJ140, ERJ145** (stabilizer bleed — do these first, they
+>   fly far more than the props), then **AT46, B1900, D328, DH8B** (rectangular block /
+>   flat cut). The auto fin detector nails the ~26 conventional-tail jets; it fails
+>   wherever a horizontal stab crosses the fin or the fuselage sits low (high-wing prop),
+>   because cutting at the mid-body crown leaves a flat/jagged edge that "doesn't map
+>   right" (designer flagged). The mechanism is READY:
 >   `aa-livery/make_fin_masks.py` has a `FIN_POLYGONS` dict — add a hand-traced fin
 >   outline (fractional (x,y) corners: tip → trailing edge → base → leading edge) per
 >   exception type, run the script (it intersects the polygon with the airframe
 >   silhouette so paint can't spill), CLEAN build, check in `-liveryGallery
->   -galleryType DH8B`. Candidates to trace: **AT46, B1900, D328, DH8B** first; eyeball
->   the CRJ/ERJ T-tails too. The jets need no polygon. ⚠️ **Do NOT regenerate the JET
->   masks** — an "improved" auto pass broke them once (jagged fins); the good jet masks
->   are committed. Only add polygons for the exception types; run the script with an
->   explicit type list (`make_fin_masks.py DH8B AT46 …`) so it doesn't touch the jets.
+>   -galleryType DH8B`. For a T-tail the polygon's job is to stop ABOVE/BELOW the
+>   stabilizer so the cross-arm stays unpainted. ⚠️ **Do NOT regenerate the
+>   CONVENTIONAL-TAIL JET masks** — an "improved" auto pass broke them once (jagged
+>   fins); the good ones are committed and the contact sheet confirms they're right.
+>   Only add polygons for the 9 exception types; run the script with an explicit type
+>   list (`make_fin_masks.py DH8B AT46 …`) so it can't touch the rest. **Re-run
+>   `contact_sheet.py` after each pass** — it's the fastest way to see all 35 at once.
 > - **Walk the full first-run flow end-to-end** on a real device (sim text-typing was
 >   flaky — `-freshFlow` reaches the naming screen reliably, but typing into the field
 >   via the automation `text` action can background the app; a real device or the sim
