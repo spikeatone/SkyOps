@@ -232,10 +232,10 @@ struct LiveryDesignView: View {
                                 Image(uiImage: ui)
                                     .renderingMode(.template).resizable().scaledToFit()
                                     .foregroundStyle(sel ? LiveryPalette.at(paletteIndex).secondary : (isDark ? .white : hex(0x334155)))
-                                    .padding(10)
+                                    .padding(4)
                             } else { Color.clear }
                         }
-                        .frame(height: 56)
+                        .frame(height: 62)
                         .frame(maxWidth: .infinity)
                         .background(RoundedRectangle(cornerRadius: 10).fill(cardBG))
                         .overlay(RoundedRectangle(cornerRadius: 10)
