@@ -83,7 +83,7 @@ struct LiveryDesignView: View {
                 .frame(maxWidth: 620)
                 .frame(maxWidth: .infinity)
             }
-            .safeAreaPadding(.top, 40)   // clear the status bar / notch — but keep the screen high in the frame
+            .safeAreaPadding(.top, 58)   // clear the status bar / notch — but keep the screen high in the frame
         }
         .onAppear {
             guard !didSeed else { return }
