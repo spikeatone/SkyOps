@@ -49,7 +49,7 @@ OUT=os.path.join(REPO,"AirlineArchitect/AirlineArchitect/Resources/FinMasks")
 #    fin along the curve and read as the wrong fin shape (designer spotted it at once).
 #    The polygons are kept only as a record of the x-ranges. To regenerate a turboprop:
 #      trace_fin.py DH8B  --x0 0.750 --x1 0.906 --x1-base 0.930 --stab-top 0.072 --base 0.468 --base-aft 0.600
-#      trace_fin.py AT46  --x0 0.700 --x1 0.872 --stab-top 0.085 --base 0.482 --base-aft 0.580
+#      trace_fin.py AT46  --x0 0.700 --x1 0.845 --x1-base 0.878 --stab-top 0.085 --base 0.482 --base-aft 0.580
 #      trace_fin.py B1900 --x0 0.716 --x1 0.880 --stab-top 0.135 --base 0.470 --base-aft 0.560
 #      trace_fin.py D328  --x0 0.700 --x1 0.876 --x1-base 0.930 --stab-top 0.080 --base 0.485 --base-aft 0.590
 #
