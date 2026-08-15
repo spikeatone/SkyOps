@@ -280,21 +280,37 @@ struct LiveryDesignView: View {
 }
 
 #if DEBUG
-/// DEBUG (-liveryGallery): every illustrated type wearing a livery, for verifying
-/// per-type placement in the REAL SwiftUI renderer (not the Python approximation).
+/// DEBUG (-liveryGallery): EMBLEM FIT TEST — all 10 emblems on the same aircraft
+/// (MAX9 by default; `-galleryType <ID>` to change) so we can nail the fin fit in
+/// the REAL SwiftUI renderer. Then a per-airframe spread across fin shapes.
 struct LiveryGalleryView: View {
-    let ids = ["A220100","A220300","A319","A319NEO","A320","A320NEO","A321","A321NEO",
-               "A339","A340","A359","A380","AT46","B1900","B737700","B737800","B739",
-               "B747","B773","B788","B789","B78J","CRJ1000","CRJ900","D328","DH8B",
-               "E170","E175","E190","E195","ERJ135","ERJ140","ERJ145","MAX8","MAX9"]
-    let livery = Livery(fontIndex: 1, paletteIndex: 0, tailArtIndex: 1)   // Bebas · Atlantic · wing
+    var previewType: String {
+        if let i = CommandLine.arguments.firstIndex(of: "-galleryType"),
+           i + 1 < CommandLine.arguments.count { return CommandLine.arguments[i+1] }
+        return "MAX9"
+    }
+    // A spread of fin shapes: swept, T-tail, turboprop, widebody.
+    let spread = ["A320","A380","B773","CRJ900","ERJ145","DH8B","AT46","E190"]
     var body: some View {
         ScrollView {
-            VStack(spacing: 6) {
-                ForEach(ids, id: \.self) { id in
+            VStack(spacing: 8) {
+                Text("ALL 10 EMBLEMS ON \(previewType)")
+                    .font(.system(size: 12, weight: .heavy)).frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(1...TailArt.count, id: \.self) { n in
+                    HStack(spacing: 4) {
+                        Text("\(n)").font(.system(size: 11, weight: .bold)).frame(width: 18)
+                        AircraftLiveryImage(typeID: previewType, name: "ASTER AIR",
+                                            livery: Livery(fontIndex: 1, paletteIndex: 0, tailArtIndex: n))
+                    }
+                }
+                Divider().padding(.vertical, 4)
+                Text("WING EMBLEM ACROSS FIN SHAPES")
+                    .font(.system(size: 12, weight: .heavy)).frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(spread, id: \.self) { id in
                     VStack(spacing: 0) {
                         Text(id).font(.system(size: 10, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading)
-                        AircraftLiveryImage(typeID: id, name: "ASTER AIR", livery: livery)
+                        AircraftLiveryImage(typeID: id, name: "ASTER AIR",
+                                            livery: Livery(fontIndex: 1, paletteIndex: 0, tailArtIndex: 1))
                     }
                 }
             }
