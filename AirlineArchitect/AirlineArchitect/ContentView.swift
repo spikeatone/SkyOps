@@ -91,6 +91,14 @@ struct ContentView: View {
             if CommandLine.arguments.contains("-liveryGallery") {   // DEBUG: all types wearing a livery
                 showSplash = false; showLiveryGallery = true; return
             }
+            if CommandLine.arguments.contains("-freshFlow") {   // DEBUG: walk naming → livery → tutorial
+                // Skip the splash AND the load menu, straight into the first-launch
+                // flow on a clean sim (playerAirlineName == nil), regardless of saved
+                // games. Claims the first free slot (or 0) so a Save has somewhere to go.
+                showSplash = false
+                currentSlot = GameStore.firstFreeSlot ?? 0
+                return
+            }
             if let scenario = Self.devScenario {
                 sim.devSeed(scenario)
                 showSplash = false
