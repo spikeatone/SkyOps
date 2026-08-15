@@ -597,6 +597,9 @@ final class Simulation {
     private(set) var totalMarketingSpend = 0
     /// Capital-out accumulator for fleet repaints. In the cash invariant.
     private(set) var totalRepaintSpend = 0
+    /// How many aircraft the running repaint program covers (0 = none running).
+    /// Persisted so a reload can still report "3 of 12 done".
+    private(set) var repaintProgramTotal = 0
 
     static let promoFareWarDurationDays = 21
     static let promoAdDurationDays = 14
@@ -1449,16 +1452,25 @@ final class Simulation {
         /// player actually meets it (the -liveryGallery harness only ever shows the
         /// bare illustration + overlay, never the real screen chrome around it).
         case fleet
+        /// A BIG fleet (20 aircraft, mixed classes) — for judging the repaint quote
+        /// and the shop queue at a realistic late-game scale.
+        case bigfleet
     }
 
     func devSeed(_ scenario: DevScenario) {
-        if scenario == .fleet {
+        if scenario == .fleet || scenario == .bigfleet {
             nameAirline("Air Tina", tailCode: "TN")
             setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "AIR TINA")
-            devInjectCash(1_500_000_000)
+            devInjectCash(3_000_000_000)
             // One per body-type family, so the detail screen can be checked against a
             // turboprop, a regional jet, a narrowbody and a widebody in one session.
-            for id in ["DH8B", "AT46", "B1900", "D328", "CRJ900", "A320", "B789"] {
+            let small = ["DH8B", "AT46", "B1900", "D328", "CRJ900", "A320", "B789"]
+            // A realistic mid-size airline: mostly narrowbodies, a regional tail, a
+            // few widebodies — the shape that makes the repaint quote worth reading.
+            let big = ["A320", "A320", "A320", "A321", "A321", "B737800", "B737800",
+                       "B739", "MAX8", "MAX8", "E175", "E175", "CRJ900", "ERJ145",
+                       "DH8B", "AT46", "B789", "B788", "B773", "A380"]
+            for id in (scenario == .bigfleet ? big : small) {
                 if let t = AircraftType.all.first(where: { $0.id == id }) { _ = buyAircraft(t) }
             }
             return
@@ -1944,16 +1956,31 @@ final class Simulation {
         case .widebody4Engine: return 400_000   // jumbo band (A380/747)
         }
     }
-    /// Sim-days out of service. A real strip-and-paint is 1–2 weeks; bigger
-    /// airframes take longer. This is the part that actually hurts.
+    /// Sim-days of TOTAL HANGAR OCCUPANCY for one airframe — real figures: a
+    /// narrowbody is 3–7 days of active shop time but 5–10 days of occupancy; a
+    /// widebody 7–14 active, 10–21 total for a custom livery. These are the
+    /// occupancy numbers, because occupancy is what costs the player revenue.
+    ///
+    /// The real job is four stages, and they corroborate these totals:
+    ///   strip 1–3d · prep + prime 1–3d · paint + livery 1–7d · clear coat + cure 1–3d
+    /// = 4–16 days of work, plus hangar turnaround. Modelled as one duration rather
+    /// than four tracked stages — the player never schedules around a stage, so
+    /// splitting it would be detail with no decision attached.
     static func repaintDays(for type: AircraftType) -> Int {
         switch type.bodyType {
         case .turboprop, .regionalJet:   return 7
         case .narrowbody:                return 10
-        case .widebody2Engine:           return 12
-        case .widebody4Engine:           return 14
+        case .widebody2Engine:           return 14
+        case .widebody4Engine:           return 18
         }
     }
+
+    /// How many aircraft the paint shop can hold at once. An airline doesn't pull
+    /// its whole fleet at the same time — it schedules them through in ones and
+    /// twos, which is why a fleet repaint takes MONTHS of calendar time, not the
+    /// length of one paint job. Two slots keeps that real without turning the
+    /// feature into a scheduling chore for the player.
+    static let repaintShopSlots = 2
 
     /// One line of the repaint quote — the UI itemizes rather than showing a bare
     /// total, so the player can see WHERE the money goes before committing.
@@ -1983,10 +2010,33 @@ final class Simulation {
     var repaintTotal: Int { repaintQuote.reduce(0) { $0 + $1.lineCost } }
     /// Longest single-aircraft downtime — the fleet is repainted in parallel, so
     /// this is when the LAST jet is back, not the sum.
-    var repaintLongestDays: Int { repaintQuote.map(\.days).max() ?? 0 }
-    /// Aircraft currently in the shop.
+    /// Calendar days to get the WHOLE fleet through the shop, given it only holds
+    /// `repaintShopSlots` at a time. Aircraft are scheduled through in ones and twos
+    /// like a real airline, so this scales with FLEET SIZE — it is not the length of
+    /// the single longest job. Computed by simulating the queue: each aircraft goes
+    /// to whichever slot frees first (classic list scheduling).
+    var repaintProgramDays: Int {
+        var slots = Array(repeating: 0, count: max(1, Simulation.repaintShopSlots))
+        // Longest job first — the same order the program actually runs (below), so
+        // the estimate the player is shown matches what they get.
+        for d in repaintJobDays.sorted(by: >) {
+            let i = slots.indices.min { slots[$0] < slots[$1] }!
+            slots[i] += d
+        }
+        return slots.max() ?? 0
+    }
+    /// Per-airframe shop durations for the owned fleet (one entry per aircraft).
+    private var repaintJobDays: [Int] {
+        aircraft.filter(\.purchased).map { Simulation.repaintDays(for: $0.type) }
+    }
+    /// Aircraft currently IN the shop (being painted right now).
     var repaintingCount: Int { aircraft.filter { $0.purchased && $0.inPaintShop }.count }
-    var repaintInProgress: Bool { repaintingCount > 0 }
+    /// Aircraft painted, waiting their turn — still flying and earning until called in.
+    var repaintQueuedCount: Int { aircraft.filter { $0.purchased && $0.repaintQueued }.count }
+    /// The program is running while anything is in the shop OR still waiting.
+    var repaintInProgress: Bool { repaintingCount > 0 || repaintQueuedCount > 0 }
+    /// Aircraft already through the shop, of the fleet the program covers.
+    var repaintDoneCount: Int { max(0, repaintProgramTotal - repaintingCount - repaintQueuedCount) }
     var canAffordRepaint: Bool { playerBalance >= repaintTotal }
 
     /// Repaint the whole owned fleet into a new livery. Charges the full bill up
@@ -2003,27 +2053,53 @@ final class Simulation {
         totalRepaintSpend += bill
         setLivery(fontIndex: fontIndex, paletteIndex: paletteIndex, tailArtIndex: tailArtIndex, text: text)
 
-        for ac in aircraft where ac.purchased {
-            ac.repaintUntilTick = tick + Simulation.repaintDays(for: ac.type) * 1440
-        }
-        let n = aircraft.filter { $0.purchased }.count
-        logOps(.structural, "Fleet repaint started",
-               "\(n) aircraft into the paint shop · \(compactMoneySim(bill)) · back in \(repaintLongestDays)d")
+        // BOOK the whole fleet into the program; the shop only takes
+        // `repaintShopSlots` at a time, so most aircraft keep flying (and earning)
+        // until they're called in. `tickRepaint` pulls them through.
+        let owned = aircraft.filter(\.purchased)
+        for ac in owned { ac.repaintQueued = true }
+        repaintProgramTotal = owned.count
+        fillPaintShop()
+
+        logOps(.structural, "Fleet repaint scheduled",
+               "\(owned.count) aircraft · \(compactMoneySim(bill)) · ~\(repaintProgramDays)d through the shop")
         return true
     }
 
-    /// Release aircraft whose paint job is done. Called once per tick.
+    /// Call in as many queued aircraft as there are free slots. Longest jobs first,
+    /// which is what makes the whole program finish soonest (and matches the
+    /// estimate `repaintProgramDays` shows the player).
+    private func fillPaintShop() {
+        var free = Simulation.repaintShopSlots - repaintingCount
+        guard free > 0 else { return }
+        let waiting = aircraft
+            .filter { $0.purchased && $0.repaintQueued && !$0.inPaintShop }
+            .sorted { Simulation.repaintDays(for: $0.type) > Simulation.repaintDays(for: $1.type) }
+        for ac in waiting where free > 0 {
+            ac.repaintQueued = false
+            ac.repaintStartTick = tick
+            ac.repaintUntilTick = tick + Simulation.repaintDays(for: ac.type) * 1440
+            free -= 1
+        }
+    }
+
+    /// Release finished aircraft and pull the next ones in. Called once per tick.
     func tickRepaint() {
         guard repaintInProgress else { return }
-        var released = 0
+        var released = false
         for ac in aircraft where ac.purchased {
             if let until = ac.repaintUntilTick, tick >= until {
                 ac.repaintUntilTick = nil
-                released += 1
+                ac.repaintStartTick = nil
+                released = true
             }
         }
-        if released > 0 && !repaintInProgress {
-            logOps(.structural, "Fleet repaint complete", "Every aircraft is back in service")
+        // A freed slot immediately takes the next aircraft in the queue.
+        if released { fillPaintShop() }
+        if released && !repaintInProgress {
+            logOps(.structural, "Fleet repaint complete",
+                   "All \(repaintProgramTotal) aircraft are back in service in the new livery")
+            repaintProgramTotal = 0
         }
     }
 
@@ -4190,6 +4266,7 @@ final class Simulation {
         s.totalBuybackSpend = totalBuybackSpend
         s.totalMarketingSpend = totalMarketingSpend
         s.totalRepaintSpend = totalRepaintSpend
+        s.repaintProgramTotal = repaintProgramTotal
         s.playerFareWarUntil = playerFareWarUntil
         s.adCampaignUntil = adCampaignUntil
         s.loyaltyPushUntil = loyaltyPushUntil
@@ -4212,6 +4289,8 @@ final class Simulation {
                          assignedRouteId: ac.assignedRouteId, pendingRouteId: ac.pendingRouteId,
                          pendingPark: ac.pendingPark,
                          repaintUntilTick: ac.repaintUntilTick,
+                         repaintStartTick: ac.repaintStartTick,
+                         repaintQueued: ac.repaintQueued,
                          sellOfferDismissed: ac.sellOfferDismissed,
                          isLeased: ac.isLeased, leaseAccrued: ac.leaseAccrued, maint: ac.maint,
                          aogAutoClearTick: ac.aogAutoClearTick, crewId: ac.crewId,
@@ -4319,6 +4398,7 @@ final class Simulation {
         totalBuybackSpend = s.totalBuybackSpend ?? 0
         totalMarketingSpend = s.totalMarketingSpend ?? 0
         totalRepaintSpend = s.totalRepaintSpend ?? 0
+        repaintProgramTotal = s.repaintProgramTotal ?? 0
         playerFareWarUntil = s.playerFareWarUntil
         adCampaignUntil = s.adCampaignUntil
         loyaltyPushUntil = s.loyaltyPushUntil
@@ -4373,6 +4453,7 @@ final class Simulation {
             ac.stateTick = a.stateTick; ac.assignedRouteId = a.assignedRouteId
             ac.pendingRouteId = a.pendingRouteId; ac.pendingPark = a.pendingPark
             ac.repaintUntilTick = a.repaintUntilTick
+            ac.repaintStartTick = a.repaintStartTick; ac.repaintQueued = a.repaintQueued
             ac.sellOfferDismissed = a.sellOfferDismissed; ac.isLeased = a.isLeased; ac.leaseAccrued = a.leaseAccrued
             ac.maint = a.maint; ac.aogAutoClearTick = a.aogAutoClearTick; ac.crewId = a.crewId
             ac.subsidiaryCode = a.subsidiaryCode

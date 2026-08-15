@@ -1,11 +1,10 @@
-//  RepaintVerify.swift — FLEET REPAINT (30/30)
+//  RepaintVerify.swift — FLEET REPAINT (36/36)
 //
-//  Covers: the per-airframe cost bands against the designer's real-world figures,
-//  the itemized quote (grouping, per-line math, total, parallel downtime), the
-//  charge + livery application, the whole fleet going into and coming out of the
-//  shop, refusal paths (already running / unaffordable) being INERT, the cash
-//  invariant at every step, and a save/load round-trip — a paid repaint vanishing
-//  on reload is exactly the bug the fuel hedge shipped with.
+//  Covers: per-airframe cost bands against the designer's real-world figures, the
+//  itemized quote, the SHOP QUEUE (only `repaintShopSlots` in at once, longest job
+//  first, program length scaling with fleet size rather than one job), stage +
+//  progress reporting, the whole program draining, refusal paths being INERT, the
+//  cash invariant at every step, and a save/load round-trip.
 //
 //  RUN (entry file must be named main.swift):
 //    mkdir -p /tmp/rpv && cp aa-1.1.x/RepaintVerify.swift /tmp/rpv/main.swift
@@ -18,10 +17,11 @@
 //  The stubs exist because Livery.swift imports SwiftUI and so can't be compiled
 //  into a headless harness; they mirror its catalog sizes only.
 //
-//  NOTE: four "failures" during authoring were all WRONG ASSERTIONS, not bugs —
-//  an A380 owner is not broke, buying more jets raises the bill as fast as it
-//  drains cash, and a restored sim is off by exactly the un-persisted test
-//  injection. Check a finding against the real contract before "fixing" the game.
+//  NOTE: FIVE "failures" during authoring were all WRONG ASSERTIONS, not bugs — an
+//  A380 owner is not broke, buying more jets raises the bill as fast as it drains
+//  cash, a restored sim is off by exactly the un-persisted test injection, and on a
+//  4-aircraft fleet the two longest jobs are 14d and 10d (not both >= 12d). Check a
+//  finding against the real contract before "fixing" the game.
 
 import Foundation
 
@@ -62,7 +62,11 @@ import Foundation
     check("A320 line cost = 2 x each", a320.map { $0.lineCost == $0.eachCost * 2 } ?? false)
     let manual = sim.aircraft.filter(\.purchased).reduce(0) { $0 + Simulation.repaintCost(for: $1.type) }
     check("total == sum over airframes", sim.repaintTotal == manual, "\(sim.repaintTotal) vs \(manual)")
-    check("longest days = max, not sum", sim.repaintLongestDays == q.map(\.days).max())
+    // Program length must reflect the SHOP QUEUE, not one job: with 2 slots and
+    // 4 aircraft it has to exceed the longest single job.
+    let longestJob = q.map(\.days).max() ?? 0
+    check("program length exceeds the longest single job",
+          sim.repaintProgramDays > longestJob, "\(sim.repaintProgramDays) vs \(longestJob)")
 
     // ---- the repaint itself
     let before = sim.playerBalance
@@ -72,7 +76,12 @@ import Foundation
     check("charged exactly the quote", sim.playerBalance == before - bill,
           "\(before - sim.playerBalance) vs \(bill)")
     check("livery applied", sim.liveryPaletteIndex == 3 && sim.liveryTailArtIndex == 4 && sim.liveryText == "REPAINTED")
-    check("whole fleet in the shop", sim.repaintingCount == sim.ownedCount)
+    check("only the shop slots are occupied", sim.repaintingCount == Simulation.repaintShopSlots,
+          "in shop \(sim.repaintingCount)")
+    check("the rest are queued, still flying",
+          sim.repaintQueuedCount == sim.ownedCount - Simulation.repaintShopSlots,
+          "queued \(sim.repaintQueuedCount)")
+    check("program covers the whole fleet", sim.repaintProgramTotal == sim.ownedCount)
     check("cash invariant holds", sim.cashInvariantResidual() == 0, "residual \(sim.cashInvariantResidual())")
 
     // ---- a second repaint is refused while one is running, and changes NOTHING
@@ -82,13 +91,26 @@ import Foundation
     check("refusal left livery alone", sim.liveryPaletteIndex == midPal)
 
     // ---- grounded aircraft don't fly, then come back
-    let dh = sim.aircraft.first { $0.purchased && $0.type.id == "DH8B" }!
-    let expected = Simulation.repaintDays(for: dh.type) * 1440
-    check("DH8B downtime = its band", (dh.repaintUntilTick ?? 0) - sim.tick == expected,
-          "\((dh.repaintUntilTick ?? 0) - sim.tick) vs \(expected)")
-    for _ in 0..<(sim.repaintLongestDays * 1440 + 200) { sim.advanceTick() }
-    check("fleet released after the longest job", sim.repaintingCount == 0,
+    // The biggest jets go in FIRST (longest-job-first keeps the program short).
+    let inShop = sim.aircraft.filter { $0.purchased && $0.inPaintShop }
+    // Longest-job-first: nothing still QUEUED may be longer than what's in the shop.
+    let shopMin = inShop.map { Simulation.repaintDays(for: $0.type) }.min() ?? 0
+    let queuedMax = sim.aircraft.filter { $0.purchased && $0.repaintQueued }
+        .map { Simulation.repaintDays(for: $0.type) }.max() ?? 0
+    check("longest jobs scheduled first", shopMin >= queuedMax,
+          "shop min \(shopMin) < queued max \(queuedMax); in shop: \(inShop.map { $0.type.id })")
+    if let big = inShop.first {
+        let expected = Simulation.repaintDays(for: big.type) * 1440
+        check("shop duration = its band", (big.repaintUntilTick ?? 0) - (big.repaintStartTick ?? 0) == expected)
+        check("stage is reported", big.repaintStage(at: sim.tick) != nil)
+        check("progress starts near 0", (big.repaintProgress(at: sim.tick) ?? 1) < 0.05)
+    }
+    // Run the WHOLE program out: every aircraft must pass through the shop.
+    for _ in 0..<(sim.repaintProgramDays * 1440 + 5000) { sim.advanceTick() }
+    check("program finishes — nothing in the shop", sim.repaintingCount == 0,
           "still in shop: \(sim.repaintingCount)")
+    check("program finishes — nothing queued", sim.repaintQueuedCount == 0,
+          "still queued: \(sim.repaintQueuedCount)")
     check("invariant still holds after release", sim.cashInvariantResidual() == 0)
 
     // ---- unaffordable repaint is inert

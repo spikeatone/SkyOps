@@ -84,12 +84,17 @@ struct RepaintConfirmView: View {
                         .foregroundStyle(affordable ? bodyColor : red)
                 }
                 HStack {
-                    Text("Out of service").font(.karla(13)).foregroundStyle(secondary)
+                    Text("Program length").font(.karla(13)).foregroundStyle(secondary)
                     Spacer()
-                    Text("up to \(sim.repaintLongestDays) days")
+                    Text("~\(sim.repaintProgramDays) days")
                         .font(.karla(13, .semibold)).foregroundStyle(secondary)
                 }
                 .padding(.top, 2)
+                Text("Aircraft go through \(Simulation.repaintShopSlots) at a time — the rest keep flying until their slot comes up.")
+                    .font(.karla(11)).foregroundStyle(secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 4)
 
                 if !affordable {
                     Text("Not enough cash — you have \(cashLabel(sim.playerBalance)).")
