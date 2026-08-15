@@ -16,12 +16,30 @@ Everything between is fin, so the mask is the artwork's own silhouette. Curves c
 exact and stay exact if the art changes.
 
 TWO CUTS make it a FIN and not a whole tail:
-  • X RANGE  [x0, x1] — the fin's leading edge to its trailing edge. x1 excludes a T-tail
-    stabilizer that continues aft of the fin.
+  • X RANGE  [x0, x1] — x0 is the DORSAL FIN's front (the fillet blending into the spine),
+    x1 the fin's trailing edge (excluding a T-tail stabilizer that continues aft, and on
+    the B1900 its separate endplate).
+    ⚠️ x0 MATTERS MORE THAN IT LOOKS: past the dorsal there is no fin left to trace, just
+    fuselage, and this function will happily paint the spine — that's how a teal band once
+    ran forward to mid-cabin. Find it by SLOPE, not by eye and not by height: the rear body
+    tapers up at a slow steady rate and the dorsal is several times steeper, so the jump is
+    the boundary. `--report` prints the per-column top edge; the measured values for the
+    four turboprops are recorded in make_fin_masks.py. (An auto-detector was tried and
+    removed: a height-above-crown test follows the spine on a long shallow fillet, and a
+    slope test needs per-type thresholds anyway because these dorsals climb in stages.)
   • STAB FLOOR (`stab_top`) — on a T-tail the stabilizer sits ON the fin top, so within
     the fin's own x-range the top opaque pixel IS the stab, not the fin. Passing
     `stab_top` clamps the traced top DOWN to that line, so the cross-arm stays unpainted
     while the fin below it is still traced from the real outline.
+
+THE BOTTOM EDGE — where the dorsal meets the fuselage — is the fiddly one, and a FLAT
+`--base` is wrong: the fuselage crown SLOPES down going aft, so a horizontal cut dips onto
+the body at the front and floats above it at the back. Use `--base y0 --base-aft y1` to
+give the junction a SLOPE (y0 at x0, y1 at x1, linear between). The auto crown-fit is no
+help here — it's fitted from the forward fuselage and comes out nearly flat, missing the
+tailcone's rise entirely. Read the two ends off `fin_probe.py` and tune them by eye; this
+is the one part of the shape the artwork can't hand you, because fin and body are a single
+continuous silhouette with no edge between them.
 
 USAGE
   python3 aa-livery/trace_fin.py --report DH8B                    # print the outline
@@ -53,7 +71,7 @@ def crown_fit(px, w, h, x_end, x_start=0.35):
     return lambda x: my + slope * (x - mx)
 
 
-def trace(tid, x0, x1, stab_top=None, base=None, dry=False):
+def trace(tid, x0, x1, stab_top=None, base=None, base_aft=None, dry=False):
     ip = os.path.join(ART, f"{tid}.png")
     illo = Image.open(ip).convert("RGBA")
     w, h = illo.size
@@ -76,7 +94,14 @@ def trace(tid, x0, x1, stab_top=None, base=None, dry=False):
         top = min(col)
         if stab_y is not None and top < stab_y:
             top = int(round(stab_y))         # clamp under a T-tail stabilizer
-        bot = int(round(h * base)) if base is not None else int(round(crown(x)))
+        if base is not None:
+            if base_aft is not None and cx1 > cx0:
+                f = (x - cx0) / (cx1 - cx0)          # 0 at the dorsal front, 1 at the TE
+                bot = int(round(h * (base + (base_aft - base) * f)))
+            else:
+                bot = int(round(h * base))
+        else:
+            bot = int(round(crown(x)))
         # only paint contiguous airframe between top and bot
         y = top
         while y <= bot and y < h:
@@ -113,6 +138,7 @@ def main():
     ap.add_argument("--x0", type=float); ap.add_argument("--x1", type=float)
     ap.add_argument("--stab-top", type=float, default=None)
     ap.add_argument("--base", type=float, default=None)
+    ap.add_argument("--base-aft", type=float, default=None)
     ap.add_argument("--report", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
@@ -120,7 +146,7 @@ def main():
         if a.report:
             report(t)
         else:
-            print(f"{t:9} {trace(t, a.x0, a.x1, a.stab_top, a.base, a.dry_run)}")
+            print(f"{t:9} {trace(t, a.x0, a.x1, a.stab_top, a.base, a.base_aft, a.dry_run)}")
 
 
 if __name__ == "__main__":
