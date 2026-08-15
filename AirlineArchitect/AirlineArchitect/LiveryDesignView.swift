@@ -74,7 +74,7 @@ struct LiveryDesignView: View {
                 .frame(maxWidth: 620)
                 .frame(maxWidth: .infinity)
             }
-            .safeAreaPadding(.top, 52)   // clear the status bar / notch — header sits below the clock
+            .safeAreaPadding(.top, 70)   // clear the status bar / notch — header sits below the clock
         }
         .onAppear {
             // Seed the fuselage text from the airline name (trimmed to the cap) the
@@ -163,8 +163,9 @@ struct LiveryDesignView: View {
                                 .font(f.font(19))
                                 .lineLimit(1)
                                 .foregroundStyle(sel ? selRing : titleColor)
-                                .padding(.horizontal, 16).padding(.vertical, 12)
+                                .padding(.horizontal, 16)
                                 .frame(minWidth: 96)
+                                .frame(height: 52)   // uniform chip height across fonts
                                 .background(RoundedRectangle(cornerRadius: 10).fill(cardBG))
                                 .overlay(RoundedRectangle(cornerRadius: 10)
                                     .stroke(sel ? selRing : cardStroke, lineWidth: sel ? 2 : 1))
