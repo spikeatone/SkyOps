@@ -123,12 +123,40 @@
 >   - **`aa-livery/fin_probe.py`** (new) is the tracing aid: zooms a tail with a
 >     fractional coordinate grid + the current mask in red, which is how the geometry
 >     above was read off. Use it for the turboprops.
-> - **⭐ NEXT ITEM: THE 4 TURBOPROPS — AT46, B1900, D328, DH8B** (rectangular block /
->   flat cut / detached wedge; B1900 + AT46 are worst). These need the HAND-POLYGON path,
->   not `trim_stab.py` — their masks are wrong in SHAPE, not merely too long, so there's
->   nothing to subtract. The auto detector fails here because a high-wing prop's fuselage
->   sits low, so cutting at the mid-body crown chops the fin and leaves the flat edge that
->   "doesn't map right" (designer flagged). The mechanism is READY:
+> - **✅ THE 4 TURBOPROPS — FIXED (15 Aug 2026). AT46 · B1900 · D328 · DH8B** now paint a
+>   real fin: filled top-to-bottom down to the fuselage, stabilizer left white, emblem
+>   centred on the blade. Was a rectangular block with a flat cut across the fin (lower
+>   fin unpainted, paint past the trailing edge; B1900 read as a detached wedge).
+>   - **HAND-POLYGON path** (`FIN_POLYGONS` in `make_fin_masks.py`), not `trim_stab.py` —
+>     these were wrong in SHAPE, not merely too long, so there was nothing to subtract.
+>     Traced off `fin_probe.py`. Two rules made them work: **stop the top edge UNDER the
+>     stabilizer** (all four are T-tails), and **run the base INTO the fuselage** — the
+>     polygon is intersected with the airframe silhouette, so an over-long base is clipped
+>     to the body and the paint meets it cleanly instead of stopping in mid-air.
+>   - **`tailCX/CY/Scale` re-derived from the new fin bbox** (the old values pointed at the
+>     wrong blocks, so emblems sat high/aft and clipped). **Titles also moved** — these are
+>     HIGH-WING props, so the old mid-body titles collided with the wing root and the
+>     propeller; they now sit on the upper cabin band forward of the wing. AT46/D328 still
+>     graze the prop blade slightly (it's mid-cabin on those airframes — unavoidable
+>     without shrinking the title further).
+> - **✅ RJ TAILS NOW PAINT ALL THE WAY DOWN (designer request, 15 Aug 2026).** The CRJ/ERJ
+>   fin fairing sweeps down and blends into the fuselage; the masks stopped at a straight
+>   cut partway down, so the paint ended in mid-air. **`aa-livery/extend_fin_base.py`**
+>   extends a mask down to the body, following that curve.
+>   - **HOW:** below the fin the airframe is CONTINUOUS (fairing and body are one
+>     silhouette), so there's no gap to detect — measured that first. Instead it fits the
+>     FUSELAGE CROWN line from the columns AHEAD of the tail (least-squares; the rear body
+>     tapers, so a line tracks it far better than a constant) and extrapolates aft, then
+>     paints each column down to it. The fairing curve comes out exact because it's the
+>     artwork's own silhouette between the mask's top edge and the crown — no polygon can
+>     match that, and it stays right if the art changes. ADD-ONLY, so a correct blade
+>     stays correct. Grew the masks 9–18%.
+>   - Same treatment would suit any future type whose tail stops short — run it, don't
+>     hand-trace.
+> - **⭐ NEXT ITEM: none of the fin masks are known-bad.** All 35 types now read as real
+>   painted tails (26 conventional jets untouched + 5 T-tails + 4 turboprops). Re-run
+>   `contact_sheet.py` after any art change to spot a regression. If a NEW type is added,
+>   the mechanism below is how to give it a fin:
 >   `aa-livery/make_fin_masks.py` has a `FIN_POLYGONS` dict — add a hand-traced fin
 >   outline (fractional (x,y) corners: tip → trailing edge → base → leading edge) per
 >   exception type, run the script (it intersects the polygon with the airframe

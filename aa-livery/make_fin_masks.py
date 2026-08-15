@@ -42,10 +42,36 @@ REPO=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIR=os.path.join(REPO,"AirlineArchitect/AirlineArchitect/Resources/Illustrations")
 OUT=os.path.join(REPO,"AirlineArchitect/AirlineArchitect/Resources/FinMasks")
 
-# Hand-traced fin outlines (fractional x,y). Fill in per exception type.
-# TODO(designer session): trace AT46 / B1900 / D328 / DH8B (+ any T-tail that looks off).
+# Hand-traced fin outlines (fractional x,y), traced 2026-08-15 off aa-livery/fin_probe.py
+# (which draws the tail zoomed with a fractional grid). Order: fin TIP → aft along the
+# tip → DOWN the trailing edge → across the base → UP the leading edge.
+#
+# These are the 4 TURBOPROPS, whose auto masks were wrong in SHAPE (a rectangular block
+# with a flat bottom cutting across the fin, lower fin left unpainted, and on the T-tails
+# the horizontal stabilizer painted too). A high-wing prop's fuselage sits low, so the
+# auto detector's "cut at the mid-body crown" rule slices the fin in half.
+#
+# TWO RULES that make these read right:
+#  1. STOP BELOW THE STABILIZER on the T-tails (AT46/B1900/D328/DH8B all have one) — the
+#     polygon's top edge runs UNDER the stab so the cross-arm stays unpainted, the same
+#     result trim_stab.py gets on the CRJ/ERJ jets.
+#  2. RUN THE BASE INTO THE FUSELAGE. poly_mask intersects with the airframe silhouette,
+#     so the base can be drawn a little low/long — it gets clipped to the body and the
+#     paint meets the fuselage cleanly instead of stopping in mid-air.
 FIN_POLYGONS = {
-    # "DH8B": [(0.836,0.06),(0.850,0.06),(0.887,0.54),(0.595,0.54)],  # example shape — RE-TRACE
+    # Dash-8: swept blade. Top edge sits at 0.125 — just UNDER the stabilizer root — and
+    # the leading edge is a 2-segment sweep so it hugs the dorsal fillet.
+    "DH8B":  [(0.845,0.125),(0.892,0.125),(0.905,0.600),(0.760,0.600),(0.800,0.330)],
+    # ATR-42: big curved dorsal. The stab is mounted LOW here (y~0.15-0.19), so the top
+    # edge drops to 0.205 to clear it — the painted fin is the dorsal below the stab.
+    "AT46":  [(0.792,0.205),(0.872,0.205),(0.874,0.570),(0.706,0.570),(0.741,0.330)],
+    # Beech 1900: strongly swept narrow blade; stab + endplate sit above 0.21, so the
+    # polygon starts below them. The leading edge is steeply raked, so the base corner
+    # tracks it (0.762 at the root, not 0.716) instead of spilling onto the fuselage.
+    "B1900": [(0.812,0.215),(0.858,0.215),(0.936,0.560),(0.762,0.560),(0.786,0.360)],
+    # Do-328: curved dorsal fillet. Base pulled up to 0.575 (the crown line) so the paint
+    # meets the fuselage instead of running along it; leading edge is a 2-segment sweep.
+    "D328":  [(0.852,0.120),(0.884,0.120),(0.890,0.575),(0.726,0.575),(0.782,0.340)],
 }
 
 def auto_mask(path):
