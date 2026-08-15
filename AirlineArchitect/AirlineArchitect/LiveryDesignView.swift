@@ -15,8 +15,16 @@ struct LiveryDesignView: View {
     let airlineName: String
     /// Opacity for the shared brand backdrop behind the screen (nil = off).
     var backdropOpacity: Double? = nil
+    /// EDIT MODE: pre-fill the screen with an existing livery + fuselage text (nil =
+    /// first-launch, seeds from the name). Set by the in-game "Livery" re-customise flow.
+    var initialLivery: Livery? = nil
+    var initialText: String? = nil
+    /// The commit button label ("Launch Airline" at creation, "Save Livery" in-game).
+    var commitTitle: String = "Launch Airline"
+    /// Optional back/close affordance (in-game edit shows a chevron to return to Fleet).
+    var onCancel: (() -> Void)? = nil
     /// Called with the chosen font / palette / tail-emblem indices + the fuselage
-    /// text on Launch.
+    /// text when the player commits.
     let onLaunch: (Int, Int, Int, String) -> Void
 
     @Environment(\.colorScheme) private var scheme
@@ -27,6 +35,7 @@ struct LiveryDesignView: View {
     @State private var tailIndex = 1        // 1-based; 0 = none
     /// What's painted on the fuselage — seeded from the airline name, capped, editable.
     @State private var fuselageText = ""
+    @State private var didSeed = false
     @FocusState private var textFocused: Bool
 
     /// The reference aircraft for the preview (designer's call).
@@ -77,11 +86,15 @@ struct LiveryDesignView: View {
             .safeAreaPadding(.top, 70)   // clear the status bar / notch — header sits below the clock
         }
         .onAppear {
-            // Seed the fuselage text from the airline name (trimmed to the cap) the
-            // first time in — the player can then shorten/edit it.
-            if fuselageText.isEmpty {
-                fuselageText = String(airlineName.trimmingCharacters(in: .whitespaces).prefix(Livery.maxTextLength))
+            guard !didSeed else { return }
+            didSeed = true
+            // EDIT MODE pre-fills from the current livery; first-launch seeds defaults
+            // + the fuselage text from the airline name (trimmed to the cap).
+            if let l = initialLivery {
+                fontIndex = l.fontIndex; paletteIndex = l.paletteIndex; tailIndex = l.tailArtIndex
             }
+            let seedText = initialText ?? airlineName
+            fuselageText = String(seedText.trimmingCharacters(in: .whitespaces).prefix(Livery.maxTextLength))
         }
         .animation(.easeInOut(duration: 0.22), value: paletteIndex)
         .animation(.easeInOut(duration: 0.22), value: fontIndex)
@@ -91,14 +104,27 @@ struct LiveryDesignView: View {
     // MARK: Header
 
     private var header: some View {
-        VStack(spacing: 2) {
-            Text("Design your livery")
-                .font(.karla(22, .bold))
-                .foregroundStyle(titleColor)
-            Text("Paint \(airlineName.isEmpty ? "your airline" : airlineName) onto the fleet.")
-                .font(.karla(15))
-                .foregroundStyle(subtitleColor)
-                .multilineTextAlignment(.center)
+        ZStack {
+            VStack(spacing: 2) {
+                Text(initialLivery == nil ? "Design your livery" : "Customise your livery")
+                    .font(.karla(22, .bold))
+                    .foregroundStyle(titleColor)
+                Text("Paint \(airlineName.isEmpty ? "your airline" : airlineName) onto the fleet.")
+                    .font(.karla(15))
+                    .foregroundStyle(subtitleColor)
+                    .multilineTextAlignment(.center)
+            }
+            // Edit mode: a leading back chevron to return without saving.
+            if let onCancel {
+                HStack {
+                    Button(action: onCancel) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(titleColor)
+                    }
+                    Spacer()
+                }
+            }
         }
     }
 
@@ -254,7 +280,7 @@ struct LiveryDesignView: View {
         Button {
             onLaunch(fontIndex, paletteIndex, tailIndex, fuselageText)
         } label: {
-            Text("Launch Airline")
+            Text(commitTitle)
                 .font(.karla(17, .medium))
                 .foregroundStyle(buttonText)
                 .frame(maxWidth: .infinity)

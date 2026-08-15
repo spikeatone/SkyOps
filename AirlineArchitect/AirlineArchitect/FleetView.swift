@@ -33,6 +33,8 @@ struct FleetView: View {
 
     @State private var segment: Segment = .myFleet
     @State private var detailID: UUID?
+    /// Presents the livery designer in EDIT mode (re-customise the fleet's livery).
+    @State private var showLivery = false
     /// Fleet-list status filter, driven by tapping a status box (nil = all).
     @State private var fleetFilter: FleetStatus?
     enum Segment: Hashable { case myFleet, marketplace }
@@ -132,8 +134,28 @@ struct FleetView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .animation(.easeInOut(duration: 0.3), value: detailID)
             }
+
+            // Livery re-customise (edit mode) — full-screen over the Fleet tab.
+            if showLivery {
+                LiveryDesignView(airlineName: sim.playerAirlineName ?? "",
+                                 initialLivery: sim.livery,
+                                 initialText: sim.liveryTitle,
+                                 commitTitle: "Save Livery",
+                                 onCancel: { showLivery = false }) { fontI, palI, tailI, text in
+                    sim.setLivery(fontIndex: fontI, paletteIndex: palI, tailArtIndex: tailI, text: text)
+                    if isFirstLiverySaveNeeded { onSave() }   // persist immediately
+                    showLivery = false
+                }
+                .transition(.opacity)
+                .zIndex(5)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: showLivery)
     }
+
+    /// Always persist a livery change right away so it survives even if the app is
+    /// killed before the next autosave (true is fine; kept as a named flag for clarity).
+    private var isFirstLiverySaveNeeded: Bool { true }
 
     /// Portrait / iPhone / Marketplace: the single-column stack.
     private var stackedLayout: some View {
@@ -195,10 +217,19 @@ struct FleetView: View {
                 SaveQuitBar(onSave: onSave, onQuit: onQuit)
             }
             Divider().overlay(cardBorder)
-            HStack {
+            HStack(spacing: 14) {
                 Text(segment == .myFleet ? "FLEET HOME" : "MARKETPLACE")
                     .font(.karla(22, .bold)).foregroundStyle(titleColor)
                 Spacer()
+                // Re-customise the fleet livery (also the ONLY way an existing/
+                // pre-livery save gets to set one).
+                Button { showLivery = true } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "paintbrush.fill").font(.system(size: 12, weight: .semibold))
+                        Text("Livery").font(.karla(13, .semibold))
+                    }
+                    .foregroundStyle(titleColor)
+                }
                 AlertBell(count: sim.decisionQueue.count, tint: titleColor, action: onBell)
             }
         }
