@@ -1455,22 +1455,34 @@ final class Simulation {
         /// A BIG fleet (20 aircraft, mixed classes) — for judging the repaint quote
         /// and the shop queue at a realistic late-game scale.
         case bigfleet
+        /// An EXISTING player's save from BEFORE the livery feature: a real fleet
+        /// flying real routes, but `liveryChosen` false — so the fleet is wearing
+        /// defaults nobody picked and the one free "Add Livery" choice is pending.
+        case legacyPlayer
     }
 
     func devSeed(_ scenario: DevScenario) {
-        if scenario == .fleet || scenario == .bigfleet {
-            nameAirline("Air Tina", tailCode: "TN")
-            setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "AIR TINA")
+        if scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer {
+            if scenario == .legacyPlayer {
+                // No setLivery call — exactly what a pre-feature save restores as:
+                // default indices, liveryChosen false.
+                nameAirline("Meridian Air", tailCode: "MR")
+            } else {
+                nameAirline("Air Tina", tailCode: "TN")
+                setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "AIR TINA")
+            }
             devInjectCash(3_000_000_000)
             // One per body-type family, so the detail screen can be checked against a
             // turboprop, a regional jet, a narrowbody and a widebody in one session.
             let small = ["DH8B", "AT46", "B1900", "D328", "CRJ900", "A320", "B789"]
             // A realistic mid-size airline: mostly narrowbodies, a regional tail, a
             // few widebodies — the shape that makes the repaint quote worth reading.
+            let legacy = ["A320", "A320", "B737800", "E175", "CRJ900"]
             let big = ["A320", "A320", "A320", "A321", "A321", "B737800", "B737800",
                        "B739", "MAX8", "MAX8", "E175", "E175", "CRJ900", "ERJ145",
                        "DH8B", "AT46", "B789", "B788", "B773", "A380"]
-            for id in (scenario == .bigfleet ? big : small) {
+            let ids = scenario == .bigfleet ? big : (scenario == .legacyPlayer ? legacy : small)
+            for id in ids {
                 if let t = AircraftType.all.first(where: { $0.id == id }) { _ = buyAircraft(t) }
             }
             // Put the fleet to WORK — an idle spare earns nothing, so without

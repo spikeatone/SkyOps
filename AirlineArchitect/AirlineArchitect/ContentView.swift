@@ -102,7 +102,7 @@ struct ContentView: View {
             if let scenario = Self.devScenario {
                 sim.devSeed(scenario)
                 showSplash = false
-                tab = (scenario == .fleet || scenario == .bigfleet) ? 1 : 4   // FLEET for livery, else FINANCE
+                tab = (scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer) ? 1 : 4   // FLEET for livery, else FINANCE
                 return
             }
             #endif
