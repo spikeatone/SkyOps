@@ -19,6 +19,14 @@ struct ContentView: View {
     @State private var gameID = UUID()
     @State private var tab = 0
     @State private var showAlerts = false
+    /// One-time "you can paint your fleet now" card for an EXISTING player whose
+    /// save predates the livery feature (see NewLiveryPromptView).
+    @State private var showLiveryPrompt = false
+    /// Set to open FleetView's livery editor from outside it (the update prompt's
+    /// "Design it"). FleetView consumes it in .onAppear/.onChange and clears it —
+    /// an intent set BEFORE a tab switch must be adopted in .onAppear, since the
+    /// tab bar recreates the tab's content view (the documented rule).
+    @State private var openLiveryDesigner = false
     @State private var paywallReason: String?
     @State private var showPaywall = false
     @State private var showLiveryPreview = false   // DEBUG (-liveryPreview): open the livery design screen directly
@@ -83,35 +91,7 @@ struct ContentView: View {
         // saved on another device on the same Apple ID is already present),
         // then show the load menu if any saved game exists; otherwise fall
         // through to the naming screen for a fresh airline in slot 0.
-        .onAppear {
-            #if DEBUG
-            if CommandLine.arguments.contains("-liveryPreview") {   // DEBUG: drive the livery screen directly
-                showSplash = false; showLiveryPreview = true; return
-            }
-            if CommandLine.arguments.contains("-liveryGallery") {   // DEBUG: all types wearing a livery
-                showSplash = false; showLiveryGallery = true; return
-            }
-            if CommandLine.arguments.contains("-freshFlow") {   // DEBUG: walk naming → livery → tutorial
-                // Skip the splash AND the load menu, straight into the first-launch
-                // flow on a clean sim (playerAirlineName == nil), regardless of saved
-                // games. Claims the first free slot (or 0) so a Save has somewhere to go.
-                showSplash = false
-                currentSlot = GameStore.firstFreeSlot ?? 0
-                return
-            }
-            if let scenario = Self.devScenario {
-                sim.devSeed(scenario)
-                showSplash = false
-                tab = (scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer) ? 1 : 4   // FLEET for livery, else FINANCE
-                return
-            }
-            #endif
-            GameStore.reconcileCloud()
-            if currentSlot == nil, sim.playerAirlineName == nil, GameStore.anySave {
-                showLoadMenu = true
-                sim.isPaused = true
-            }
-        }
+        .onAppear { coldLaunch() }
         // Keep syncing while running: if another device saves a slot, merge it
         // and refresh the load menu (rebuild it so it re-reads the slots).
         .task { GameStore.observeCloudChanges { cloudGen += 1 } }
@@ -256,8 +236,70 @@ struct ContentView: View {
 
     /// Cold-launch flow: load menu → name → design livery → game. Extracted from
     /// the body overlay so the type-checker doesn't choke on the chain.
+    /// One-time update prompt (existing players only). Either button dismisses it
+    /// for good; "Design it" drops them into the Fleet tab's livery editor, which
+    /// is free on a first choice.
+    /// Cold-launch routing: DEBUG harness args first, then the iCloud reconcile
+    /// and the load menu. Extracted from `body` — inlined it pushed the view
+    /// expression past the type-checker's budget.
+    private func coldLaunch() {
+            #if DEBUG
+            if CommandLine.arguments.contains("-liveryPreview") {   // DEBUG: drive the livery screen directly
+                showSplash = false; showLiveryPreview = true; return
+            }
+            if CommandLine.arguments.contains("-liveryGallery") {   // DEBUG: all types wearing a livery
+                showSplash = false; showLiveryGallery = true; return
+            }
+            if CommandLine.arguments.contains("-freshFlow") {   // DEBUG: walk naming → livery → tutorial
+                // Skip the splash AND the load menu, straight into the first-launch
+                // flow on a clean sim (playerAirlineName == nil), regardless of saved
+                // games. Claims the first free slot (or 0) so a Save has somewhere to go.
+                showSplash = false
+                currentSlot = GameStore.firstFreeSlot ?? 0
+                return
+            }
+            if let scenario = Self.devScenario {
+                sim.devSeed(scenario)
+                showSplash = false
+                tab = (scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer) ? 1 : 4   // FLEET for livery, else FINANCE
+                // legacyPlayer stands in for "continued a pre-livery save", so it
+                // shows the same one-time prompt loadSlot would (ignoring the seen
+                // flag, so the harness is repeatable).
+                if scenario == .legacyPlayer { showLiveryPrompt = true }
+                return
+            }
+            #endif
+            GameStore.reconcileCloud()
+            if currentSlot == nil, sim.playerAirlineName == nil, GameStore.anySave {
+                showLoadMenu = true
+                sim.isPaused = true
+            }
+            }
+
+    @ViewBuilder private var liveryUpdatePrompt: some View {
+        if showLiveryPrompt {
+            NewLiveryPromptView(
+                airlineName: sim.playerAirlineName ?? "Your airline",
+                onDesign: {
+                    LiveryPromptState.seen = true
+                    showLiveryPrompt = false
+                    tab = 1
+                    openLiveryDesigner = true
+                },
+                onLater: { LiveryPromptState.seen = true; showLiveryPrompt = false }
+            )
+            .transition(.opacity)
+        }
+    }
+
     @ViewBuilder private var firstLaunchFlow: some View {
-        if showLoadMenu {
+        if showLiveryPrompt {
+            // Sits in THIS overlay rather than its own: the body's modifier chain
+            // is already at the type-checker's budget, and adding another
+            // .overlay/.animation pair tipped it over ("unable to type-check this
+            // expression in reasonable time").
+            liveryUpdatePrompt
+        } else if showLoadMenu {
             // Load / slot-picker menu — takes precedence over naming.
             SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) },
                           backdropOpacity: coldLaunchBackdrop)
@@ -316,7 +358,8 @@ struct ContentView: View {
                              onSave: saveCurrent, onQuit: quitToMenu,
                              onReturnToOps: { tab = 3 })
         case 1:  FleetView(sim: sim, tab: $tab, store: store, onBell: { showAlerts = true },
-                           onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: upgrade)
+                           onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: upgrade,
+                           openLivery: $openLiveryDesigner)
         case 2:  CrewsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu)
         case 3:  OpsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu,
                          onShowAirport: { code in sim.focusCamera(on: code); tab = 0 },
@@ -369,6 +412,13 @@ struct ContentView: View {
         tab = 0
         pendingLiveryName = nil   // a restored game skips the naming/livery flow
         showLoadMenu = false
+        // An existing player whose save predates the livery feature has a fleet
+        // wearing defaults they never picked. Tell them once, here — after the
+        // game is on screen, not as a gate in front of it.
+        if fresh.needsFirstLivery && !LiveryPromptState.seen {
+            tab = 1                       // FLEET — where the Add Livery button is
+            showLiveryPrompt = true
+        }
     }
 
     /// Start a brand-new airline in the given (empty) slot.

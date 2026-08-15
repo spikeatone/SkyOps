@@ -153,6 +153,26 @@
 >   **"Save Livery"** rather than promising a paid repaint, and the apply is **free**.
 > - `setLivery` sets the flag, so every change after that is a normal billed repaint.
 >   The flag persists, so the free choice can't be farmed by reloading.
+> - **ONE-TIME UPDATE PROMPT** (`NewLiveryPromptView`, `LiveryPromptState.seen`): the
+>   first time an existing player CONTINUES a pre-livery save, a card appears over the
+>   resumed game — "PAINT YOUR FLEET", naming their airline, stating that the first
+>   livery is free and that later changes cost money and ground aircraft. **Later** and
+>   **Design it** both dismiss it permanently; Design it jumps to Fleet and opens the
+>   editor. Deliberately NOT a gate in front of the load menu — interrupting someone's
+>   saved game on update is the thing to avoid. Fired from `loadSlot`, so it can't hit a
+>   new airline (which chooses a livery during creation).
+>   - The cross-tab intent uses `openLivery: Binding<Bool>` adopted in FleetView's
+>     **`.onAppear` AND `.onChange`** — the standing rule, since the tab bar recreates
+>     the tab's content view and `.onChange` never fires for a value set beforehand.
+>   - ⚠️ **ContentView.body is at the Swift type-checker's budget.** Adding one more
+>     `.overlay` + `.animation` pair to it failed with "unable to type-check this
+>     expression in reasonable time". The prompt is therefore rendered INSIDE the
+>     existing `firstLaunchFlow` overlay, and the cold-launch `.onAppear` body was
+>     extracted to `coldLaunch()`. If a future screen needs another root overlay,
+>     extract rather than chain.
+> - **`-devScenario legacyPlayer`** seeds exactly this state (real fleet on real routes,
+>   `liveryChosen` false) and shows the prompt — that state only exists on a save made
+>   before the feature, so it isn't otherwise reachable by hand.
 >
 > ### ✅ FLEET-DETAIL LIVERY CHECK — DONE (one of the two 1.3 gates)
 > The livery was verified on the REAL Fleet detail screen (not just the `-liveryGallery`

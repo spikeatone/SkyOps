@@ -22,6 +22,11 @@ struct FleetView: View {
     var onSave: () -> Void = {}
     var onQuit: () -> Void = {}
     var onUpgrade: (String?) -> Void = { _ in }
+    /// Set from outside (the one-time update prompt) to open the livery editor.
+    /// Adopted in BOTH .onAppear and .onChange: the tab bar recreates this view on
+    /// a tab switch, and .onChange never fires for a value that was already set
+    /// before the view existed — the documented rule for cross-tab intents.
+    var openLivery: Binding<Bool>? = nil
 
     /// Free-tier gate for Marketplace acquires — paywall at the fleet cap.
     private func gatedAcquire(_ perform: () -> Void) {
@@ -187,7 +192,16 @@ struct FleetView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: showLivery)
+        .onAppear { adoptOpenLiveryIfAny() }
+        .onChange(of: openLivery?.wrappedValue ?? false) { _, _ in adoptOpenLiveryIfAny() }
         .animation(.easeInOut(duration: 0.2), value: pendingLivery != nil)
+    }
+
+    /// Consume an external "open the livery editor" intent exactly once.
+    private func adoptOpenLiveryIfAny() {
+        guard openLivery?.wrappedValue == true else { return }
+        showLivery = true
+        openLivery?.wrappedValue = false
     }
 
     /// Always persist a livery change right away so it survives even if the app is
