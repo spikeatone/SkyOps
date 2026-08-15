@@ -47,7 +47,7 @@ struct LiveryPlacement {
         case "A340": return .init(titleCX: 0.292, titleCY: 0.653, titleW: 0.42, titleScale: 0.144, tailCX: 0.838, tailCY: 0.298, tailScale: 0.979) // tuned
         case "A359": return .init(titleCX: 0.301, titleCY: 0.632, titleW: 0.42, titleScale: 0.145, tailCX: 0.852, tailCY: 0.273, tailScale: 0.849) // tuned
         case "A380": return .init(titleCX: 0.295, titleCY: 0.685, titleW: 0.42, titleScale: 0.125, tailCX: 0.864, tailCY: 0.3, tailScale: 0.875) // tuned
-        case "AT46": return .init(titleCX: 0.655, titleCY: 0.628, titleW: 0.32, titleScale: 0.128, tailCX: 0.786, tailCY: 0.385, tailScale: 0.56) // tuned
+        case "AT46": return .init(titleCX: 0.655, titleCY: 0.655, titleW: 0.32, titleScale: 0.128, tailCX: 0.786, tailCY: 0.385, tailScale: 0.56) // tuned
         case "B1900": return .init(titleCX: 0.625, titleCY: 0.61, titleW: 0.32, titleScale: 0.125, tailCX: 0.819, tailCY: 0.384, tailScale: 0.53) // tuned
         case "B737700": return .init(titleCX: 0.328, titleCY: 0.671, titleW: 0.42, titleScale: 0.125, tailCX: 0.784, tailCY: 0.3, tailScale: 0.872) // tuned
         case "B737800": return .init(titleCX: 0.298, titleCY: 0.674, titleW: 0.42, titleScale: 0.125, tailCX: 0.843, tailCY: 0.289, tailScale: 0.91) // tuned
