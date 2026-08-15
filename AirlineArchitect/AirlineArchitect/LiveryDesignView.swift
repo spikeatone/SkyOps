@@ -54,7 +54,7 @@ struct LiveryDesignView: View {
             if let o = backdropOpacity { ArchitectBackdrop(opacity: o) }
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 18) {
+                VStack(spacing: 12) {
                     header
 
                     // Live preview — the MAX 9 wearing the current selection, on a
@@ -67,14 +67,14 @@ struct LiveryDesignView: View {
                     tailSection
 
                     launchButton
-                    Spacer().frame(height: 20)
                 }
                 .padding(.horizontal, 18)
-                .padding(.top, 10)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
                 .frame(maxWidth: 620)
                 .frame(maxWidth: .infinity)
             }
-            .safeAreaPadding(.top, 8)   // clear the status bar / notch
+            .safeAreaPadding(.top, 16)   // clear the status bar / notch
         }
         .onAppear {
             // Seed the fuselage text from the airline name (trimmed to the cap) the
@@ -91,16 +91,15 @@ struct LiveryDesignView: View {
     // MARK: Header
 
     private var header: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             Text("Design your livery")
-                .font(.karla(26, .bold))
+                .font(.karla(22, .bold))
                 .foregroundStyle(titleColor)
             Text("Paint \(airlineName.isEmpty ? "your airline" : airlineName) onto the fleet.")
-                .font(.karla(16))
+                .font(.karla(15))
                 .foregroundStyle(subtitleColor)
                 .multilineTextAlignment(.center)
         }
-        .padding(.top, 4)
     }
 
     // MARK: Preview
@@ -111,7 +110,7 @@ struct LiveryDesignView: View {
         let g: [Color] = isDark ? [hex(0x1B2233), hex(0x11172A)] : [hex(0xEAF3FB), hex(0xF7FBFF)]
         return AircraftLiveryImage(typeID: previewType, name: previewText, livery: livery)
             .padding(.horizontal, 8)
-            .padding(.vertical, 22)
+            .padding(.vertical, 10)
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 16)
@@ -269,7 +268,7 @@ struct LiveryDesignView: View {
     // MARK: Section chrome
 
     @ViewBuilder private func section<V: View>(_ title: String, @ViewBuilder _ content: () -> V) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 7) {
             Text(title)
                 .font(.karla(12, .semibold))
                 .foregroundStyle(labelColor)
