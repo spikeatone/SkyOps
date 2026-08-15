@@ -96,6 +96,45 @@
 > So the fix list below is **9 types, not 4**, and the T-tail jets should arguably come
 > FIRST — a player is far more likely to fly a CRJ/ERJ than a Dornier.
 >
+> ### ✅ FLEET REPAINT — BUILT (15 Aug 2026, designer request)
+> Changing the livery once you own aircraft is a **repaint**, not a free restyle: the
+> Livery button's commit routes through an **itemized quote** (one line per type —
+> count × per-airframe cost + days each). With no aircraft owned there's nothing to
+> repaint, so the choice stays free.
+> - **Costs are the designer's real-world bands** (`Simulation.repaintCost`): narrowbody
+>   **$130k** (a real 737-900ER refresh is ~$131k), widebody **$225k**, jumbo **$400k**;
+>   turboprop $35k / RJ $60k sit below the narrowbody floor.
+> - **DOWNTIME is the bigger cost and gets equal billing** (`repaintDays`, 7–14d by size).
+>   Aircraft reuse the **parked-gate block** AOG uses, so an airborne jet finishes its leg
+>   before going in — the same "don't teleport a flying aircraft" rule as reassignment and
+>   parking. The fleet repaints **in PARALLEL**, so the headline is the LONGEST single job,
+>   never the sum (`repaintLongestDays`).
+> - **`totalRepaintSpend` is a new capital-out term in the cash invariant**, and both it
+>   and each aircraft's `repaintUntilTick` PERSIST — a paid repaint vanishing on reload is
+>   exactly the fuel-hedge bug class.
+> - A failed repaint (unaffordable, or one already running) is **INERT** — it returns
+>   before charging or applying, so it can never half-apply a livery or half-charge.
+> - Verified **30/30 headless** (`aa-1.1.x/RepaintVerify.swift` + its stub file — note
+>   `Livery.swift` imports SwiftUI so the headless harness needs the catalog stubs) and
+>   driven live: quote rendered with correct per-type lines, $555k charged on a 5-type
+>   fleet, whole fleet repainted.
+> - **`-devScenario fleet`** (new, `#if DEBUG`) seeds a named airline + livery + one
+>   aircraft per class and opens the Fleet tab — this is what makes the Fleet-detail and
+>   repaint checks drivable at all.
+>
+> ### ✅ FLEET-DETAIL LIVERY CHECK — DONE (one of the two 1.3 gates)
+> The livery was verified on the REAL Fleet detail screen (not just the `-liveryGallery`
+> harness), on both a **turboprop (B1900)** and a **widebody (787-9)**: painted tail,
+> emblem, and fuselage title all render correctly against the real screen chrome.
+> **Remaining 1.3 gate: the first-run flow on a REAL DEVICE** (sim text entry keeps
+> backgrounding the app).
+>
+> ### Cash display — `cashLabel` now switches to BILLIONS past $1B
+> "$1136.0M" stopped reading as money; it's `$1.136B` now (3 decimals ≈ $1M precision,
+> still finer than the aircraft prices it gets compared against). The Finance ledger
+> already used compact B — this aligns the always-visible header with it, which the
+> spec previously flagged as a known divergence to fix "if it ever bugs someone."
+>
 > ### Open / possible next
 > - **✅ T-TAIL STABILIZER BLEED — FIXED (15 Aug 2026). CRJ900 · CRJ1000 · ERJ135 ·
 >   ERJ140 · ERJ145 now paint the FIN ONLY**; the horizontal stabilizer stays white, so
