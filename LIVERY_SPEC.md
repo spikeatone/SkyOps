@@ -21,10 +21,17 @@
 > - **Fonts** — 5 static OFL TTFs in `Resources/Fonts/` (ArchivoBlack, BebasNeue,
 >   Poppins-SemiBold, Righteous, DMSerifDisplay) + `OFL-LiveryFonts.txt`, registered in
 >   Info.plist `UIAppFonts`. Static instances on purpose (variable-font weight is fragile).
-> - **Emblems** — the designer's 10 SVGs (`art-source/tail-logos/`) rasterised, **trimmed
->   to artwork bounds + centred in a square** (the normalisation the old spec asked for),
->   bundled as `Resources/TailArt/tailart1…10.png`. One fin placement now centres any of
->   them.
+> - **Emblems** — the designer's 10 SVGs (`art-source/tail-logos/`) rasterised + **normalised
+>   to a CONSISTENT ON-FIN HEIGHT** (~62% of the square), bundled as
+>   `Resources/TailArt/tailart1…10.png`. This is the KEY fix: the emblems have wildly
+>   different aspects (a wing 1.34 vs a thin swoosh 3.55 vs a tall globe ~0.8), so merely
+>   centring them in equal squares made tall ones render huge and wide ones tiny/overhanging
+>   at one `tailScale`. Now each PNG's ARTWORK fills the same height fraction (width clamped
+>   to ≤90% so the thin ribbons don't overflow sideways), so a SINGLE `tailScale` gives every
+>   emblem the same visual footprint on the fin — the per-aircraft tail placements (all tuned
+>   against the wing) apply to all 10 with no per-emblem fiddling. To re-normalise after new
+>   emblem art: re-run the height-normalise pass (this session's git history) targeting ~0.62
+>   artwork-height, then verify on the `-liveryGallery` fleet.
 > - **Persistence** — `liveryFontIndex` / `liveryPaletteIndex` / `liveryTailArtIndex` /
 >   `liveryText` on `Simulation` + `GameSnapshot` (each `decodeSafe`, nil/legacy-safe,
 >   like `playerTailCode`). `sim.liveryTitle` = the text if set, else the airline name.
