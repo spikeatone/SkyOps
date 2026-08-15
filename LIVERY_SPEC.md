@@ -127,12 +127,20 @@
 >   real fin: filled top-to-bottom down to the fuselage, stabilizer left white, emblem
 >   centred on the blade. Was a rectangular block with a flat cut across the fin (lower
 >   fin unpainted, paint past the trailing edge; B1900 read as a detached wedge).
->   - **HAND-POLYGON path** (`FIN_POLYGONS` in `make_fin_masks.py`), not `trim_stab.py` —
->     these were wrong in SHAPE, not merely too long, so there was nothing to subtract.
->     Traced off `fin_probe.py`. Two rules made them work: **stop the top edge UNDER the
->     stabilizer** (all four are T-tails), and **run the base INTO the fuselage** — the
->     polygon is intersected with the airframe silhouette, so an over-long base is clipped
->     to the body and the paint meets it cleanly instead of stopping in mid-air.
+>   - **TRACED FROM THE ARTWORK (`aa-livery/trace_fin.py`) — NOT a polygon.** A first cut
+>     used hand-traced `FIN_POLYGONS`, and the designer rejected it on sight: **a polygon
+>     has STRAIGHT edges, a real fin has a CURVED leading edge and a ROUNDED tip**, so the
+>     paint left an unpainted sliver of fin along the curve and read as the wrong fin
+>     shape. Lesson worth keeping — approximating a shape the artwork already contains is
+>     always worse than reading it. `trace_fin.py` takes each column's own top opaque pixel
+>     (the true outline) down to the fitted fuselage crown, so curves and tips are exact
+>     and stay exact if the art changes.
+>   - **Two cuts make it a fin and not a whole tail:** an **x-range** [x0,x1] (leading to
+>     trailing edge — x1 excludes a stabilizer continuing aft, and on the B1900 also its
+>     separate endplate), and a **`--stab-top` floor** that clamps the traced top DOWN
+>     under the stabilizer where the stab sits ON the fin. The exact per-type invocations
+>     are recorded at the top of `make_fin_masks.py`; `FIN_POLYGONS` is kept only as a
+>     record of the x-ranges and is SUPERSEDED for these four.
 >   - **`tailCX/CY/Scale` re-derived from the new fin bbox** (the old values pointed at the
 >     wrong blocks, so emblems sat high/aft and clipped). **Titles also moved** — these are
 >     HIGH-WING props, so the old mid-body titles collided with the wing root and the
