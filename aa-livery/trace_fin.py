@@ -71,7 +71,7 @@ def crown_fit(px, w, h, x_end, x_start=0.35):
     return lambda x: my + slope * (x - mx)
 
 
-def trace(tid, x0, x1, stab_top=None, base=None, base_aft=None, dry=False):
+def trace(tid, x0, x1, stab_top=None, base=None, base_aft=None, x1_base=None, dry=False):
     ip = os.path.join(ART, f"{tid}.png")
     illo = Image.open(ip).convert("RGBA")
     w, h = illo.size
@@ -83,11 +83,23 @@ def trace(tid, x0, x1, stab_top=None, base=None, base_aft=None, dry=False):
     if crown is None and base is None:
         return "could not fit crown — pass --base"
 
+    # highest traced point of the fin (its tip), for the rake interpolation
+    tops_all = []
+    for x in range(cx0, int(w * (x1_base if x1_base is not None else x1)) + 1):
+        col = [y for y in range(h) if op(x, y)]
+        if col:
+            t = min(col)
+            if stab_top is not None and t < h * stab_top:
+                t = h * stab_top
+            tops_all.append(t)
+    tip_y = (min(tops_all) / h) if tops_all else 0.0
+
     mask = Image.new("L", (w, h), 0)
     m = mask.load()
     stab_y = None if stab_top is None else h * stab_top
     painted = 0
-    for x in range(cx0, cx1 + 1):
+    xmax = max(cx1, int(w * x1_base)) if x1_base is not None else cx1
+    for x in range(cx0, xmax + 1):
         col = [y for y in range(h) if op(x, y)]
         if not col:
             continue
@@ -102,6 +114,24 @@ def trace(tid, x0, x1, stab_top=None, base=None, base_aft=None, dry=False):
                 bot = int(round(h * base))
         else:
             bot = int(round(crown(x)))
+        if x1_base is not None and x > cx1:
+            # RAKED TRAILING EDGE. A fin's TE slopes aft going down, so a single vertical
+            # x1 lops off the lower-aft corner (a white wedge along the TE). Aft of the tip
+            # cut the fin is simply the TOP CONTIGUOUS RUN below the stab clamp, and that
+            # run's own bottom IS the raked edge — measured, not interpolated. Stop at
+            # x1_base so we never wander onto the tailcone.
+            if x > int(w * x1_base):
+                continue
+            s_ = set(col)
+            y = top
+            while y + 1 in s_:
+                y += 1
+            for yy in range(top, min(y, bot) + 1):
+                if op(x, yy):
+                    m[x, yy] = 255
+                    painted += 1
+            continue
+
         # only paint contiguous airframe between top and bot
         y = top
         while y <= bot and y < h:
@@ -139,6 +169,7 @@ def main():
     ap.add_argument("--stab-top", type=float, default=None)
     ap.add_argument("--base", type=float, default=None)
     ap.add_argument("--base-aft", type=float, default=None)
+    ap.add_argument("--x1-base", type=float, default=None)
     ap.add_argument("--report", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
@@ -146,7 +177,7 @@ def main():
         if a.report:
             report(t)
         else:
-            print(f"{t:9} {trace(t, a.x0, a.x1, a.stab_top, a.base, a.base_aft, a.dry_run)}")
+            print(f"{t:9} {trace(t, a.x0, a.x1, a.stab_top, a.base, a.base_aft, a.x1_base, a.dry_run)}")
 
 
 if __name__ == "__main__":
