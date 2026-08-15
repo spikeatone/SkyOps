@@ -1,5 +1,49 @@
 # Personalized Livery — Phase 1 (prototype spec)
 
+> ## ▶▶ NEXT SESSION STARTS HERE — TAIL EMBLEM PLACEMENT (14 Aug 2026, `livery-prototype`)
+>
+> **The tail-emblem-on-fin placement is AUTO-COMPUTED and CLOSE but not perfect.**
+> The designer wants it finished. It is NOT hand-tuned per plane anymore — do NOT go
+> back to that. It's a repeatable script:
+>
+> **`aa-livery/fin_place.py`** — for every `Resources/Illustrations/<TYPE>.png` it
+> detects the FIN silhouette, finds the **largest square that fits fully INSIDE the fin
+> outline** (so the emblem can NEVER exceed the fin edge — the designer's explicit
+> requirement: "outline the edge of each tail, the logo never exceeds it, sits
+> comfortably within it"), detects **T-tails** (biases the emblem LOWER, off the
+> horizontal stab), and gives big tall fins a height-based minimum size. It writes
+> `tailCX/tailCY/tailScale` into `AircraftLivery.swift` (TITLE values are separately
+> hand-tuned — leave them). Tunables + full notes are in the script's docstring.
+>
+> **WORKFLOW to iterate:**
+> 1. Edit a tunable (or add a per-type override) in `aa-livery/fin_place.py`.
+> 2. `python3 aa-livery/fin_place.py` (rewrites the Swift values) — or `--report` to
+>    just print detected values + which types classified as `[T-TAIL]`.
+> 3. **CLEAN build** (`xcodebuild … clean build` — plain build caches stale art/values;
+>    this bit us repeatedly) → **uninstall + install** → launch `-liveryGallery`
+>    (shows ALL 10 emblems on one aircraft; `-galleryType <ID>` to switch; there's also
+>    a Python compositor pattern in this session's git history that matches the SwiftUI
+>    render for fast off-sim previews).
+>
+> **KNOWN REMAINING IMPERFECTIONS (what "not quite perfect" means):**
+> - **T-tail detector misses some.** The width-ratio heuristic correctly caught
+>   CRJ900/ERJ145/DH8B but MISSED **CRJ1000, ERJ135, ERJ140** (they came out with a
+>   high `cy` = placed too high, not lowered). Run `--report` and check the `[T-TAIL]`
+>   flags — fix the heuristic or add those ids to a T-tail set.
+> - **AT46 (ATR 42)** — stubby T-tail; round emblems (globe) kiss the horizontal stab.
+>   Wants a smaller emblem and/or lower centre for this one type.
+> - **A couple of big jets** were reading small — the height-based min size helped
+>   (A380/777/747 now bigger); eyeball whether they're now right.
+> - Likely cleanest endgame: keep the auto pass for the ~30 that are good, add a small
+>   **per-type override table** (layered on top) for the 3-4 stubborn T-tails/turboprops.
+>   Don't chase global constants into breaking the good ones.
+>
+> **Everything else about the livery feature is DONE** (creation flow, fonts, palettes,
+> emblem normalisation, persistence, Fleet-detail painting, screen layout). Both Debug
+> + Release build clean. `main` untouched; all work on `livery-prototype`.
+>
+> ---
+
 > **▶ STATUS (this branch `livery-prototype`, 14 Aug 2026): THE CREATION FLOW IS
 > BUILT.** Naming → **livery design screen** → Launch. Both prior "next session"
 > items are done: emblems normalised (see below) AND the full picker + persistence +
