@@ -1,6 +1,6 @@
 //
 //  NewLiveryPromptView.swift
-//  Airline Architect — the ONE-TIME "your fleet can wear your own colours now"
+//  Airline Architect — the ONE-TIME "your fleet can wear your own colors now"
 //  card an EXISTING player sees the first time they continue a save after
 //  updating to the livery release.
 //
@@ -56,7 +56,7 @@ struct NewLiveryPromptView: View {
                 }
                 .padding(.bottom, 8)
 
-                Text("\(airlineName) can now fly in colours you choose — a palette, a tail emblem, and your name on the fuselage.")
+                Text("\(airlineName) can now fly in colors you choose — a palette, a tail emblem, and your name on the fuselage.")
                     .font(.karla(14)).foregroundStyle(bodyColor)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 10)

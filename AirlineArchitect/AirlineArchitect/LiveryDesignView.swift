@@ -106,7 +106,7 @@ struct LiveryDesignView: View {
     private var header: some View {
         ZStack {
             VStack(spacing: 2) {
-                Text(initialLivery == nil ? "Design your livery" : "Customise your livery")
+                Text(initialLivery == nil ? "Design your livery" : "Customize your livery")
                     .font(.karla(22, .bold))
                     .foregroundStyle(titleColor)
                 Text("Paint \(airlineName.isEmpty ? "your airline" : airlineName) onto the fleet.")
