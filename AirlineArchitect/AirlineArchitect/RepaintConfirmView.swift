@@ -56,11 +56,24 @@ struct RepaintConfirmView: View {
                     .font(.karla(20, .bold)).foregroundStyle(titleColor)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 4)
-                Text("Every aircraft goes into the paint shop. They earn nothing until they come out.")
+                Text("Every aircraft goes into the paint shop. Each line shows what the paint costs, and in amber the revenue those aircraft won't earn while they're grounded.")
                     .font(.karla(13)).foregroundStyle(secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 14)
+                    .padding(.bottom, 10)
+
+                // Column headers — without these the amber figure reads as a
+                // discount or a second charge rather than forgone earnings.
+                HStack {
+                    Text("AIRCRAFT").font(.karla(10, .bold)).foregroundStyle(secondary)
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("PAINT COST").font(.karla(10, .bold)).foregroundStyle(secondary)
+                        Text("REVENUE LOST WHILE GROUNDED")
+                            .font(.karla(9, .bold)).foregroundStyle(amber)
+                    }
+                }
+                .padding(.bottom, 6)
 
                 // ITEMIZED — one line per type.
                 ScrollView {
@@ -78,7 +91,7 @@ struct RepaintConfirmView: View {
                                     Text(money(line.lineCost))
                                         .font(.karla(14, .semibold)).foregroundStyle(bodyColor)
                                     if line.lineLostRevenue > 0 {
-                                        Text("− " + money(line.lineLostRevenue) + " rev")
+                                        Text("− " + money(line.lineLostRevenue) + " earnings")
                                             .font(.karla(11)).foregroundStyle(amber)
                                     }
                                 }
@@ -103,15 +116,20 @@ struct RepaintConfirmView: View {
                 }
                 if sim.repaintLostRevenueTotal > 0 {
                     HStack {
-                        Text("Lost revenue (grounded)").font(.karla(14)).foregroundStyle(secondary)
+                        Text("Revenue lost while grounded").font(.karla(14)).foregroundStyle(secondary)
                         Spacer()
                         Text(money(sim.repaintLostRevenueTotal))
                             .font(.karla(15, .semibold)).foregroundStyle(amber)
                     }
                     .padding(.top, 2)
+                    Text("Not billed — it's income the fleet won't earn, not a charge. You pay the paint cost.")
+                        .font(.karla(11)).foregroundStyle(amber.opacity(0.9))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 3)
                     Divider().overlay(cardBorder).padding(.vertical, 8)
                     HStack {
-                        Text("True cost").font(.karla(15, .bold)).foregroundStyle(bodyColor)
+                        Text("True cost of the repaint").font(.karla(15, .bold)).foregroundStyle(bodyColor)
                         Spacer()
                         Text(money(sim.repaintTrueCost))
                             .font(.karla(17, .bold)).foregroundStyle(bodyColor)
@@ -142,13 +160,13 @@ struct RepaintConfirmView: View {
                         Text("Cancel")
                             .font(.karla(15, .semibold)).foregroundStyle(titleColor)
                             .frame(maxWidth: .infinity).padding(.vertical, 12)
-                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(cardBorder, lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
                     }
                     Button(action: onConfirm) {
                         Text("Repaint · \(money(total))")
                             .font(.karla(15, .bold)).foregroundStyle(.white)
                             .frame(maxWidth: .infinity).padding(.vertical, 12)
-                            .background(RoundedRectangle(cornerRadius: 10)
+                            .background(RoundedRectangle(cornerRadius: 4)
                                 .fill(affordable ? Sky.brightBlue : Color.gray.opacity(0.4)))
                     }
                     .disabled(!affordable)
@@ -156,8 +174,8 @@ struct RepaintConfirmView: View {
                 .padding(.top, 16)
             }
             .padding(18)
-            .background(RoundedRectangle(cornerRadius: 16).fill(cardBG))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(cardBorder, lineWidth: 1))
+            .background(RoundedRectangle(cornerRadius: 4).fill(cardBG))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
             .padding(.horizontal, 22)
         }
     }
