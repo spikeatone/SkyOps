@@ -65,6 +65,24 @@
 > CgBI format at build time, so the hash always differs; judge by the build timestamp
 > or just clean-build when in doubt.
 >
+> ### ▶ NEXT SESSION — TOP ITEM: FULL-FLEET CONTACT SHEET (designer's request)
+> **First thing: generate a contact sheet showing EVERY aircraft type (all 35) with the
+> painted livery, so the designer can see where the whole fleet stands in one view.**
+> Don't do it in the sim (one type per launch is slow) — use the **Python compositor**
+> that mirrors the SwiftUI render (it reads the REAL `tailCX/tailCY/tailScale` + title
+> values out of `AircraftLivery.swift`, the RGBA fin masks from `Resources/FinMasks/`,
+> the emblems from `Resources/TailArt/`, and applies the SAME painted-tail math:
+> `secondary`-fill the fin masked by the fin shape, WHITE emblem sized `tailScale`
+> nudged by `TailArt.nudge`, then clip the whole tail to the fin mask; TITLE in
+> `primary` on the window line via multiply). The exact compositor is in THIS session's
+> git history (search the transcript for `/tmp/all_props.png` and `/tmp/new10.png` —
+> those scripts already do painted-tail + mask-clip + title correctly; just loop over
+> all 35 ids instead of a subset, one row per type, labelled). Render it with the wing
+> emblem (1) + Atlantic palette as the baseline, ~1180px wide, one 2-part sheet like the
+> earlier `/tmp/fleet_A*.png` / `fleet_B*.png` pattern. Deliver it via SendUserFile.
+> Purpose: a single at-a-glance status of all 35 fins so the designer can spot which
+> ones still need work (expect the turboprops to look off — see the next item).
+>
 > ### Open / possible next
 > - **⭐ TURBOPROP (+ some T-tail) FIN MASKS need HAND-AUTHORED shapes.** The auto fin
 >   detector nails the JETS (~30 types, what players mostly fly) but gets the
@@ -76,7 +94,10 @@
 >   exception type, run the script (it intersects the polygon with the airframe
 >   silhouette so paint can't spill), CLEAN build, check in `-liveryGallery
 >   -galleryType DH8B`. Candidates to trace: **AT46, B1900, D328, DH8B** first; eyeball
->   the CRJ/ERJ T-tails too. The jets need no polygon.
+>   the CRJ/ERJ T-tails too. The jets need no polygon. ⚠️ **Do NOT regenerate the JET
+>   masks** — an "improved" auto pass broke them once (jagged fins); the good jet masks
+>   are committed. Only add polygons for the exception types; run the script with an
+>   explicit type list (`make_fin_masks.py DH8B AT46 …`) so it doesn't touch the jets.
 > - **Walk the full first-run flow end-to-end** on a real device (sim text-typing was
 >   flaky — `-freshFlow` reaches the naming screen reliably, but typing into the field
 >   via the automation `text` action can background the app; a real device or the sim
