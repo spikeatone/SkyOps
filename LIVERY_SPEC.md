@@ -57,6 +57,15 @@
 >   `-galleryPalette <0-9>`. (Its background is fixed light-grey, so it does NOT show
 >   the app's dark theme — use `-liveryPreview` for a true dark-theme check.)
 >
+> ### ⚠️ EDIT MODE pads for the tab bar (fixed 15 Aug 2026)
+> `LiveryDesignView` is used in TWO contexts and they need different bottom padding:
+> first-launch is FULL-SCREEN (no tab bar, 8pt is right), but EDIT mode is presented
+> **over the Fleet tab**, where the custom `SkyTabBar` sits on top of the scroll content
+> and was CLIPPING the last emblem row and the commit button. The tab bar is a
+> `safeAreaInset` on the ROOT view and this screen is layered above it, so the safe area
+> doesn't account for it — hence the explicit `.padding(.bottom, initialLivery == nil ? 8
+> : 104)`. If this screen ever gains a third presentation context, check the bottom edge.
+>
 > ### ⚠️ Build gotcha (bit us repeatedly)
 > After changing **bundled art** (fin masks, emblem PNGs, fonts) OR the placement
 > values, do a **`xcodebuild … clean build` + `simctl uninstall` + `install`**. A

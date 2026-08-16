@@ -79,7 +79,13 @@ struct LiveryDesignView: View {
                 }
                 .padding(.horizontal, 18)
                 .padding(.top, 8)
-                .padding(.bottom, 8)
+                // EDIT MODE is presented OVER the Fleet tab, so the app's custom tab
+                // bar sits on top of this scroll content and clips the last emblem row
+                // + the commit button. First-launch mode is full-screen with no tab
+                // bar, so it only needs the small pad. (The tab bar is a
+                // safeAreaInset on the root, which this overlay is layered above —
+                // so the safe area doesn't account for it and we pad explicitly.)
+                .padding(.bottom, initialLivery == nil ? 8 : 104)
                 .frame(maxWidth: 620)
                 .frame(maxWidth: .infinity)
             }
