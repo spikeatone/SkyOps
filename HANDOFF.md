@@ -25,8 +25,22 @@ offering packages `founding`/`standard`). RevenueCat fully configured (entitleme
 products + offering, subs RETAINED for coexistence — an existing subscriber correctly
 keeps Pro, verified in TestFlight). **AFTER 1.2 IS LIVE + dominant:** remove
 Monthly/Yearly from the RevenueCat offering (NEVER delete the sub products); then watch
-trial→purchase conversion + the founding-price WOM. ⚠️ If 1.2 is still in review, check
-whether 1.2.1 should supersede it or wait — don't stack two pending versions blindly.
+trial→purchase conversion + the founding-price WOM. **PLAN (designer, 17 Aug): wait for 1.2 to be APPROVED, then 1.2.1 as a fast follow,
+then 1.3.** So do NOT submit 1.2.1 while 1.2 is pending — the pivot build and its two
+IAPs must clear as a unit.
+
+**1.2 REVIEW STATUS, checked via the ASC API on 17 Aug (`ASCTools/asc.py`):** state is
+**`WAITING_FOR_REVIEW`** — it has NOT entered review yet, 6 days after submission
+(submitted Aug 12, `reviewSubmissions` id `8f904565-…`). Everything on our side is
+correct and there is nothing to fix: build 41 is attached and `VALID`, the review
+submission holds **3 items** (the version + `aa_unlock_founding_player` +
+`aa_unlock_standard`), all `READY_FOR_REVIEW`, and both IAPs are `WAITING_FOR_REVIEW`
+in step with the build. It is purely Apple queue time — for contrast, 1.1.1→1.1.5 each
+cleared in about a day. A first-time **monetization-model change plus two new IAPs**
+plausibly draws a longer look. Re-check with:
+`python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`.
+If it stays queued much longer, the lever is a Contact Us / expedite request in ASC —
+resubmitting would only lose queue position.
 
 **1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is
 deliberately clean of it). Feature-complete — painted tails on all 35 types, the
