@@ -5,17 +5,36 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 11 August 2026. **1.1.4 (39) and 1.1.5 (40) are BOTH LIVE** (1.1.5 = fuel-hedge
-persistence fix + close-route/park action, both customer-reported). **1.2 (build 41) is
-SUBMITTED FOR REVIEW** — the MONETIZATION PIVOT (subscription → one-time "Full Unlock",
-$9.99 founding pricing rising to $19.99 on Dec 1, 2026; two non-consumables
-`aa_unlock_founding_player`/`aa_unlock_standard` under RevenueCat offering packages
-`founding`/`standard`; both IAPs submitted WITH the build; see CLAUDE.md's "MONETIZATION
-PIVOT" note + PostmarkOps `ARCHITECT_FAMILY.md`). RevenueCat is fully configured
-(entitlement + products + offering, subs RETAINED for coexistence — an existing subscriber
-correctly keeps Pro on build 41, verified in TestFlight). **AFTER 1.2 IS LIVE + dominant:**
-remove Monthly/Yearly from the RevenueCat offering (NEVER delete the sub products); then
-watch trial→purchase conversion + the founding-price WOM. Next new build must be **42+**.
+_Snapshot: 17 August 2026. **`main` is 1.2.1 (build 42)** — a customer-reported fix,
+cut ahead of the livery release because it's live-behaviour and self-contained.
+**THE FIX:** airport recruitment offers always targeted the player's single biggest
+served hub (`hubs.first(...)` on a traffic-sorted list), so a paying customer with an
+ATL hub got **35 consecutive offers all terminating at ATL** — reproduced at 100%. The
+destination is now a weighted random pick (sqrt(pax), ×3 if served, ×0.35 if not), which
+keeps the hub bias (60% still land on a served hub) while dropping the top destination
+from 100% → 12%. Guarded by `aa-1.1.x/OfferSpreadVerify.swift`, VALIDATED against the
+pre-fix code (it fails 3/5 there). Verified on the branch: Debug + Release clean, 5/5
+offer spread, 6/6 soak seeds. **Build 42 is committed but NOT yet archived/uploaded** —
+that's the next action (export/validate/upload chain in CLAUDE.md §Release, ASC API key
+`25FXKWL48U`; creating the version record + submitting is designer-side in ASC).
+
+**1.2 (build 41) status:** was SUBMITTED FOR REVIEW — the MONETIZATION PIVOT
+(subscription → one-time "Full Unlock", $9.99 founding rising to $19.99 on Dec 1, 2026;
+two non-consumables `aa_unlock_founding_player`/`aa_unlock_standard` under RevenueCat
+offering packages `founding`/`standard`). RevenueCat fully configured (entitlement +
+products + offering, subs RETAINED for coexistence — an existing subscriber correctly
+keeps Pro, verified in TestFlight). **AFTER 1.2 IS LIVE + dominant:** remove
+Monthly/Yearly from the RevenueCat offering (NEVER delete the sub products); then watch
+trial→purchase conversion + the founding-price WOM. ⚠️ If 1.2 is still in review, check
+whether 1.2.1 should supersede it or wait — don't stack two pending versions blindly.
+
+**1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is
+deliberately clean of it). Feature-complete — painted tails on all 35 types, the
+creation + re-customise flows, fleet repaint (itemized cost + shop queue + lost-revenue
+opportunity cost), and the existing-player free-first-choice path with a one-time update
+prompt. See `LIVERY_SPEC.md`. Two gates before cutting 1.3: walk the first-run flow on a
+REAL DEVICE (sim text entry backgrounds the app), and the merge itself (verified
+conflict-free). Next new build after 42 must be **43+**.
 Clean tree on `main`, all pushed. App:
 <https://apps.apple.com/us/app/airline-architect/id6790569697>._
 

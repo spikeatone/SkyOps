@@ -4928,6 +4928,29 @@ Two details are load-bearing:
   aspirational, never real. Not worth creating one — HANDOFF.md + this file +
   RELEASE_STATUS.md already orient a cold session. Resolved; stop re-flagging it.
 
+## Decided — Airport recruitment offers spread across destinations (1.2.1)
+
+- **A PAYING CUSTOMER reported all 35 of his airport incentives were routes into ATL.**
+  Not weighting — the destination was DETERMINISTIC. `tickAirportOffers` picked it with
+  `hubs.first(where: { servedCodes.contains($0.code) ... })` on a list sorted by traffic
+  DESCENDING, i.e. always the single busiest airport in the player's network. Reproduced
+  at 26/26 = 100% on a seeded big-hub airline.
+- **Why it hid for so long:** the ORIGIN was randomized (19 distinct origins in the
+  repro), so offers look varied one at a time. It only reads as broken when you see a
+  LIST of them, which is exactly what the customer's screenshot showed.
+- **Fix:** weighted random over all candidates — `weight = sqrt(annualPassengers)`
+  (compresses the spread so a mega-hub is favoured without swamping mid-size stations),
+  **×3** if the player already serves it, **×0.35** if not (a low-weight tail keeps
+  brand-new markets appearing). The hub bias is intentional and PRESERVED — an airport
+  courting you wants a link to your network.
+- **Measured over ~2,000 sim-days:** top destination 100% → **12%**, distinct
+  destinations 1 → **30+**, share landing on a served hub **60%**. That last number is
+  the one to watch on any retune — below it the offers stop feeling connected to the
+  player's network; at 100% you're back to this bug.
+- Guarded by `aa-1.1.x/OfferSpreadVerify.swift`, **validated against the PRE-FIX code**
+  (it fails 3 of 5 checks there) — a guard that only passes on the new code proves
+  nothing.
+
 ## Release status (1.0 / build 26) — see `RELEASE_STATUS.md`
 
 The live App Store submission state (build 26, screenshots, store metadata,
