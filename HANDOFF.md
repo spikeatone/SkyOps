@@ -46,7 +46,8 @@ resubmitting would only lose queue position.
 deliberately clean of it). Feature-complete — painted tails on all 35 types, the
 creation + re-customise flows, fleet repaint (itemized cost + shop queue + lost-revenue
 opportunity cost), and the existing-player free-first-choice path with a one-time update
-prompt. See `LIVERY_SPEC.md`. Two gates before cutting 1.3: walk the first-run flow on a
+prompt. See `LIVERY_SPEC.md` (branch-only — not on `main`; check out the branch to read it).
+Two gates before cutting 1.3: walk the first-run flow on a
 REAL DEVICE (sim text entry backgrounds the app), and the merge itself (verified
 conflict-free). Next new build after 42 must be **43+**.
 Clean tree on `main`, all pushed. App:

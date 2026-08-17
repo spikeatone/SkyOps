@@ -20,12 +20,47 @@ as the work, not "later."
 
 ### Shipped since (see HANDOFF.md for the current release state)
 
-**This header was stale for a long stretch** — it said "build 34" while 35→39 shipped.
-Releases are now tracked in `HANDOFF.md`, not here: **1.1 (35) → 1.1.1 (36) → 1.1.2 (37)
-→ 1.1.3 (38) are LIVE; 1.1.4 (39) is in Apple review** (3-day free-trial paywall UI + new
-cold-launch backdrop). What to do next lives in `NEXT_SESSION_PROMPT.md`.
+**This header has gone stale TWICE** — it said "build 34" while 35→39 shipped, then
+"1.1.4 in review" while 1.1.5, 1.2 and 1.2.1 happened. Releases are tracked in
+`HANDOFF.md`, not here. As of **17 Aug 2026**: **1.1.5 (40) is the newest LIVE build**;
+**1.2 (41) is WAITING_FOR_REVIEW** (monetization pivot + 2 IAPs, queued since 12 Aug —
+not misconfigured, just Apple queue time); **1.2.1 (42) is on `main`, verified, awaiting
+1.2's approval before it goes up as a fast follow**; **1.3 = livery**, on
+`livery-prototype`, unmerged. What to do next lives in `NEXT_SESSION_PROMPT.md`.
 Keep this file for in-flight TASK tracking only, and update it in the same session as
 the work — the note at the top of this file exists because it drifted badly once before.
+
+## In flight
+
+### 1.2.1 (build 42) — ON `main`, NOT YET UPLOADED
+- [x] **Airport offers always targeted the player's biggest hub** (paying customer:
+      "all 35 of my incentives were routes into ATL"). The destination was
+      DETERMINISTIC — `hubs.first(where: served…)` on a traffic-sorted list. Repro'd at
+      100%. Now weighted random (sqrt pax, ×3 served / ×0.35 unserved): top dest
+      100%→12%, distinct 1→30+, **60% still land on a served hub** (hold that number on
+      any retune). `aa-1.1.x/OfferSpreadVerify.swift`, validated against the pre-fix
+      code (fails 3/5 there). Debug+Release clean, 6/6 soak.
+- [ ] **Archive → validate → upload build 42** once 1.2 is APPROVED. Chain is in
+      CLAUDE.md §Release (ASC key `25FXKWL48U`). Version record + submit are ASC-side.
+      ⚠️ Do NOT submit while 1.2 is pending.
+
+### 1.3 — PERSONALIZED LIVERY (branch `livery-prototype`, unmerged)
+Full detail in `LIVERY_SPEC.md` — which, like the `aa-livery/` scripts, exists ONLY on
+the `livery-prototype` branch, not on `main`. Feature-complete; merge verified
+conflict-free.
+- [x] Fin masks correct on all 35 types — T-tail stabilizer bleed (CRJ/ERJ) removed via
+      subtract-only `trim_stab.py`; RJ tails painted down the fairing to the fuselage;
+      the 4 turboprops re-traced from the ARTWORK (`trace_fin.py`) rather than
+      approximated with polygons, incl. dorsal fin + raked trailing edge.
+- [x] Fleet repaint: itemized quote, real cost bands, shop QUEUE (2 at a time, so
+      program length scales with fleet size), lost-revenue opportunity cost, fleet-card
+      stage display. 47/47 headless + driven live.
+- [x] Existing-player path: free first livery choice (`liveryChosen`), "Add Livery"
+      prompt, one-time update card. 4/4 headless + driven live, both themes.
+- [ ] **WALK THE FIRST-RUN FLOW ON A REAL DEVICE** (naming → livery → launch) — the last
+      unverified path. Sim text entry backgrounds the app, so it has never been done
+      end-to-end.
+- [ ] Merge `livery-prototype` → `main` and cut 1.3, AFTER 1.2.1 is live.
 
 ### (historical) Accumulated for build 34
 - [x] GAME CLOCK on the speed bar (designer request): a slim "Day N · Mon D, YYYY ·

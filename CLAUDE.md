@@ -2748,7 +2748,8 @@ where numbers are involved.
     Presented as a ContentView overlay (`showPaywall`/`paywallReason`) via an
     `upgrade(reason:)` helper.
   - **3.1.2 COMPLIANCE (added build 34, after 1.1(33) was App-Store-REJECTED for a
-    missing metadata EULA link — see RELEASE_STATUS.md).** The paywall fine print now
+    missing metadata EULA link; RELEASE_STATUS.md documented it and has since been
+    DELETED — historical reference only).** The paywall fine print now
     carries **functional Terms of Use (EULA) + Privacy Policy `Link`s**
     (`PaywallView.termsURL` = Apple's standard EULA, `privacyURL` = the support-site
     privacy page) — required IN THE BINARY for auto-renewable subs; the App
@@ -4926,7 +4927,32 @@ Two details are load-bearing:
 - `README.md` — CHECKED (2026-07-22): there is NO `README.md` at the repo root
   (`ls` confirms). The old `TASKS.md` "Repo scaffolded" reference to one was
   aspirational, never real. Not worth creating one — HANDOFF.md + this file +
-  RELEASE_STATUS.md already orient a cold session. Resolved; stop re-flagging it.
+  NEXT_SESSION_PROMPT.md already orient a cold session. Resolved; stop re-flagging it.
+  (This bullet used to cite RELEASE_STATUS.md, which has since been deleted.)
+
+## Decided — Personalized livery (1.3; on `livery-prototype`, NOT merged)
+
+**Full design + implementation detail: `LIVERY_SPEC.md`.** Summarised here only so a
+session reading CLAUDE.md alone knows the feature exists — `main` has none of it.
+
+- The player picks a font, a 2-colour palette, a tail emblem and the fuselage text; every
+  side-view illustration wears a **PAINTED TAIL** (fin filled in the secondary colour,
+  emblem in white, both clipped to a per-type fin mask) plus titles on the window line
+  with `.blendMode(.multiply)` so the artwork's own windows punch through the letters.
+- **Fin masks are traced FROM THE ARTWORK, not approximated.** A polygon has straight
+  edges; a real fin has a curved leading edge and rounded tip, so polygons left unpainted
+  slivers and read as the wrong shape. Tooling in `aa-livery/` (`trace_fin.py`,
+  `trim_stab.py`, `extend_fin_base.py`, `fin_probe.py`, `contact_sheet.py`).
+- **FLEET REPAINT is a real capital decision:** itemized per-type quote, real-world cost
+  bands, a paint-shop QUEUE (2 aircraft at a time, so program length scales with fleet
+  size — 20 aircraft ≈ 103 days), and the **lost-revenue opportunity cost** shown
+  alongside the paint bill (usually the larger number). `totalRepaintSpend` is a
+  capital-out term in the cash invariant; the lost revenue deliberately is NOT (it is
+  income that never arrives, not a charge).
+- **Existing players get their first livery FREE** (`liveryChosen`, persisted): a
+  pre-livery save restores with default indices, so that player's fleet already wears a
+  livery they never picked — billing them a repaint for the initial choice would charge
+  them for what every new player gets free at naming.
 
 ## Decided — Airport recruitment offers spread across destinations (1.2.1)
 
@@ -4951,13 +4977,19 @@ Two details are load-bearing:
   (it fails 3 of 5 checks there) — a guard that only passes on the new code proves
   nothing.
 
-## Release status (1.0 / build 26) — see `RELEASE_STATUS.md`
+## Release status — see `HANDOFF.md`
 
-The live App Store submission state (build 26, screenshots, store metadata,
-reviewer notes, the support/privacy site, the subscription products, and the
-remaining ASC checklist) lives in **`RELEASE_STATUS.md`** at the repo root, not
-here. A session picking up the launch should read that file — it's written to be
-understood cold, with no conversation history. Delete it once 1.0 is live.
+⚠️ **`RELEASE_STATUS.md` NO LONGER EXISTS.** It covered the 1.0 / build 26 launch and
+carried its own "delete once 1.0 is live" instruction, which was followed — but three
+references to it survived in this file and sent later sessions chasing a missing file.
+Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (which
+version is live, what's in review, what the next build number must be), and in-flight
+task tracking lives in `TASKS.md`.
+
+As of 17 Aug 2026: **1.1.5 (40) LIVE · 1.2 (41) WAITING_FOR_REVIEW · 1.2.1 (42) on
+`main` awaiting 1.2's approval · 1.3 = livery on `livery-prototype`, unmerged.** Query
+review state directly rather than trusting any doc's snapshot:
+`cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 
 ## Working agreement for future sessions
 
