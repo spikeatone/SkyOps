@@ -7,9 +7,12 @@ cold, with no memory of this conversation.
 **Read first:** `HANDOFF.md` (one-read orientation) → `CLAUDE.md` (the persistent
 design/technical record; it wins on any disagreement).
 
-_Written 9 August 2026, at the end of the session that shipped the free-cap change +
-TelemetryDeck (1.1.3), built the pricing-experiment groundwork + the 3-day free-trial
-paywall UI, and replaced the cold-launch backdrop art (1.1.4, in review)._
+⚠️ **`LIVERY_SPEC.md` and the `aa-livery/` tooling exist ONLY on the `livery-prototype`
+branch, not on `main`** — `git checkout livery-prototype` before looking for them.
+
+_Written 17 August 2026, at the end of the session that fixed the T-tail and turboprop
+fin masks, built the fleet-repaint economy, added the existing-player livery path, and
+cut 1.2.1 for a customer-reported route-offer bug._
 
 ---
 
@@ -18,87 +21,78 @@ paywall UI, and replaced the cold-launch backdrop art (1.1.4, in review)._
 > You're picking up **Airline Architect** (repo dir is `SkyOps`; the app was renamed).
 > Read `HANDOFF.md` first, then `CLAUDE.md`. Tree is clean on `main`, nothing blocked.
 >
-> **State:** **1.1.3 (build 38) is LIVE.** **1.1.4 (build 39) is SUBMITTED FOR APPLE
-> REVIEW** (uploaded + submitted 9 Aug) — it adds the **3-day free-trial paywall UI**
-> (Monthly-default, trial on both plans) and a **new full-bleed aerial-runway cold-launch
-> backdrop**. Next new build must be **40+**. First thing to do: **check whether 1.1.4
-> cleared review** (`python3 ~/Architect\ Universe/PostmarkOps/ASCTools/asc.py builds
-> 6790569697`, or ASC). If it BOUNCED, the likeliest reason is **Guideline 3.1.2**
-> (subscription/trial disclosure) — the paywall already states full terms + Terms/Privacy
-> links, so a bounce would be a quick copy/link fix, not a rebuild.
+> **RELEASE STATE — three versions in flight, in this order (designer's plan):**
 >
-> **THE FREE TRIAL IS ALREADY LIVE AT THE STORE LEVEL — don't be confused by this.** The
-> ASC introductory offers (Free / 3 Days, both Monthly + Yearly, all 175 territories,
-> `starts 2026-08-09` / `ends 2026-12-31`) are a STORE-config change independent of the
-> app binary. Apple auto-applies the trial to any eligible new subscriber RIGHT NOW, even
-> on the live build 38 whose paywall doesn't advertise it (verified: a Yearly TRIAL
-> transaction appeared in RevenueCat hours after the offer went live). Build 39 doesn't
-> "turn on" the trial — it **advertises** it (the "3 days free / Start Free Trial" CTA),
-> which should increase trial STARTS. ⚠️ The `ends 2026-12-31` date means the offer stops
-> being available after year-end unless extended (can't edit — delete + recreate).
+> 1. **1.2 (build 41) is WAITING FOR REVIEW** — the monetization pivot (subscription →
+>    one-time unlock) plus two new IAPs. Checked via the ASC API on 17 Aug: it had NOT
+>    entered review 6 days after submission. **Nothing is misconfigured** — build 41 is
+>    attached and `VALID`, and the review submission holds 3 items (version +
+>    `aa_unlock_founding_player` + `aa_unlock_standard`), all `READY_FOR_REVIEW`. It is
+>    Apple queue time. **Do not resubmit** (that loses queue position); if it is still
+>    stuck, the lever is a Contact Us / expedite request in ASC.
+>    Re-check first thing:
+>    `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 >
-> **Priority 1 — read the monetization signals now accumulating (give them ~2 weeks).**
-> Three separate things to watch, in order:
-> 1. **RevenueCat trial→paid conversion.** Trials are starting NOW (store-level). Trial
->    STARTS are easy to inflate; the number that matters is whether they CONVERT after
->    3 days. This is the payoff of the whole trial + pricing thread.
-> 2. **TelemetryDeck funnel: `Paywall.shown` ÷ `Game.started`** (production view =
->    **Test Mode OFF**; Debug/Simulator signals are quarantined in test mode). This
->    answers whether the 1.1.3 free-cap change (3 aircraft/2 routes → **6/5**, sized so a
->    free player can reach ONE hub) fixed conversion. HIGH ratio + few purchases →
->    pricing/value problem, caps were right. LOW ratio → they churn before the wall, caps
->    weren't the issue. Also check the **`Hub.established`** share — the direct test of
->    whether 6/5 exposes the hub hook.
-> 3. **The next pricing lever is scoped, not built.** `PRICING_EXPERIMENT_SPEC.md` has the
->    full plan: a RevenueCat price A/B and/or a default-Monthly-vs-Annual A/B, GATED on
->    ~1k paywall-views/week (don't start an A/B below that — it can't conclude). The trial
->    is shipped to EVERYONE (not A/B'd) precisely because volume is too low for a clean
->    experiment; the A/B stays in reserve.
-> ⚠️ Re-run `aa-1.1.x/free-tier-probe` after ANY change to starting capital, aircraft
-> prices, or `hubMinRoutes` — it proves a free player can still reach a hub.
+> 2. **1.2.1 (build 42) is ON `main`, committed and verified, but NOT archived/uploaded.**
+>    It is the **fast follow**, to go up once 1.2 is APPROVED — do NOT submit it while 1.2
+>    is pending; the pivot build and its IAPs must clear as a unit. When 1.2 is live, the
+>    remaining work is: archive → validate → upload (the chain is in CLAUDE.md §Release,
+>    ASC API key `25FXKWL48U`), then create the version record + submit in ASC
+>    (designer-side).
 >
-> **Priority 2 — the standing "never played end-to-end" concern.** The soak harness
-> (`aa-1.1.x/SoakMain.swift`) closed the numeric/state-integrity half. The RESIDUAL is
-> the UI / "does it feel right" half, which no headless harness can see. It keeps paying:
-> driving the app this session found the **ASSIGN TO NEW ROUTE no-op** (headless passed
-> it 41/41) and the **SLC-as-plains** artwork bug (a systemic mis-mapping across Europe +
-> the Gulf). Sit with the app for a real stretch and watch it.
+> 3. **1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is
+>    deliberately clean of it). Feature-complete. Verified conflict-free against `main` —
+>    the merge is `git checkout main && git merge livery-prototype`.
 >
-> **Priority 3 — Resort Architect's telemetry pointer.** Every other family app
-> (+ Fruition) has TelemetryDeck wired + verified receiving; Resort was skipped mid
-> vertical-slice pass. Once that lands, add the pointer to its `CLAUDE.md` (the stronger,
-> pre-paywall wording — see the family doc) and flip its column in `ARCHITECT_FAMILY.md`
-> §2. **Verify the app-TARGET linkage, don't trust a callback** — the whole reason
-> Airline's telemetry silently no-op'd at first was a package added to the project but not
-> linked to the target.
+> **What 1.2.1 fixes (customer-reported):** a paying customer sent a screenshot showing
+> **all 35 of his airport incentives were routes into ATL**. The destination was
+> DETERMINISTIC — `hubs.first(where: served…)` on a traffic-sorted list, i.e. always the
+> single busiest airport in his network. Reproduced at 100%. Now a weighted random pick
+> (sqrt of passengers, ×3 if served, ×0.35 if not): top destination 100% → 12%, distinct
+> destinations 1 → 30+, and **60% still land on a served hub** so the offers stay worth
+> accepting. That 60% is the number to hold on any retune. Guarded by
+> `aa-1.1.x/OfferSpreadVerify.swift`, validated against the pre-fix code (fails 3/5 there).
 >
-> **Low priority, only if idle:** the explicit **Restore Purchases** button is still
-> unexercised (auto-restore works; it's unreachable while Pro — let a sandbox sub lapse to
-> test it), and **true cross-device iCloud sync** (needs two devices on one Apple ID; the
-> same-device delete/reinstall round-trip is already proven).
+> **Two gates before cutting 1.3** (neither blocks the merge; both block shipping):
+> - **Walk the full first-run flow on a REAL DEVICE** (naming → livery → launch). It has
+>   never been done end-to-end because sim text entry keeps backgrounding the app. This is
+>   the last unverified path in the livery feature.
+> - Everything else in the livery feature is verified: fins on all 35 types (contact sheet
+>   + live), the Fleet-detail render, repaint (47/47 headless + driven), the
+>   existing-player free-first-choice path and its one-time prompt (4/4 + driven), both
+>   themes.
 >
-> **Conventions that bite** (full list in HANDOFF): verify by DRIVING, not just building —
-> a clean `xcodebuild` proves nothing (both bugs above passed the build). The Finance cash
-> invariant is sacred. Temp hooks are NEVER committed (grep TEMPSHOT/forceTrial before any
-> commit — this session used a `-forceTrial` hook to verify the trial UI, then stripped
-> it). Update `CLAUDE.md` in the SAME commit as the code. New persisted fields need a
-> `decodeSafe` line. The App Store upload is scriptable end-to-end (archive → altool
-> validate → upload with the ASC API key; see CLAUDE.md / ARCHITECT_FAMILY.md §4).
+> **If you want to work on the livery branch**, `git checkout livery-prototype` and read
+> `LIVERY_SPEC.md` (branch-only — it is NOT on `main`) — it documents the painted-tail model, the fin-mask tooling in
+> `aa-livery/`, the repaint economy, and the layout gotchas.
+>
+> **Simulator warning that cost real time this session:** the input channel degrades —
+> taps land on the tab bar, and sibling Architect apps steal focus. If a tap seems to do
+> nothing, RE-SCREENSHOT before concluding a control is broken, and terminate the other
+> Postmark apps (`xcrun simctl terminate <udid> Postmark-Digital.GolfCourseArchitect`).
+> When it gets bad, verify headlessly instead — that is how the repaint numbers were
+> checked.
 
 ---
 
-## Deliberately NOT on the list
+## Useful commands
 
-- **Feature work.** Go Public, Competitor Acquisition, and Hubs & Clubs are all COMPLETE;
-  their specs remain as reference. The next feature should come from what the telemetry
-  says, not from the backlog.
-- **A pricing A/B right now.** Scoped in `PRICING_EXPERIMENT_SPEC.md` but GATED on volume
-  (~1k paywall views/week). Don't start one below that — it can't conclude, and acting on
-  a noisy result is the real risk.
-- **Storage rework.** Staying on iCloud KVS, not CloudKit — decided in CLAUDE.md with the
-  one trigger that would justify revisiting (a save approaching the ~1 MB KVS quota; today
-  ~21 KB).
-- **Re-flagging resolved items.** `README.md` doesn't exist and doesn't need to; App
-  Privacy is declared for analytics (Usage Data → Product Interaction, not linked to
-  identity → no ATT prompt); signing is healthy post-migration; the trial UI is built and
-  verified; the intro offers are configured and generating trials.
+```bash
+# review status (all three versions at a glance)
+cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"
+
+# the offer-spread regression (the 1.2.1 fix) — verified to run as-is on `main`
+mkdir -p /tmp/osv && cp aa-1.1.x/OfferSpreadVerify.swift /tmp/osv/main.swift
+swiftc -O -DDEBUG -o /tmp/osv/osv AirlineArchitect/AirlineArchitect/Sim/*.swift \
+  AirlineArchitect/AirlineArchitect/Persistence.swift /tmp/osv/main.swift && /tmp/osv/osv
+# ON `livery-prototype` ONLY, add the catalog stubs — Livery.swift imports SwiftUI and
+# can't compile headlessly:  cp aa-1.1.x/RepaintVerifyStubs.swift /tmp/osv/  (and pass it)
+
+# the soak (cash invariant + crew/route integrity) — run after ANY sim change
+mkdir -p /tmp/soak && cp aa-1.1.x/SoakMain.swift /tmp/soak/main.swift
+swiftc -O -DDEBUG -o /tmp/soak/soak AirlineArchitect/AirlineArchitect/Sim/*.swift \
+  AirlineArchitect/AirlineArchitect/Persistence.swift /tmp/soak/main.swift && /tmp/soak/soak
+
+# full-fleet livery contact sheet (on livery-prototype)
+python3 aa-livery/contact_sheet.py --parts 2 --width 1400 --rowheight 140
+```

@@ -5,17 +5,51 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 11 August 2026. **1.1.4 (39) and 1.1.5 (40) are BOTH LIVE** (1.1.5 = fuel-hedge
-persistence fix + close-route/park action, both customer-reported). **1.2 (build 41) is
-SUBMITTED FOR REVIEW** — the MONETIZATION PIVOT (subscription → one-time "Full Unlock",
-$9.99 founding pricing rising to $19.99 on Dec 1, 2026; two non-consumables
-`aa_unlock_founding_player`/`aa_unlock_standard` under RevenueCat offering packages
-`founding`/`standard`; both IAPs submitted WITH the build; see CLAUDE.md's "MONETIZATION
-PIVOT" note + PostmarkOps `ARCHITECT_FAMILY.md`). RevenueCat is fully configured
-(entitlement + products + offering, subs RETAINED for coexistence — an existing subscriber
-correctly keeps Pro on build 41, verified in TestFlight). **AFTER 1.2 IS LIVE + dominant:**
-remove Monthly/Yearly from the RevenueCat offering (NEVER delete the sub products); then
-watch trial→purchase conversion + the founding-price WOM. Next new build must be **42+**.
+_Snapshot: 17 August 2026. **`main` is 1.2.1 (build 42)** — a customer-reported fix,
+cut ahead of the livery release because it's live-behaviour and self-contained.
+**THE FIX:** airport recruitment offers always targeted the player's single biggest
+served hub (`hubs.first(...)` on a traffic-sorted list), so a paying customer with an
+ATL hub got **35 consecutive offers all terminating at ATL** — reproduced at 100%. The
+destination is now a weighted random pick (sqrt(pax), ×3 if served, ×0.35 if not), which
+keeps the hub bias (60% still land on a served hub) while dropping the top destination
+from 100% → 12%. Guarded by `aa-1.1.x/OfferSpreadVerify.swift`, VALIDATED against the
+pre-fix code (it fails 3/5 there). Verified on the branch: Debug + Release clean, 5/5
+offer spread, 6/6 soak seeds. **Build 42 is committed but NOT yet archived/uploaded** —
+that's the next action (export/validate/upload chain in CLAUDE.md §Release, ASC API key
+`25FXKWL48U`; creating the version record + submitting is designer-side in ASC).
+
+**1.2 (build 41) status:** was SUBMITTED FOR REVIEW — the MONETIZATION PIVOT
+(subscription → one-time "Full Unlock", $9.99 founding rising to $19.99 on Dec 1, 2026;
+two non-consumables `aa_unlock_founding_player`/`aa_unlock_standard` under RevenueCat
+offering packages `founding`/`standard`). RevenueCat fully configured (entitlement +
+products + offering, subs RETAINED for coexistence — an existing subscriber correctly
+keeps Pro, verified in TestFlight). **AFTER 1.2 IS LIVE + dominant:** remove
+Monthly/Yearly from the RevenueCat offering (NEVER delete the sub products); then watch
+trial→purchase conversion + the founding-price WOM. **PLAN (designer, 17 Aug): wait for 1.2 to be APPROVED, then 1.2.1 as a fast follow,
+then 1.3.** So do NOT submit 1.2.1 while 1.2 is pending — the pivot build and its two
+IAPs must clear as a unit.
+
+**1.2 REVIEW STATUS, checked via the ASC API on 17 Aug (`ASCTools/asc.py`):** state is
+**`WAITING_FOR_REVIEW`** — it has NOT entered review yet, 6 days after submission
+(submitted Aug 12, `reviewSubmissions` id `8f904565-…`). Everything on our side is
+correct and there is nothing to fix: build 41 is attached and `VALID`, the review
+submission holds **3 items** (the version + `aa_unlock_founding_player` +
+`aa_unlock_standard`), all `READY_FOR_REVIEW`, and both IAPs are `WAITING_FOR_REVIEW`
+in step with the build. It is purely Apple queue time — for contrast, 1.1.1→1.1.5 each
+cleared in about a day. A first-time **monetization-model change plus two new IAPs**
+plausibly draws a longer look. Re-check with:
+`python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`.
+If it stays queued much longer, the lever is a Contact Us / expedite request in ASC —
+resubmitting would only lose queue position.
+
+**1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is
+deliberately clean of it). Feature-complete — painted tails on all 35 types, the
+creation + re-customise flows, fleet repaint (itemized cost + shop queue + lost-revenue
+opportunity cost), and the existing-player free-first-choice path with a one-time update
+prompt. See `LIVERY_SPEC.md` (branch-only — not on `main`; check out the branch to read it).
+Two gates before cutting 1.3: walk the first-run flow on a
+REAL DEVICE (sim text entry backgrounds the app), and the merge itself (verified
+conflict-free). Next new build after 42 must be **43+**.
 Clean tree on `main`, all pushed. App:
 <https://apps.apple.com/us/app/airline-architect/id6790569697>._
 
@@ -166,6 +200,16 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   extended (can't edit — delete + recreate). Full decision/mechanics: `PRICING_EXPERIMENT_SPEC.md`.
 
 ## NEXT — see `NEXT_SESSION_PROMPT.md`
+
+> **⭐ IN-FLIGHT FEATURE: personalized aircraft LIVERY** (surprise-&-delight). A
+> designer-approved prototype lives on the **`livery-prototype`** branch (pushed to
+> origin), NOT on `main` — the player's airline name is painted on the fuselage (window-
+> line titles with the windows cutting through them) + a recolourable tail emblem, all
+> palette-driven. **`git checkout livery-prototype` and read `LIVERY_SPEC.md`** (on that
+> branch). The designer set the next-session plan: **(1) normalize the 5 tail emblem PNGs
+> (trim to artwork bounds + centre), (2) build the livery creation flow** (2-colour +
+> emblem picker on the naming screen, persistence, wire into Fleet/Acquire). Keep `main`
+> clean until 1.2 is live; ship the livery as its own later version.
 
 The prioritised brief for the next session lives in **`NEXT_SESSION_PROMPT.md`** —
 a paste-ready block written to be understood cold. In short:
