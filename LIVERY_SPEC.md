@@ -3,8 +3,19 @@
 > ## ▶▶ CURRENT STATE (15 Aug 2026, `livery-prototype`) — PAINTED TAIL, FEATURE COMPLETE
 >
 > The livery feature is **built and looks like a real airline**. All pushed to
-> `origin/livery-prototype`; **`main` untouched** (keep it clean until 1.2 is live).
-> Debug + Release both build clean.
+> `origin/livery-prototype`. Debug + Release both build clean.
+>
+> **▶ SHIPS AS 1.3, AFTER 1.2.1.** Release order (designer, 17 Aug): 1.2 (the monetization
+> pivot, WAITING_FOR_REVIEW) → 1.2.1 (the airport-offer fix, on `main` build 42, awaiting
+> 1.2's approval) → **1.3 = this branch**. `main` is deliberately clean of livery code;
+> `main` has been MERGED INTO this branch (17 Aug) so it carries 1.2.1 and current docs,
+> and the merge back is verified conflict-free.
+>
+> **ONE GATE LEFT before cutting 1.3: walk the full first-run flow (naming → livery →
+> launch) on a REAL DEVICE.** It has never been done end-to-end — sim text entry keeps
+> backgrounding the app. Everything else is verified: fins on all 35 types, the
+> Fleet-detail render, repaint (47/47 headless + driven), the existing-player
+> free-first-choice path + one-time prompt (4/4 + driven), both themes.
 >
 > ### The livery model (as shipped on this branch)
 > A player picks a **font**, a **2-colour palette**, a **tail emblem**, and the
