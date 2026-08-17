@@ -57,6 +57,15 @@
 >   `-galleryPalette <0-9>`. (Its background is fixed light-grey, so it does NOT show
 >   the app's dark theme — use `-liveryPreview` for a true dark-theme check.)
 >
+> ### ⚠️ The designer's insets are DYNAMIC now (fixed 15 Aug 2026)
+> `LiveryDesignView` had a hardcoded `safeAreaPadding(.top, 58)` — tuned on one iPhone,
+> and wrong anywhere the metrics differ. It now reads the device's real top inset:
+> `max(24, topSafeInset + 4)`, which yields **58 on the iPhone it was dialled on** (54+4,
+> so the tuned look is preserved pixel-for-pixel — verified) and adapts elsewhere
+> (no-notch 24, older notch 51, iPad 28). The floor keeps a sane gap if a platform
+> reports 0. `topSafeInset` reads the active `UIWindowScene`'s `safeAreaInsets` rather
+> than a GeometryReader, so it can't fight the ScrollView's own layout.
+>
 > ### ⚠️ EDIT MODE pads for the tab bar (fixed 15 Aug 2026)
 > `LiveryDesignView` is used in TWO contexts and they need different bottom padding:
 > first-launch is FULL-SCREEN (no tab bar, 8pt is right), but EDIT mode is presented

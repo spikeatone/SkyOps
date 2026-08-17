@@ -57,6 +57,14 @@ struct LiveryDesignView: View {
     private var cardStroke: Color { isDark ? Sky.onDarkStroke.opacity(0.6) : hex(0xE2E8F0) }
     private var selRing: Color { isDark ? hex(0xBDE0FF) : hex(0x497AA5) }
 
+    /// The device's real top safe-area inset (status bar / notch / Dynamic Island).
+    /// Read from the active scene rather than a GeometryReader so it can't fight the
+    /// ScrollView's own layout.
+    private var topSafeInset: CGFloat {
+        (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
+            .keyWindow?.safeAreaInsets.top ?? 54
+    }
+
     var body: some View {
         ZStack {
             background.ignoresSafeArea()
@@ -89,7 +97,14 @@ struct LiveryDesignView: View {
                 .frame(maxWidth: 620)
                 .frame(maxWidth: .infinity)
             }
-            .safeAreaPadding(.top, 58)   // clear the status bar / notch — but keep the screen high in the frame
+            // Clear the status bar / Dynamic Island, but keep the screen high in the
+            // frame. Derived from the DEVICE's real top inset rather than a hardcoded
+            // 58: that number was tuned on one iPhone and would sit wrong anywhere the
+            // metrics differ (an iPad's inset is ~24, a no-notch device's ~20, and a
+            // taller island is more). `topInset + 4` reproduces the tuned look on the
+            // device it was dialled on (54 + 4) while adapting everywhere else, and the
+            // floor keeps a sane gap if a platform reports 0.
+            .safeAreaPadding(.top, max(24, topSafeInset + 4))
         }
         .onAppear {
             guard !didSeed else { return }
