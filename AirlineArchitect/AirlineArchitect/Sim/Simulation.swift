@@ -3602,11 +3602,37 @@ final class Simulation {
         let bySize = conus.sorted { ($0.info?.annualPassengers ?? 0) < ($1.info?.annualPassengers ?? 0) }
         let smaller = Array(bySize.prefix(max(1, bySize.count * 2 / 3)))   // bottom ~2/3 by traffic
         guard let origin = smaller.filter({ !servedCodes.contains($0.code) }).randomElement() else { return }
-        let hubs = conus.sorted { ($0.info?.annualPassengers ?? 0) > ($1.info?.annualPassengers ?? 0) }
-        let dest = hubs.first(where: { servedCodes.contains($0.code) && $0.code != origin.code
-                                       && !servedPairs.contains(pairKey(origin.code, $0.code)) })
-            ?? hubs.first(where: { $0.code != origin.code && !servedPairs.contains(pairKey(origin.code, $0.code)) })
-        guard let dest else { return }
+        // DESTINATION — weighted random, NOT "the biggest airport you serve".
+        //
+        // This used to be `hubs.first(where: served…)` on a list sorted by traffic
+        // descending, so the destination was ALWAYS the single busiest airport in
+        // the player's network. A customer with a big ATL hub got 35 consecutive
+        // offers that all terminated at ATL. The bias toward a real hub is right —
+        // an airport courting you wants a connection to your network — but it has
+        // to be a bias, not a constant.
+        //
+        // So: every served airport is a candidate, weighted by its own traffic, and
+        // the weight is COMPRESSED (square root) so a mega-hub is favoured without
+        // swamping mid-size stations. Unserved airports stay a low-weight tail, which
+        // keeps the occasional "open a brand-new market" offer alive.
+        let candidates = conus.filter { $0.code != origin.code
+                                        && !servedPairs.contains(pairKey(origin.code, $0.code)) }
+        guard !candidates.isEmpty else { return }
+        let weighted: [(Airport, Double)] = candidates.map { ap in
+            let pax = Double(ap.info?.annualPassengers ?? 0)
+            // sqrt compresses the spread (ATL ~50M vs a mid hub ~10M is 2.2x, not 5x)
+            let base = max(1, pax.squareRoot())
+            // a hub the player already serves is a plausible connection — favoured,
+            // but only 3x, so it can't monopolise the way `.first` did.
+            return (ap, servedCodes.contains(ap.code) ? base * 3 : base * 0.35)
+        }
+        let totalWeight = weighted.reduce(0) { $0 + $1.1 }
+        var roll = Double.random(in: 0..<totalWeight)
+        var dest = weighted[0].0
+        for (ap, w) in weighted {
+            if roll < w { dest = ap; break }
+            roll -= w
+        }
 
         let demand = routeDailyDemand(origin, dest)
         let bonus = min(500_000, 100_000 + demand * 300)
