@@ -16,8 +16,10 @@ first-time monetization change + 2 IAPs drew a longer look than the ~1-day 1.1.x
 **NOW THAT IT'S LIVE + once it's dominant:** remove Monthly/Yearly from the RevenueCat
 offering (NEVER delete the sub products); watch trial→purchase conversion + founding-price WOM.
 
-**► 1.2.1 is BUILD 43 — UPLOADED to ASC 18 Aug, submit is ASC-SIDE (designer TODO).**
-It carries TWO things:
+**► 1.2.1 is BUILD 43 — SUBMITTED FOR REVIEW 18 Aug.** (Uploaded via CLI, then the
+designer created the version record, set the "What's New", attached build 43, and
+submitted in the ASC web UI — no IAP re-review since the two unlock products already
+cleared with 1.2, so it should move faster than 1.2's ~6-day queue.) It carries TWO things:
 - **The airport-offer fix** (the customer-reported one): recruitment offers always targeted
   the player's single biggest served hub (`hubs.first(...)` on a traffic-sorted list) — an ATL
   customer got 35 consecutive offers all into ATL, repro'd at 100%. Now a weighted random pick
@@ -32,8 +34,8 @@ It carries TWO things:
   still needs applying to the OTHER Architect apps (Golf/Vineyard/etc.) — NOT done here.
 - **Verified + shipped:** clean Release build, offer-spread 5/5 on build-43 main, `altool
   --validate-app` + `--upload-app` both clean (Delivery UUID `689635df-0f22-4025-bc0f-6b1066f5ac38`).
-  **REMAINING (ASC-side, designer): create the 1.2.1 version record → attach build 43 → submit.**
-  Build takes ~5–30 min to finish processing after upload before it can be attached.
+  **DONE: version record created, build 43 attached, SUBMITTED FOR REVIEW 18 Aug.** Next
+  action is just to watch the review state (poll or `asc.py`), then it auto-releases on approval.
 
 **► 1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is clean of
 it). Feature-complete — painted tails on all 35 types, the creation + re-customise flows, fleet
@@ -104,9 +106,13 @@ Contents:
 - **Two paywall fixes (from the pricing-experiment prep):** no stale-price flash
   (`Store.pricesAreLive` gates the price), and the savings badge is computed from real
   prices (`savingsNote`) instead of a hardcoded "Save 30%".
-- **ASC Promotional Text updated** (9 Aug, new-user hook): "Start with one jet and
-  build an airline that spans the globe. 385 real airports…". Promo text updates
-  with no review — a free lever to re-tune anytime.
+- **ASC Promotional Text** — the STANDING copy for all future releases lives in
+  `APP_STORE_DESCRIPTION.md` (designer, 18 Aug): "Start with one jet and build an airline
+  that spans the globe. 385 real airports, real economics. One-time unlock — no
+  subscription, no tedious in-app spending." Promo text updates with NO review — a free
+  lever, editable anytime. ⚠️ Keep "no tedious in-app spending" (NOT "no in-app
+  purchases" — the one-time unlock IS an IAP); re-verify the 385 airport count if airports
+  are added.
 
 ## What shipped in 1.1.3 (build 38) — LIVE
 

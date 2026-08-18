@@ -46,11 +46,23 @@ Privacy Policy: https://spikeatone.github.io/airline-architect/privacy.html
 # Promotional Text (ASC → App Information → Promotional Text)
 
 170-char max. Appears ABOVE the description and can be edited ANY time WITHOUT a
-new review — good for rotating a hook. This one is ~156 chars.
+new review — good for rotating a hook.
+
+**► STANDING PROMO TEXT — use this on ALL future releases (designer, 18 Aug 2026).**
+Leads with the proven "one jet → global" hook and lands the monetization pivot as a
+gameplay promise, not just a price. 158 chars. The "385 real airports" is exact as of
+18 Aug — re-verify with `grep -c '\.init(code:' AirlineArchitect/AirlineArchitect/Sim/Airport.swift`
+before reusing if airports have been added, and bump the number to match.
+⚠️ Keep "no tedious in-app spending" — NOT "no in-app purchases" (there IS the one-time
+unlock IAP; an absolute no-IAP claim would contradict the purchase model).
 
 ------------------------------------------------------------------------------
-One jet and $20M. Grow a global airline in a living world of real airports and aircraft — build hubs, ride the seasons, take it public, or buy out your rivals.
+Start with one jet and build an airline that spans the globe. 385 real airports, real economics. One-time unlock — no subscription, no tedious in-app spending.
 ------------------------------------------------------------------------------
+
+_(Prior hook, kept for reference: "One jet and $20M. Grow a global airline in a living
+world of real airports and aircraft — build hubs, ride the seasons, take it public, or
+buy out your rivals.")_
 
 
 # What's New / Version release notes (ASC → the version's "What's New" field)
