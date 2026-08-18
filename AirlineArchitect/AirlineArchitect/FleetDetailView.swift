@@ -153,8 +153,12 @@ struct FleetDetailView: View {
                 }
             }
             ownershipChip(aircraft.isLeased)
-            if let img = AircraftArt.image(for: aircraft.type.id) {
-                img.resizable().scaledToFit().frame(maxWidth: .infinity)
+            if AircraftArt.uiImage(for: aircraft.type.id) != nil {
+                // Owned aircraft wear the player's livery (name + tail emblem).
+                AircraftLiveryImage(typeID: aircraft.type.id,
+                                    name: sim.liveryTitle,
+                                    livery: sim.livery)
+                    .frame(maxWidth: .infinity)
             } else {
                 Image(systemName: "airplane")
                     .font(.system(size: 60)).foregroundStyle(secondary.opacity(0.5))

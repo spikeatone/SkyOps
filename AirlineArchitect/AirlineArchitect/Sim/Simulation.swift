@@ -595,6 +595,11 @@ final class Simulation {
     private(set) var adCampaignUntil:    [Int: Int] = [:]
     private(set) var loyaltyPushUntil:   [Int: Int] = [:]
     private(set) var totalMarketingSpend = 0
+    /// Capital-out accumulator for fleet repaints. In the cash invariant.
+    private(set) var totalRepaintSpend = 0
+    /// How many aircraft the running repaint program covers (0 = none running).
+    /// Persisted so a reload can still report "3 of 12 done".
+    private(set) var repaintProgramTotal = 0
 
     static let promoFareWarDurationDays = 21
     static let promoAdDurationDays = 14
@@ -1421,6 +1426,7 @@ final class Simulation {
             - (totalIntegrationSpend + totalSenioritySpend + totalDiligenceSpend)
             - totalAcquisitionSpend - totalRouteSpend - totalHedgeSpend - totalHubSpend
             - totalAcquisitionPrice - totalDividendsPaid - totalBuybackSpend - totalMarketingSpend
+            - totalRepaintSpend
             + totalSaleProceeds + totalOfferIncome + totalLoanProceeds + totalEquityRaised
         return expected - playerBalance
     }
@@ -1441,9 +1447,63 @@ final class Simulation {
         case activist
         /// Listed + diluted + slumping, one board tick from removal → OUSTED.
         case ouster
+        /// A named airline wearing a real livery with a spread of owned aircraft —
+        /// for checking the LIVERY on the FLEET DETAIL screen, which is where a
+        /// player actually meets it (the -liveryGallery harness only ever shows the
+        /// bare illustration + overlay, never the real screen chrome around it).
+        case fleet
+        /// A BIG fleet (20 aircraft, mixed classes) — for judging the repaint quote
+        /// and the shop queue at a realistic late-game scale.
+        case bigfleet
+        /// An EXISTING player's save from BEFORE the livery feature: a real fleet
+        /// flying real routes, but `liveryChosen` false — so the fleet is wearing
+        /// defaults nobody picked and the one free "Add Livery" choice is pending.
+        case legacyPlayer
     }
 
     func devSeed(_ scenario: DevScenario) {
+        if scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer {
+            if scenario == .legacyPlayer {
+                // No setLivery call — exactly what a pre-feature save restores as:
+                // default indices, liveryChosen false.
+                nameAirline("Meridian Air", tailCode: "MR")
+            } else {
+                nameAirline("Air Tina", tailCode: "TN")
+                setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "AIR TINA")
+            }
+            devInjectCash(3_000_000_000)
+            // One per body-type family, so the detail screen can be checked against a
+            // turboprop, a regional jet, a narrowbody and a widebody in one session.
+            let small = ["DH8B", "AT46", "B1900", "D328", "CRJ900", "A320", "B789"]
+            // A realistic mid-size airline: mostly narrowbodies, a regional tail, a
+            // few widebodies — the shape that makes the repaint quote worth reading.
+            let legacy = ["A320", "A320", "B737800", "E175", "CRJ900"]
+            let big = ["A320", "A320", "A320", "A321", "A321", "B737800", "B737800",
+                       "B739", "MAX8", "MAX8", "E175", "E175", "CRJ900", "ERJ145",
+                       "DH8B", "AT46", "B789", "B788", "B773", "A380"]
+            let ids = scenario == .bigfleet ? big : (scenario == .legacyPlayer ? legacy : small)
+            for id in ids {
+                if let t = AircraftType.all.first(where: { $0.id == id }) { _ = buyAircraft(t) }
+            }
+            // Put the fleet to WORK — an idle spare earns nothing, so without
+            // routes the repaint quote's lost-revenue estimate is (correctly) zero
+            // and there'd be nothing to look at. Each spare takes the first pair
+            // it can physically fly.
+            let hubs = ["JFK", "LAX", "ORD", "DFW", "ATL", "DEN", "SFO", "SEA", "MIA", "BOS"]
+            let pool = hubs.compactMap { code in airports.first { $0.code == code } }
+            var pair = 0
+            for ac in aircraft where ac.purchased && ac.assignedRouteId == nil {
+                var opened = false
+                var tries = 0
+                while !opened && tries < pool.count * 2 {
+                    let o = pool[pair % pool.count], d = pool[(pair + 1 + tries / pool.count) % pool.count]
+                    pair += 1; tries += 1
+                    if o.code != d.code, routeBlock(for: ac, from: o, to: d) == nil,
+                       case .success = openRoute(from: o, to: d, using: ac) { opened = true }
+                }
+            }
+            return
+        }
         nameAirline("Test Air", tailCode: "TS")
         // netWorth = balance + fleetMarketValue, and this airline has no fleet,
         // so cash alone clears the gate.
@@ -1881,6 +1941,260 @@ final class Simulation {
         let code = tailCode.uppercased().filter { $0.isLetter }
         // Ignore an invalid/blank/colliding code and keep the safe default.
         if code.count == 2 && Airline.realCodes[code] == nil { playerTailCode = code }
+    }
+
+    /// The player's chosen livery: title font, 2-colour palette, and tail emblem,
+    /// stored as indices into the Livery.swift catalogs. Set on the livery design
+    /// screen (right after naming). Defaults to the first-of-each so a legacy save
+    /// or a skipped-design game still paints a sensible livery.
+    private(set) var liveryFontIndex = 0
+    private(set) var liveryPaletteIndex = 0
+    private(set) var liveryTailArtIndex = 1     // 1-based; 0 = no emblem
+    /// The text PAINTED on the fuselage — separate from `playerAirlineName` (the
+    /// company name). Chosen on the livery screen, capped at `Livery.maxTextLength`
+    /// so it fits the window line. Empty → the illustration falls back to the name.
+    private(set) var liveryText = ""
+    /// Has the player ever CHOSEN a livery? A new game sets this at the design step;
+    /// a save from before the livery feature decodes it false, because those players
+    /// were never asked. Until it's true the fleet is wearing DEFAULTS nobody picked,
+    /// so the first real choice is FREE — charging for it would bill an existing
+    /// player for the initial pick every new player gets free at naming. Every
+    /// change after that is a paid repaint.
+    private(set) var liveryChosen = false
+    /// True when the player still owes their one free livery choice.
+    var needsFirstLivery: Bool { !liveryChosen }
+    /// The resolved livery, for the Fleet / Acquire / tooltip illustrations.
+    var livery: Livery {
+        Livery(fontIndex: liveryFontIndex, paletteIndex: liveryPaletteIndex, tailArtIndex: liveryTailArtIndex)
+    }
+    /// What actually gets painted: the livery text if set, else the airline name.
+    var liveryTitle: String {
+        liveryText.isEmpty ? (playerAirlineName ?? "") : liveryText
+    }
+    // MARK: - Fleet repaint
+    //
+    // Changing the livery restyles every aircraft, so it can't be free: a real
+    // repaint is a strip-and-paint job costing six figures per airframe, and the
+    // BIGGER cost is the 1–2 weeks the jet sits in the shop earning nothing.
+    // Both are modelled. Cost bands are real (designer-sourced): narrowbody
+    // $50–150k (a 737-900ER refresh is ~$131k), widebody $150–300k, jumbo
+    // $300–500k+ (an A380 runs $200–300k, more for intricate artwork).
+    //
+    // The BILL is charged up front; the DOWNTIME is per-aircraft and staggered by
+    // the parked gate, so a flying jet finishes its leg before going in.
+
+    /// Paint-shop bill for one airframe, by size. Turboprops and regional jets
+    /// sit below the narrowbody band (less surface, no wide-body hangar).
+    static func repaintCost(for type: AircraftType) -> Int {
+        switch type.bodyType {
+        case .turboprop:       return 35_000
+        case .regionalJet:     return 60_000
+        case .narrowbody:      return 130_000   // ~a real 737-900ER refresh
+        case .widebody2Engine: return 225_000
+        case .widebody4Engine: return 400_000   // jumbo band (A380/747)
+        }
+    }
+    /// Sim-days of TOTAL HANGAR OCCUPANCY for one airframe — real figures: a
+    /// narrowbody is 3–7 days of active shop time but 5–10 days of occupancy; a
+    /// widebody 7–14 active, 10–21 total for a custom livery. These are the
+    /// occupancy numbers, because occupancy is what costs the player revenue.
+    ///
+    /// The real job is four stages, and they corroborate these totals:
+    ///   strip 1–3d · prep + prime 1–3d · paint + livery 1–7d · clear coat + cure 1–3d
+    /// = 4–16 days of work, plus hangar turnaround. Modelled as one duration rather
+    /// than four tracked stages — the player never schedules around a stage, so
+    /// splitting it would be detail with no decision attached.
+    static func repaintDays(for type: AircraftType) -> Int {
+        switch type.bodyType {
+        case .turboprop, .regionalJet:   return 7
+        case .narrowbody:                return 10
+        case .widebody2Engine:           return 14
+        case .widebody4Engine:           return 18
+        }
+    }
+
+    /// How many aircraft the paint shop can hold at once. An airline doesn't pull
+    /// its whole fleet at the same time — it schedules them through in ones and
+    /// twos, which is why a fleet repaint takes MONTHS of calendar time, not the
+    /// length of one paint job. Two slots keeps that real without turning the
+    /// feature into a scheduling chore for the player.
+    static let repaintShopSlots = 2
+
+    /// One line of the repaint quote — the UI itemizes rather than showing a bare
+    /// total, so the player can see WHERE the money goes before committing.
+    struct RepaintLine: Identifiable {
+        var id: String { typeID }
+        let typeID: String
+        let typeName: String
+        let count: Int
+        let eachCost: Int
+        let days: Int
+        /// Revenue this type's aircraft won't earn while they're in the shop —
+        /// per airframe, for the whole time it's grounded.
+        let eachLostRevenue: Int
+        var lineCost: Int { eachCost * count }
+        var lineLostRevenue: Int { eachLostRevenue * count }
+        /// What the repaint really costs for this line: paint + forgone revenue.
+        var lineTotal: Int { lineCost + lineLostRevenue }
+    }
+
+    /// One full flight cycle (parked → … → turnaround) in ticks, i.e. how long an
+    /// aircraft takes to earn one leg's net. Sum of `FlightState.durationTicks`.
+    static let legCycleTicks = 409
+
+    /// Net revenue one aircraft earns per sim-day IN SERVICE, from its own route.
+    /// An idle spare earns nothing, so grounding it costs nothing — the estimate
+    /// only counts aircraft actually flying a route.
+    ///
+    /// Prefers the route's REALISED average (`cumulativeNet / flights`) over the
+    /// in-flight leg: a single leg is noisy — fares and load carry a per-flight
+    /// random spread — so quoting from it makes the same fleet show a different
+    /// number every time the card opens. Falls back to the current leg for a route
+    /// that hasn't completed a flight yet.
+    func dailyNet(for ac: Aircraft) -> Int {
+        guard ac.purchased, let rid = ac.assignedRouteId else { return 0 }
+        let route = playerRoutes.first { $0.id == rid }
+        let perLeg: Int
+        if let r = route, r.flights > 0 {
+            perLeg = r.cumulativeNet / r.flights
+        } else {
+            perLeg = legEconomics(for: ac).net
+        }
+        guard perLeg > 0 else { return 0 }   // grounding a loss-making leg costs no revenue
+        let legsPerDay = 1440.0 / Double(Simulation.legCycleTicks)
+        return Int((Double(perLeg) * legsPerDay).rounded())
+    }
+
+    /// Revenue forgone by grounding this aircraft for its whole paint job.
+    func repaintLostRevenue(for ac: Aircraft) -> Int {
+        dailyNet(for: ac) * Simulation.repaintDays(for: ac.type)
+    }
+
+    /// The itemized quote for repainting the whole owned fleet, grouped by type
+    /// and ordered most-expensive line first.
+    var repaintQuote: [RepaintLine] {
+        let owned = aircraft.filter { $0.purchased }
+        let byType = Dictionary(grouping: owned, by: { $0.type.id })
+        return byType.compactMap { id, group -> RepaintLine? in
+            guard let t = group.first?.type else { return nil }
+            // Lost revenue is averaged across this type's aircraft: some may be
+            // routed and earning, others idle spares that cost nothing to ground.
+            let lost = group.reduce(0) { $0 + repaintLostRevenue(for: $1) }
+            return RepaintLine(typeID: id, typeName: t.name, count: group.count,
+                               eachCost: Simulation.repaintCost(for: t),
+                               days: Simulation.repaintDays(for: t),
+                               eachLostRevenue: lost / max(1, group.count))
+        }
+        .sorted { $0.lineCost == $1.lineCost ? $0.typeName < $1.typeName : $0.lineCost > $1.lineCost }
+    }
+    var repaintTotal: Int { repaintQuote.reduce(0) { $0 + $1.lineCost } }
+    /// Total revenue the fleet won't earn while it cycles through the shop.
+    /// NOT charged — it's revenue that simply never arrives, so it can't be a
+    /// cash-invariant term; it's shown so the player sees the real cost.
+    var repaintLostRevenueTotal: Int { repaintQuote.reduce(0) { $0 + $1.lineLostRevenue } }
+    /// Paint bill + forgone revenue — what the repaint actually costs.
+    var repaintTrueCost: Int { repaintTotal + repaintLostRevenueTotal }
+    /// Longest single-aircraft downtime — the fleet is repainted in parallel, so
+    /// this is when the LAST jet is back, not the sum.
+    /// Calendar days to get the WHOLE fleet through the shop, given it only holds
+    /// `repaintShopSlots` at a time. Aircraft are scheduled through in ones and twos
+    /// like a real airline, so this scales with FLEET SIZE — it is not the length of
+    /// the single longest job. Computed by simulating the queue: each aircraft goes
+    /// to whichever slot frees first (classic list scheduling).
+    var repaintProgramDays: Int {
+        var slots = Array(repeating: 0, count: max(1, Simulation.repaintShopSlots))
+        // Longest job first — the same order the program actually runs (below), so
+        // the estimate the player is shown matches what they get.
+        for d in repaintJobDays.sorted(by: >) {
+            let i = slots.indices.min { slots[$0] < slots[$1] }!
+            slots[i] += d
+        }
+        return slots.max() ?? 0
+    }
+    /// Per-airframe shop durations for the owned fleet (one entry per aircraft).
+    private var repaintJobDays: [Int] {
+        aircraft.filter(\.purchased).map { Simulation.repaintDays(for: $0.type) }
+    }
+    /// Aircraft currently IN the shop (being painted right now).
+    var repaintingCount: Int { aircraft.filter { $0.purchased && $0.inPaintShop }.count }
+    /// Aircraft painted, waiting their turn — still flying and earning until called in.
+    var repaintQueuedCount: Int { aircraft.filter { $0.purchased && $0.repaintQueued }.count }
+    /// The program is running while anything is in the shop OR still waiting.
+    var repaintInProgress: Bool { repaintingCount > 0 || repaintQueuedCount > 0 }
+    /// Aircraft already through the shop, of the fleet the program covers.
+    var repaintDoneCount: Int { max(0, repaintProgramTotal - repaintingCount - repaintQueuedCount) }
+    var canAffordRepaint: Bool { playerBalance >= repaintTotal }
+
+    /// Repaint the whole owned fleet into a new livery. Charges the full bill up
+    /// front and sends every owned aircraft to the shop. Returns false (changing
+    /// NOTHING) if it can't be afforded or one is already under way, so a failed
+    /// repaint can never half-apply a livery or half-charge for it.
+    @discardableResult
+    func repaintFleet(fontIndex: Int, paletteIndex: Int, tailArtIndex: Int, text: String) -> Bool {
+        guard !repaintInProgress else { return false }
+        let bill = repaintTotal
+        guard bill > 0, playerBalance >= bill else { return false }
+
+        playerBalance -= bill
+        totalRepaintSpend += bill
+        setLivery(fontIndex: fontIndex, paletteIndex: paletteIndex, tailArtIndex: tailArtIndex, text: text)
+
+        // BOOK the whole fleet into the program; the shop only takes
+        // `repaintShopSlots` at a time, so most aircraft keep flying (and earning)
+        // until they're called in. `tickRepaint` pulls them through.
+        let owned = aircraft.filter(\.purchased)
+        for ac in owned { ac.repaintQueued = true }
+        repaintProgramTotal = owned.count
+        fillPaintShop()
+
+        logOps(.structural, "Fleet repaint scheduled",
+               "\(owned.count) aircraft · \(compactMoneySim(bill)) · ~\(repaintProgramDays)d through the shop")
+        return true
+    }
+
+    /// Call in as many queued aircraft as there are free slots. Longest jobs first,
+    /// which is what makes the whole program finish soonest (and matches the
+    /// estimate `repaintProgramDays` shows the player).
+    private func fillPaintShop() {
+        var free = Simulation.repaintShopSlots - repaintingCount
+        guard free > 0 else { return }
+        let waiting = aircraft
+            .filter { $0.purchased && $0.repaintQueued && !$0.inPaintShop }
+            .sorted { Simulation.repaintDays(for: $0.type) > Simulation.repaintDays(for: $1.type) }
+        for ac in waiting where free > 0 {
+            ac.repaintQueued = false
+            ac.repaintStartTick = tick
+            ac.repaintUntilTick = tick + Simulation.repaintDays(for: ac.type) * 1440
+            free -= 1
+        }
+    }
+
+    /// Release finished aircraft and pull the next ones in. Called once per tick.
+    func tickRepaint() {
+        guard repaintInProgress else { return }
+        var released = false
+        for ac in aircraft where ac.purchased {
+            if let until = ac.repaintUntilTick, tick >= until {
+                ac.repaintUntilTick = nil
+                ac.repaintStartTick = nil
+                released = true
+            }
+        }
+        // A freed slot immediately takes the next aircraft in the queue.
+        if released { fillPaintShop() }
+        if released && !repaintInProgress {
+            logOps(.structural, "Fleet repaint complete",
+                   "All \(repaintProgramTotal) aircraft are back in service in the new livery")
+            repaintProgramTotal = 0
+        }
+    }
+
+    func setLivery(fontIndex: Int, paletteIndex: Int, tailArtIndex: Int, text: String) {
+        liveryChosen = true
+        liveryFontIndex = max(0, min(LiveryFont.all.count - 1, fontIndex))
+        liveryPaletteIndex = max(0, min(LiveryPalette.all.count - 1, paletteIndex))
+        liveryTailArtIndex = max(0, min(TailArt.count, tailArtIndex))   // allow 0 = none
+        liveryText = String(text.trimmingCharacters(in: .whitespaces).prefix(Livery.maxTextLength))
     }
 
     private(set) var playerBalance = startingCapital
@@ -3112,6 +3426,7 @@ final class Simulation {
         tickCompetition()
         // Expire finished player promotions (fare war / ad / loyalty).
         tickPromotions()
+        tickRepaint()
         // A rival occasionally bids to buy one of the player's hubs.
         tickHubOffers()
 
@@ -4024,6 +4339,11 @@ final class Simulation {
         s.savedAtTick = tick
         s.playerAirlineName = playerAirlineName
         s.playerTailCode = playerTailCode
+        s.liveryFontIndex = liveryFontIndex
+        s.liveryPaletteIndex = liveryPaletteIndex
+        s.liveryTailArtIndex = liveryTailArtIndex
+        s.liveryChosen = liveryChosen
+        s.liveryText = liveryText
         s.playerBalance = playerBalance
         s.tick = tick
         s.calendarStartDay = calendarStartDay
@@ -4059,6 +4379,8 @@ final class Simulation {
         s.totalDividendsPaid = totalDividendsPaid
         s.totalBuybackSpend = totalBuybackSpend
         s.totalMarketingSpend = totalMarketingSpend
+        s.totalRepaintSpend = totalRepaintSpend
+        s.repaintProgramTotal = repaintProgramTotal
         s.playerFareWarUntil = playerFareWarUntil
         s.adCampaignUntil = adCampaignUntil
         s.loyaltyPushUntil = loyaltyPushUntil
@@ -4080,6 +4402,9 @@ final class Simulation {
                          stateIndex: ac.stateIndex, stateTick: ac.stateTick, cyclesAccrued: ac.cyclesAccrued,
                          assignedRouteId: ac.assignedRouteId, pendingRouteId: ac.pendingRouteId,
                          pendingPark: ac.pendingPark,
+                         repaintUntilTick: ac.repaintUntilTick,
+                         repaintStartTick: ac.repaintStartTick,
+                         repaintQueued: ac.repaintQueued,
                          sellOfferDismissed: ac.sellOfferDismissed,
                          isLeased: ac.isLeased, leaseAccrued: ac.leaseAccrued, maint: ac.maint,
                          aogAutoClearTick: ac.aogAutoClearTick, crewId: ac.crewId,
@@ -4143,6 +4468,11 @@ final class Simulation {
     func restore(from s: GameSnapshot) {
         playerAirlineName = s.playerAirlineName
         playerTailCode = s.playerTailCode
+        liveryFontIndex = s.liveryFontIndex
+        liveryPaletteIndex = s.liveryPaletteIndex
+        liveryTailArtIndex = s.liveryTailArtIndex
+        liveryChosen = s.liveryChosen
+        liveryText = s.liveryText
         playerBalance = s.playerBalance
         tick = s.tick
         calendarStartDay = s.calendarStartDay
@@ -4182,6 +4512,8 @@ final class Simulation {
         totalDividendsPaid = s.totalDividendsPaid ?? 0
         totalBuybackSpend = s.totalBuybackSpend ?? 0
         totalMarketingSpend = s.totalMarketingSpend ?? 0
+        totalRepaintSpend = s.totalRepaintSpend ?? 0
+        repaintProgramTotal = s.repaintProgramTotal ?? 0
         playerFareWarUntil = s.playerFareWarUntil
         adCampaignUntil = s.adCampaignUntil
         loyaltyPushUntil = s.loyaltyPushUntil
@@ -4235,6 +4567,8 @@ final class Simulation {
                               cyclesAccrued: a.cyclesAccrued, purchased: true)
             ac.stateTick = a.stateTick; ac.assignedRouteId = a.assignedRouteId
             ac.pendingRouteId = a.pendingRouteId; ac.pendingPark = a.pendingPark
+            ac.repaintUntilTick = a.repaintUntilTick
+            ac.repaintStartTick = a.repaintStartTick; ac.repaintQueued = a.repaintQueued
             ac.sellOfferDismissed = a.sellOfferDismissed; ac.isLeased = a.isLeased; ac.leaseAccrued = a.leaseAccrued
             ac.maint = a.maint; ac.aogAutoClearTick = a.aogAutoClearTick; ac.crewId = a.crewId
             ac.subsidiaryCode = a.subsidiaryCode

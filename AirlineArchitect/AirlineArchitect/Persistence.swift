@@ -22,6 +22,15 @@ struct GameSnapshot: Codable {
     // Identity + economy
     var playerAirlineName: String?
     var playerTailCode = "ZQ"
+    // Livery (font / palette / tail-emblem indices; defaults = first-of-each, so
+    // a pre-livery save loads a sensible default rather than nothing).
+    var liveryFontIndex = 0
+    var liveryPaletteIndex = 0
+    var liveryTailArtIndex = 1
+    var liveryText = ""
+    /// nil / false = a pre-livery save: the player never chose, so their first
+    /// choice must be free (see Simulation.needsFirstLivery).
+    var liveryChosen: Bool = false
     var playerBalance = 0
     var tick = 0
     var calendarStartDay = 0   // randomized calendar start-of-year offset (0–359)
@@ -67,6 +76,8 @@ struct GameSnapshot: Codable {
     var totalDividendsPaid: Int? = nil
     var totalBuybackSpend: Int? = nil
     var totalMarketingSpend: Int? = nil
+    var totalRepaintSpend: Int? = nil
+    var repaintProgramTotal: Int? = nil
     // Player route promotions (routeId → expiry tick). Empty for pre-1.1 saves.
     var playerFareWarUntil: [Int: Int] = [:]
     var adCampaignUntil: [Int: Int] = [:]
@@ -120,6 +131,9 @@ struct AircraftSave: Codable {
     /// A deferred park (airborne aircraft parks on arrival). Defaults false in
     /// saves written before the park action existed.
     var pendingPark: Bool = false
+    var repaintUntilTick: Int? = nil
+    var repaintStartTick: Int? = nil
+    var repaintQueued: Bool = false
     var sellOfferDismissed: Bool
     var isLeased: Bool
     var leaseAccrued: Double
@@ -251,6 +265,11 @@ extension GameSnapshot {
         savedAtEpoch = c.decodeSafe(.savedAtEpoch, default: 0.0)
         playerAirlineName = c.decodeSafeOpt(String.self, .playerAirlineName)
         playerTailCode = c.decodeSafe(.playerTailCode, default: "ZQ")
+        liveryFontIndex = c.decodeSafe(.liveryFontIndex, default: 0)
+        liveryPaletteIndex = c.decodeSafe(.liveryPaletteIndex, default: 0)
+        liveryTailArtIndex = c.decodeSafe(.liveryTailArtIndex, default: 1)
+        liveryText = c.decodeSafe(.liveryText, default: "")
+        liveryChosen = c.decodeSafe(.liveryChosen, default: false)
         playerBalance = c.decodeSafe(.playerBalance, default: 0)
         tick = c.decodeSafe(.tick, default: 0)
         calendarStartDay = c.decodeSafe(.calendarStartDay, default: 0)
@@ -293,6 +312,8 @@ extension GameSnapshot {
         totalDividendsPaid = c.decodeSafeOpt(Int.self, .totalDividendsPaid)
         totalBuybackSpend = c.decodeSafeOpt(Int.self, .totalBuybackSpend)
         totalMarketingSpend = c.decodeSafeOpt(Int.self, .totalMarketingSpend)
+        totalRepaintSpend = c.decodeSafeOpt(Int.self, .totalRepaintSpend)
+        repaintProgramTotal = c.decodeSafeOpt(Int.self, .repaintProgramTotal)
         playerFareWarUntil = c.decodeSafe(.playerFareWarUntil, default: [:])
         adCampaignUntil = c.decodeSafe(.adCampaignUntil, default: [:])
         loyaltyPushUntil = c.decodeSafe(.loyaltyPushUntil, default: [:])
@@ -334,6 +355,9 @@ extension AircraftSave {
         assignedRouteId = c.decodeSafeOpt(Int.self, .assignedRouteId)
         pendingRouteId = c.decodeSafeOpt(Int.self, .pendingRouteId)
         pendingPark = c.decodeSafe(.pendingPark, default: false)
+        repaintUntilTick = c.decodeSafeOpt(Int.self, .repaintUntilTick)
+        repaintStartTick = c.decodeSafeOpt(Int.self, .repaintStartTick)
+        repaintQueued = c.decodeSafe(.repaintQueued, default: false)
         sellOfferDismissed = c.decodeSafe(.sellOfferDismissed, default: false)
         isLeased = c.decodeSafe(.isLeased, default: false)
         leaseAccrued = c.decodeSafe(.leaseAccrued, default: 0)

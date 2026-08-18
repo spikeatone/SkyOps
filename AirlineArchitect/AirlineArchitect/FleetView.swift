@@ -22,6 +22,11 @@ struct FleetView: View {
     var onSave: () -> Void = {}
     var onQuit: () -> Void = {}
     var onUpgrade: (String?) -> Void = { _ in }
+    /// Set from outside (the one-time update prompt) to open the livery editor.
+    /// Adopted in BOTH .onAppear and .onChange: the tab bar recreates this view on
+    /// a tab switch, and .onChange never fires for a value that was already set
+    /// before the view existed — the documented rule for cross-tab intents.
+    var openLivery: Binding<Bool>? = nil
 
     /// Free-tier gate for Marketplace acquires — paywall at the fleet cap.
     private func gatedAcquire(_ perform: () -> Void) {
@@ -33,6 +38,13 @@ struct FleetView: View {
 
     @State private var segment: Segment = .myFleet
     @State private var detailID: UUID?
+    /// Presents the livery designer in EDIT mode (re-customise the fleet's livery).
+    @State private var showLivery = false
+    /// A livery chosen on the design screen, waiting on the repaint quote. Held
+    /// here so backing out of the quote returns to the design screen with the
+    /// choice intact. A struct (not a tuple) so it can drive `.animation(value:)`.
+    struct PendingLivery: Equatable { let font: Int, palette: Int, tailArt: Int; let text: String }
+    @State private var pendingLivery: PendingLivery?
     /// Fleet-list status filter, driven by tapping a status box (nil = all).
     @State private var fleetFilter: FleetStatus?
     enum Segment: Hashable { case myFleet, marketplace }
@@ -132,8 +144,69 @@ struct FleetView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .animation(.easeInOut(duration: 0.3), value: detailID)
             }
+
+            // Livery re-customise (edit mode) — full-screen over the Fleet tab.
+            if showLivery {
+                LiveryDesignView(airlineName: sim.playerAirlineName ?? "",
+                                 initialLivery: sim.livery,
+                                 initialText: sim.liveryTitle,
+                                 // A player who has never chosen (a save from before
+                                 // the livery feature) is picking for the FIRST time —
+                                 // that's free, so don't promise a paid repaint.
+                                 commitTitle: (sim.ownedCount > 0 && !sim.needsFirstLivery)
+                                     ? "Repaint Fleet" : "Save Livery",
+                                 onCancel: { showLivery = false }) { fontI, palI, tailI, text in
+                    // With aircraft on the books a livery change is a REPAINT: it
+                    // costs real money and grounds the fleet, so it goes through an
+                    // itemized quote first. With no fleet there's nothing to repaint,
+                    // so the choice is free and applies straight away.
+                    // FREE when the player has never chosen: their fleet is wearing
+                    // defaults nobody picked, so billing the first real choice would
+                    // charge an existing player for the pick new players get free.
+                    if sim.ownedCount > 0 && !sim.needsFirstLivery {
+                        pendingLivery = PendingLivery(font: fontI, palette: palI, tailArt: tailI, text: text)
+                    } else {
+                        sim.setLivery(fontIndex: fontI, paletteIndex: palI, tailArtIndex: tailI, text: text)
+                        onSave()
+                        showLivery = false
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(5)
+            }
+
+            // Itemized repaint quote — shown over the design screen so backing out
+            // returns to the design, not to the fleet list.
+            if let p = pendingLivery {
+                RepaintConfirmView(sim: sim, onCancel: { pendingLivery = nil }) {
+                    if sim.repaintFleet(fontIndex: p.font, paletteIndex: p.palette,
+                                        tailArtIndex: p.tailArt, text: p.text) {
+                        Feedback.success()
+                        onSave()                 // a paid repaint must survive a kill
+                        pendingLivery = nil
+                        showLivery = false
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(6)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: showLivery)
+        .onAppear { adoptOpenLiveryIfAny() }
+        .onChange(of: openLivery?.wrappedValue ?? false) { _, _ in adoptOpenLiveryIfAny() }
+        .animation(.easeInOut(duration: 0.2), value: pendingLivery != nil)
     }
+
+    /// Consume an external "open the livery editor" intent exactly once.
+    private func adoptOpenLiveryIfAny() {
+        guard openLivery?.wrappedValue == true else { return }
+        showLivery = true
+        openLivery?.wrappedValue = false
+    }
+
+    /// Always persist a livery change right away so it survives even if the app is
+    /// killed before the next autosave (true is fine; kept as a named flag for clarity).
+    private var isFirstLiverySaveNeeded: Bool { true }
 
     /// Portrait / iPhone / Marketplace: the single-column stack.
     private var stackedLayout: some View {
@@ -195,10 +268,27 @@ struct FleetView: View {
                 SaveQuitBar(onSave: onSave, onQuit: onQuit)
             }
             Divider().overlay(cardBorder)
-            HStack {
+            HStack(spacing: 14) {
                 Text(segment == .myFleet ? "FLEET HOME" : "MARKETPLACE")
                     .font(.karla(22, .bold)).foregroundStyle(titleColor)
                 Spacer()
+                // Re-customise the fleet livery (also the ONLY way an existing/
+                // pre-livery save gets to set one).
+                Button { showLivery = true } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "paintbrush.fill").font(.system(size: 12, weight: .semibold))
+                        // An existing player (pre-livery save) has no idea the feature
+                        // exists and is currently wearing defaults nobody picked, so
+                        // the button ASKS rather than sitting there unlabelled — and a
+                        // dot marks that their one free choice is still waiting.
+                        Text(sim.needsFirstLivery ? "Add Livery" : "Livery")
+                            .font(.karla(13, .semibold))
+                        if sim.needsFirstLivery {
+                            Circle().fill(Sky.coreGreen).frame(width: 6, height: 6)
+                        }
+                    }
+                    .foregroundStyle(titleColor)
+                }
                 AlertBell(count: sim.decisionQueue.count, tint: titleColor, action: onBell)
             }
         }
@@ -335,8 +425,12 @@ struct FleetView: View {
                     Text(ac.type.name).font(.karla(14)).foregroundStyle(secondary)
                 }
                 Spacer()
-                statusChip(st)
+                if ac.inPaintShop { liveryChip } else { statusChip(st) }
             }
+            // Repaint progress — the four real stages, so a grounded aircraft
+            // explains itself instead of just reading GROUNDED.
+            if ac.inPaintShop { repaintRow(ac) }
+            else if ac.repaintQueued { queuedRow }
             // Route + ownership chip
             HStack(spacing: 12) {
                 Image(systemName: "arrow.left.arrow.right")
@@ -384,9 +478,54 @@ struct FleetView: View {
     // MARK: Status model
     enum FleetStatus { case flying, idle, grounded }
     private func status(_ ac: Aircraft) -> FleetStatus {
+        if ac.inPaintShop { return .grounded }     // in the paint shop = not flying
         if ac.holdReason == .aog { return .grounded }
         if ac.isIdleSpare { return .idle }
         return .flying
+    }
+
+    /// Purple "LIVERY UPDATE" chip — distinct from GROUNDED (a fault) because a
+    /// repaint is planned, paid-for downtime, not something gone wrong.
+    private var liveryChip: some View {
+        let c = Color(skyHex: 0xC79CFF)
+        return Text("LIVERY UPDATE")
+            .font(.karla(10, .bold)).foregroundStyle(isDark ? c : Color(skyHex: 0x6E43A6))
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background((isDark ? c : Color(skyHex: 0x6E43A6)).opacity(isDark ? 0.18 : 0.14))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4)
+                .stroke(isDark ? c : Color(skyHex: 0x6E43A6), lineWidth: 1))
+    }
+
+    /// Current paint stage + a progress bar, for an aircraft in the shop.
+    private func repaintRow(_ ac: Aircraft) -> some View {
+        let p = ac.repaintProgress(at: sim.tick) ?? 0
+        let stage = ac.repaintStage(at: sim.tick)?.rawValue ?? "In the shop"
+        let daysLeft = max(0, ((ac.repaintUntilTick ?? sim.tick) - sim.tick + 1439) / 1440)
+        let c = isDark ? Color(skyHex: 0xC79CFF) : Color(skyHex: 0x6E43A6)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(stage).font(.karla(12, .semibold)).foregroundStyle(c)
+                Spacer()
+                Text("\(daysLeft)d left").font(.karla(12)).foregroundStyle(secondary)
+            }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(track)
+                    Capsule().fill(c).frame(width: g.size.width * p)
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+
+    /// Booked into the repaint program but still flying until its slot opens.
+    private var queuedRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "paintbrush.fill").font(.system(size: 10))
+            Text("Scheduled for repaint").font(.karla(12))
+        }
+        .foregroundStyle(isDark ? Color(skyHex: 0xC79CFF) : Color(skyHex: 0x6E43A6))
     }
 
     private func statusChip(_ st: FleetStatus) -> some View {

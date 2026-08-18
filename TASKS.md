@@ -68,6 +68,12 @@ conflict-free.
 - [ ] **WALK THE FIRST-RUN FLOW ON A REAL DEVICE** (naming → livery → launch) — the last
       unverified path. Sim text entry backgrounds the app, so it has never been done
       end-to-end.
+- [ ] **UPLOAD THE TWO NEW LIVERY SCREENSHOTS TO ASC** (App Store Connect → the 1.3
+      version → Screenshots), for BOTH the 6.9" iPhone and 13" iPad size classes. Files
+      are on the designer's Desktop in `Airline Architect Livery Screenshots/` (dark, App
+      Store dimensions; airline reads "Air Tina" consistently across create + in-game).
+      The two new marketing frames are "08 · Livery Create" (the design screen) and
+      "09 · Livery In Game" (the painted 787-9 on Fleet detail).
 - [ ] Merge `livery-prototype` → `main` and cut 1.3, AFTER 1.2.1 is live.
 
 ### (historical) Accumulated for build 34

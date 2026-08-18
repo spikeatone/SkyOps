@@ -117,6 +117,46 @@ final class Aircraft: Identifiable {
     var aogAutoClearTick: Int?
     var holdLogged: Bool = false
 
+    /// FLEET REPAINT. Tick this airframe comes OUT of the paint shop, or nil if
+    /// it isn't in the shop. Like `maint` it blocks at the PARKED gate, so an
+    /// airborne aircraft finishes its leg first and only then goes into the shop —
+    /// the same "don't teleport a flying jet" rule reassignment and parking use.
+    /// The real cost of a repaint is this downtime, not the paint bill: a grounded
+    /// jet earns nothing for the 1–2 weeks it's in the shop.
+    var repaintUntilTick: Int?
+    /// Tick it ENTERED the shop — needed to know how far through the job it is.
+    var repaintStartTick: Int?
+    /// Booked into the repaint program but still WAITING for a shop slot. A real
+    /// airline schedules its fleet through in ones and twos, so a queued aircraft
+    /// keeps flying and earning until it's called in.
+    var repaintQueued: Bool = false
+    var inPaintShop: Bool { repaintUntilTick != nil }
+
+    /// The four real stages of a strip-and-paint, as fractions of total occupancy:
+    /// strip 1–3d · prep + prime 1–3d · paint + livery 1–7d · clear coat + cure 1–3d.
+    /// Shown on the fleet card so a grounded aircraft explains itself.
+    enum RepaintStage: String {
+        case stripping   = "Stripping"
+        case priming     = "Prep & priming"
+        case painting    = "Painting livery"
+        case curing      = "Clear coat & curing"
+        /// Fraction of the job complete at the END of each stage. Painting is the
+        /// long pole (1–7d of a 4–16d job), so it gets the widest band.
+        static let bounds: [(RepaintStage, Double)] =
+            [(.stripping, 0.20), (.priming, 0.40), (.painting, 0.80), (.curing, 1.0)]
+    }
+
+    /// How far through the paint job this airframe is (0…1), or nil if not in the shop.
+    func repaintProgress(at tick: Int) -> Double? {
+        guard let start = repaintStartTick, let end = repaintUntilTick, end > start else { return nil }
+        return min(1, max(0, Double(tick - start) / Double(end - start)))
+    }
+    /// Which of the four stages it's in right now.
+    func repaintStage(at tick: Int) -> RepaintStage? {
+        guard let p = repaintProgress(at: tick) else { return nil }
+        return RepaintStage.bounds.first { p <= $0.1 }?.0 ?? .curing
+    }
+
     /// Assigned crew's id within its family pool (nil = none assigned yet).
     var crewId: Int?
 
@@ -179,6 +219,9 @@ final class Aircraft: Identifiable {
         if stateTick >= duration - 1 {
             switch state {
             case .parked:
+                // in the paint shop — nothing moves until it comes out. Checked
+                // BEFORE maint so a repaint can't be masked by an AOG card.
+                if inPaintShop { return event }
                 // grounded for maintenance — nothing moves until resolved
                 if maint {
                     holdReason = .aog

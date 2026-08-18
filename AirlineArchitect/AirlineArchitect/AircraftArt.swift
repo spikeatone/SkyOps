@@ -13,17 +13,26 @@ import UIKit
 enum AircraftArt {
     /// Cache so we don't hit the disk every card re-render.
     private static var cache: [String: Image?] = [:]
+    private static var uiCache: [String: UIImage?] = [:]
 
     static func image(for typeID: String) -> Image? {
         if let hit = cache[typeID] { return hit }
-        let img: Image?
-        if let path = Bundle.main.path(forResource: typeID, ofType: "png"),
-           let ui = UIImage(contentsOfFile: path) {
-            img = Image(uiImage: ui)
-        } else {
-            img = nil
-        }
+        let img = uiImage(for: typeID).map { Image(uiImage: $0) }
         cache[typeID] = img
         return img
+    }
+
+    /// The raw UIImage (for callers that need the pixel size / aspect ratio,
+    /// e.g. livery overlays that place text on the fuselage).
+    static func uiImage(for typeID: String) -> UIImage? {
+        if let hit = uiCache[typeID] { return hit }
+        let ui: UIImage?
+        if let path = Bundle.main.path(forResource: typeID, ofType: "png") {
+            ui = UIImage(contentsOfFile: path)
+        } else {
+            ui = nil
+        }
+        uiCache[typeID] = ui
+        return ui
     }
 }
