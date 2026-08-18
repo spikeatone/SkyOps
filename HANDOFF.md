@@ -37,20 +37,24 @@ cleared with 1.2, so it should move faster than 1.2's ~6-day queue.) It carries 
   **DONE: version record created, build 43 attached, SUBMITTED FOR REVIEW 18 Aug.** Next
   action is just to watch the review state (poll or `asc.py`), then it auto-releases on approval.
 
-**► 1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is clean of
-it). Feature-complete — painted tails on all 35 types, the creation + re-customise flows, fleet
-repaint (itemized cost + shop queue + lost-revenue opportunity cost), and the existing-player
-free-first-choice path with a one-time update prompt. See `LIVERY_SPEC.md` (branch-only — check
-out the branch to read it). **APP STORE SCREENSHOTS ARE DONE** (18 Aug): 6.9" iPhone + 13" iPad,
-dark, App-Store-valid dimensions, at `~/Desktop/Airline Architect Livery Screenshots/`; airline
-reads "Air Tina" consistently across the create screen + in-game (the design-screen name was a
-throwaway `-liveryPreview` default, reverted). Two gates before cutting 1.3 remain: **walk the
-first-run flow on a REAL DEVICE** (sim text entry backgrounds the app — the one path never
-verified end-to-end), and the merge (verified conflict-free). The 1.3 checklist in TASKS.md now
-also includes **uploading the two livery screenshots to ASC**. Next new build after 43 must be **44+**.
+**► 1.3 = PERSONALIZED LIVERY — MERGED to `main`, BUILD 44 UPLOADED to ASC (18 Aug).**
+`livery-prototype` merged into `main` conflict-free; bumped to 1.3 / build 44; Release build
+clean + offer-spread 5/5; archived → exported → `altool --validate-app` + `--upload-app` both
+clean (Delivery UUID `234e9bf3-0636-4fc9-bd29-1b138455541a`). Feature: painted tails on all 35
+types, the creation + re-customise flows, fleet repaint (itemized cost + shop queue + lost-revenue
+opportunity cost), existing-player free-first-choice path + one-time update prompt. `LIVERY_SPEC.md`
++ `aa-livery/` tooling are now ON `main` too. **APP STORE SCREENSHOTS DONE** (6.9" iPhone + 13"
+iPad, dark, "Air Tina" consistent create↔in-game) at `~/Desktop/Airline Architect Livery
+Screenshots/`.
+- **⚠️ ONE GATE STILL OPEN before SUBMIT: walk the first-run flow (naming → livery → launch) on
+  a REAL DEVICE** — never done end-to-end (sim text entry backgrounds the app). The designer is
+  doing this from the TestFlight build (build 44) this morning. Do NOT submit 1.3 for review until
+  that passes.
+- **REMAINING ASC-side (designer): create the 1.3 version record → What's New → attach build 44 →
+  add the two livery screenshots → submit** (after the device test). Next new build after 44 = **45+**.
 
 **► Note the Telemetry commit lives on BOTH branches** — `main` (147bbc1, cherry-picked) and
-`livery-prototype` (3cb9558, the original), so the merge stays conflict-free. Clean tree on
+`livery-prototype` (3cb9558, the original), so the merge stayed conflict-free. Clean tree on
 `main`, all pushed. App: <https://apps.apple.com/us/app/airline-architect/id6790569697>._
 
 ## What shipped in 1.1.2 (build 37)
