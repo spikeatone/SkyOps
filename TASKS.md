@@ -22,17 +22,19 @@ as the work, not "later."
 
 **This header has gone stale TWICE** — it said "build 34" while 35→39 shipped, then
 "1.1.4 in review" while 1.1.5, 1.2 and 1.2.1 happened. Releases are tracked in
-`HANDOFF.md`, not here. As of **17 Aug 2026**: **1.1.5 (40) is the newest LIVE build**;
-**1.2 (41) is WAITING_FOR_REVIEW** (monetization pivot + 2 IAPs, queued since 12 Aug —
-not misconfigured, just Apple queue time); **1.2.1 (42) is on `main`, verified, awaiting
-1.2's approval before it goes up as a fast follow**; **1.3 = livery**, on
-`livery-prototype`, unmerged. What to do next lives in `NEXT_SESSION_PROMPT.md`.
+`HANDOFF.md`, not here. As of **18 Aug 2026**: **1.2 (41) is APPROVED + LIVE**
+(monetization pivot + 2 IAPs, approved ~18 Aug); **1.2.1 is now BUILD 43** (not 42 —
+build 42 predated the TelemetryDeck error-reporting helper the designer wanted in all
+builds, so `Telemetry.errorOccurred` was cherry-picked onto `main` and the build bumped
+42→43). **Build 43 is UPLOADED to ASC** (Delivery UUID `689635df-…`, VERIFY + UPLOAD both
+clean) — the version record + attach-build + submit are ASC-side and still TODO. **1.3 =
+livery**, on `livery-prototype`, unmerged. What to do next lives in `NEXT_SESSION_PROMPT.md`.
 Keep this file for in-flight TASK tracking only, and update it in the same session as
 the work — the note at the top of this file exists because it drifted badly once before.
 
 ## In flight
 
-### 1.2.1 (build 42) — ON `main`, NOT YET UPLOADED
+### 1.2.1 (build 43) — UPLOADED to ASC (18 Aug), submit is ASC-side
 - [x] **Airport offers always targeted the player's biggest hub** (paying customer:
       "all 35 of my incentives were routes into ATL"). The destination was
       DETERMINISTIC — `hubs.first(where: served…)` on a traffic-sorted list. Repro'd at
@@ -40,9 +42,15 @@ the work — the note at the top of this file exists because it drifted badly on
       100%→12%, distinct 1→30+, **60% still land on a served hub** (hold that number on
       any retune). `aa-1.1.x/OfferSpreadVerify.swift`, validated against the pre-fix
       code (fails 3/5 there). Debug+Release clean, 6/6 soak.
-- [ ] **Archive → validate → upload build 42** once 1.2 is APPROVED. Chain is in
-      CLAUDE.md §Release (ASC key `25FXKWL48U`). Version record + submit are ASC-side.
-      ⚠️ Do NOT submit while 1.2 is pending.
+- [x] **TelemetryDeck error reporting folded in** (designer: "added TD error reporting to
+      all builds/repos"). `Telemetry.errorOccurred(id:category:detail:)` (Errors preset,
+      stable slug — never localizedDescription/PII). Cherry-picked from `livery-prototype`
+      onto `main`; build bumped 42→43 so it ships with 1.2.1 rather than a later build.
+- [x] **Archive → validate → upload build 43** (18 Aug, after 1.2 went live). Release build
+      clean, offer-spread 5/5 on build-43 main, `altool --validate-app` + `--upload-app`
+      both clean (Delivery UUID `689635df-0f22-4025-bc0f-6b1066f5ac38`).
+- [ ] **ASC-side (designer): create the 1.2.1 version record → attach build 43 → submit.**
+      Build takes ~5 min to appear in `asc.py builds 6790569697` after upload.
 
 ### 1.3 — PERSONALIZED LIVERY (branch `livery-prototype`, unmerged)
 Full detail in `LIVERY_SPEC.md` — which, like the `aa-livery/` scripts, exists ONLY on
