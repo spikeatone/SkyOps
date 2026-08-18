@@ -5,53 +5,51 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 17 August 2026. **`main` is 1.2.1 (build 42)** — a customer-reported fix,
-cut ahead of the livery release because it's live-behaviour and self-contained.
-**THE FIX:** airport recruitment offers always targeted the player's single biggest
-served hub (`hubs.first(...)` on a traffic-sorted list), so a paying customer with an
-ATL hub got **35 consecutive offers all terminating at ATL** — reproduced at 100%. The
-destination is now a weighted random pick (sqrt(pax), ×3 if served, ×0.35 if not), which
-keeps the hub bias (60% still land on a served hub) while dropping the top destination
-from 100% → 12%. Guarded by `aa-1.1.x/OfferSpreadVerify.swift`, VALIDATED against the
-pre-fix code (it fails 3/5 there). Verified on the branch: Debug + Release clean, 5/5
-offer spread, 6/6 soak seeds. **Build 42 is committed but NOT yet archived/uploaded** —
-that's the next action (export/validate/upload chain in CLAUDE.md §Release, ASC API key
-`25FXKWL48U`; creating the version record + submitting is designer-side in ASC).
+_Snapshot: 18 August 2026._
 
-**1.2 (build 41) status:** was SUBMITTED FOR REVIEW — the MONETIZATION PIVOT
-(subscription → one-time "Full Unlock", $9.99 founding rising to $19.99 on Dec 1, 2026;
-two non-consumables `aa_unlock_founding_player`/`aa_unlock_standard` under RevenueCat
-offering packages `founding`/`standard`). RevenueCat fully configured (entitlement +
-products + offering, subs RETAINED for coexistence — an existing subscriber correctly
-keeps Pro, verified in TestFlight). **AFTER 1.2 IS LIVE + dominant:** remove
-Monthly/Yearly from the RevenueCat offering (NEVER delete the sub products); then watch
-trial→purchase conversion + the founding-price WOM. **PLAN (designer, 17 Aug): wait for 1.2 to be APPROVED, then 1.2.1 as a fast follow,
-then 1.3.** So do NOT submit 1.2.1 while 1.2 is pending — the pivot build and its two
-IAPs must clear as a unit.
+**► 1.2 (build 41) is APPROVED + LIVE** — the MONETIZATION PIVOT is public (subscription →
+one-time "Full Unlock", $9.99 founding rising to $19.99 on Dec 1, 2026; two non-consumables
+`aa_unlock_founding_player`/`aa_unlock_standard` under RevenueCat packages `founding`/
+`standard`; subs RETAINED for coexistence so existing subscribers keep Pro). It went
+`WAITING_FOR_REVIEW` → `READY_FOR_SALE` early 18 Aug after ~6 days in Apple's queue (a
+first-time monetization change + 2 IAPs drew a longer look than the ~1-day 1.1.x reviews).
+**NOW THAT IT'S LIVE + once it's dominant:** remove Monthly/Yearly from the RevenueCat
+offering (NEVER delete the sub products); watch trial→purchase conversion + founding-price WOM.
 
-**1.2 REVIEW STATUS, checked via the ASC API on 17 Aug (`ASCTools/asc.py`):** state is
-**`WAITING_FOR_REVIEW`** — it has NOT entered review yet, 6 days after submission
-(submitted Aug 12, `reviewSubmissions` id `8f904565-…`). Everything on our side is
-correct and there is nothing to fix: build 41 is attached and `VALID`, the review
-submission holds **3 items** (the version + `aa_unlock_founding_player` +
-`aa_unlock_standard`), all `READY_FOR_REVIEW`, and both IAPs are `WAITING_FOR_REVIEW`
-in step with the build. It is purely Apple queue time — for contrast, 1.1.1→1.1.5 each
-cleared in about a day. A first-time **monetization-model change plus two new IAPs**
-plausibly draws a longer look. Re-check with:
-`python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`.
-If it stays queued much longer, the lever is a Contact Us / expedite request in ASC —
-resubmitting would only lose queue position.
+**► 1.2.1 is BUILD 43 — UPLOADED to ASC 18 Aug, submit is ASC-SIDE (designer TODO).**
+It carries TWO things:
+- **The airport-offer fix** (the customer-reported one): recruitment offers always targeted
+  the player's single biggest served hub (`hubs.first(...)` on a traffic-sorted list) — an ATL
+  customer got 35 consecutive offers all into ATL, repro'd at 100%. Now a weighted random pick
+  (sqrt(pax), ×3 served / ×0.35 unserved): top dest 100%→12%, distinct 1→30+, **60% still land
+  on a served hub** (hold that number on any retune). Guard: `aa-1.1.x/OfferSpreadVerify.swift`,
+  validated against the pre-fix code (fails 3/5 there).
+- **TelemetryDeck error reporting** (designer: "added TD error reporting to all builds/repos").
+  `Telemetry.errorOccurred(id:category:detail:)` (Errors preset, stable slug — never
+  localizedDescription/PII). This is WHY it's build 43, not 42: build 42 predated the Telemetry
+  helper, so `Telemetry.errorOccurred` was cherry-picked from `livery-prototype` onto `main` and
+  the build bumped 42→43 so error reporting ships WITH 1.2.1. ⚠️ The "to all builds/repos" intent
+  still needs applying to the OTHER Architect apps (Golf/Vineyard/etc.) — NOT done here.
+- **Verified + shipped:** clean Release build, offer-spread 5/5 on build-43 main, `altool
+  --validate-app` + `--upload-app` both clean (Delivery UUID `689635df-0f22-4025-bc0f-6b1066f5ac38`).
+  **REMAINING (ASC-side, designer): create the 1.2.1 version record → attach build 43 → submit.**
+  Build takes ~5–30 min to finish processing after upload before it can be attached.
 
-**1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is
-deliberately clean of it). Feature-complete — painted tails on all 35 types, the
-creation + re-customise flows, fleet repaint (itemized cost + shop queue + lost-revenue
-opportunity cost), and the existing-player free-first-choice path with a one-time update
-prompt. See `LIVERY_SPEC.md` (branch-only — not on `main`; check out the branch to read it).
-Two gates before cutting 1.3: walk the first-run flow on a
-REAL DEVICE (sim text entry backgrounds the app), and the merge itself (verified
-conflict-free). Next new build after 42 must be **43+**.
-Clean tree on `main`, all pushed. App:
-<https://apps.apple.com/us/app/airline-architect/id6790569697>._
+**► 1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is clean of
+it). Feature-complete — painted tails on all 35 types, the creation + re-customise flows, fleet
+repaint (itemized cost + shop queue + lost-revenue opportunity cost), and the existing-player
+free-first-choice path with a one-time update prompt. See `LIVERY_SPEC.md` (branch-only — check
+out the branch to read it). **APP STORE SCREENSHOTS ARE DONE** (18 Aug): 6.9" iPhone + 13" iPad,
+dark, App-Store-valid dimensions, at `~/Desktop/Airline Architect Livery Screenshots/`; airline
+reads "Air Tina" consistently across the create screen + in-game (the design-screen name was a
+throwaway `-liveryPreview` default, reverted). Two gates before cutting 1.3 remain: **walk the
+first-run flow on a REAL DEVICE** (sim text entry backgrounds the app — the one path never
+verified end-to-end), and the merge (verified conflict-free). The 1.3 checklist in TASKS.md now
+also includes **uploading the two livery screenshots to ASC**. Next new build after 43 must be **44+**.
+
+**► Note the Telemetry commit lives on BOTH branches** — `main` (147bbc1, cherry-picked) and
+`livery-prototype` (3cb9558, the original), so the merge stays conflict-free. Clean tree on
+`main`, all pushed. App: <https://apps.apple.com/us/app/airline-architect/id6790569697>._
 
 ## What shipped in 1.1.2 (build 37)
 

@@ -4986,9 +4986,12 @@ Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (whic
 version is live, what's in review, what the next build number must be), and in-flight
 task tracking lives in `TASKS.md`.
 
-As of 17 Aug 2026: **1.1.5 (40) LIVE · 1.2 (41) WAITING_FOR_REVIEW · 1.2.1 (42) on
-`main` awaiting 1.2's approval · 1.3 = livery on `livery-prototype`, unmerged.** Query
-review state directly rather than trusting any doc's snapshot:
+As of 18 Aug 2026: **1.2 (41) APPROVED + LIVE (`READY_FOR_SALE`) — the monetization pivot
+is public · 1.2.1 is BUILD 43 (was 42; bumped to fold in TelemetryDeck error reporting),
+UPLOADED to ASC 18 Aug, version-record + submit are ASC-side/designer TODO · 1.3 = livery
+on `livery-prototype`, unmerged, screenshots done.** Build 43 = the airport-offer fix +
+`Telemetry.errorOccurred`. Next new build after 43 must be **44+**. Query review state
+directly rather than trusting any doc's snapshot:
 `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 
 ## Working agreement for future sessions

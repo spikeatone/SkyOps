@@ -10,53 +10,50 @@ design/technical record; it wins on any disagreement).
 ⚠️ **`LIVERY_SPEC.md` and the `aa-livery/` tooling exist ONLY on the `livery-prototype`
 branch, not on `main`** — `git checkout livery-prototype` before looking for them.
 
-_Written 17 August 2026, at the end of the session that fixed the T-tail and turboprop
-fin masks, built the fleet-repaint economy, added the existing-player livery path, and
-cut 1.2.1 for a customer-reported route-offer bug._
+_Written 18 August 2026, at the end of the session where 1.2 (the monetization pivot)
+was APPROVED + went live, 1.2.1 was rebuilt as build 43 to fold in the designer's
+TelemetryDeck error reporting and UPLOADED to ASC, and the 1.3 livery App Store
+screenshots were captured (iPhone + iPad, "Air Tina")._
 
 ---
 
 ## The prompt
 
 > You're picking up **Airline Architect** (repo dir is `SkyOps`; the app was renamed).
-> Read `HANDOFF.md` first, then `CLAUDE.md`. Tree is clean on `main`, nothing blocked.
+> Read `HANDOFF.md` first, then `CLAUDE.md`. Tree is clean on `main`, all pushed.
 >
-> **RELEASE STATE — three versions in flight, in this order (designer's plan):**
+> **RELEASE STATE (designer's plan: 1.2 → 1.2.1 fast follow → 1.3):**
 >
-> 1. **1.2 (build 41) is WAITING FOR REVIEW** — the monetization pivot (subscription →
->    one-time unlock) plus two new IAPs. Checked via the ASC API on 17 Aug: it had NOT
->    entered review 6 days after submission. **Nothing is misconfigured** — build 41 is
->    attached and `VALID`, and the review submission holds 3 items (version +
->    `aa_unlock_founding_player` + `aa_unlock_standard`), all `READY_FOR_REVIEW`. It is
->    Apple queue time. **Do not resubmit** (that loses queue position); if it is still
->    stuck, the lever is a Contact Us / expedite request in ASC.
->    Re-check first thing:
+> 1. **1.2 (build 41) is APPROVED + LIVE** (`READY_FOR_SALE`) — the monetization pivot
+>    (subscription → one-time unlock, $9.99 founding → $19.99 on Dec 1, two IAPs
+>    `aa_unlock_founding_player`/`aa_unlock_standard`) is public. Once it's dominant:
+>    remove Monthly/Yearly from the RevenueCat offering (NEVER delete the sub products);
+>    then watch trial→purchase conversion + founding-price WOM.
+>
+> 2. **1.2.1 is BUILD 43 — UPLOADED to ASC (18 Aug), submit is ASC-SIDE (designer TODO).**
+>    Build 43 = the airport-offer fix + TelemetryDeck error reporting (it's 43 not 42
+>    because 42 predated the Telemetry helper; `Telemetry.errorOccurred` was cherry-picked
+>    onto `main` and the build bumped 42→43 so error reporting ships with 1.2.1). It's
+>    verified (Release build clean, offer-spread 5/5) and the upload was clean (Delivery
+>    UUID `689635df-…`). **THE REMAINING STEP IS ASC-SIDE, designer-only: create the 1.2.1
+>    version record → attach build 43 → submit for review.** FIRST THING: check whether
+>    build 43 finished processing and whether the designer already submitted it —
 >    `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
->
-> 2. **1.2.1 (build 42) is ON `main`, committed and verified, but NOT archived/uploaded.**
->    It is the **fast follow**, to go up once 1.2 is APPROVED — do NOT submit it while 1.2
->    is pending; the pivot build and its IAPs must clear as a unit. When 1.2 is live, the
->    remaining work is: archive → validate → upload (the chain is in CLAUDE.md §Release,
->    ASC API key `25FXKWL48U`), then create the version record + submit in ASC
->    (designer-side).
+>    and `python3 asc.py GET "/v1/apps/6790569697/builds?limit=3&sort=-version"`.
 >
 > 3. **1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is
->    deliberately clean of it). Feature-complete. Verified conflict-free against `main` —
->    the merge is `git checkout main && git merge livery-prototype`.
+>    clean of it). Feature-complete. Verified conflict-free against `main` — the merge is
+>    `git checkout main && git merge livery-prototype`. **Screenshots DONE** (6.9" iPhone +
+>    13" iPad, dark, "Air Tina", at `~/Desktop/Airline Architect Livery Screenshots/`).
+>    The 1.3 TASKS.md checklist includes uploading those two screenshots to ASC at cut time.
 >
-> **What 1.2.1 fixes (customer-reported):** a paying customer sent a screenshot showing
-> **all 35 of his airport incentives were routes into ATL**. The destination was
-> DETERMINISTIC — `hubs.first(where: served…)` on a traffic-sorted list, i.e. always the
-> single busiest airport in his network. Reproduced at 100%. Now a weighted random pick
-> (sqrt of passengers, ×3 if served, ×0.35 if not): top destination 100% → 12%, distinct
-> destinations 1 → 30+, and **60% still land on a served hub** so the offers stay worth
-> accepting. That 60% is the number to hold on any retune. Guarded by
-> `aa-1.1.x/OfferSpreadVerify.swift`, validated against the pre-fix code (fails 3/5 there).
+> **⚠️ TD ERROR REPORTING → "all repos":** the designer wants `Telemetry.errorOccurred`
+> in every Architect app, not just this one. It's in THIS repo (main + livery-prototype).
+> The OTHER apps (Golf Course Architect, Vineyard Architect, …) still need it — NOT done.
 >
-> **Two gates before cutting 1.3** (neither blocks the merge; both block shipping):
-> - **Walk the full first-run flow on a REAL DEVICE** (naming → livery → launch). It has
->   never been done end-to-end because sim text entry keeps backgrounding the app. This is
->   the last unverified path in the livery feature.
+> **THE ONE GATE LEFT before cutting 1.3** (blocks shipping, not the merge):
+> - **Walk the full first-run flow on a REAL DEVICE** (naming → livery → launch). Never
+>   done end-to-end because sim text entry backgrounds the app. Last unverified path.
 > - Everything else in the livery feature is verified: fins on all 35 types (contact sheet
 >   + live), the Fleet-detail render, repaint (47/47 headless + driven), the
 >   existing-player free-first-choice path and its one-time prompt (4/4 + driven), both
@@ -82,9 +79,13 @@ cut 1.2.1 for a customer-reported route-offer bug._
 cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"
 
 # the offer-spread regression (the 1.2.1 fix) — verified to run as-is on `main`
+# NOTE: exclude the two SwiftUI-importing Sim files (AircraftIcon.swift, SVGPath.swift)
+# or the headless build fails; the `Sim/*.swift` glob below pulls them in.
 mkdir -p /tmp/osv && cp aa-1.1.x/OfferSpreadVerify.swift /tmp/osv/main.swift
-swiftc -O -DDEBUG -o /tmp/osv/osv AirlineArchitect/AirlineArchitect/Sim/*.swift \
+swiftc -O -DDEBUG -o /tmp/osv/osv \
+  $(ls AirlineArchitect/AirlineArchitect/Sim/*.swift | grep -vE 'AircraftIcon|SVGPath') \
   AirlineArchitect/AirlineArchitect/Persistence.swift /tmp/osv/main.swift && /tmp/osv/osv
+# (compile can take ~30s under -O; if a foreground run times out, compile then run separately.)
 # ON `livery-prototype` ONLY, add the catalog stubs — Livery.swift imports SwiftUI and
 # can't compile headlessly:  cp aa-1.1.x/RepaintVerifyStubs.swift /tmp/osv/  (and pass it)
 
