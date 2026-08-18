@@ -4930,10 +4930,11 @@ Two details are load-bearing:
   NEXT_SESSION_PROMPT.md already orient a cold session. Resolved; stop re-flagging it.
   (This bullet used to cite RELEASE_STATUS.md, which has since been deleted.)
 
-## Decided — Personalized livery (1.3; on `livery-prototype`, NOT merged)
+## Decided — Personalized livery (1.3; MERGED to `main` 18 Aug, build 44 uploaded)
 
-**Full design + implementation detail: `LIVERY_SPEC.md`.** Summarised here only so a
-session reading CLAUDE.md alone knows the feature exists — `main` has none of it.
+**Full design + implementation detail: `LIVERY_SPEC.md` (now on `main`).** Summarised here
+only so a session reading CLAUDE.md alone knows the feature exists — the full livery code +
+`aa-livery/` tooling are on `main` as of the 18 Aug merge.
 
 - The player picks a font, a 2-colour palette, a tail emblem and the fuselage text; every
   side-view illustration wears a **PAINTED TAIL** (fin filled in the secondary colour,
@@ -4986,12 +4987,13 @@ Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (whic
 version is live, what's in review, what the next build number must be), and in-flight
 task tracking lives in `TASKS.md`.
 
-As of 18 Aug 2026: **1.2 (41) APPROVED + LIVE (`READY_FOR_SALE`) — the monetization pivot
-is public · 1.2.1 is BUILD 43 (was 42; bumped to fold in TelemetryDeck error reporting),
-UPLOADED to ASC 18 Aug, version-record + submit are ASC-side/designer TODO · 1.3 = livery
-on `livery-prototype`, unmerged, screenshots done.** Build 43 = the airport-offer fix +
-`Telemetry.errorOccurred`. Next new build after 43 must be **44+**. Query review state
-directly rather than trusting any doc's snapshot:
+As of 18 Aug 2026: **1.2 (41) APPROVED + LIVE — the monetization pivot is public · 1.2.1
+(build 43 = airport-offer fix + TelemetryDeck error reporting) SUBMITTED FOR REVIEW
+(`WAITING_FOR_REVIEW`) · 1.3 = livery MERGED to `main`, build 44 UPLOADED to ASC (not yet
+submitted — designer owes a real-device first-run test + the ASC version record WITH
+screenshots).** The livery branch + its `LIVERY_SPEC.md`/`aa-livery/` tooling are now ON
+`main`. Next new build after 44 must be **45+**. Query review state directly rather than
+trusting any doc's snapshot:
 `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 
 ## Working agreement for future sessions

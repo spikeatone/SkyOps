@@ -23,18 +23,19 @@ as the work, not "later."
 **This header has gone stale TWICE** — it said "build 34" while 35→39 shipped, then
 "1.1.4 in review" while 1.1.5, 1.2 and 1.2.1 happened. Releases are tracked in
 `HANDOFF.md`, not here. As of **18 Aug 2026**: **1.2 (41) is APPROVED + LIVE**
-(monetization pivot + 2 IAPs, approved ~18 Aug); **1.2.1 is now BUILD 43** (not 42 —
-build 42 predated the TelemetryDeck error-reporting helper the designer wanted in all
-builds, so `Telemetry.errorOccurred` was cherry-picked onto `main` and the build bumped
-42→43). **Build 43 is UPLOADED to ASC** (Delivery UUID `689635df-…`, VERIFY + UPLOAD both
-clean) — the version record + attach-build + submit are ASC-side and still TODO. **1.3 =
-livery**, on `livery-prototype`, unmerged. What to do next lives in `NEXT_SESSION_PROMPT.md`.
+(monetization pivot + 2 IAPs); **1.2.1 (build 43) is SUBMITTED FOR REVIEW**
+(`WAITING_FOR_REVIEW`) — the airport-offer fix + TelemetryDeck error reporting (it's 43 not
+42 because 42 predated the Telemetry helper; `Telemetry.errorOccurred` was cherry-picked onto
+`main`, build bumped 42→43). **1.3 = LIVERY: MERGED to `main`, build 44 UPLOADED to ASC**
+(Delivery UUID `234e9bf3-…`), NOT yet submitted — two designer steps left (real-device
+first-run test + the ASC version record WITH screenshots). Next new build after 44 = **45+**.
+What to do next lives in `NEXT_SESSION_PROMPT.md`.
 Keep this file for in-flight TASK tracking only, and update it in the same session as
 the work — the note at the top of this file exists because it drifted badly once before.
 
 ## In flight
 
-### 1.2.1 (build 43) — UPLOADED to ASC (18 Aug), submit is ASC-side
+### 1.2.1 (build 43) — SUBMITTED FOR REVIEW (18 Aug, `WAITING_FOR_REVIEW`)
 - [x] **Airport offers always targeted the player's biggest hub** (paying customer:
       "all 35 of my incentives were routes into ATL"). The destination was
       DETERMINISTIC — `hubs.first(where: served…)` on a traffic-sorted list. Repro'd at
@@ -49,13 +50,15 @@ the work — the note at the top of this file exists because it drifted badly on
 - [x] **Archive → validate → upload build 43** (18 Aug, after 1.2 went live). Release build
       clean, offer-spread 5/5 on build-43 main, `altool --validate-app` + `--upload-app`
       both clean (Delivery UUID `689635df-0f22-4025-bc0f-6b1066f5ac38`).
-- [ ] **ASC-side (designer): create the 1.2.1 version record → attach build 43 → submit.**
-      Build takes ~5 min to appear in `asc.py builds 6790569697` after upload.
+- [x] **ASC-side (designer): version record created → build 43 attached → SUBMITTED FOR
+      REVIEW** (18 Aug). No IAP re-review (the two unlock products cleared with 1.2), so it
+      should move faster than 1.2's ~6-day queue. Watch state via `asc.py appStoreVersions`.
 
-### 1.3 — PERSONALIZED LIVERY (branch `livery-prototype`, unmerged)
-Full detail in `LIVERY_SPEC.md` — which, like the `aa-livery/` scripts, exists ONLY on
-the `livery-prototype` branch, not on `main`. Feature-complete; merge verified
-conflict-free.
+### 1.3 — PERSONALIZED LIVERY (MERGED to `main`, build 44 UPLOADED to ASC — 18 Aug)
+Full detail in `LIVERY_SPEC.md` + the `aa-livery/` scripts — NOW ON `main` (merged 18 Aug;
+the `livery-prototype` branch still exists for history). Merge was conflict-free; Release
+build clean + offer-spread 5/5; validated + uploaded (Delivery UUID `234e9bf3-…`).
+**NOT yet submitted — see the two open boxes below.**
 - [x] Fin masks correct on all 35 types — T-tail stabilizer bleed (CRJ/ERJ) removed via
       subtract-only `trim_stab.py`; RJ tails painted down the fairing to the fuselage;
       the 4 turboprops re-traced from the ARTWORK (`trace_fin.py`) rather than
@@ -74,7 +77,10 @@ conflict-free.
       Store dimensions; airline reads "Air Tina" consistently across create + in-game).
       The two new marketing frames are "08 · Livery Create" (the design screen) and
       "09 · Livery In Game" (the painted 787-9 on Fleet detail).
-- [ ] Merge `livery-prototype` → `main` and cut 1.3, AFTER 1.2.1 is live.
+- [x] Merge `livery-prototype` → `main`, bump to 1.3/build 44, verify, upload to ASC. DONE 18 Aug.
+- [ ] **ASC-side (designer): create the 1.3 version record → What's New → attach build 44 →
+      add the screenshots (box above) → SUBMIT** — only AFTER the real-device first-run test
+      passes. (1.2.1 does NOT need to be live first; different builds.)
 
 ### (historical) Accumulated for build 34
 - [x] GAME CLOCK on the speed bar (designer request): a slim "Day N · Mon D, YYYY ·

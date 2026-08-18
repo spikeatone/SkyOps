@@ -7,13 +7,13 @@ cold, with no memory of this conversation.
 **Read first:** `HANDOFF.md` (one-read orientation) → `CLAUDE.md` (the persistent
 design/technical record; it wins on any disagreement).
 
-⚠️ **`LIVERY_SPEC.md` and the `aa-livery/` tooling exist ONLY on the `livery-prototype`
-branch, not on `main`** — `git checkout livery-prototype` before looking for them.
+✅ **The livery branch is MERGED into `main` (18 Aug), so `LIVERY_SPEC.md` + the `aa-livery/`
+tooling now exist on `main`.** (The `livery-prototype` branch still exists for history.)
 
-_Written 18 August 2026, at the end of the session where 1.2 (the monetization pivot)
-was APPROVED + went live, 1.2.1 was rebuilt as build 43 to fold in the designer's
-TelemetryDeck error reporting and UPLOADED to ASC, and the 1.3 livery App Store
-screenshots were captured (iPhone + iPad, "Air Tina")._
+_Written 18 August 2026, at the end of the session where: 1.2 (the monetization pivot) was
+APPROVED + went live; 1.2.1 (build 43 — airport-offer fix + TelemetryDeck error reporting) was
+uploaded AND submitted for review; and 1.3 (livery) was merged to `main`, built as build 44, and
+uploaded to ASC. The livery App Store screenshots (iPhone + iPad, "Air Tina") were captured._
 
 ---
 
@@ -30,34 +30,33 @@ screenshots were captured (iPhone + iPad, "Air Tina")._
 >    remove Monthly/Yearly from the RevenueCat offering (NEVER delete the sub products);
 >    then watch trial→purchase conversion + founding-price WOM.
 >
-> 2. **1.2.1 is BUILD 43 — UPLOADED to ASC (18 Aug), submit is ASC-SIDE (designer TODO).**
->    Build 43 = the airport-offer fix + TelemetryDeck error reporting (it's 43 not 42
->    because 42 predated the Telemetry helper; `Telemetry.errorOccurred` was cherry-picked
->    onto `main` and the build bumped 42→43 so error reporting ships with 1.2.1). It's
->    verified (Release build clean, offer-spread 5/5) and the upload was clean (Delivery
->    UUID `689635df-…`). **THE REMAINING STEP IS ASC-SIDE, designer-only: create the 1.2.1
->    version record → attach build 43 → submit for review.** FIRST THING: check whether
->    build 43 finished processing and whether the designer already submitted it —
->    `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
->    and `python3 asc.py GET "/v1/apps/6790569697/builds?limit=3&sort=-version"`.
+> 2. **1.2.1 (build 43) is SUBMITTED FOR REVIEW** (`WAITING_FOR_REVIEW`) — the airport-offer
+>    fix + TelemetryDeck error reporting. Uploaded via CLI, then the designer created the
+>    version record + attached build 43 + submitted in ASC. No IAP re-review (the two unlock
+>    products cleared with 1.2), so it should move faster than 1.2's ~6-day queue. Nothing to
+>    do but watch: `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`.
 >
-> 3. **1.3 = PERSONALIZED LIVERY**, on branch `livery-prototype` (NOT merged; `main` is
->    clean of it). Feature-complete. Verified conflict-free against `main` — the merge is
->    `git checkout main && git merge livery-prototype`. **Screenshots DONE** (6.9" iPhone +
->    13" iPad, dark, "Air Tina", at `~/Desktop/Airline Architect Livery Screenshots/`).
->    The 1.3 TASKS.md checklist includes uploading those two screenshots to ASC at cut time.
+> 3. **1.3 = PERSONALIZED LIVERY — MERGED to `main`, BUILD 44 UPLOADED to ASC (18 Aug).**
+>    `livery-prototype` merged into `main` conflict-free; bumped to 1.3/build 44; Release
+>    build clean + offer-spread 5/5; validated + uploaded (Delivery UUID `234e9bf3-…`).
+>    **⚠️ NOT YET SUBMITTED — two ASC-side steps remain (designer):**
+>    - **(a) The real-device first-run walkthrough** (naming → livery → launch) from the
+>      TestFlight build 44 — the ONE path never verified end-to-end (sim text entry
+>      backgrounds the app). Must pass before submitting.
+>    - **(b) In ASC: create the 1.3 version record → What's New → attach build 44 → ADD THE
+>      TWO LIVERY SCREENSHOTS (iPhone 6.9" + iPad 13", in `~/Desktop/Airline Architect Livery
+>      Screenshots/`) → submit.** Without the screenshots, 1.3 inherits 1.2's shots and the
+>      livery isn't shown. A `_READ_BEFORE_SUBMITTING_1.3.txt` note sits in that folder.
+>    Next new build after 44 = **45+**.
 >
 > **⚠️ TD ERROR REPORTING → "all repos":** the designer wants `Telemetry.errorOccurred`
-> in every Architect app, not just this one. It's in THIS repo (main + livery-prototype).
-> The OTHER apps (Golf Course Architect, Vineyard Architect, …) still need it — NOT done.
+> in every Architect app, not just this one. It's in THIS repo (on `main`). The OTHER apps
+> (Golf Course Architect, Vineyard Architect, …) still need it — NOT done here.
 >
-> **THE ONE GATE LEFT before cutting 1.3** (blocks shipping, not the merge):
-> - **Walk the full first-run flow on a REAL DEVICE** (naming → livery → launch). Never
->   done end-to-end because sim text entry backgrounds the app. Last unverified path.
-> - Everything else in the livery feature is verified: fins on all 35 types (contact sheet
->   + live), the Fleet-detail render, repaint (47/47 headless + driven), the
->   existing-player free-first-choice path and its one-time prompt (4/4 + driven), both
->   themes.
+> **Everything in the livery feature is verified EXCEPT the real-device first-run flow**
+> (see 3a above): fins on all 35 types (contact sheet + live), the Fleet-detail render,
+> repaint (47/47 headless + driven), the existing-player free-first-choice path and its
+> one-time prompt (4/4 + driven), both themes.
 >
 > **If you want to work on the livery branch**, `git checkout livery-prototype` and read
 > `LIVERY_SPEC.md` (branch-only — it is NOT on `main`) — it documents the painted-tail model, the fin-mask tooling in
@@ -86,8 +85,8 @@ swiftc -O -DDEBUG -o /tmp/osv/osv \
   $(ls AirlineArchitect/AirlineArchitect/Sim/*.swift | grep -vE 'AircraftIcon|SVGPath') \
   AirlineArchitect/AirlineArchitect/Persistence.swift /tmp/osv/main.swift && /tmp/osv/osv
 # (compile can take ~30s under -O; if a foreground run times out, compile then run separately.)
-# ON `livery-prototype` ONLY, add the catalog stubs — Livery.swift imports SwiftUI and
-# can't compile headlessly:  cp aa-1.1.x/RepaintVerifyStubs.swift /tmp/osv/  (and pass it)
+# NOW ON `main` TOO (livery merged 18 Aug): Livery.swift imports SwiftUI, so add the catalog
+# stubs for the headless build:  cp aa-1.1.x/RepaintVerifyStubs.swift /tmp/osv/  (and pass it)
 
 # the soak (cash invariant + crew/route integrity) — run after ANY sim change
 mkdir -p /tmp/soak && cp aa-1.1.x/SoakMain.swift /tmp/soak/main.swift
