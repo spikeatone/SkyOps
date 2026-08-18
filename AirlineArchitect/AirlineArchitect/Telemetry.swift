@@ -88,4 +88,41 @@ enum Telemetry {
     static func purchaseCompleted(plan: String) {
         send("Purchase.completed", ["plan": plan])
     }
+
+    // MARK: - Errors
+    //
+    // Handled failures we want to SEE without shipping a crash reporter. Uses
+    // TelemetryDeck's Errors preset so the dashboard can group and count them:
+    // the event is `TelemetryDeck.Error.occurred`, keyed by a STABLE `id`
+    // (never a localized description — grouping breaks if the string varies).
+    //
+    // RULE 1 still holds: `id` and `category` are developer-chosen enums/slugs,
+    // never player text and never a raw error's `localizedDescription`, which
+    // can carry file paths or user input. Pass a short stable slug set at the
+    // call site (e.g. "purchase.verifyFailed"), not `error.localizedDescription`.
+
+    /// One of the three TelemetryDeck error buckets. `thrown` = a caught
+    /// exception/throw; `userInput` = bad/rejected input; `appState` = an
+    /// invariant we expected to hold didn't.
+    enum ErrorCategory: String {
+        case thrown = "thrown-exception"
+        case userInput = "user-input"
+        case appState = "app-state"
+    }
+
+    /// Report a handled error. `id` is a stable slug for grouping (dot.case,
+    /// no player text). Optional `detail` is a short developer-authored note —
+    /// still no personal data, no `localizedDescription`.
+    static func errorOccurred(_ id: String,
+                              category: ErrorCategory = .thrown,
+                              detail: String? = nil) {
+        var p: [String: String] = [
+            "TelemetryDeck.Error.id": id,
+            "TelemetryDeck.Error.category": category.rawValue,
+        ]
+        if let detail = detail, !detail.isEmpty {
+            p["TelemetryDeck.Error.message"] = detail
+        }
+        send("TelemetryDeck.Error.occurred", p)
+    }
 }
