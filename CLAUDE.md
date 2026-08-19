@@ -4987,12 +4987,10 @@ Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (whic
 version is live, what's in review, what the next build number must be), and in-flight
 task tracking lives in `TASKS.md`.
 
-As of 19 Aug 2026: **1.2 (41) APPROVED + LIVE — the monetization pivot is public · 1.2.1
-(build 43 = airport-offer fix + TelemetryDeck error reporting) APPROVED + LIVE
-(`READY_FOR_SALE`) · 1.3 = livery SUBMITTED FOR REVIEW (`WAITING_FOR_REVIEW`, build 44) —
-all gates cleared (real-device first-run passed, version record + livery screenshots +
-What's New done).** The livery branch + its `LIVERY_SPEC.md`/`aa-livery/` tooling are now ON
-`main`. Next new build after 44 must be **45+**. Query review state directly rather than
+As of 19 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) are ALL APPROVED +
+LIVE (`READY_FOR_SALE`).** The monetization pivot, the airport-offer fix + TelemetryDeck error
+reporting, and the personalized-livery module are all public. The livery branch + its
+`LIVERY_SPEC.md`/`aa-livery/` tooling are now ON `main`. Next new build after 44 must be **45+**. Query review state directly rather than
 trusting any doc's snapshot:
 `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 

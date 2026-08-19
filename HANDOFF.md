@@ -40,7 +40,7 @@ as expected with no IAP re-review). It carries TWO things:
   **DONE + APPROVED: version record created, build 43 attached, submitted 18 Aug, went
   `READY_FOR_SALE` 19 Aug. Both changes are LIVE.**
 
-**► 1.3 = PERSONALIZED LIVERY — SUBMITTED FOR REVIEW 19 Aug (`WAITING_FOR_REVIEW`, build 44).**
+**► 1.3 = PERSONALIZED LIVERY — APPROVED + LIVE 19 Aug (`READY_FOR_SALE`, build 44).**
 `livery-prototype` merged into `main` conflict-free; bumped to 1.3 / build 44; Release build
 clean + offer-spread 5/5; archived → exported → `altool --validate-app` + `--upload-app` both
 clean (Delivery UUID `234e9bf3-0636-4fc9-bd29-1b138455541a`). Feature: painted tails on all 35
@@ -49,11 +49,9 @@ opportunity cost), existing-player free-first-choice path + one-time update prom
 + `aa-livery/` tooling are now ON `main` too. **APP STORE SCREENSHOTS DONE** (6.9" iPhone + 13"
 iPad, dark, "Air Tina" consistent create↔in-game) at `~/Desktop/Airline Architect Livery
 Screenshots/`.
-- **✅ ALL GATES CLEARED (19 Aug):** the real-device first-run flow (naming → livery → launch)
-  passed from the TestFlight build 44; the designer created the 1.3 version record, wrote the
-  What's New (livery-led), attached build 44, added the two livery screenshots, and SUBMITTED for
-  review. Now just watch the review state (`asc.py` / poll), then it auto-releases on approval.
-  Next new build after 44 = **45+**.
+- **✅ SHIPPED (19 Aug):** all gates cleared (real-device first-run passed, version record +
+  livery-led What's New + two livery screenshots), submitted, and APPROVED same day —
+  `READY_FOR_SALE`. The personalized livery is public. Next new build after 44 = **45+**.
 
 **► Note the Telemetry commit lives on BOTH branches** — `main` (147bbc1, cherry-picked) and
 `livery-prototype` (3cb9558, the original), so the merge stayed conflict-free. Clean tree on
