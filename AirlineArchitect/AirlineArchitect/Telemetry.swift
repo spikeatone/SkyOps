@@ -37,16 +37,28 @@ enum Telemetry {
     private static let launchedAt = Date()
     private static var minutesPlayed: Int { max(0, Int(Date().timeIntervalSince(launchedAt) / 60)) }
 
+    /// True once `configure()` has actually initialized TelemetryDeck. `send()`
+    /// guards on this so a signal fired before configure — or in a build where
+    /// TelemetryDeck isn't linked — is a clean no-op instead of a silent misfire.
+    private(set) static var isConfigured = false
+
     static func configure() {
         #if canImport(TelemetryDeck)
         TelemetryDeck.initialize(config: TelemetryDeck.Config(appID: appID))
+        isConfigured = true
         #endif
     }
 
     private static func send(_ name: String, _ parameters: [String: String] = [:]) {
-        #if canImport(TelemetryDeck)
+        guard isConfigured else { return }
         var p = parameters
         p["minutesPlayed"] = "\(minutesPlayed)"
+        #if DEBUG
+        // Makes a driven verification pass readable: every signal names itself and its parameters
+        // in the console, so "did it fire" is answerable without waiting on the dashboard.
+        print("[Telemetry] → \(name) \(p.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))")
+        #endif
+        #if canImport(TelemetryDeck)
         TelemetryDeck.signal(name, parameters: p)
         #endif
     }

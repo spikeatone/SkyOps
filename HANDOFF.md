@@ -5,7 +5,7 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 18 August 2026._
+_Snapshot: 19 August 2026._
 
 **► 1.2 (build 41) is APPROVED + LIVE** — the MONETIZATION PIVOT is public (subscription →
 one-time "Full Unlock", $9.99 founding rising to $19.99 on Dec 1, 2026; two non-consumables
@@ -16,10 +16,8 @@ first-time monetization change + 2 IAPs drew a longer look than the ~1-day 1.1.x
 **NOW THAT IT'S LIVE + once it's dominant:** remove Monthly/Yearly from the RevenueCat
 offering (NEVER delete the sub products); watch trial→purchase conversion + founding-price WOM.
 
-**► 1.2.1 is BUILD 43 — SUBMITTED FOR REVIEW 18 Aug.** (Uploaded via CLI, then the
-designer created the version record, set the "What's New", attached build 43, and
-submitted in the ASC web UI — no IAP re-review since the two unlock products already
-cleared with 1.2, so it should move faster than 1.2's ~6-day queue.) It carries TWO things:
+**► 1.2.1 (build 43) is APPROVED + LIVE** (`READY_FOR_SALE`, 19 Aug — cleared review fast,
+as expected with no IAP re-review). It carries TWO things:
 - **The airport-offer fix** (the customer-reported one): recruitment offers always targeted
   the player's single biggest served hub (`hubs.first(...)` on a traffic-sorted list) — an ATL
   customer got 35 consecutive offers all into ATL, repro'd at 100%. Now a weighted random pick
@@ -30,14 +28,19 @@ cleared with 1.2, so it should move faster than 1.2's ~6-day queue.) It carries 
   `Telemetry.errorOccurred(id:category:detail:)` (Errors preset, stable slug — never
   localizedDescription/PII). This is WHY it's build 43, not 42: build 42 predated the Telemetry
   helper, so `Telemetry.errorOccurred` was cherry-picked from `livery-prototype` onto `main` and
-  the build bumped 42→43 so error reporting ships WITH 1.2.1. ⚠️ The "to all builds/repos" intent
-  still needs applying to the OTHER Architect apps (Golf/Vineyard/etc.) — NOT done here.
+  the build bumped 42→43 so error reporting ships WITH 1.2.1. ✅ The "to all builds/repos" intent
+  is DONE for every SHIPPING sibling — Vineyard/Golf/FC/Flight Ops/Resort all already have
+  `errorOccurred` (surveyed 19 Aug). Only Aerospace + Mars Colony lack Telemetry.swift entirely
+  (no telemetry at all — a bigger separate job, likely pre-ship). GCA's `send()` is actually a bit
+  AHEAD of AA's (an `isConfigured` guard + a DEBUG signal print); those two were back-ported into
+  AA on 19 Aug (branch `telemetry-guard-and-doc-sync`, NOT yet in a shipped build — rides the next
+  build after 44).
 - **Verified + shipped:** clean Release build, offer-spread 5/5 on build-43 main, `altool
   --validate-app` + `--upload-app` both clean (Delivery UUID `689635df-0f22-4025-bc0f-6b1066f5ac38`).
-  **DONE: version record created, build 43 attached, SUBMITTED FOR REVIEW 18 Aug.** Next
-  action is just to watch the review state (poll or `asc.py`), then it auto-releases on approval.
+  **DONE + APPROVED: version record created, build 43 attached, submitted 18 Aug, went
+  `READY_FOR_SALE` 19 Aug. Both changes are LIVE.**
 
-**► 1.3 = PERSONALIZED LIVERY — MERGED to `main`, BUILD 44 UPLOADED to ASC (18 Aug).**
+**► 1.3 = PERSONALIZED LIVERY — SUBMITTED FOR REVIEW 19 Aug (`WAITING_FOR_REVIEW`, build 44).**
 `livery-prototype` merged into `main` conflict-free; bumped to 1.3 / build 44; Release build
 clean + offer-spread 5/5; archived → exported → `altool --validate-app` + `--upload-app` both
 clean (Delivery UUID `234e9bf3-0636-4fc9-bd29-1b138455541a`). Feature: painted tails on all 35
@@ -46,12 +49,11 @@ opportunity cost), existing-player free-first-choice path + one-time update prom
 + `aa-livery/` tooling are now ON `main` too. **APP STORE SCREENSHOTS DONE** (6.9" iPhone + 13"
 iPad, dark, "Air Tina" consistent create↔in-game) at `~/Desktop/Airline Architect Livery
 Screenshots/`.
-- **⚠️ ONE GATE STILL OPEN before SUBMIT: walk the first-run flow (naming → livery → launch) on
-  a REAL DEVICE** — never done end-to-end (sim text entry backgrounds the app). The designer is
-  doing this from the TestFlight build (build 44) this morning. Do NOT submit 1.3 for review until
-  that passes.
-- **REMAINING ASC-side (designer): create the 1.3 version record → What's New → attach build 44 →
-  add the two livery screenshots → submit** (after the device test). Next new build after 44 = **45+**.
+- **✅ ALL GATES CLEARED (19 Aug):** the real-device first-run flow (naming → livery → launch)
+  passed from the TestFlight build 44; the designer created the 1.3 version record, wrote the
+  What's New (livery-led), attached build 44, added the two livery screenshots, and SUBMITTED for
+  review. Now just watch the review state (`asc.py` / poll), then it auto-releases on approval.
+  Next new build after 44 = **45+**.
 
 **► Note the Telemetry commit lives on BOTH branches** — `main` (147bbc1, cherry-picked) and
 `livery-prototype` (3cb9558, the original), so the merge stayed conflict-free. Clean tree on
