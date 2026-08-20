@@ -22,6 +22,10 @@ struct OpsView: View {
     /// Tap a Route Opportunity → preview it on the map (dashed line + pulse)
     /// with Open This Route / Don't Open.
     var onPreviewRoute: (Simulation.RouteOpportunity) -> Void = { _ in }
+    /// Free tier: the Events card carries a one-line depth hint (the rival
+    /// flavor events SHOW the endgame systems; this line names the door).
+    var isPro: Bool = true
+    var onUpgrade: () -> Void = {}
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     /// Cached so the finder isn't recomputed on every tick — it only changes when
@@ -471,6 +475,19 @@ struct OpsView: View {
                         ForEach(events.prefix(6).map { $0 }) { eventCard($0) }
                     }
                 }
+            }
+            if !isPro {
+                Button(action: onUpgrade) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lock.open").font(.system(size: 11, weight: .semibold))
+                        Text("Your rivals build hubs, go public, and buy airlines. So can you — unlock the full game.")
+                            .font(.karla(12, .semibold)).multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .foregroundStyle(Sky.brightBlue)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 6)
             }
         }
         .padding(16)

@@ -161,6 +161,8 @@ struct RouteSave: Codable {
     var fulfillByTick: Int? = nil
     /// Non-nil for a route that came with an acquired subsidiary.
     var subsidiaryCode: String? = nil
+    /// Fare positioning level (nil in pre-fare-lever saves → Standard).
+    var fareLevel: Int? = nil
     var history: [FlightRecordSave]
     var assignmentHistory: [RouteAssignmentSave]
     // Lifetime running totals (nil in pre-1.1 saves → recomputed from the
@@ -386,6 +388,7 @@ extension RouteSave {
         incentiveWaived = c.decodeSafe(.incentiveWaived, default: 0)
         fulfillByTick = c.decodeSafeOpt(Int.self, .fulfillByTick)
         subsidiaryCode = c.decodeSafeOpt(String.self, .subsidiaryCode)
+        fareLevel = c.decodeSafeOpt(Int.self, .fareLevel)
         history = c.decodeSafe(.history, default: [])
         assignmentHistory = c.decodeSafe(.assignmentHistory, default: [])
         revenueTotal = c.decodeSafeOpt(Int.self, .revenueTotal)

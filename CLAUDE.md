@@ -4978,6 +4978,97 @@ only so a session reading CLAUDE.md alone knows the feature exists — the full 
   (it fails 3 of 5 checks there) — a guard that only passes on the new code proves
   nothing.
 
+## Decided — Gameplay pack (1.4 candidate; branch `gameplay-lever-pack`)
+
+Five features from a designer-requested critical gameplay review (the thesis:
+excellent SIM, thin GAME — the player's role was investor-spectator with no verb
+between purchases and no reason to return tomorrow). All built in one pass,
+verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
+
+- **FARE LEVER (per-route fare positioning) — the new core verb.** Every open
+  route's detail card (RoutesPanel) has 5 pills: Discount 0.85 · Value 0.925 ·
+  Standard 1.0 · Premium 1.075 · Flagship 1.15 (`Route.fareLevel`, default 2 =
+  Standard → ZERO behavioral change for existing saves/harnesses). Demand
+  responds via ASYMMETRIC elasticity (`fareDemandResponse`: raise e=1.35, cut
+  e=1.15) — the design that keeps it from being globally solvable: a raise is
+  net-negative on an UNCAPPED route (f^(1−e) < 1) but pure margin on a
+  demand-CAPPED trunk (the shed pax were never boarding); a cut is
+  ~revenue-neutral but fills thin routes AND defends competition share
+  (`fareShareShifts`: discount ×1.08 … flagship ×0.94, applies only when rivals
+  are on the route). So the right level depends on demand-vs-seats + contest
+  state: overfull trunk → Premium/Flagship, contested → Discount, mismatch →
+  loss. Applied in `rollRevenue` (fare side in the fareMult stack, demand side
+  in the demand block); revenue still rolls at scheduling, so a change takes
+  effect next leg. Persisted (`RouteSave.fareLevel`, optional → legacy saves =
+  Standard). Cash-invariant-neutral (amounts only). `Simulation.routeEditSeq`
+  is the observable bump the panel re-renders on (Route isn't @Observable).
+  **HARNESS METHODOLOGY worth reusing (`aa-1.1.x/FareVerify.swift`, 17/17):**
+  economic events fire ~15%/day and poison any sequential A/B — so the
+  behavioral checks run a capped trunk + an uncapped thin route in the SAME sim
+  SIMULTANEOUSLY and measure RATIOS normalized by a both-Standard baseline;
+  events/wiggle/reputation cancel across routes. Competition is zeroed each
+  tick by the harness and a phase touched by the rival fare-war event is
+  discarded and re-collected. Also note: FlightRecord.id is the GLOBAL flight
+  index — phase windows use history-count offsets, not id filters.
+- **SESSION BRIEFING (the re-entry hook).** Loading a save with real progress
+  shows a one-tap "OPS BRIEFING / Welcome back to <airline>" card
+  (`SessionBriefingView`, ContentView overlay) with the top-5 most actionable
+  items from `Simulation.briefingItems()` (pure read, sim layer): insolvency
+  countdown → pending decisions → activist/board → unstaffed offer-route
+  deadlines → understaffed hubs → active event → routes within ~8 avg-legs of
+  recouping → a calm "all quiet" fallback. NOT a replay of missed events — no
+  sim time passes while closed (the documented pause rule); it's a status
+  re-orientation. Skipped when the one-time livery prompt has the stage, and
+  for empty starts.
+- **FIRST QUEST (directed first session).** `seedFirstQuest()` pushes a
+  guaranteed, curated airport recruitment offer for a brand-new airline —
+  smaller home-region airport → bigger one, 200–900nm, demand 40–220/day (a
+  turboprop/RJ fills it — teaching plane-to-market matching), 21-day expiry,
+  "first customer" pitch text. Reuses the REAL offer machinery: accept with no
+  fleet opens the route PENDING (fee waived, bonus banked, 14-day staffing
+  clock), and buying a capable aircraft auto-staffs it — the existing
+  fulfillment flow does all the work. Called from ContentView's new-game flow
+  NEXT TO `randomizeCalendarStart()`, NOT from nameAirline — the same
+  convention that keeps headless harnesses deterministic. Tutorial step 2
+  rewritten to point at the bell/offer. Known accepted gap: quit before
+  accepting and the offer doesn't regenerate on reload (decisionQueue isn't
+  persisted) — random offers resume, and the 21-day window makes it rare.
+- **GAME CENTER — achievements + efficiency leaderboards (`GameCenter.swift`,
+  view layer like Feedback/Telemetry; sim stays framework-free).** Achievements
+  map 1:1 onto the milestone ladder via `Celebration.key` (new field) reported
+  from ContentView's celebration onChange; a loaded save back-fills via
+  `syncAchievements(firedMilestoneKeys)` (idempotent). Leaderboards follow the
+  long-standing "rank EFFICIENCY, not accumulation" rule: `aa.fastest_100m`
+  (sim-days to $100M, ascending — submits when nw_100000000 fires) and
+  `aa.networth_day365` (net worth when the NEW `year_one` milestone fires at
+  day 365; firedMilestones' persistence makes both once-per-save). Auth waits
+  for the splash to dismiss; GKAccessPoint shows on the load menu only.
+  Entitlement `com.apple.developer.game-center` added. **DESIGNER SIDE: the ASC
+  config (enable Game Center + create the 29 achievement / 2 leaderboard IDs)
+  is in `GAMEKIT_SETUP.md`** — until configured, submissions fail silently
+  server-side (safe to ship in either order).
+- **RIVAL FLAVOR + FREE-TIER DEPTH TEASER.** `tickRivalFlavor()` (daily 5%)
+  logs cosmetic MARKET ops events about real `relevantCompetitors` profiles —
+  a rival IPOs, expands a hub, courts a merger, posts results — so the world
+  visibly plays the endgame systems (and the names match Market Intelligence;
+  owned subsidiaries excluded). Zero sim effect. For FREE users only, the Ops
+  Events card footer adds one tappable line ("Your rivals build hubs, go
+  public, and buy airlines. So can you — unlock the full game" → paywall) —
+  the events SHOW the depth, the line names the door (`OpsView.isPro`/
+  `onUpgrade`).
+- **ContentView's body chain hit the type-checker budget** when the briefing +
+  Game Center hooks landed ("unable to type-check this expression in
+  reasonable time") — fixed by splitting the modifier chain in two
+  (`stageOne` = shell + tasks/onChanges through the tutorial overlay; `body` =
+  stageOne + the modal overlays). If it trips again, split further — don't
+  fight it with inline closures (extracting closure bodies to funcs was NOT
+  enough on its own).
+- **NOT yet done for this pack:** live Simulator drive of the five surfaces
+  (fare pills, briefing card, quest card copy, GC sign-in sheet, teaser line) —
+  headless + build only so far; the ASC Game Center config (designer); and the
+  soak/offer-spread guard results should be checked in the session log before
+  shipping.
+
 ## Release status — see `HANDOFF.md`
 
 ⚠️ **`RELEASE_STATUS.md` NO LONGER EXISTS.** It covered the 1.0 / build 26 launch and
