@@ -423,6 +423,11 @@ struct FleetView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(ac.tail).font(.karla(20, .heavy)).foregroundStyle(primary)
                     Text(ac.type.name).font(.karla(14)).foregroundStyle(secondary)
+                    // A subsidiary's aircraft names its operator (it flies the
+                    // sub's flag, not the mainline's).
+                    if ac.subsidiaryCode != nil, let subName = ac.airlineName {
+                        Text(subName).font(.karla(12, .semibold)).foregroundStyle(Color(skyHex: 0xD767FF))
+                    }
                 }
                 Spacer()
                 if ac.inPaintShop { liveryChip } else { statusChip(st) }
@@ -696,7 +701,11 @@ struct FleetView: View {
     private var marketplacePlaceholder: some View {
         VStack(spacing: 10) {
             categoryBoxRow
-            HStack { sortMenu(showPrice: true); Spacer(minLength: 0) }
+            HStack {
+                sortMenu(showPrice: true)
+                Spacer(minLength: 0)
+                BuyForSelector(sim: sim)   // shown only when subsidiaries exist
+            }
             ScrollView {
                 LazyVStack(spacing: 16) {
                     if marketTypes.isEmpty {

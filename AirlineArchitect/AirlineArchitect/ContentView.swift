@@ -22,6 +22,8 @@ struct ContentView: View {
     /// One-time "you can paint your fleet now" card for an EXISTING player whose
     /// save predates the livery feature (see NewLiveryPromptView).
     @State private var showLiveryPrompt = false
+    /// Non-nil = the session-opening ops briefing is up (set when a save loads).
+    @State private var briefing: [Simulation.BriefingItem]?
     /// Set to open FleetView's livery editor from outside it (the update prompt's
     /// "Design it"). FleetView consumes it in .onAppear/.onChange and clears it —
     /// an intent set BEFORE a tab switch must be adopted in .onAppear, since the
@@ -74,7 +76,10 @@ struct ContentView: View {
     }()
     #endif
 
-    var body: some View {
+    /// First half of body's modifier chain — split in two because the single
+    /// chain outgrew the type-checker's expression budget when the briefing +
+    /// Game Center hooks landed.
+    private var stageOne: some View {
         // Custom bottom nav (SkyTabBar) — the Figma tab bar (yellow-on-dark /
         // blue-on-light, custom icons) isn't a stock UITabBar, so we drive tab
         // selection ourselves and switch the content. Only NETWORK is built;
@@ -114,7 +119,11 @@ struct ContentView: View {
         // Haptics on the big observed moments (the delight layer). Player-initiated
         // actions (buy / open route) tap at their own call sites; these are the
         // events that arrive from the sim itself.
-        .onChange(of: sim.celebrations.first?.id) { _, id in if id != nil { Feedback.milestone() } }
+        .onChange(of: sim.celebrations.first?.id) { _, id in celebrationFired(id) }
+        // Game Center sign-in waits for the splash to finish so the sheet never
+        // lands on the intro animation; the access point lives on the load menu.
+        .onChange(of: showSplash) { _, showing in splashDismissed(showing) }
+        .onChange(of: showLoadMenu) { _, menu in GameCenter.setAccessPointActive(menu) }
         .onChange(of: sim.decisionQueue.count) { old, new in if new > old { Feedback.alert() } }
         .onChange(of: sim.isBankrupt) { _, bankrupt in if bankrupt { Feedback.gameOver() } }
         .overlay { firstLaunchFlow }
@@ -133,6 +142,10 @@ struct ContentView: View {
             }
         }
         .animation(Motion.glide, value: tutorialStep)
+    }
+
+    var body: some View {
+        stageOne
         // Alerts modal — the bell's target, over everything, on any tab.
         .overlay {
             if showAlerts {
@@ -149,6 +162,8 @@ struct ContentView: View {
                 .transition(.opacity)
             }
         }
+        // Session-opening ops briefing — shown once when a saved game loads.
+        .overlay { briefingOverlay }
         // Paywall — the target of every in-context upgrade prompt, over any tab.
         .overlay {
             if showPaywall {
@@ -320,6 +335,7 @@ struct ContentView: View {
             LiveryDesignView(airlineName: liveryName, backdropOpacity: coldLaunchBackdrop) { fontI, palI, tailI, text in
                 sim.setLivery(fontIndex: fontI, paletteIndex: palI, tailArtIndex: tailI, text: text)
                 sim.randomizeCalendarStart()   // new game starts on a random date + season
+                sim.seedFirstQuest()           // guaranteed first customer (directed first arc)
                 Telemetry.gameStarted(region: sim.homeRegion.rawValue)   // funnel denominator
                 if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
                 pendingLiveryName = nil
@@ -363,7 +379,8 @@ struct ContentView: View {
         case 2:  CrewsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu)
         case 3:  OpsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu,
                          onShowAirport: { code in sim.focusCamera(on: code); tab = 0 },
-                         onPreviewRoute: { opp in sim.suggestRoute(from: opp.originCode, to: opp.destCode); tab = 0 })
+                         onPreviewRoute: { opp in sim.suggestRoute(from: opp.originCode, to: opp.destCode); tab = 0 },
+                         isPro: store.isPro, onUpgrade: { upgrade(nil) })
         default: FinanceView(sim: sim, store: store, onBell: { showAlerts = true },
                              onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: { upgrade(nil) })
         }
@@ -400,6 +417,33 @@ struct ContentView: View {
         withAnimation(.easeOut(duration: 0.25)) { showLoadMenu = true }
     }
 
+    /// Haptic + Game Center mirror for a fired milestone (extracted from the
+    /// onChange closure — body-inline closures cost type-checker budget).
+    private func celebrationFired(_ id: Int?) {
+        if id != nil { Feedback.milestone() }
+        if let c = sim.celebrations.first { GameCenter.reportMilestone(c.key, sim: sim) }
+    }
+
+    /// Game Center auth once the cold-launch splash is gone.
+    private func splashDismissed(_ stillShowing: Bool) {
+        guard !stillShowing else { return }
+        GameCenter.configure(onAuthenticated: { GameCenter.setAccessPointActive(showLoadMenu) })
+    }
+
+    /// Session-opening ops briefing (extracted — inline it and ContentView's
+    /// body blows the type-checker's expression budget).
+    @ViewBuilder private var briefingOverlay: some View {
+        if let items = briefing, let name = sim.playerAirlineName {
+            let date = Simulation.gameDateString(at: sim.tick, startDay: sim.calendarStartDay)
+            SessionBriefingView(
+                airlineName: name,
+                dateLine: "Day \(Simulation.gameDay(at: sim.tick)) · \(date)",
+                items: items,
+                onDismiss: { withAnimation(.easeOut(duration: 0.2)) { briefing = nil } })
+                .transition(.opacity)
+        }
+    }
+
     /// Load a saved slot into a fresh sim instance (so no residue from a prior
     /// game survives), restart its run loop, and enter it.
     private func loadSlot(_ slot: Int) {
@@ -410,6 +454,9 @@ struct ContentView: View {
         gameID = UUID()
         currentSlot = slot
         tab = 0
+        // Bring Game Center up to date with this save's earned milestones
+        // (idempotent — completed achievements re-report as no-ops).
+        GameCenter.syncAchievements(fresh.firedMilestoneKeys)
         pendingLiveryName = nil   // a restored game skips the naming/livery flow
         showLoadMenu = false
         // An existing player whose save predates the livery feature has a fleet
@@ -418,6 +465,11 @@ struct ContentView: View {
         if fresh.needsFirstLivery && !LiveryPromptState.seen {
             tab = 1                       // FLEET — where the Add Livery button is
             showLiveryPrompt = true
+        } else if fresh.ownedCount > 0 || !fresh.playerRoutes.isEmpty {
+            // Session-opening ops briefing — a re-orientation for a save with
+            // real progress (an empty $20M start has nothing to brief). Skipped
+            // when the one-time livery prompt has the stage.
+            briefing = fresh.briefingItems()
         }
     }
 
@@ -489,6 +541,48 @@ enum RouteMode: Equatable {
 /// side-view art is supplied), a Seats / Range / Lifespan spec row, then Buy
 /// new / Lease new / Buy used(×listings) rows each with a BUY (green) or LEASE
 /// (gray) button. Live affordability; @Observable re-renders on balance change.
+/// "Buying for: <airline> ▾" — which airline in the group a marketplace
+/// purchase joins (a paying-player request: grow an acquired subsidiary).
+/// Rendered only when the player owns subsidiaries; writes the transient
+/// `sim.purchaseFor` intent that makePurchasedAircraft reads. Shared by the
+/// Network Acquire panel and the Fleet Marketplace.
+struct BuyForSelector: View {
+    let sim: Simulation
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var labelC: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x64748B) }
+    private var valueC: Color { isDark ? .white : .black }
+    private var border: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xC9C9C9) }
+
+    var body: some View {
+        if !sim.subsidiaries.isEmpty {
+            let current = sim.subsidiaries.first { $0.code == sim.purchaseFor }
+            Menu {
+                Button { sim.purchaseFor = nil } label: {
+                    Label(sim.playerAirlineName ?? "Mainline",
+                          systemImage: current == nil ? "checkmark" : "airplane")
+                }
+                ForEach(sim.subsidiaries) { sub in
+                    Button { sim.purchaseFor = sub.code } label: {
+                        Label(sub.name, systemImage: current?.code == sub.code ? "checkmark" : "building.2")
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Buying for:").font(.karla(13)).foregroundStyle(labelC)
+                    Text(current?.name ?? (sim.playerAirlineName ?? "Mainline"))
+                        .font(.karla(13, .bold)).foregroundStyle(valueC)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 10, weight: .semibold)).foregroundStyle(labelC)
+                }
+                .padding(.horizontal, 10).padding(.vertical, 7)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(border, lineWidth: 1))
+            }
+        }
+    }
+}
+
 struct BuyPanel: View {
     let sim: Simulation
     var store: Store
@@ -502,6 +596,7 @@ struct BuyPanel: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 8) {
+                BuyForSelector(sim: sim).frame(maxWidth: .infinity, alignment: .leading)
                 // Priciest/biggest first, matching the Figma card order.
                 ForEach(AircraftType.all.sorted { $0.purchasePrice < $1.purchasePrice }) { t in
                     AircraftProfileCard(sim: sim, type: t, store: store, onUpgrade: onUpgrade, onBought: onBought)
@@ -949,6 +1044,7 @@ struct RoutesPanel: View {
             line("Lease cost", "−" + money(r.totalLeaseCost))
             line("Avg load", "\(r.averageLoadPct)%")
         }
+        if r.isOpen { fareControl(r) }
         if !r.history.isEmpty {
             Text(r.flights > 8 ? "RECENT FLIGHTS (last 8 of \(r.flights))" : "RECENT FLIGHTS")
                 .font(.karla(10, .bold)).foregroundStyle(labelColor).padding(.top, 2)
@@ -968,6 +1064,54 @@ struct RoutesPanel: View {
             .buttonStyle(.plain)
             .padding(.top, 4)
         }
+    }
+
+    /// Per-route fare positioning: five pills (Discount…Flagship) + a hint line
+    /// explaining the current level's tradeoff. Reads `sim.routeEditSeq` so a
+    /// tap re-renders (Route itself isn't @Observable).
+    @ViewBuilder private func fareControl(_ r: Route) -> some View {
+        let _ = sim.routeEditSeq
+        VStack(alignment: .leading, spacing: 6) {
+            Text("FARE").font(.karla(10, .bold)).foregroundStyle(labelColor)
+            HStack(spacing: 4) {
+                ForEach(0..<Simulation.fareLevelNames.count, id: \.self) { i in
+                    let selected = r.fareLevel == i
+                    Button {
+                        Feedback.impact(.light)
+                        sim.setFareLevel(i, for: r.id)
+                    } label: {
+                        Text(Simulation.fareLevelNames[i])
+                            .font(.karla(11, selected ? .bold : .regular))
+                            .foregroundStyle(selected ? .white : labelColor)
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                            .frame(maxWidth: .infinity).frame(height: 26)
+                            .background(selected ? Sky.brightBlue : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay(RoundedRectangle(cornerRadius: 4)
+                                .stroke(selected ? Sky.brightBlue : cardBorder, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Text(fareHint(r)).font(.karla(11)).foregroundStyle(labelColor)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, 4)
+    }
+
+    private func fareHint(_ r: Route) -> String {
+        let f = Simulation.fareMultiplier(level: r.fareLevel)
+        let d = Simulation.fareDemandResponse(level: r.fareLevel)
+        let farePct = Int(((f - 1) * 100).rounded())
+        let demandPct = Int(((d - 1) * 100).rounded())
+        if r.fareLevel == Route.standardFareLevel {
+            return "Market-rate fares. Raise them on a route that's overflowing; cut them to fill seats or defend against rivals."
+        }
+        let fareStr = "\(farePct >= 0 ? "+" : "")\(farePct)% fares · \(demandPct >= 0 ? "+" : "")\(demandPct)% demand"
+        if r.fareLevel > Route.standardFareLevel {
+            return fareStr + (r.competitionLevel > 0 ? " · concedes some share to rivals. Pays when the aircraft is full anyway." : ". Pays when the aircraft is full anyway.")
+        }
+        return fareStr + (r.competitionLevel > 0 ? " · defends share against rivals." : ". Fills seats on a thin route.")
     }
 
     private func line(_ label: String, _ value: String) -> some View {

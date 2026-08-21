@@ -19,8 +19,8 @@ struct TutorialStep {
 let tutorialSteps: [TutorialStep] = [
     .init(tab: 0, title: "Welcome aboard ✈️",
           body: "Your goal is to build a profitable global airline. You'll start small — one aircraft, one route — and grow it flight by flight."),
-    .init(tab: 0, title: "Open your first route",
-          body: "Tap Open Route, pick two cities on the map, then buy or lease an aircraft to fly it. Match the plane to the route — a small regional jet for short hops, bigger jets for busy, long ones."),
+    .init(tab: 0, title: "Your first customer is calling",
+          body: "An airport is already courting you — tap the bell (top right) to see their offer: opening fees waived plus a signing bonus. Accept it, then buy an aircraft that can fly the route. Match the plane to the market — a small turboprop or regional jet fills up; a big jet flies half-empty. Or skip it and open any route you like with Open Route."),
     .init(tab: 1, title: "Mind your fleet",
           body: "The Fleet tab tracks every aircraft — its status, age, and resale value. Older airframes cost more to run and break down more often, so plan when to sell."),
     .init(tab: 2, title: "Staff your crews",

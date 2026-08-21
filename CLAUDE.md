@@ -4978,6 +4978,145 @@ only so a session reading CLAUDE.md alone knows the feature exists — the full 
   (it fails 3 of 5 checks there) — a guard that only passes on the new code proves
   nothing.
 
+## Decided — Gameplay pack (1.4 candidate; branch `gameplay-lever-pack`)
+
+Five features from a designer-requested critical gameplay review (the thesis:
+excellent SIM, thin GAME — the player's role was investor-spectator with no verb
+between purchases and no reason to return tomorrow). All built in one pass,
+verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
+
+- **FARE LEVER (per-route fare positioning) — the new core verb.** Every open
+  route's detail card (RoutesPanel) has 5 pills: Discount 0.85 · Value 0.925 ·
+  Standard 1.0 · Premium 1.075 · Flagship 1.15 (`Route.fareLevel`, default 2 =
+  Standard → ZERO behavioral change for existing saves/harnesses). Demand
+  responds via ASYMMETRIC elasticity (`fareDemandResponse`: raise e=1.35, cut
+  e=1.15) — the design that keeps it from being globally solvable: a raise is
+  net-negative on an UNCAPPED route (f^(1−e) < 1) but pure margin on a
+  demand-CAPPED trunk (the shed pax were never boarding); a cut is
+  ~revenue-neutral but fills thin routes AND defends competition share
+  (`fareShareShifts`: discount ×1.08 … flagship ×0.94, applies only when rivals
+  are on the route). So the right level depends on demand-vs-seats + contest
+  state: overfull trunk → Premium/Flagship, contested → Discount, mismatch →
+  loss. Applied in `rollRevenue` (fare side in the fareMult stack, demand side
+  in the demand block); revenue still rolls at scheduling, so a change takes
+  effect next leg. Persisted (`RouteSave.fareLevel`, optional → legacy saves =
+  Standard). Cash-invariant-neutral (amounts only). `Simulation.routeEditSeq`
+  is the observable bump the panel re-renders on (Route isn't @Observable).
+  **HARNESS METHODOLOGY worth reusing (`aa-1.1.x/FareVerify.swift`, 17/17):**
+  economic events fire ~15%/day and poison any sequential A/B — so the
+  behavioral checks run a capped trunk + an uncapped thin route in the SAME sim
+  SIMULTANEOUSLY and measure RATIOS normalized by a both-Standard baseline;
+  events/wiggle/reputation cancel across routes. Competition is zeroed each
+  tick by the harness and a phase touched by the rival fare-war event is
+  discarded and re-collected. Also note: FlightRecord.id is the GLOBAL flight
+  index — phase windows use history-count offsets, not id filters.
+- **SESSION BRIEFING (the re-entry hook).** Loading a save with real progress
+  shows a one-tap "OPS BRIEFING / Welcome back to <airline>" card
+  (`SessionBriefingView`, ContentView overlay) with the top-5 most actionable
+  items from `Simulation.briefingItems()` (pure read, sim layer): insolvency
+  countdown → pending decisions → activist/board → unstaffed offer-route
+  deadlines → understaffed hubs → active event → routes within ~8 avg-legs of
+  recouping → a calm "all quiet" fallback. NOT a replay of missed events — no
+  sim time passes while closed (the documented pause rule); it's a status
+  re-orientation. Skipped when the one-time livery prompt has the stage, and
+  for empty starts.
+- **FIRST QUEST (directed first session).** `seedFirstQuest()` pushes a
+  guaranteed, curated airport recruitment offer for a brand-new airline —
+  smaller home-region airport → bigger one, 200–900nm, demand 40–220/day (a
+  turboprop/RJ fills it — teaching plane-to-market matching), 21-day expiry,
+  "first customer" pitch text. Reuses the REAL offer machinery: accept with no
+  fleet opens the route PENDING (fee waived, bonus banked, 14-day staffing
+  clock), and buying a capable aircraft auto-staffs it — the existing
+  fulfillment flow does all the work. Called from ContentView's new-game flow
+  NEXT TO `randomizeCalendarStart()`, NOT from nameAirline — the same
+  convention that keeps headless harnesses deterministic. Tutorial step 2
+  rewritten to point at the bell/offer. Known accepted gap: quit before
+  accepting and the offer doesn't regenerate on reload (decisionQueue isn't
+  persisted) — random offers resume, and the 21-day window makes it rare.
+- **GAME CENTER — achievements + efficiency leaderboards (`GameCenter.swift`,
+  view layer like Feedback/Telemetry; sim stays framework-free).** Achievements
+  map 1:1 onto the milestone ladder via `Celebration.key` (new field) reported
+  from ContentView's celebration onChange; a loaded save back-fills via
+  `syncAchievements(firedMilestoneKeys)` (idempotent). Leaderboards follow the
+  long-standing "rank EFFICIENCY, not accumulation" rule: `aa.fastest_100m`
+  (sim-days to $100M, ascending — submits when nw_100000000 fires) and
+  `aa.networth_day365` (net worth when the NEW `year_one` milestone fires at
+  day 365; firedMilestones' persistence makes both once-per-save). Auth waits
+  for the splash to dismiss; GKAccessPoint shows on the load menu only.
+  Entitlement `com.apple.developer.game-center` added. **DESIGNER SIDE: the ASC
+  config (enable Game Center + create the 29 achievement / 2 leaderboard IDs)
+  is in `GAMEKIT_SETUP.md`** — until configured, submissions fail silently
+  server-side (safe to ship in either order).
+- **RIVAL FLAVOR + FREE-TIER DEPTH TEASER.** `tickRivalFlavor()` (daily 5%)
+  logs cosmetic MARKET ops events about real `relevantCompetitors` profiles —
+  a rival IPOs, expands a hub, courts a merger, posts results — so the world
+  visibly plays the endgame systems (and the names match Market Intelligence;
+  owned subsidiaries excluded). Zero sim effect. For FREE users only, the Ops
+  Events card footer adds one tappable line ("Your rivals build hubs, go
+  public, and buy airlines. So can you — unlock the full game" → paywall) —
+  the events SHOW the depth, the line names the door (`OpsView.isPro`/
+  `onUpgrade`).
+- **ContentView's body chain hit the type-checker budget** when the briefing +
+  Game Center hooks landed ("unable to type-check this expression in
+  reasonable time") — fixed by splitting the modifier chain in two
+  (`stageOne` = shell + tasks/onChanges through the tutorial overlay; `body` =
+  stageOne + the modal overlays). If it trips again, split further — don't
+  fight it with inline closures (extracting closure bodies to funcs was NOT
+  enough on its own).
+- **BUY FOR / TRANSFER TO A SUBSIDIARY (paying-player request: "add planes to
+  an airline I've acquired") — BUILT in the same pack (15/15 headless,
+  `aa-1.1.x/SubFleetVerify.swift`).** `Simulation.purchaseFor` is a TRANSIENT
+  purchase intent (like `pendingAssignment` — not persisted, resets on load):
+  the shared `BuyForSelector` ("Buying for: <airline> ▾", shown only when
+  `!subsidiaries.isEmpty`) sits in BOTH acquire surfaces (Network Acquire
+  panel + Fleet Marketplace) and writes it; `makePurchasedAircraft` reads it
+  and builds the sub's FLAG tail (`registrationPrefix + n + IATA code`, the
+  same rule `inheritFleet` uses — an Air Canada sub purchase tails `C…AC`) +
+  sets `subsidiaryCode`/`airlineName`. Buy/lease/used all route through it; an
+  unknown code falls back to mainline. IDENTITY ONLY — economics, crew pools,
+  route machinery, and the Finance invariant are untouched (verified). The
+  intent is STICKY until changed, and that's safe because the selector always
+  displays the current target in both panels. **`assignAircraft(_:toSubsidiary:)`
+  is the escape hatch** (Fleet detail "TRANSFER WITHIN GROUP" menu, shown only
+  when subs exist) — without it a purchase under the wrong flag is an
+  irreversible dead end. Transfers keep the REGISTRATION (`Aircraft.tail` is
+  `let`, `tailHash` seeds per-tail variation; intra-group transfers keeping
+  registrations is realistic anyway) and move only operator identity. UI: the
+  fleet card + detail show the operator in the competitor purple `#D767FF`,
+  and a subsidiary's aircraft renders WITHOUT the player livery (it flies its
+  own flag — `showLivery: subsidiaryCode == nil`). Persistence already existed
+  (`AircraftSave.subsidiaryCode`); a sub-bought aircraft round-trips.
+  **MAP COLOR (corrected note):** the map keys aircraft color on
+  `airlineName != nil` (MapView ~line 349), so subsidiary aircraft render in
+  the COMPETITOR purple `#D767FF` — coherent with the Fleet views' purple
+  operator labels ("flies its own flag"), but a sub is indistinguishable from
+  a RIVAL on the map. The spec's dedicated third colour state still doesn't
+  exist; build it if that ambiguity ever bites.
+- **LIVE SIMULATOR DRIVE — DONE (all six surfaces, iPhone 17 Pro sim).** The
+  full first-run arc: naming → livery → tutorial (rewritten step 2 shows) →
+  bell badge 1 → the quest card ("Thunder Bay, ON wants your airline", YQT ↔
+  JFK, bonus + 14-day clawback copy) → accept (fired the first_intl milestone
+  toast, exercising the GameCenter.reportMilestone hook) → buy B1900 → the
+  pending route AUTO-STAFFED and flew. FARE pills rendered in the route
+  detail (the quest route ran 89% load — a textbook Flagship case), tap
+  flipped Standard→Flagship instantly with the hint updating; no flicker/
+  dropped-tap (the documented panel-bug class did not recur). Save→Quit→
+  reload showed the OPS BRIEFING card ("Welcome back to New Airline · Day 4"
+  + the calm fallback). Ops tab showed the free-tier teaser line + the
+  Airport Incentives box tracking the quest ("In service · +$159k bonus ·
+  opening waived $107k"). The free-tier cap correctly intercepted a buy with
+  the paywall at 51/6. Subsidiary UI driven via the new COMMITTED `-devScenario
+  subfleet` (kept, like the livery scenarios — the $1B gate is unreachable by
+  hand): "Buying for:" selector in the Marketplace (menu ✓ Air Tina /
+  Air Canada, STICKY across tabs), bought a B1900 for Air Canada → `C52AC`
+  tail + purple "Air Canada" label + bare-metal illustration; TRANSFER WITHIN
+  GROUP → back to mainline → the Air Tina livery painted itself back on,
+  operator line gone, registration kept. Game Center auth ran silently
+  unauthenticated all session (no sheet on the sim, nothing blocked — the
+  degradation contract). STILL REMAINING: the ASC Game Center config
+  (designer, GAMEKIT_SETUP.md) and a real-device first-run pass before
+  submitting 1.4.
+
 ## Release status — see `HANDOFF.md`
 
 ⚠️ **`RELEASE_STATUS.md` NO LONGER EXISTS.** It covered the 1.0 / build 26 launch and
@@ -4987,12 +5126,10 @@ Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (whic
 version is live, what's in review, what the next build number must be), and in-flight
 task tracking lives in `TASKS.md`.
 
-As of 18 Aug 2026: **1.2 (41) APPROVED + LIVE — the monetization pivot is public · 1.2.1
-(build 43 = airport-offer fix + TelemetryDeck error reporting) SUBMITTED FOR REVIEW
-(`WAITING_FOR_REVIEW`) · 1.3 = livery MERGED to `main`, build 44 UPLOADED to ASC (not yet
-submitted — designer owes a real-device first-run test + the ASC version record WITH
-screenshots).** The livery branch + its `LIVERY_SPEC.md`/`aa-livery/` tooling are now ON
-`main`. Next new build after 44 must be **45+**. Query review state directly rather than
+As of 19 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) are ALL APPROVED +
+LIVE (`READY_FOR_SALE`).** The monetization pivot, the airport-offer fix + TelemetryDeck error
+reporting, and the personalized-livery module are all public. The livery branch + its
+`LIVERY_SPEC.md`/`aa-livery/` tooling are now ON `main`. Next new build after 44 must be **45+**. Query review state directly rather than
 trusting any doc's snapshot:
 `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 

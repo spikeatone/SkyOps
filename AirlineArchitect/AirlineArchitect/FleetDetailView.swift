@@ -153,11 +153,19 @@ struct FleetDetailView: View {
                 }
             }
             ownershipChip(aircraft.isLeased)
+            if let subName = aircraft.airlineName, aircraft.subsidiaryCode != nil {
+                // A subsidiary aircraft flies its OWN flag, not the player's.
+                Text("Operated by \(subName)")
+                    .font(.karla(13, .semibold)).foregroundStyle(Color(skyHex: 0xD767FF))
+            }
             if AircraftArt.uiImage(for: aircraft.type.id) != nil {
-                // Owned aircraft wear the player's livery (name + tail emblem).
+                // Owned aircraft wear the player's livery (name + tail emblem);
+                // a subsidiary's aircraft keeps its own identity — bare metal
+                // here rather than the player's paint on someone else's flag.
                 AircraftLiveryImage(typeID: aircraft.type.id,
                                     name: sim.liveryTitle,
-                                    livery: sim.livery)
+                                    livery: sim.livery,
+                                    showLivery: aircraft.subsidiaryCode == nil)
                     .frame(maxWidth: .infinity)
             } else {
                 Image(systemName: "airplane")
@@ -302,7 +310,35 @@ struct FleetDetailView: View {
                 // idle spare has nothing to close.
                 if onRoute { outlineButton("PARK (CLOSE ROUTE)") { confirmPark = true } }
             }
+            transferMenu
             sellButton
+        }
+    }
+
+    /// Move this aircraft between the mainline and a subsidiary (identity only —
+    /// the escape hatch for a purchase made under the wrong flag, and the way to
+    /// grow a sub with aircraft already owned). Shown only when subs exist.
+    @ViewBuilder private var transferMenu: some View {
+        if !sim.subsidiaries.isEmpty {
+            let _ = sim.routeEditSeq   // re-render on transfer (Aircraft isn't @Observable)
+            Menu {
+                if aircraft.subsidiaryCode != nil {
+                    Button("\(sim.playerAirlineName ?? "Mainline") (mainline)") {
+                        Feedback.impact(.light); sim.assignAircraft(aircraft, toSubsidiary: nil)
+                    }
+                }
+                ForEach(sim.subsidiaries.filter { $0.code != aircraft.subsidiaryCode }) { sub in
+                    Button(sub.name) {
+                        Feedback.impact(.light); sim.assignAircraft(aircraft, toSubsidiary: sub.code)
+                    }
+                }
+            } label: {
+                Text("TRANSFER WITHIN GROUP")
+                    .font(.karla(15, .medium)).foregroundStyle(isDark ? .white : Color(skyHex: 0x4B4B4B))
+                    .lineLimit(1).minimumScaleFactor(0.75)
+                    .frame(maxWidth: .infinity).frame(height: 48)
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(skyHex: 0xC9C9C9), lineWidth: 1))
+            }
         }
     }
 

@@ -95,6 +95,14 @@ final class Route: Identifiable {
     /// no obligation.
     var fulfillByTick: Int? = nil
 
+    /// Player-set fare positioning: 0 Discount … 2 Standard … 4 Flagship (index
+    /// into Simulation.fareLevelMultipliers). Raising fares sheds demand faster
+    /// than cutting wins it back, so the right level depends on this route's
+    /// demand vs. its aircraft's seats and the rivals on it — there is no one
+    /// globally correct setting (see the fare-lever notes in Simulation.swift).
+    var fareLevel: Int = Route.standardFareLevel
+    static let standardFareLevel = 2
+
     /// The player's share of this route's demand given the competition on it and
     /// the airline's reputation. Uncontested = 1.0. Each rival takes a slice, but
     /// a strong reputation lets the airline hold more of the market.

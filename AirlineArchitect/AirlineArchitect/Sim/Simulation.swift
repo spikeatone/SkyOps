@@ -610,6 +610,53 @@ final class Simulation {
     static let promoAdDemandBoost = 1.15        // +15% demand at a neutral economy
     static let promoLoyaltyShareBoost = 1.20    // sticky retained share
 
+    // MARK: - Fare positioning (per-route player lever)
+    // The player sets each route's fare level: Discount … Standard … Flagship.
+    // Demand responds through an ASYMMETRIC elasticity — raising fares sheds
+    // demand FASTER than cutting wins it back — which is what makes the lever a
+    // real, context-dependent decision instead of a globally-solvable one:
+    //   · A trunk route whose demand OVERFLOWS the aircraft can raise fares and
+    //     keep the plane full (the shed passengers were never boarding anyway) —
+    //     premium pricing is how an overfull route monetises its overflow.
+    //   · A thin route can discount to fill seats — roughly revenue-neutral on
+    //     fare×load, but the discount also DEFENDS market share on contested
+    //     routes (and Flagship concedes a little), so pricing is a competition
+    //     tool as well.
+    //   · A mispriced route (Flagship on a half-empty regional) just loses.
+    // Fare level applies at the next leg's scheduling roll (revenue is rolled at
+    // scheduling time, the documented model). Constants are DESIGNED pacing.
+    static let fareLevelMultipliers = [0.85, 0.925, 1.0, 1.075, 1.15]
+    static let fareLevelNames = ["Discount", "Value", "Standard", "Premium", "Flagship"]
+    /// Demand response exponents: demandMult = fareMult^(−e). Asymmetric — see above.
+    static let fareRaiseElasticity = 1.35
+    static let fareCutElasticity   = 1.15
+    /// Competition-share nudge per level (applies only when rivals are on the
+    /// route): a discount retains flyers rivals would take; flagship concedes some.
+    static let fareShareShifts = [1.08, 1.04, 1.0, 0.97, 0.94]
+
+    static func fareMultiplier(level: Int) -> Double {
+        fareLevelMultipliers[max(0, min(fareLevelMultipliers.count - 1, level))]
+    }
+    static func fareDemandResponse(level: Int) -> Double {
+        let f = fareMultiplier(level: level)
+        return pow(f, -(f > 1 ? fareRaiseElasticity : fareCutElasticity))
+    }
+    static func fareShareShift(level: Int) -> Double {
+        fareShareShifts[max(0, min(fareShareShifts.count - 1, level))]
+    }
+    /// Set a route's fare level (clamped). Takes effect on the next scheduled leg.
+    func setFareLevel(_ level: Int, for routeId: Int) {
+        guard let r = playerRoutes.first(where: { $0.id == routeId }) else { return }
+        let clamped = max(0, min(Simulation.fareLevelMultipliers.count - 1, level))
+        guard clamped != r.fareLevel else { return }
+        r.fareLevel = clamped
+        bumpRouteEdit()
+    }
+    /// UI refresh key for route-object edits (Route isn't @Observable, so a
+    /// fare-level change needs an observable value the panel can key on).
+    private(set) var routeEditSeq = 0
+    private func bumpRouteEdit() { routeEditSeq += 1 }
+
     func fareWarActive(_ id: Int) -> Bool { (playerFareWarUntil[id] ?? 0) > tick }
     func adCampaignActive(_ id: Int) -> Bool { (adCampaignUntil[id] ?? 0) > tick }
     func loyaltyPushActive(_ id: Int) -> Bool { (loyaltyPushUntil[id] ?? 0) > tick }
@@ -1459,9 +1506,21 @@ final class Simulation {
         /// flying real routes, but `liveryChosen` false — so the fleet is wearing
         /// defaults nobody picked and the one free "Add Livery" choice is pending.
         case legacyPlayer
+        /// A group with one acquired subsidiary + a mainline spare — for driving
+        /// the buy-for-subsidiary selector + the fleet TRANSFER WITHIN GROUP
+        /// menu (the $1B acquisition gate is unreachable by hand).
+        case subfleet
     }
 
     func devSeed(_ scenario: DevScenario) {
+        if scenario == .subfleet {
+            nameAirline("Air Tina", tailCode: "TN")
+            setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "AIR TINA")
+            devInjectCash(8_000_000_000)
+            if let t = AircraftType.all.first(where: { $0.id == "A320" }) { _ = buyAircraft(t) }
+            if let p = relevantCompetitors.first(where: { !$0.code.isEmpty }) { _ = acquire(p) }
+            return
+        }
         if scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer {
             if scenario == .legacyPlayer {
                 // No setLivery call — exactly what a pre-feature save restores as:
@@ -2278,17 +2337,54 @@ final class Simulation {
 
     /// A genuinely fresh purchase — 0 cycles, PARKED at a random home-region
     /// base, no route (a spare). Separate from makeAircraft (stress-test).
+    /// Which airline a marketplace purchase is FOR: nil = the mainline, or an
+    /// owned subsidiary's code (a paying-player request — a subsidiary you
+    /// can't re-equip undercuts the "keeps flying under its own flag" fiction).
+    /// TRANSIENT purchase intent (like pendingAssignment) — not persisted; the
+    /// buy panels set it, makePurchasedAircraft reads it. Identity only: a
+    /// subsidiary-bought aircraft wears the sub's flag/tail/name but shares the
+    /// group's economics, crew pools and route machinery unchanged.
+    var purchaseFor: String? = nil
+
     private func makePurchasedAircraft(_ type: AircraftType, startingCycles: Int = 0) -> Aircraft {
         // Defensive: homeBaseAirports falls back to the full list (never empty),
         // but avoid the force-unwrap entirely — Airport.all is a non-empty static.
         let base = homeBaseAirports.randomElement() ?? airports.first ?? Airport.all[0]
-        let tail = "N\(nextTailNum)\(playerTailCode)"
+        // Buying FOR a subsidiary: the new tail carries the sub's national
+        // registration prefix + its own IATA code (the same flag rule
+        // inheritFleet uses), not the player's N-code.
+        let sub = purchaseFor.flatMap { code in subsidiaries.first { $0.code == code && !code.isEmpty } }
+        let tail = sub.map { "\(Airline.registrationPrefix(code: $0.code))\(nextTailNum)\($0.code)" }
+            ?? "N\(nextTailNum)\(playerTailCode)"
         nextTailNum += 1
         let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
                           stateIndex: FlightState.parked.rawValue,
                           cyclesAccrued: startingCycles, purchased: true)
+        if let sub { ac.subsidiaryCode = sub.code; ac.airlineName = sub.name }
         rollRevenue(for: ac)
         return ac
+    }
+
+    /// Move an owned aircraft between the mainline and a subsidiary — the
+    /// escape hatch for a purchase made under the wrong flag (and the way to
+    /// grow a sub with aircraft you already own). Operator identity only
+    /// (subsidiaryCode + displayed airline); the REGISTRATION is kept — tails
+    /// are immutable (`tailHash` seeds per-tail variation), and intra-group
+    /// transfers keeping their registration is realistic anyway. Economics,
+    /// crew and any assigned route are untouched.
+    func assignAircraft(_ ac: Aircraft, toSubsidiary code: String?) {
+        guard ac.purchased else { return }
+        if let code, let sub = subsidiaries.first(where: { $0.code == code }) {
+            guard ac.subsidiaryCode != sub.code else { return }
+            ac.subsidiaryCode = sub.code
+            ac.airlineName = sub.name
+            logOps(.structural, "Fleet transfer", "\(ac.tail) now flies for \(sub.name).")
+        } else if code == nil, ac.subsidiaryCode != nil {
+            ac.subsidiaryCode = nil
+            ac.airlineName = nil
+            logOps(.structural, "Fleet transfer", "\(ac.tail) returns to the mainline fleet.")
+        } else { return }
+        bumpRouteEdit()   // Aircraft isn't @Observable-diffed by identity — nudge the panels
     }
 
     /// Buy an aircraft if affordable. Returns the new spare (to auto-assign to a
@@ -3429,6 +3525,8 @@ final class Simulation {
         tickRepaint()
         // A rival occasionally bids to buy one of the player's hubs.
         tickHubOffers()
+        // Cosmetic world flavor: rivals making moves in the Ops feed.
+        tickRivalFlavor()
 
         // Clear an expired fare war so a new one can start.
         if fareWarRouteId != nil, tick >= fareWarExpiryTick { fareWarRouteId = nil }
@@ -3644,6 +3742,76 @@ final class Simulation {
                                 signingBonus: bonus, demandPerDay: demand,
                                 expiryTick: tick + Simulation.airportOfferDurationDays * 1440, pitch: pitchText)))
         logOps(.structural, "Route offer", "\(oCity) is courting you for \(origin.code) ↔\u{FE0E} \(dest.code)")
+    }
+
+    // MARK: - Rival flavor (world texture + depth signal)
+    // Cosmetic MARKET events about rival carriers making the same moves the
+    // player can make — a rival goes public, opens a hub, posts results, courts
+    // a merger. No sim effect: the profiles are the real CompetitorIntel data,
+    // so the names/regions are consistent with Market Intelligence, and the feed
+    // doubles as a depth signal (a free player SEES the endgame systems in
+    // motion before the paywall describes them). Owned subsidiaries never
+    // feature — you don't get rumors about your own group.
+    private static let rivalFlavorDailyProbability = 0.05
+
+    private func tickRivalFlavor() {
+        guard Double.random(in: 0..<1) < Simulation.rivalFlavorDailyProbability else { return }
+        let owned = Set(subsidiaries.map { $0.code })
+        let pool = relevantCompetitors.filter { !owned.contains($0.code) && !$0.code.isEmpty }
+        guard let p = pool.randomElement() else { return }
+        let templates: [(String, String)] = [
+            ("\(p.name) rings the bell", "\(p.name) has gone public — shares opened strong."),
+            ("\(p.name) doubles down", p.hubCodes.first.map { "\(p.name) is expanding its \($0) hub operation." } ?? "\(p.name) is expanding hub operations."),
+            ("Merger chatter", "Analysts say \(p.name) could be an acquisition target this year."),
+            ("\(p.name) posts results", p.operatingMargin >= 0.04
+                ? "Strong quarter — \(Int((p.loadFactor * 100).rounded()))% load factor and healthy margins."
+                : "A rough quarter — margins under pressure and costs climbing."),
+            ("\(p.name) refreshes its fleet", "New aircraft orders signal \(p.trend == .growing ? "an aggressive growth push" : "a bid to cut operating costs")."),
+        ]
+        let t = templates.randomElement()!
+        logOps(.market, t.0, t.1)
+    }
+
+    /// FIRST QUEST — a guaranteed, curated recruitment offer for a brand-new
+    /// airline, so the first session has a directed arc: accept the deal → buy a
+    /// plane that fits it → watch it fly and recoup. Reuses the real offer
+    /// machinery (accept opens the route free + banks the bonus; with no
+    /// aircraft it opens PENDING and auto-staffs when one is bought — the
+    /// existing fulfillment flow does all the work). Called from the app's
+    /// NEW-GAME flow (ContentView, beside randomizeCalendarStart), NOT from
+    /// nameAirline — the same convention that keeps headless harnesses
+    /// deterministic. The pair is curated: a smaller home-region airport linking
+    /// to a big one, short enough for the cheapest aircraft, with demand a small
+    /// plane can actually fill.
+    func seedFirstQuest() {
+        guard playerRoutes.isEmpty, ownedCount == 0,
+              !decisionQueue.contains(where: { $0.kind == .airportOffer }) else { return }
+        let pool = homeAirports.filter { $0.info != nil }
+        guard pool.count >= 4 else { return }
+        let bySize = pool.sorted { ($0.info?.annualPassengers ?? 0) < ($1.info?.annualPassengers ?? 0) }
+        let smaller = Array(bySize.prefix(bySize.count * 2 / 3))
+        let bigger = Array(bySize.suffix(bySize.count / 3))
+        // Curated pair: 200–900nm (any starter aircraft's range), demand 40–220/day
+        // (a turboprop/regional jet fills nicely — matching plane to route is the
+        // lesson this quest teaches). Take the best of a bounded random sample.
+        var best: (Airport, Airport, Int)? = nil
+        for _ in 0..<40 {
+            guard let o = smaller.randomElement(), let d = bigger.randomElement(), o.code != d.code else { continue }
+            let nm = o.greatCircleNM(to: d)
+            guard nm >= 200, nm <= 900 else { continue }
+            let dem = routeDailyDemand(o, d)
+            guard dem >= 40, dem <= 220 else { continue }
+            if best == nil || dem > best!.2 { best = (o, d, dem) }
+        }
+        guard let (origin, dest, demand) = best else { return }
+        let bonus = min(500_000, 100_000 + demand * 300)
+        let oCity = origin.info?.city ?? origin.code, dCity = dest.info?.city ?? dest.code
+        let pitch = "\(oCity) heard a new airline is starting up — and they want to be your first customer. Fly \(origin.code) ↔ \(dest.code) and they'll waive every opening fee, plus a $\(bonus.formatted()) signing bonus. ~\(demand) travelers a day are waiting. Accept, then buy an aircraft that can fly it."
+        decisionQueue.append(Decision(id: "airport_first_\(origin.code)", kind: .airportOffer, aircraft: nil,
+            pitch: AirportPitch(originCode: origin.code, destCode: dest.code, originCity: oCity, destCity: dCity,
+                                signingBonus: bonus, demandPerDay: demand,
+                                expiryTick: tick + 21 * 1440, pitch: pitch)))
+        logOps(.structural, "Your first customer", "\(oCity) wants to fund your first route: \(origin.code) ↔\u{FE0E} \(dest.code)")
     }
 
     private func airportPitchText(originCity: String, destCity: String, originCode: String,
@@ -3974,6 +4142,12 @@ final class Simulation {
         if let fw = fareWarRouteId, ac.assignedRouteId == fw, tick < fareWarExpiryTick { fareMult *= Simulation.fareWarMultiplier }
         // Player's OWN fare war on this route: cut fares to undercut rivals.
         if let rid = ac.assignedRouteId, fareWarActive(rid) { fareMult *= Simulation.promoFareWarFareMult }
+        // Fare POSITIONING (the per-route player lever, Discount…Flagship): the
+        // fare side here; the demand response applies in the demand block below.
+        if ac.purchased, let rid = ac.assignedRouteId,
+           let r = playerRoutes.first(where: { $0.id == rid }) {
+            fareMult *= Simulation.fareMultiplier(level: r.fareLevel)
+        }
         // Leisure destinations command premium fares (designer: island/beach
         // markets run a premium, as in the real world).
         if Airport.isLeisure(ac.origin.code) || Airport.isLeisure(ac.dest.code) {
@@ -4021,6 +4195,11 @@ final class Simulation {
                     let floor = clubOperating(r.originCode) || clubOperating(r.destCode)
                         ? Simulation.clubCompetitionShareFloor : 0.2
                     effDemand *= r.competitionShare(reputation: reputation, shareFloor: floor)
+                    // Fare positioning: demand responds to the fare level via the
+                    // asymmetric elasticity, and on a CONTESTED route the level
+                    // also shifts share (discount defends, flagship concedes).
+                    effDemand *= Simulation.fareDemandResponse(level: r.fareLevel)
+                    if r.competitionLevel > 0 { effDemand *= Simulation.fareShareShift(level: r.fareLevel) }
                     // Double coverage: you compete with YOURSELF on a pair you
                     // serve twice. Eases over the integration, never to 1.0 —
                     // only closing/reassigning one of the pair clears it.
@@ -4239,6 +4418,9 @@ final class Simulation {
 
     struct Celebration: Identifiable, Equatable {
         let id: Int
+        /// The milestone key that fired this (e.g. "first_hub") — lets the view
+        /// layer map celebrations to Game Center achievements/leaderboards.
+        let key: String
         let symbol: String          // SF Symbol name (app-aesthetic, not emoji)
         let title: String
         let subtitle: String
@@ -4249,13 +4431,15 @@ final class Simulation {
     private(set) var celebrations: [Celebration] = []
     private var celebrationSeq = 0
     private var firedMilestones: Set<String> = []
+    /// Read-only view for the Game Center layer (sync achievements on load).
+    var firedMilestoneKeys: Set<String> { firedMilestones }
 
     /// Queue a one-time celebration for `key` (deduped — fires once, ever).
     private func celebrate(_ key: String, _ symbol: String, _ title: String, _ subtitle: String,
                            originCode: String? = nil, destCode: String? = nil) {
         guard playerAirlineName != nil, !isBankrupt, firedMilestones.insert(key).inserted else { return }
         celebrationSeq += 1
-        celebrations.append(Celebration(id: celebrationSeq, symbol: symbol, title: title, subtitle: subtitle,
+        celebrations.append(Celebration(id: celebrationSeq, key: key, symbol: symbol, title: title, subtitle: subtitle,
                                         originCode: originCode, destCode: destCode))
         if celebrations.count > 3 { celebrations.removeFirst() }   // never back up too far
     }
@@ -4311,6 +4495,14 @@ final class Simulation {
         // --- Flight-count beats (100 sits between first_flight and 1,000) ---
         if totalFlightsFlown >= 100 { celebrate("flights_100", "airplane.departure", "100 flights flown", "Finding your rhythm.") }
 
+        // --- One year in — also the Game Center "net worth at day 365" moment
+        // (the GC layer reads net worth when this key fires; firedMilestones'
+        // persistence is what makes the submission once-per-save). ---
+        if Simulation.gameDay(at: tick) >= 365, ownedCount >= 1 {
+            celebrate("year_one", "calendar.badge.checkmark", "One year in the sky",
+                      "365 days of operations — your first anniversary.")
+        }
+
         // --- Fleet & iconic-destination flavor ---
         if aircraft.contains(where: { $0.purchased && ($0.type.bodyType == .widebody2Engine || $0.type.bodyType == .widebody4Engine) }) {
             celebrate("first_widebody", "airplane.circle", "First widebody!", "The big metal has arrived.")
@@ -4328,6 +4520,94 @@ final class Simulation {
         // --- Endgame milestones ---
         if !subsidiaries.isEmpty { celebrate("first_subsidiary", "building.2.fill", "First airline acquired!", "Your empire grows by merger.") }
         if isPublic { celebrate("went_public", "chart.line.uptrend.xyaxis", "You're publicly traded!", "The airline rings the opening bell.") }
+    }
+
+    // MARK: - Session briefing (the re-entry hook)
+
+    /// One line of the "welcome back" briefing shown when a saved game loads.
+    struct BriefingItem: Identifiable {
+        let id = UUID()
+        let symbol: String      // SF Symbol
+        let title: String
+        let detail: String
+        let urgent: Bool        // renders red/amber vs neutral
+    }
+
+    /// The most actionable state of the airline right now, prioritized, capped
+    /// at 5 — a re-orientation for a player picking the save back up. No sim
+    /// time passes while the app is closed, so this is a STATUS briefing ("where
+    /// you left off"), not a replay of missed events. Pure read; no mutation.
+    func briefingItems() -> [BriefingItem] {
+        var items: [BriefingItem] = []
+        // 1. Insolvency — the one thing that can end the game on a clock.
+        if let d = insolvencyDaysLeft {
+            items.append(.init(symbol: "exclamationmark.triangle.fill",
+                               title: "Cash is negative",
+                               detail: "\(d) day\(d == 1 ? "" : "s") to raise funds before forced liquidation.",
+                               urgent: true))
+        }
+        // 2. Decisions waiting in the queue.
+        if !decisionQueue.isEmpty {
+            let n = decisionQueue.count
+            items.append(.init(symbol: "bell.badge.fill",
+                               title: "\(n) decision\(n == 1 ? "" : "s") waiting",
+                               detail: "Check the alerts bell — aircraft or offers need a call.",
+                               urgent: decisionQueue.contains { $0.kind == .aog || $0.kind == .crew }))
+        }
+        // 3. Board / activist pressure (public company).
+        if let c = activistCampaign {
+            items.append(.init(symbol: "megaphone.fill",
+                               title: "Activist investor campaign",
+                               detail: "They hold \(Int((c.stake * 100).rounded()))% and want change — settle it or outperform it.",
+                               urgent: true))
+        } else if isPublic, boardPressure > 0.35 {
+            items.append(.init(symbol: "person.3.fill",
+                               title: "The board is restless",
+                               detail: "Lift the share price or rebuild your stake before patience runs out.",
+                               urgent: boardPressure > 0.7))
+        }
+        // 4. Offer-opened routes still awaiting an aircraft (fulfillment clock).
+        for r in pendingRoutes where r.fulfillByTick != nil {
+            let d = max(0, ((r.fulfillByTick ?? tick) - tick) / 1440)
+            items.append(.init(symbol: "airplane.arrival",
+                               title: "\(r.originCode)–\(r.destCode) needs an aircraft",
+                               detail: "\(d) day\(d == 1 ? "" : "s") to staff it or the deal is forfeited.",
+                               urgent: d <= 4))
+        }
+        // 5. Understaffed hubs — benefits suspended, bills still running.
+        for (code, _) in hubs.sorted(by: { $0.key < $1.key }) where hubUnderstaffed(code) {
+            items.append(.init(symbol: "building.2.crop.circle",
+                               title: "\(code) hub is understaffed",
+                               detail: "Below 5 routes — benefits suspended while the bills keep coming.",
+                               urgent: false))
+        }
+        // 6. An economic event in progress.
+        if currentEvent.id != EconomicEvent.normal.id {
+            items.append(.init(symbol: "chart.line.downtrend.xyaxis",
+                               title: currentEvent.label,
+                               detail: "\(eventDaysLeft) day\(eventDaysLeft == 1 ? "" : "s") left — margins are moving.",
+                               urgent: false))
+        }
+        // 7. Routes on the verge of recouping — the near-win worth watching.
+        for r in playerRoutes where r.isOpen && !r.isProfitable && r.flights >= 5 {
+            let short = -r.netVsOpeningCost
+            let avgNet = r.flights > 0 ? max(1, r.cumulativeNet / r.flights) : 1
+            if short > 0, avgNet > 0, short <= avgNet * 8 {
+                items.append(.init(symbol: "chart.line.uptrend.xyaxis",
+                                   title: "\(r.originCode)–\(r.destCode) is almost profitable",
+                                   detail: "$\(short.formatted()) from recouping its opening cost.",
+                                   urgent: false))
+            }
+        }
+        // Fallback so the card never comes up empty on a healthy airline.
+        if items.isEmpty {
+            let flying = aircraft.filter { $0.purchased && $0.assignedRouteId != nil }.count
+            items.append(.init(symbol: "checkmark.circle.fill",
+                               title: "All quiet on the network",
+                               detail: "\(flying) aircraft flying \(playerRoutes.count) route\(playerRoutes.count == 1 ? "" : "s") · $\(playerBalance.formatted()) on hand.",
+                               urgent: false))
+        }
+        return Array(items.prefix(5))
     }
 
     // MARK: - Persistence (save / restore)
@@ -4439,7 +4719,7 @@ final class Simulation {
                   totalLeaseCost: r.totalLeaseCost, closedTick: r.closedTick,
                   competitionLevel: r.competitionLevel, competitors: r.competitors,
                   incentiveBonus: r.incentiveBonus, incentiveWaived: r.incentiveWaived, fulfillByTick: r.fulfillByTick,
-                  subsidiaryCode: r.subsidiaryCode,
+                  subsidiaryCode: r.subsidiaryCode, fareLevel: r.fareLevel,
                   history: r.history.map { FlightRecordSave(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) },
                   assignmentHistory: r.assignmentHistory.map { RouteAssignmentSave(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) },
                   revenueTotal: r.revenueTotal, feesTotal: r.feesTotal,
@@ -4451,6 +4731,7 @@ final class Simulation {
         r.subsidiaryCode = s.subsidiaryCode
         r.competitionLevel = s.competitionLevel; r.competitors = s.competitors
         r.incentiveBonus = s.incentiveBonus; r.incentiveWaived = s.incentiveWaived; r.fulfillByTick = s.fulfillByTick
+        r.fareLevel = s.fareLevel ?? Route.standardFareLevel
         // Cap the log on load too — protects against a pre-1.1 save whose history
         // grew unbounded (only the last maxHistory records are kept in memory).
         r.history = s.history.suffix(Route.maxHistory).map { FlightRecord(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) }
