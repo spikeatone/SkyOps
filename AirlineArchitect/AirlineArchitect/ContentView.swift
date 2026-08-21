@@ -541,6 +541,48 @@ enum RouteMode: Equatable {
 /// side-view art is supplied), a Seats / Range / Lifespan spec row, then Buy
 /// new / Lease new / Buy used(×listings) rows each with a BUY (green) or LEASE
 /// (gray) button. Live affordability; @Observable re-renders on balance change.
+/// "Buying for: <airline> ▾" — which airline in the group a marketplace
+/// purchase joins (a paying-player request: grow an acquired subsidiary).
+/// Rendered only when the player owns subsidiaries; writes the transient
+/// `sim.purchaseFor` intent that makePurchasedAircraft reads. Shared by the
+/// Network Acquire panel and the Fleet Marketplace.
+struct BuyForSelector: View {
+    let sim: Simulation
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var labelC: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x64748B) }
+    private var valueC: Color { isDark ? .white : .black }
+    private var border: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xC9C9C9) }
+
+    var body: some View {
+        if !sim.subsidiaries.isEmpty {
+            let current = sim.subsidiaries.first { $0.code == sim.purchaseFor }
+            Menu {
+                Button { sim.purchaseFor = nil } label: {
+                    Label(sim.playerAirlineName ?? "Mainline",
+                          systemImage: current == nil ? "checkmark" : "airplane")
+                }
+                ForEach(sim.subsidiaries) { sub in
+                    Button { sim.purchaseFor = sub.code } label: {
+                        Label(sub.name, systemImage: current?.code == sub.code ? "checkmark" : "building.2")
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Buying for:").font(.karla(13)).foregroundStyle(labelC)
+                    Text(current?.name ?? (sim.playerAirlineName ?? "Mainline"))
+                        .font(.karla(13, .bold)).foregroundStyle(valueC)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 10, weight: .semibold)).foregroundStyle(labelC)
+                }
+                .padding(.horizontal, 10).padding(.vertical, 7)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(border, lineWidth: 1))
+            }
+        }
+    }
+}
+
 struct BuyPanel: View {
     let sim: Simulation
     var store: Store
@@ -554,6 +596,7 @@ struct BuyPanel: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 8) {
+                BuyForSelector(sim: sim).frame(maxWidth: .infinity, alignment: .leading)
                 // Priciest/biggest first, matching the Figma card order.
                 ForEach(AircraftType.all.sorted { $0.purchasePrice < $1.purchasePrice }) { t in
                     AircraftProfileCard(sim: sim, type: t, store: store, onUpgrade: onUpgrade, onBought: onBought)

@@ -2325,17 +2325,54 @@ final class Simulation {
 
     /// A genuinely fresh purchase — 0 cycles, PARKED at a random home-region
     /// base, no route (a spare). Separate from makeAircraft (stress-test).
+    /// Which airline a marketplace purchase is FOR: nil = the mainline, or an
+    /// owned subsidiary's code (a paying-player request — a subsidiary you
+    /// can't re-equip undercuts the "keeps flying under its own flag" fiction).
+    /// TRANSIENT purchase intent (like pendingAssignment) — not persisted; the
+    /// buy panels set it, makePurchasedAircraft reads it. Identity only: a
+    /// subsidiary-bought aircraft wears the sub's flag/tail/name but shares the
+    /// group's economics, crew pools and route machinery unchanged.
+    var purchaseFor: String? = nil
+
     private func makePurchasedAircraft(_ type: AircraftType, startingCycles: Int = 0) -> Aircraft {
         // Defensive: homeBaseAirports falls back to the full list (never empty),
         // but avoid the force-unwrap entirely — Airport.all is a non-empty static.
         let base = homeBaseAirports.randomElement() ?? airports.first ?? Airport.all[0]
-        let tail = "N\(nextTailNum)\(playerTailCode)"
+        // Buying FOR a subsidiary: the new tail carries the sub's national
+        // registration prefix + its own IATA code (the same flag rule
+        // inheritFleet uses), not the player's N-code.
+        let sub = purchaseFor.flatMap { code in subsidiaries.first { $0.code == code && !code.isEmpty } }
+        let tail = sub.map { "\(Airline.registrationPrefix(code: $0.code))\(nextTailNum)\($0.code)" }
+            ?? "N\(nextTailNum)\(playerTailCode)"
         nextTailNum += 1
         let ac = Aircraft(tail: tail, type: type, origin: base, dest: base,
                           stateIndex: FlightState.parked.rawValue,
                           cyclesAccrued: startingCycles, purchased: true)
+        if let sub { ac.subsidiaryCode = sub.code; ac.airlineName = sub.name }
         rollRevenue(for: ac)
         return ac
+    }
+
+    /// Move an owned aircraft between the mainline and a subsidiary — the
+    /// escape hatch for a purchase made under the wrong flag (and the way to
+    /// grow a sub with aircraft you already own). Operator identity only
+    /// (subsidiaryCode + displayed airline); the REGISTRATION is kept — tails
+    /// are immutable (`tailHash` seeds per-tail variation), and intra-group
+    /// transfers keeping their registration is realistic anyway. Economics,
+    /// crew and any assigned route are untouched.
+    func assignAircraft(_ ac: Aircraft, toSubsidiary code: String?) {
+        guard ac.purchased else { return }
+        if let code, let sub = subsidiaries.first(where: { $0.code == code }) {
+            guard ac.subsidiaryCode != sub.code else { return }
+            ac.subsidiaryCode = sub.code
+            ac.airlineName = sub.name
+            logOps(.structural, "Fleet transfer", "\(ac.tail) now flies for \(sub.name).")
+        } else if code == nil, ac.subsidiaryCode != nil {
+            ac.subsidiaryCode = nil
+            ac.airlineName = nil
+            logOps(.structural, "Fleet transfer", "\(ac.tail) returns to the mainline fleet.")
+        } else { return }
+        bumpRouteEdit()   // Aircraft isn't @Observable-diffed by identity — nudge the panels
     }
 
     /// Buy an aircraft if affordable. Returns the new spare (to auto-assign to a

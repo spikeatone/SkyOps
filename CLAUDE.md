@@ -5063,11 +5063,37 @@ verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
   stageOne + the modal overlays). If it trips again, split further — don't
   fight it with inline closures (extracting closure bodies to funcs was NOT
   enough on its own).
+- **BUY FOR / TRANSFER TO A SUBSIDIARY (paying-player request: "add planes to
+  an airline I've acquired") — BUILT in the same pack (15/15 headless,
+  `aa-1.1.x/SubFleetVerify.swift`).** `Simulation.purchaseFor` is a TRANSIENT
+  purchase intent (like `pendingAssignment` — not persisted, resets on load):
+  the shared `BuyForSelector` ("Buying for: <airline> ▾", shown only when
+  `!subsidiaries.isEmpty`) sits in BOTH acquire surfaces (Network Acquire
+  panel + Fleet Marketplace) and writes it; `makePurchasedAircraft` reads it
+  and builds the sub's FLAG tail (`registrationPrefix + n + IATA code`, the
+  same rule `inheritFleet` uses — an Air Canada sub purchase tails `C…AC`) +
+  sets `subsidiaryCode`/`airlineName`. Buy/lease/used all route through it; an
+  unknown code falls back to mainline. IDENTITY ONLY — economics, crew pools,
+  route machinery, and the Finance invariant are untouched (verified). The
+  intent is STICKY until changed, and that's safe because the selector always
+  displays the current target in both panels. **`assignAircraft(_:toSubsidiary:)`
+  is the escape hatch** (Fleet detail "TRANSFER WITHIN GROUP" menu, shown only
+  when subs exist) — without it a purchase under the wrong flag is an
+  irreversible dead end. Transfers keep the REGISTRATION (`Aircraft.tail` is
+  `let`, `tailHash` seeds per-tail variation; intra-group transfers keeping
+  registrations is realistic anyway) and move only operator identity. UI: the
+  fleet card + detail show the operator in the competitor purple `#D767FF`,
+  and a subsidiary's aircraft renders WITHOUT the player livery (it flies its
+  own flag — `showLivery: subsidiaryCode == nil`). Persistence already existed
+  (`AircraftSave.subsidiaryCode`); a sub-bought aircraft round-trips. KNOWN
+  pre-existing inconsistency, not addressed: the MAP still renders subsidiary
+  aircraft in the normal owned colors (the spec's "third colour state" was
+  never built — no view code branched on subsidiaryCode before this).
 - **NOT yet done for this pack:** live Simulator drive of the five surfaces
-  (fare pills, briefing card, quest card copy, GC sign-in sheet, teaser line) —
-  headless + build only so far; the ASC Game Center config (designer); and the
-  soak/offer-spread guard results should be checked in the session log before
-  shipping.
+  (fare pills, briefing card, quest card copy, GC sign-in sheet, teaser line)
+  plus the subsidiary buy/transfer UI — headless + build only so far; the ASC
+  Game Center config (designer); and the soak/offer-spread guard results
+  should be checked in the session log before shipping.
 
 ## Release status — see `HANDOFF.md`
 
