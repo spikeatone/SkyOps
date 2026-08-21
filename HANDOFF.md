@@ -7,7 +7,12 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 21 August 2026._
 
-**► 1.4 (build 45) = the GAMEPLAY PACK — UPLOADED to ASC 21 Aug, NOT yet submitted.**
+**► 1.4 (build 46) = the GAMEPLAY PACK — UPLOADED to ASC 21 Aug, NOT yet submitted.**
+(Build 45 is SUPERSEDED — 46 adds the Game Center trophy-button entry point and turns Apple's
+rocket/GKAccessPoint OFF: the family finding from FCA's device A/B is that the rocket's generic
+.dashboard opens EMPTY for an app that shipped before its GC integration existed, which AA did
+(1.0–1.3). The trophy button presents .achievements directly — FCA's device-confirmed path.
+Attach BUILD 46 to the 1.4 version record, and TestFlight-test 46, not 45.)
 Six features from the critical gameplay review (branch `gameplay-lever-pack`, now MERGED to
 `main`): per-route FARE LEVER (Discount…Flagship, asymmetric elasticity), SESSION BRIEFING
 (welcome-back ops card on load), FIRST QUEST (guaranteed curated airport offer for new
@@ -16,14 +21,16 @@ efficiency leaderboards; entitlement in the binary), RIVAL FLAVOR + free-tier de
 and SUBSIDIARY FLEET GROWTH (buy-for/transfer — a paying-player request). Verified:
 FareVerify 17/17 · QuestBriefVerify 19/19 · SubFleetVerify 15/15 · OfferSpread 5/5 · soak
 6/6 seeds ALL GREEN · live Simulator drive of every surface. Archived/validated/uploaded via
-the CLI chain (Delivery UUID `a0a46258-724d-4d8e-99a4-16a6404a8e5a`).
+the CLI chain (build 46 Delivery UUID `0ac75396-ac7b-441a-b161-e4e285d76e58`; the superseded
+build 45 was `a0a46258-…`).
 - **The ASC Game Center config is DONE, created via the API** (`aa-1.1.x/gc_setup.py` +
   `gc_upload_images.py`, both idempotent; shared gold-ring badge on all 29, delivery COMPLETE;
   see GAMEKIT_SETUP.md). It all goes live with the 1.4 release.
-- **REMAINING (designer): TestFlight first-run pass on build 45** — naming → livery → quest
-  card → buy → auto-staff, with a Game Center account signed in so "First Jet" pops — then
+- **REMAINING (designer): TestFlight first-run pass on build 46** — naming → livery → quest
+  card → buy → auto-staff, with a Game Center account signed in so "First Jet" pops, and the trophy button on the
+  load menu opens the achievements grid — then
   create the 1.4 version record + What's New (livery-style, fare-lever-led) + submit.
-  Next new build after 45 = **46+**.
+  Next new build after 46 = **47+**.
 
 **► 1.2 (build 41) is APPROVED + LIVE** — the MONETIZATION PIVOT is public (subscription →
 one-time "Full Unlock", $9.99 founding rising to $19.99 on Dec 1, 2026; two non-consumables
