@@ -24,44 +24,9 @@
 //
 
 import UIKit
-import SwiftUI
 #if canImport(GameKit)
 import GameKit
 #endif
-
-/// The Game Center trophy button — the app's entry to the achievements grid
-/// (Apple's floating access point stays OFF; see GameCenter.presentDashboard).
-/// Shown once auth resolves (brief poll — auth is async after the splash).
-/// Overlay it top-leading on any cold-launch surface: the load menu AND the
-/// naming screen (a fresh install has no saves, so the load menu never shows —
-/// the naming screen is that player's only pre-game surface).
-struct GameCenterTrophyButton: View {
-    @State private var ready = false
-
-    var body: some View {
-        Group {
-            if ready {
-                Button { GameCenter.presentDashboard() } label: {
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(.black.opacity(0.28)))
-                }
-                .accessibilityLabel("Game Center achievements")
-                .transition(.opacity)
-            }
-        }
-        .onAppear { ready = GameCenter.isReady }
-        .task {
-            for _ in 0..<20 where !ready {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                ready = GameCenter.isReady
-            }
-        }
-        .animation(.easeOut(duration: 0.2), value: ready)
-    }
-}
 
 @MainActor
 enum GameCenter {
@@ -127,55 +92,25 @@ enum GameCenter {
         #endif
     }
 
-    /// ⚠️ **Apple's floating `GKAccessPoint` ("the rocket") is deliberately OFF.**
-    /// Family-wide finding (FC Architect's device A/B, 2026-08-21 — full write-up
-    /// in FCA's docs/game-center-rocket-bug.md): the rocket opens GameKit's
-    /// generic `.dashboard` home, which honors a stale server-side record from
-    /// the app's LIVE released version. An app that shipped before its GC
-    /// integration existed (FCA 1.0–1.1.1, and AA 1.0–1.3 — this app) gets an
-    /// EMPTY dashboard until a GC-carrying version is actually RELEASED; only
-    /// never-released VA's rocket works. The custom trophy button below uses
-    /// `.achievements` directly, which queries by ID and bypasses the stale
-    /// record — device-confirmed working on FCA. Revisit the rocket after 1.4
-    /// is live if we want Apple's widget back.
+    /// ⚠️ **NO in-app Game Center UI right now — deliberately (family decision,
+    /// FC Architect build 35, 2026-08-21).** An app that shipped to the App
+    /// Store BEFORE its GC integration existed (FCA 1.0–1.1.1, and AA 1.0–1.3
+    /// — this app) carries a stale server-side app-presence record that poisons
+    /// GameKit's own dashboard/home UI: the floating access point opens EMPTY,
+    /// and every client-side workaround fought that condition and lost on
+    /// device (direct `.achievements` present → its back button dead-ends on
+    /// the empty root; `.pageSheet` → iOS forces GC full-screen, no swipe-down;
+    /// a floating Done button → GC renders in its own window and buries it).
+    /// Never-released VA works untouched — 3-for-3 confirms the server-side
+    /// cause. So, like FCA: reporting only, no entry point; players reach
+    /// achievements via the Apple Games app. The record should HEAL once a
+    /// GC-carrying version (1.4) is actually released — verify on device in a
+    /// 1.4.x, then re-enable Apple's standard `GKAccessPoint` here, clean.
     static func setAccessPointActive(_ active: Bool) {
         #if canImport(GameKit)
         GKAccessPoint.shared.isActive = false
         #endif
     }
-
-    /// Whether our own Game Center button should show — true once auth resolves.
-    static var isReady: Bool { isAuthenticated }
-
-    /// The custom trophy button's action (SaveSlotsView): presents the
-    /// achievements grid DIRECTLY via `.achievements` — the family's proven
-    /// path (FCA build 30/31, device-confirmed).
-    ///
-    /// ⚠️ Exit trap (FCA build 32, fixed in 33): the `.achievements` grid's nav
-    /// ROOT underneath is still the poisoned empty `.dashboard`; its internal
-    /// back button pops there, and that screen has no working Done. Presenting
-    /// as a PAGE SHEET keeps iOS's swipe-down-to-dismiss available — an exit
-    /// GameKit's own navigation can't trap. Don't change to full-screen.
-    static func presentDashboard() {
-        #if canImport(GameKit)
-        guard let top = topViewController() else { return }
-        let gc = GKGameCenterViewController(state: .achievements)
-        gc.gameCenterDelegate = DashboardDismisser.shared
-        gc.modalPresentationStyle = .pageSheet
-        top.present(gc, animated: true)
-        #endif
-    }
-
-    #if canImport(GameKit)
-    /// Dismisses the grid when GameKit's own Done chrome is used; the page-sheet
-    /// swipe-down dismissal needs no delegate.
-    final class DashboardDismisser: NSObject, GKGameCenterControllerDelegate {
-        static let shared = DashboardDismisser()
-        func gameCenterViewControllerDidFinish(_ gameCenterViewController: GKGameCenterViewController) {
-            gameCenterViewController.dismiss(animated: true)
-        }
-    }
-    #endif
 
     /// A milestone fired live (from the celebration hook): report its
     /// achievement, plus the two leaderboard moments.

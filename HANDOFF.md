@@ -7,7 +7,7 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 21 August 2026._
 
-**► 1.4 (build 47) = the GAMEPLAY PACK — UPLOADED to ASC 21 Aug, NOT yet submitted.**
+**► 1.4 (build 48) = the GAMEPLAY PACK — UPLOADED to ASC 21 Aug, NOT yet submitted.**
 (Builds 45/46 are SUPERSEDED — 46 added the Game Center trophy-button entry point and turns Apple's
 rocket/GKAccessPoint OFF: the family finding from FCA's device A/B is that the rocket's generic
 .dashboard opens EMPTY for an app that shipped before its GC integration existed, which AA did
@@ -28,11 +28,11 @@ the CLI chain (build 47 Delivery UUID `e4e6ce5f-0133-4aed-b2fe-255a5014b9e5`; su
 - **The ASC Game Center config is DONE, created via the API** (`aa-1.1.x/gc_setup.py` +
   `gc_upload_images.py`, both idempotent; shared gold-ring badge on all 29, delivery COMPLETE;
   see GAMEKIT_SETUP.md). It all goes live with the 1.4 release.
-- **REMAINING (designer): TestFlight first-run pass on build 47** — naming → livery → quest
+- **REMAINING (designer): TestFlight first-run pass on build 48** — naming → livery → quest
   card → buy → auto-staff, with a Game Center account signed in so "First Jet" pops, and the trophy button on the
   load menu opens the achievements grid — then
   create the 1.4 version record + What's New (livery-style, fare-lever-led) + submit.
-  Next new build after 47 = **48+**.
+  Next new build after 48 = **49+**.
 
 **► 1.2 (build 41) is APPROVED + LIVE** — the MONETIZATION PIVOT is public (subscription →
 one-time "Full Unlock", $9.99 founding rising to $19.99 on Dec 1, 2026; two non-consumables

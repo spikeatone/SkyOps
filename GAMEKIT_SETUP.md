@@ -148,11 +148,19 @@ The IDs above are already in `GameCenter.swift` (`achievementIDs` map + the two
 leaderboard constants) — no code changes after the ASC config. A loaded save
 back-fills its already-earned achievements automatically (idempotent).
 
-**Test before submitting 1.4:** on a device (or the sim signed into a sandbox
-Apple ID via Settings → Game Center), start a new airline and buy one plane —
-the "First Jet" achievement should appear in the Game Center overlay within a
-minute. The load-menu screen also shows the floating Game Center widget once
-signed in.
+**Entry point status (family decision, 21 Aug 2026):** 1.4 ships with NO
+in-app Game Center UI — reporting only. An app that shipped before its GC
+integration (AA 1.0–1.3, same as FCA) carries a stale server-side record that
+poisons GameKit's own dashboard UI, and every client-side workaround lost on
+device (trophy button → grid dead-ends; page sheet → forced full-screen). Until
+the record heals, players view achievements in the Apple **Games app** (profile
+→ Airline Architect). **After 1.4 is publicly released:** verify Apple's
+floating access point works on device, then re-enable it in a 1.4.x
+(GameCenter.setAccessPointActive — the standard one-liner is documented there).
+
+**Test before submitting 1.4:** on a device, start a new airline and buy one
+plane — the "First Jet" achievement should report (visible in the Games app
+within a minute).
 
 **Tedium escape hatch:** all of the above can be created through the App Store
 Connect API (`gameCenterLeaderboards` / `gameCenterAchievements` endpoints —

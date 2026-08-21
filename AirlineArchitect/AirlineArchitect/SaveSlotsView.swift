@@ -56,11 +56,8 @@ struct SaveSlotsView: View {
             .padding(24)
             .frame(maxWidth: 420)
         }
-        // Our own Game Center button (Apple's rocket stays OFF — see
-        // GameCenter.presentDashboard for the family finding).
-        .overlay(alignment: .topLeading) {
-            GameCenterTrophyButton().padding(.leading, 16).padding(.top, 8)
-        }
+        // No in-app Game Center entry point for now — see the note in
+        // GameCenter.swift (stale-record poisoning; revisit after 1.4 is live).
         .onAppear { slots = GameStore.slotInfos() }
     }
 

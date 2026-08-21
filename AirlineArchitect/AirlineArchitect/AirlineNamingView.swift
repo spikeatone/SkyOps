@@ -204,13 +204,6 @@ struct AirlineNamingView: View {
             .frame(maxWidth: .infinity)
             }
         }
-        // Game Center trophy — a FRESH INSTALL has no saves, so the load menu
-        // (the button's other home) never shows; this screen is that player's
-        // only pre-game surface. Apple's rocket stays OFF (family finding —
-        // see GameCenter.presentDashboard).
-        .overlay(alignment: .topLeading) {
-            GameCenterTrophyButton().padding(.leading, 16).padding(.top, 8)
-        }
         .onAppear {
             // Blink the prompt cursor; don't auto-focus (keeps the keyboard
             // down until the player taps, matching the design).
