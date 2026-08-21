@@ -24,9 +24,44 @@
 //
 
 import UIKit
+import SwiftUI
 #if canImport(GameKit)
 import GameKit
 #endif
+
+/// The Game Center trophy button — the app's entry to the achievements grid
+/// (Apple's floating access point stays OFF; see GameCenter.presentDashboard).
+/// Shown once auth resolves (brief poll — auth is async after the splash).
+/// Overlay it top-leading on any cold-launch surface: the load menu AND the
+/// naming screen (a fresh install has no saves, so the load menu never shows —
+/// the naming screen is that player's only pre-game surface).
+struct GameCenterTrophyButton: View {
+    @State private var ready = false
+
+    var body: some View {
+        Group {
+            if ready {
+                Button { GameCenter.presentDashboard() } label: {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(.black.opacity(0.28)))
+                }
+                .accessibilityLabel("Game Center achievements")
+                .transition(.opacity)
+            }
+        }
+        .onAppear { ready = GameCenter.isReady }
+        .task {
+            for _ in 0..<20 where !ready {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                ready = GameCenter.isReady
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: ready)
+    }
+}
 
 @MainActor
 enum GameCenter {

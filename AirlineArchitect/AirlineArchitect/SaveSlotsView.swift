@@ -25,8 +25,6 @@ struct SaveSlotsView: View {
     @State private var slots: [SlotInfo?] = GameStore.slotInfos()
     /// Slot index awaiting delete confirmation (tap trash once to arm).
     @State private var confirmDelete: Int?
-    /// Game Center auth resolved — shows the trophy (achievements) button.
-    @State private var gcReady = false
 
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
@@ -58,33 +56,12 @@ struct SaveSlotsView: View {
             .padding(24)
             .frame(maxWidth: 420)
         }
-        // Our own Game Center button. Apple's floating access point ("rocket")
-        // stays OFF — its .dashboard home opens EMPTY for an app that shipped
-        // before its GC integration existed (AA 1.0–1.3; the family finding
-        // from FC Architect's device A/B). This button uses the proven
-        // .achievements present path instead. See GameCenter.presentDashboard().
+        // Our own Game Center button (Apple's rocket stays OFF — see
+        // GameCenter.presentDashboard for the family finding).
         .overlay(alignment: .topLeading) {
-            if gcReady {
-                Button { GameCenter.presentDashboard() } label: {
-                    Image(systemName: "trophy.fill")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(.black.opacity(0.28)))
-                }
-                .padding(.leading, 16).padding(.top, 8)
-                .accessibilityLabel("Game Center achievements")
-            }
+            GameCenterTrophyButton().padding(.leading, 16).padding(.top, 8)
         }
-        .onAppear { slots = GameStore.slotInfos(); gcReady = GameCenter.isReady }
-        // Auth resolves async after the splash — poll briefly so the trophy
-        // appears once Game Center is ready (same pattern as FC Architect).
-        .task {
-            for _ in 0..<20 where !gcReady {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                gcReady = GameCenter.isReady
-            }
-        }
+        .onAppear { slots = GameStore.slotInfos() }
     }
 
     @ViewBuilder
