@@ -8,12 +8,17 @@
 > achievements (840/1000 points; iconic_sbh + iconic_ppt hidden) with their
 > en-US titles + before/after-earned descriptions.
 >
-> **ONE TASK LEFT (designer, in the ASC web UI): upload each achievement's
-> image** — required before release; 1024×1024 PNG/JPG, and ONE shared badge
-> (the app logo mark on the navy circle) uploaded to all 29 is fine for launch
-> (per-achievement art can be a later polish pass). Then eyeball the Game
-> Center page once and test (see the bottom of this file). Everything goes
-> live with **1.4**.
+> **✅ IMAGES DONE TOO (same day):** the shared badge (designer picked variant
+> B — the logo mark on the icon's navy gradient inside the milestone-gold ring;
+> `aa-1.1.x/gc_achievement_badge.png`) was uploaded to all 29 achievements via
+> `aa-1.1.x/gc_upload_images.py` (idempotent) — all 29 assetDeliveryState
+> COMPLETE by read-back. A shared badge is a launch choice, not a permanent
+> one: images are REPLACEABLE later (unlike the IDs), so a per-achievement art
+> pass can ship with any future version.
+>
+> **NOTHING LEFT TO CONFIGURE.** Remaining is verification only: eyeball the
+> Game Center page once, and sandbox-test on device (bottom of this file).
+> Everything goes live with **1.4**.
 >
 > The tables below are now REFERENCE (what exists), not a to-do list.
 
