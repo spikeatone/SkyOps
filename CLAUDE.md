@@ -5127,14 +5127,15 @@ version is live, what's in review, what the next build number must be), and in-f
 task tracking lives in `TASKS.md`.
 
 As of 21 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) are ALL APPROVED +
-LIVE (`READY_FOR_SALE`) · 1.4 (build 46, the GAMEPLAY PACK — fare lever, first quest, session
+LIVE (`READY_FOR_SALE`) · 1.4 (build 47, the GAMEPLAY PACK — fare lever, first quest, session
 briefing, Game Center, rival flavor, subsidiary fleet growth) is UPLOADED to ASC (Delivery UUID
-`0ac75396-ac7b-441a-b161-e4e285d76e58`; build 45 is superseded — 46 adds the Game Center
-trophy-button entry point, Apple's rocket OFF per the family stale-record finding), NOT yet submitted** — remaining: designer's TestFlight
+`e4e6ce5f-0133-4aed-b2fe-255a5014b9e5`; builds 45/46 superseded — 46 added the Game Center
+trophy button + rocket-off, 47 puts the trophy on the NAMING screen too, since a fresh
+install never sees the load menu), NOT yet submitted** — remaining: designer's TestFlight
 first-run pass (incl. Game Center sandbox — "First Jet" should pop on the first purchase), then
 the 1.4 version record + What's New + submit. `gameplay-lever-pack` is MERGED to `main`; the ASC
 Game Center config + badge images are fully created (aa-1.1.x/gc_setup.py + gc_upload_images.py)
-and go live with 1.4. Next new build after 46 must be **47+**. Query review state directly rather than
+and go live with 1.4. Next new build after 47 must be **48+**. Query review state directly rather than
 trusting any doc's snapshot:
 `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 
