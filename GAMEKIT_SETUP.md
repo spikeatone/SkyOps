@@ -1,16 +1,32 @@
 # Game Center setup — designer's one-time checklist
 
+> ## ✅ THE CONFIG WAS CREATED VIA THE ASC API (19 Aug 2026)
+> `aa-1.1.x/gc_setup.py` (idempotent — safe to re-run; skips whatever exists)
+> created it all with the ASCTools key and it's verified by read-back: both
+> leaderboards (aa.fastest_100m **ASC/low-to-high** ✓ — the un-fixable field —
+> INTEGER + "days" suffix; aa.networth_day365 DESC, MONEY_DOLLAR) and all 29
+> achievements (840/1000 points; iconic_sbh + iconic_ppt hidden) with their
+> en-US titles + before/after-earned descriptions.
+>
+> **ONE TASK LEFT (designer, in the ASC web UI): upload each achievement's
+> image** — required before release; 1024×1024 PNG/JPG, and ONE shared badge
+> (the app logo mark on the navy circle) uploaded to all 29 is fine for launch
+> (per-achievement art can be a later polish pass). Then eyeball the Game
+> Center page once and test (see the bottom of this file). Everything goes
+> live with **1.4**.
+>
+> The tables below are now REFERENCE (what exists), not a to-do list.
+
 **Where:** App Store Connect → Airline Architect → Distribution → App Store →
 **Growth & Marketing → Game Center** (the page with the Leaderboards /
 Achievements / Challenges / Activities sections). There is no separate
 "enable Game Center" switch to find — this page IS the configuration, and the
 app side is already done (the `com.apple.developer.game-center` entitlement is
 in the binary; automatic signing picks up the capability at the next archive,
-same as iCloud KVS did). Everything below goes live with the first app version
-released after it's created — i.e. **1.4**.
+same as iCloud KVS did).
 
-The app ships safely in either order: until these IDs exist, every submission
-fails silently server-side and nothing player-facing breaks.
+The app ships safely in either order: until the config went live, every
+submission fails silently server-side and nothing player-facing breaks.
 
 ⚠️ **Two things ASC won't let you undo:**
 - A leaderboard or achievement that has gone LIVE with any version can never be
@@ -67,8 +83,9 @@ circle works) uploaded to all 29 is fine for launch — per-achievement art can
 be a polish pass later. Don't let 29 unique images block the release.
 
 Use the Description for both the pre-earned and earned fields (tweak tense if
-you feel like it). Points total 690 of ASC's 1,000 cap — room for future
-milestones. Hidden = No for all except the two iconic ones.
+you feel like it — the API-created ones already have distinct before/after
+copy, see `aa-1.1.x/gc_setup.py`). Points total 840 of ASC's 1,000 cap — some
+room for future milestones. Hidden = No for all except the two iconic ones.
 
 | Achievement ID | Title | Description | Pts | Hidden |
 |---|---|---|---|---|
