@@ -5126,10 +5126,14 @@ Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (whic
 version is live, what's in review, what the next build number must be), and in-flight
 task tracking lives in `TASKS.md`.
 
-As of 19 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) are ALL APPROVED +
-LIVE (`READY_FOR_SALE`).** The monetization pivot, the airport-offer fix + TelemetryDeck error
-reporting, and the personalized-livery module are all public. The livery branch + its
-`LIVERY_SPEC.md`/`aa-livery/` tooling are now ON `main`. Next new build after 44 must be **45+**. Query review state directly rather than
+As of 21 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) are ALL APPROVED +
+LIVE (`READY_FOR_SALE`) · 1.4 (build 45, the GAMEPLAY PACK — fare lever, first quest, session
+briefing, Game Center, rival flavor, subsidiary fleet growth) is UPLOADED to ASC (Delivery UUID
+`a0a46258-724d-4d8e-99a4-16a6404a8e5a`), NOT yet submitted** — remaining: designer's TestFlight
+first-run pass (incl. Game Center sandbox — "First Jet" should pop on the first purchase), then
+the 1.4 version record + What's New + submit. `gameplay-lever-pack` is MERGED to `main`; the ASC
+Game Center config + badge images are fully created (aa-1.1.x/gc_setup.py + gc_upload_images.py)
+and go live with 1.4. Next new build after 45 must be **46+**. Query review state directly rather than
 trusting any doc's snapshot:
 `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 

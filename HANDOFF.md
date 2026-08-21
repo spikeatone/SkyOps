@@ -5,7 +5,25 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 19 August 2026._
+_Snapshot: 21 August 2026._
+
+**► 1.4 (build 45) = the GAMEPLAY PACK — UPLOADED to ASC 21 Aug, NOT yet submitted.**
+Six features from the critical gameplay review (branch `gameplay-lever-pack`, now MERGED to
+`main`): per-route FARE LEVER (Discount…Flagship, asymmetric elasticity), SESSION BRIEFING
+(welcome-back ops card on load), FIRST QUEST (guaranteed curated airport offer for new
+airlines + rewritten tutorial), GAME CENTER (29 achievements ← milestone ladder + 2
+efficiency leaderboards; entitlement in the binary), RIVAL FLAVOR + free-tier depth teaser,
+and SUBSIDIARY FLEET GROWTH (buy-for/transfer — a paying-player request). Verified:
+FareVerify 17/17 · QuestBriefVerify 19/19 · SubFleetVerify 15/15 · OfferSpread 5/5 · soak
+6/6 seeds ALL GREEN · live Simulator drive of every surface. Archived/validated/uploaded via
+the CLI chain (Delivery UUID `a0a46258-724d-4d8e-99a4-16a6404a8e5a`).
+- **The ASC Game Center config is DONE, created via the API** (`aa-1.1.x/gc_setup.py` +
+  `gc_upload_images.py`, both idempotent; shared gold-ring badge on all 29, delivery COMPLETE;
+  see GAMEKIT_SETUP.md). It all goes live with the 1.4 release.
+- **REMAINING (designer): TestFlight first-run pass on build 45** — naming → livery → quest
+  card → buy → auto-staff, with a Game Center account signed in so "First Jet" pops — then
+  create the 1.4 version record + What's New (livery-style, fare-lever-led) + submit.
+  Next new build after 45 = **46+**.
 
 **► 1.2 (build 41) is APPROVED + LIVE** — the MONETIZATION PIVOT is public (subscription →
 one-time "Full Unlock", $9.99 founding rising to $19.99 on Dec 1, 2026; two non-consumables
