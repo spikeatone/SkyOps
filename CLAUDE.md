@@ -5128,13 +5128,13 @@ task tracking lives in `TASKS.md`.
 
 As of 21 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) are ALL APPROVED +
 LIVE (`READY_FOR_SALE`) · 1.4 (build 48, the GAMEPLAY PACK — fare lever, first quest, session
-briefing, Game Center, rival flavor, subsidiary fleet growth) is UPLOADED to ASC (Delivery UUID
-`db71f0fc-47fd-434b-90b1-3f3cb4544987`; builds 45-47 superseded — 48 ships NO in-app GC UI
+briefing, Game Center, rival flavor, subsidiary fleet growth) is SUBMITTED FOR REVIEW
+(`WAITING_FOR_REVIEW`, 21 Aug; build 48, Delivery UUID `db71f0fc-…`; builds 45-47 superseded — 48 ships NO in-app GC UI
 at all, following FCA build 35: the trophy/grid workarounds all dead-end against the stale
 server-side record; reporting stays, players use the Apple Games app, and the standard
-GKAccessPoint gets re-enabled in a 1.4.x once the record heals post-release), NOT yet submitted** — remaining: designer's TestFlight
-first-run pass (incl. Game Center sandbox — "First Jet" should pop on the first purchase), then
-the 1.4 version record + What's New + submit. `gameplay-lever-pack` is MERGED to `main`; the ASC
+GKAccessPoint gets re-enabled in a 1.4.x once the record heals post-release), SUBMITTED** — auto-releases on approval. The Game Center per-version record was
+ENABLED via the API (gameCenterAppVersion, the checkbox ASC demanded at submit — and the very
+artifact whose absence poisons the GC dashboard; 1.4's release IS the heal mechanism). `gameplay-lever-pack` is MERGED to `main`; the ASC
 Game Center config + badge images are fully created (aa-1.1.x/gc_setup.py + gc_upload_images.py)
 and go live with 1.4. Next new build after 48 must be **49+**. Query review state directly rather than
 trusting any doc's snapshot:

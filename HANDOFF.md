@@ -7,7 +7,7 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 21 August 2026._
 
-**► 1.4 (build 48) = the GAMEPLAY PACK — UPLOADED to ASC 21 Aug, NOT yet submitted.**
+**► 1.4 (build 48) = the GAMEPLAY PACK — SUBMITTED FOR REVIEW 21 Aug (`WAITING_FOR_REVIEW`).**
 (Builds 45–47 are SUPERSEDED. The Game Center ENTRY-POINT saga, condensed: an app that shipped
 before its GC integration (AA 1.0–1.3, same as FCA) carries a stale server-side record that
 poisons GameKit's own dashboard UI — Apple's rocket opens empty, and every client-side
