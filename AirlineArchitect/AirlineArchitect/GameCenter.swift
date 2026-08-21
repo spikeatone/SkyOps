@@ -92,15 +92,55 @@ enum GameCenter {
         #endif
     }
 
-    /// The floating Game Center widget — shown on the load menu only (in-game
-    /// it would sit on top of the HUD).
+    /// ⚠️ **Apple's floating `GKAccessPoint` ("the rocket") is deliberately OFF.**
+    /// Family-wide finding (FC Architect's device A/B, 2026-08-21 — full write-up
+    /// in FCA's docs/game-center-rocket-bug.md): the rocket opens GameKit's
+    /// generic `.dashboard` home, which honors a stale server-side record from
+    /// the app's LIVE released version. An app that shipped before its GC
+    /// integration existed (FCA 1.0–1.1.1, and AA 1.0–1.3 — this app) gets an
+    /// EMPTY dashboard until a GC-carrying version is actually RELEASED; only
+    /// never-released VA's rocket works. The custom trophy button below uses
+    /// `.achievements` directly, which queries by ID and bypasses the stale
+    /// record — device-confirmed working on FCA. Revisit the rocket after 1.4
+    /// is live if we want Apple's widget back.
     static func setAccessPointActive(_ active: Bool) {
         #if canImport(GameKit)
-        GKAccessPoint.shared.location = .topLeading
-        GKAccessPoint.shared.showHighlights = false
-        GKAccessPoint.shared.isActive = active && isAuthenticated
+        GKAccessPoint.shared.isActive = false
         #endif
     }
+
+    /// Whether our own Game Center button should show — true once auth resolves.
+    static var isReady: Bool { isAuthenticated }
+
+    /// The custom trophy button's action (SaveSlotsView): presents the
+    /// achievements grid DIRECTLY via `.achievements` — the family's proven
+    /// path (FCA build 30/31, device-confirmed).
+    ///
+    /// ⚠️ Exit trap (FCA build 32, fixed in 33): the `.achievements` grid's nav
+    /// ROOT underneath is still the poisoned empty `.dashboard`; its internal
+    /// back button pops there, and that screen has no working Done. Presenting
+    /// as a PAGE SHEET keeps iOS's swipe-down-to-dismiss available — an exit
+    /// GameKit's own navigation can't trap. Don't change to full-screen.
+    static func presentDashboard() {
+        #if canImport(GameKit)
+        guard let top = topViewController() else { return }
+        let gc = GKGameCenterViewController(state: .achievements)
+        gc.gameCenterDelegate = DashboardDismisser.shared
+        gc.modalPresentationStyle = .pageSheet
+        top.present(gc, animated: true)
+        #endif
+    }
+
+    #if canImport(GameKit)
+    /// Dismisses the grid when GameKit's own Done chrome is used; the page-sheet
+    /// swipe-down dismissal needs no delegate.
+    final class DashboardDismisser: NSObject, GKGameCenterControllerDelegate {
+        static let shared = DashboardDismisser()
+        func gameCenterViewControllerDidFinish(_ gameCenterViewController: GKGameCenterViewController) {
+            gameCenterViewController.dismiss(animated: true)
+        }
+    }
+    #endif
 
     /// A milestone fired live (from the celebration hook): report its
     /// achievement, plus the two leaderboard moments.
