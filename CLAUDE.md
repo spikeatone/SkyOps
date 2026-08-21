@@ -5085,15 +5085,37 @@ verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
   fleet card + detail show the operator in the competitor purple `#D767FF`,
   and a subsidiary's aircraft renders WITHOUT the player livery (it flies its
   own flag — `showLivery: subsidiaryCode == nil`). Persistence already existed
-  (`AircraftSave.subsidiaryCode`); a sub-bought aircraft round-trips. KNOWN
-  pre-existing inconsistency, not addressed: the MAP still renders subsidiary
-  aircraft in the normal owned colors (the spec's "third colour state" was
-  never built — no view code branched on subsidiaryCode before this).
-- **NOT yet done for this pack:** live Simulator drive of the five surfaces
-  (fare pills, briefing card, quest card copy, GC sign-in sheet, teaser line)
-  plus the subsidiary buy/transfer UI — headless + build only so far; the ASC
-  Game Center config (designer); and the soak/offer-spread guard results
-  should be checked in the session log before shipping.
+  (`AircraftSave.subsidiaryCode`); a sub-bought aircraft round-trips.
+  **MAP COLOR (corrected note):** the map keys aircraft color on
+  `airlineName != nil` (MapView ~line 349), so subsidiary aircraft render in
+  the COMPETITOR purple `#D767FF` — coherent with the Fleet views' purple
+  operator labels ("flies its own flag"), but a sub is indistinguishable from
+  a RIVAL on the map. The spec's dedicated third colour state still doesn't
+  exist; build it if that ambiguity ever bites.
+- **LIVE SIMULATOR DRIVE — DONE (all six surfaces, iPhone 17 Pro sim).** The
+  full first-run arc: naming → livery → tutorial (rewritten step 2 shows) →
+  bell badge 1 → the quest card ("Thunder Bay, ON wants your airline", YQT ↔
+  JFK, bonus + 14-day clawback copy) → accept (fired the first_intl milestone
+  toast, exercising the GameCenter.reportMilestone hook) → buy B1900 → the
+  pending route AUTO-STAFFED and flew. FARE pills rendered in the route
+  detail (the quest route ran 89% load — a textbook Flagship case), tap
+  flipped Standard→Flagship instantly with the hint updating; no flicker/
+  dropped-tap (the documented panel-bug class did not recur). Save→Quit→
+  reload showed the OPS BRIEFING card ("Welcome back to New Airline · Day 4"
+  + the calm fallback). Ops tab showed the free-tier teaser line + the
+  Airport Incentives box tracking the quest ("In service · +$159k bonus ·
+  opening waived $107k"). The free-tier cap correctly intercepted a buy with
+  the paywall at 51/6. Subsidiary UI driven via the new COMMITTED `-devScenario
+  subfleet` (kept, like the livery scenarios — the $1B gate is unreachable by
+  hand): "Buying for:" selector in the Marketplace (menu ✓ Air Tina /
+  Air Canada, STICKY across tabs), bought a B1900 for Air Canada → `C52AC`
+  tail + purple "Air Canada" label + bare-metal illustration; TRANSFER WITHIN
+  GROUP → back to mainline → the Air Tina livery painted itself back on,
+  operator line gone, registration kept. Game Center auth ran silently
+  unauthenticated all session (no sheet on the sim, nothing blocked — the
+  degradation contract). STILL REMAINING: the ASC Game Center config
+  (designer, GAMEKIT_SETUP.md) and a real-device first-run pass before
+  submitting 1.4.
 
 ## Release status — see `HANDOFF.md`
 

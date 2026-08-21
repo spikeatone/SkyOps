@@ -1506,9 +1506,21 @@ final class Simulation {
         /// flying real routes, but `liveryChosen` false — so the fleet is wearing
         /// defaults nobody picked and the one free "Add Livery" choice is pending.
         case legacyPlayer
+        /// A group with one acquired subsidiary + a mainline spare — for driving
+        /// the buy-for-subsidiary selector + the fleet TRANSFER WITHIN GROUP
+        /// menu (the $1B acquisition gate is unreachable by hand).
+        case subfleet
     }
 
     func devSeed(_ scenario: DevScenario) {
+        if scenario == .subfleet {
+            nameAirline("Air Tina", tailCode: "TN")
+            setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "AIR TINA")
+            devInjectCash(8_000_000_000)
+            if let t = AircraftType.all.first(where: { $0.id == "A320" }) { _ = buyAircraft(t) }
+            if let p = relevantCompetitors.first(where: { !$0.code.isEmpty }) { _ = acquire(p) }
+            return
+        }
         if scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer {
             if scenario == .legacyPlayer {
                 // No setLivery call — exactly what a pre-feature save restores as:
