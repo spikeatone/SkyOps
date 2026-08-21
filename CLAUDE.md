@@ -5129,9 +5129,10 @@ task tracking lives in `TASKS.md`.
 As of 21 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) are ALL APPROVED +
 LIVE (`READY_FOR_SALE`) · 1.4 (build 48, the GAMEPLAY PACK — fare lever, first quest, session
 briefing, Game Center, rival flavor, subsidiary fleet growth) is UPLOADED to ASC (Delivery UUID
-`e4e6ce5f-0133-4aed-b2fe-255a5014b9e5`; builds 45/46 superseded — 46 added the Game Center
-trophy button + rocket-off, 47 puts the trophy on the NAMING screen too, since a fresh
-install never sees the load menu), NOT yet submitted** — remaining: designer's TestFlight
+`db71f0fc-47fd-434b-90b1-3f3cb4544987`; builds 45-47 superseded — 48 ships NO in-app GC UI
+at all, following FCA build 35: the trophy/grid workarounds all dead-end against the stale
+server-side record; reporting stays, players use the Apple Games app, and the standard
+GKAccessPoint gets re-enabled in a 1.4.x once the record heals post-release), NOT yet submitted** — remaining: designer's TestFlight
 first-run pass (incl. Game Center sandbox — "First Jet" should pop on the first purchase), then
 the 1.4 version record + What's New + submit. `gameplay-lever-pack` is MERGED to `main`; the ASC
 Game Center config + badge images are fully created (aa-1.1.x/gc_setup.py + gc_upload_images.py)
