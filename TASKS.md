@@ -20,22 +20,46 @@ as the work, not "later."
 
 ### Shipped since (see HANDOFF.md for the current release state)
 
-**This header has gone stale TWICE** — it said "build 34" while 35→39 shipped, then
-"1.1.4 in review" while 1.1.5, 1.2 and 1.2.1 happened. Releases are tracked in
-`HANDOFF.md`, not here. As of **18 Aug 2026**: **1.2 (41) is APPROVED + LIVE**
-(monetization pivot + 2 IAPs); **1.2.1 (build 43) is SUBMITTED FOR REVIEW**
-(`WAITING_FOR_REVIEW`) — the airport-offer fix + TelemetryDeck error reporting (it's 43 not
-42 because 42 predated the Telemetry helper; `Telemetry.errorOccurred` was cherry-picked onto
-`main`, build bumped 42→43). **1.3 = LIVERY: MERGED to `main`, build 44 UPLOADED to ASC**
-(Delivery UUID `234e9bf3-…`), NOT yet submitted — two designer steps left (real-device
-first-run test + the ASC version record WITH screenshots). Next new build after 44 = **45+**.
-What to do next lives in `NEXT_SESSION_PROMPT.md`.
-Keep this file for in-flight TASK tracking only, and update it in the same session as
-the work — the note at the top of this file exists because it drifted badly once before.
+**This header has gone stale TWICE** — releases are tracked in `HANDOFF.md`, not here.
+As of **21 Aug 2026**: **1.2 (41) · 1.2.1 (43) · 1.3 (44) are all LIVE**; **1.4 (build 48,
+the GAMEPLAY PACK) is SUBMITTED FOR REVIEW** (`WAITING_FOR_REVIEW`). Next new build = **49+**.
+What to do next lives in `NEXT_SESSION_PROMPT.md`. Keep this file for in-flight TASK tracking
+only, and update it in the same session as the work.
 
 ## In flight
 
-### 1.2.1 (build 43) — SUBMITTED FOR REVIEW (18 Aug, `WAITING_FOR_REVIEW`)
+### 1.4 (build 48) — SUBMITTED FOR REVIEW (21 Aug, `WAITING_FOR_REVIEW`)
+The GAMEPLAY PACK, from a designer-requested critical gameplay review (thesis: excellent sim,
+thin game). Branch `gameplay-lever-pack`, merged to `main`. Full notes in CLAUDE.md
+("Decided — Gameplay pack").
+- [x] FARE LEVER — per-route Discount…Flagship pills, asymmetric elasticity (17/17 headless,
+      event-proof two-route ratio harness `aa-1.1.x/FareVerify.swift`)
+- [x] SESSION BRIEFING — welcome-back ops card on save load
+- [x] FIRST QUEST — guaranteed curated airport offer for a new airline + rewritten tutorial
+      (19/19 with the briefing, `aa-1.1.x/QuestBriefVerify.swift`)
+- [x] GAME CENTER — 29 achievements ← milestone ladder, 2 efficiency leaderboards; ASC config
+      + shared badge created via API (`aa-1.1.x/gc_setup.py`, `gc_upload_images.py`)
+- [x] RIVAL FLAVOR + free-tier depth teaser in the Ops feed
+- [x] SUBSIDIARY FLEET GROWTH — buy-for/transfer (paying-player request; 15/15
+      `aa-1.1.x/SubFleetVerify.swift`)
+- [x] Soak 6/6 seeds ALL GREEN · Debug + Release builds · live Simulator drive of every surface
+- [x] Builds 45→48 cut + uploaded via the CLI chain (45–47 superseded by the GC entry-point
+      saga); `gameCenterAppVersion` enabled via API; App Review notes REWRITTEN; submitted.
+- [ ] **AFTER 1.4 IS LIVE:** designer checks Apple's GC rocket on the live build → if the
+      stale record healed, re-enable the standard `GKAccessPoint` in a 1.4.1 (load menu +
+      naming screen). No custom presentation hacks — see `GameCenter.swift`.
+
+### Post-1.4 follow-ups (none blocking)
+- [ ] Map: subsidiary aircraft render in competitor purple (no third colour state) — build one
+      if the ambiguity bites.
+- [ ] Game Center per-achievement art (all 29 share one badge; replaceable any time).
+- [ ] RevenueCat: remove Monthly/Yearly from the offering once the one-time unlock dominates
+      (NEVER delete the sub products).
+- [ ] TelemetryDeck for Aerospace + Mars Colony Architect (no telemetry at all yet) — every
+      SHIPPING sibling already has `errorOccurred`.
+
+
+### 1.2.1 (build 43) — SHIPPED (LIVE 19 Aug)
 - [x] **Airport offers always targeted the player's biggest hub** (paying customer:
       "all 35 of my incentives were routes into ATL"). The destination was
       DETERMINISTIC — `hubs.first(where: served…)` on a traffic-sorted list. Repro'd at
@@ -54,7 +78,7 @@ the work — the note at the top of this file exists because it drifted badly on
       REVIEW** (18 Aug). No IAP re-review (the two unlock products cleared with 1.2), so it
       should move faster than 1.2's ~6-day queue. Watch state via `asc.py appStoreVersions`.
 
-### 1.3 — PERSONALIZED LIVERY (MERGED to `main`, build 44 UPLOADED to ASC — 18 Aug)
+### 1.3 — PERSONALIZED LIVERY — SHIPPED (LIVE 19 Aug, build 44)
 Full detail in `LIVERY_SPEC.md` + the `aa-livery/` scripts — NOW ON `main` (merged 18 Aug;
 the `livery-prototype` branch still exists for history). Merge was conflict-free; Release
 build clean + offer-spread 5/5; validated + uploaded (Delivery UUID `234e9bf3-…`).

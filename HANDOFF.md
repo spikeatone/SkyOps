@@ -35,6 +35,31 @@ the CLI chain (build 48 Delivery UUID `db71f0fc-47fd-434b-90b1-3f3cb4544987`; su
   create the 1.4 version record + What's New (livery-style, fare-lever-led) + submit.
   Next new build after 48 = **49+**.
 
+**► WHAT THE NEXT SESSION SHOULD KNOW (21 Aug, end of the 1.4 session):**
+- **App Review notes for 1.4 were REWRITTEN via the API** (they were stale: subscription-era
+  $5.99/mo pricing + 3.1.2 auto-renew text, the old 3/2 free caps, and "no analytics SDKs" —
+  false since TelemetryDeck shipped in 1.2.1). Now: one-time unlock, 6/5 caps + paths to the
+  paywall, a GAME CENTER section explaining reporting-only/no in-app browser is deliberate,
+  the livery + first-quest first-launch flow, the fare control, TelemetryDeck as anonymous
+  aggregate analytics. Review details are editable while `WAITING_FOR_REVIEW`.
+- **The `gameCenterAppVersion` checkbox:** ASC refuses to submit a build carrying the GC
+  entitlement until the version's Game Center checkbox is enabled. Done for 1.4 via
+  `POST /v1/gameCenterAppVersions` (relationship appStoreVersion; came back enabled). **FCA's
+  1.2 will hit the same error** — same one-liner.
+- **AFTER 1.4 IS LIVE — the one real follow-up:** check Apple's Game Center rocket on the
+  live build. If the stale server record healed (the theory from FCA's device A/B; 1.4's
+  release is the heal mechanism), re-enable the standard `GKAccessPoint` in a 1.4.1 on BOTH
+  the load menu and the naming screen. `GameCenter.swift` documents the whole saga at the
+  hard-off stub. No custom presentation hacks — they all dead-ended on device.
+- Non-blocking: subsidiary aircraft render competitor-purple on the map (no third colour
+  state); all 29 GC achievements share one badge (replaceable via `gc_upload_images.py`);
+  remove Monthly/Yearly from the RevenueCat offering once the unlock dominates (never delete
+  the sub products); Aerospace + Mars Colony have no Telemetry at all.
+- Tooling that now exists: `aa-1.1.x/gc_setup.py` + `gc_upload_images.py` (ASC Game Center
+  via API, idempotent), `FareVerify` / `QuestBriefVerify` / `SubFleetVerify` harnesses,
+  `-devScenario subfleet`. The release chain (archive → export → altool validate/upload) ran
+  four times this session from the CLI without touching Xcode.
+
 **► 1.2 (build 41) is APPROVED + LIVE** — the MONETIZATION PIVOT is public (subscription →
 one-time "Full Unlock", $9.99 founding rising to $19.99 on Dec 1, 2026; two non-consumables
 `aa_unlock_founding_player`/`aa_unlock_standard` under RevenueCat packages `founding`/

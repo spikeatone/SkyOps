@@ -7,13 +7,11 @@ cold, with no memory of this conversation.
 **Read first:** `HANDOFF.md` (one-read orientation) → `CLAUDE.md` (the persistent
 design/technical record; it wins on any disagreement).
 
-✅ **The livery branch is MERGED into `main` (18 Aug), so `LIVERY_SPEC.md` + the `aa-livery/`
-tooling now exist on `main`.** (The `livery-prototype` branch still exists for history.)
-
-_Written 18 August 2026, at the end of the session where: 1.2 (the monetization pivot) was
-APPROVED + went live; 1.2.1 (build 43 — airport-offer fix + TelemetryDeck error reporting) was
-uploaded AND submitted for review; and 1.3 (livery) was merged to `main`, built as build 44, and
-uploaded to ASC. The livery App Store screenshots (iPhone + iPad, "Air Tina") were captured._
+_Written 21 August 2026, at the end of the session that: ran a critical gameplay review and
+built the six-feature GAMEPLAY PACK (fare lever, session briefing, first quest, Game Center,
+rival flavor + free-tier teaser, subsidiary fleet growth); created the full Game Center config
+in App Store Connect via the API; cut builds 45→48; and SUBMITTED 1.4 (build 48) for review
+with rewritten App Review notes._
 
 ---
 
@@ -22,77 +20,79 @@ uploaded to ASC. The livery App Store screenshots (iPhone + iPad, "Air Tina") we
 > You're picking up **Airline Architect** (repo dir is `SkyOps`; the app was renamed).
 > Read `HANDOFF.md` first, then `CLAUDE.md`. Tree is clean on `main`, all pushed.
 >
-> **RELEASE STATE (designer's plan: 1.2 → 1.2.1 fast follow → 1.3):**
+> **RELEASE STATE:**
 >
-> 1. **1.2 (build 41) is APPROVED + LIVE** (`READY_FOR_SALE`) — the monetization pivot
->    (subscription → one-time unlock, $9.99 founding → $19.99 on Dec 1, two IAPs
->    `aa_unlock_founding_player`/`aa_unlock_standard`) is public. Once it's dominant:
->    remove Monthly/Yearly from the RevenueCat offering (NEVER delete the sub products);
->    then watch trial→purchase conversion + founding-price WOM.
+> 1. **1.2 (41) · 1.2.1 (43) · 1.3 (44) are all LIVE** (`READY_FOR_SALE`).
 >
-> 2. **1.2.1 (build 43) is SUBMITTED FOR REVIEW** (`WAITING_FOR_REVIEW`) — the airport-offer
->    fix + TelemetryDeck error reporting. Uploaded via CLI, then the designer created the
->    version record + attached build 43 + submitted in ASC. No IAP re-review (the two unlock
->    products cleared with 1.2), so it should move faster than 1.2's ~6-day queue. Nothing to
->    do but watch: `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`.
+> 2. **1.4 (build 48) is SUBMITTED FOR REVIEW** (`WAITING_FOR_REVIEW`, 21 Aug) — the
+>    GAMEPLAY PACK. Auto-releases on approval. Check state with:
+>    `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
+>    Builds 45–47 are superseded (the Game Center entry-point saga — see below). App Review
+>    notes were REWRITTEN for 1.4 (they were stale: subscription-era pricing, old 3/2 caps, "no
+>    analytics"); they now describe the one-time unlock, 6/5 caps, Game Center reporting-only,
+>    and TelemetryDeck. Next new build = **49+**.
 >
-> 3. **1.3 = PERSONALIZED LIVERY — MERGED to `main`, BUILD 44 UPLOADED to ASC (18 Aug).**
->    `livery-prototype` merged into `main` conflict-free; bumped to 1.3/build 44; Release
->    build clean + offer-spread 5/5; validated + uploaded (Delivery UUID `234e9bf3-…`).
->    **⚠️ NOT YET SUBMITTED — two ASC-side steps remain (designer):**
->    - **(a) The real-device first-run walkthrough** (naming → livery → launch) from the
->      TestFlight build 44 — the ONE path never verified end-to-end (sim text entry
->      backgrounds the app). Must pass before submitting.
->    - **(b) In ASC: create the 1.3 version record → What's New → attach build 44 → ADD THE
->      TWO LIVERY SCREENSHOTS (iPhone 6.9" + iPad 13", in `~/Desktop/Airline Architect Livery
->      Screenshots/`) → submit.** Without the screenshots, 1.3 inherits 1.2's shots and the
->      livery isn't shown. A `_READ_BEFORE_SUBMITTING_1.3.txt` note sits in that folder.
->    Next new build after 44 = **45+**.
+> **THE ONE FOLLOW-UP THAT MATTERS — after 1.4 is LIVE:**
 >
-> **⚠️ TD ERROR REPORTING → "all repos":** the designer wants `Telemetry.errorOccurred`
-> in every Architect app, not just this one. It's in THIS repo (on `main`). The OTHER apps
-> (Golf Course Architect, Vineyard Architect, …) still need it — NOT done here.
+> Game Center ships in 1.4 as **reporting-only, no in-app GC UI** (family decision mirroring
+> FC Architect build 35). Cause: an app that shipped before its GC integration existed (AA
+> 1.0–1.3) carries a stale server-side record that makes GameKit's own dashboard open EMPTY;
+> every client-side workaround (Apple's rocket, a trophy button → `.achievements` grid, page
+> sheet) lost on the designer's device. The record should HEAL once 1.4 is publicly released —
+> the `gameCenterAppVersion` record enabled at submit is the heal mechanism. **Once 1.4 is
+> live: have the designer check Apple's Game Center rocket on the live App Store build. If it
+> opens the populated dashboard, re-enable the standard `GKAccessPoint` in a 1.4.1** —
+> `GameCenter.setAccessPointActive` in `GameCenter.swift` is a hard-off stub with the whole
+> story documented at the site; the clean re-enable is the standard three-liner (location
+> `.topLeading`, `isActive = active && isAuthenticated`) called on the load menu + naming
+> screen (a fresh install never sees the load menu — that bit us in build 46). FCA's 1.2 is
+> the second data point for the same theory. Do NOT re-add any custom presentation hacks.
 >
-> **Everything in the livery feature is verified EXCEPT the real-device first-run flow**
-> (see 3a above): fins on all 35 types (contact sheet + live), the Fleet-detail render,
-> repaint (47/47 headless + driven), the existing-player free-first-choice path and its
-> one-time prompt (4/4 + driven), both themes.
+> **OTHER OPEN ITEMS (none blocking):**
+> - Map color for subsidiary aircraft: they render in the competitor purple (`MapView` keys on
+>   `airlineName != nil`), so a sub is indistinguishable from a rival on the map. The spec's
+>   third colour state was never built. Small follow-up if it bites.
+> - Per-achievement Game Center art: all 29 share one gold-ring badge
+>   (`aa-1.1.x/gc_achievement_badge.png`). Images are replaceable any time via
+>   `aa-1.1.x/gc_upload_images.py` (idempotent) — a polish pass, not a blocker.
+> - Once 1.2's one-time unlock is dominant: remove Monthly/Yearly from the RevenueCat
+>   offering (NEVER delete the sub products).
+> - Cross-app: FCA's 1.2 submission will hit the same "select the Game Center checkbox"
+>   error AA hit — its version needs a `gameCenterAppVersion` (POST via the API works; see
+>   this session's note in HANDOFF.md). Also FCA's tree had an uncommitted `Telemetry.swift`
+>   change + untracked `whatsnew-1.1.txt` on 21 Aug — not AA's, but flag it.
 >
-> **If you want to work on the livery branch**, `git checkout livery-prototype` and read
-> `LIVERY_SPEC.md` (branch-only — it is NOT on `main`) — it documents the painted-tail model, the fin-mask tooling in
-> `aa-livery/`, the repaint economy, and the layout gotchas.
+> **HOW THIS CODEBASE VERIFIES (don't skip):** every sim change gets a headless harness in
+> `aa-1.1.x/` (compile the real `Sim/*.swift` with `swiftc`, excluding AircraftIcon/SVGPath
+> and adding `RepaintVerifyStubs.swift`) + the soak (`SoakMain.swift`) + a Debug AND Release
+> `xcodebuild` + a live Simulator drive of any new UI. The fare lever's
+> `aa-1.1.x/FareVerify.swift` is the reference for an event-proof behavioral A/B (two routes in
+> one sim, measured as a ratio). Release chain is scriptable end-to-end (see CLAUDE.md's
+> "upload is SCRIPTABLE" note).
 >
-> **Simulator warning that cost real time this session:** the input channel degrades —
-> taps land on the tab bar, and sibling Architect apps steal focus. If a tap seems to do
-> nothing, RE-SCREENSHOT before concluding a control is broken, and terminate the other
-> Postmark apps (`xcrun simctl terminate <udid> Postmark-Digital.GolfCourseArchitect`).
-> When it gets bad, verify headlessly instead — that is how the repaint numbers were
-> checked.
+> **Simulator warnings:** tap coordinates are in POINTS (402×874 on iPhone 17 Pro), not
+> screenshot pixels; the input channel degrades — re-screenshot before concluding a control
+> is broken; terminate sibling Architect apps that steal focus. The `-devScenario` harness
+> (`publicGate|listed|activist|ouster|fleet|bigfleet|legacyPlayer|subfleet`) seeds otherwise
+> unreachable states.
 
 ---
 
 ## Useful commands
 
 ```bash
-# review status (all three versions at a glance)
+# review status
 cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"
 
-# the offer-spread regression (the 1.2.1 fix) — verified to run as-is on `main`
-# NOTE: exclude the two SwiftUI-importing Sim files (AircraftIcon.swift, SVGPath.swift)
-# or the headless build fails; the `Sim/*.swift` glob below pulls them in.
-mkdir -p /tmp/osv && cp aa-1.1.x/OfferSpreadVerify.swift /tmp/osv/main.swift
-swiftc -O -DDEBUG -o /tmp/osv/osv \
+# headless harness pattern (entry file MUST be main.swift; ~30s compile under -O)
+mkdir -p /tmp/h && cp aa-1.1.x/FareVerify.swift /tmp/h/main.swift && cp aa-1.1.x/RepaintVerifyStubs.swift /tmp/h/
+swiftc -O -DDEBUG -o /tmp/h/run \
   $(ls AirlineArchitect/AirlineArchitect/Sim/*.swift | grep -vE 'AircraftIcon|SVGPath') \
-  AirlineArchitect/AirlineArchitect/Persistence.swift /tmp/osv/main.swift && /tmp/osv/osv
-# (compile can take ~30s under -O; if a foreground run times out, compile then run separately.)
-# NOW ON `main` TOO (livery merged 18 Aug): Livery.swift imports SwiftUI, so add the catalog
-# stubs for the headless build:  cp aa-1.1.x/RepaintVerifyStubs.swift /tmp/osv/  (and pass it)
+  AirlineArchitect/AirlineArchitect/Persistence.swift /tmp/h/RepaintVerifyStubs.swift /tmp/h/main.swift && /tmp/h/run
 
-# the soak (cash invariant + crew/route integrity) — run after ANY sim change
-mkdir -p /tmp/soak && cp aa-1.1.x/SoakMain.swift /tmp/soak/main.swift
-swiftc -O -DDEBUG -o /tmp/soak/soak AirlineArchitect/AirlineArchitect/Sim/*.swift \
-  AirlineArchitect/AirlineArchitect/Persistence.swift /tmp/soak/main.swift && /tmp/soak/soak
+# the soak (cash invariant + crew/route integrity) — run after ANY sim change (~6 min)
+#   same recipe with aa-1.1.x/SoakMain.swift
 
-# full-fleet livery contact sheet (on livery-prototype)
-python3 aa-livery/contact_sheet.py --parts 2 --width 1400 --rowheight 140
+# Game Center config (idempotent — re-run to add milestones / swap badge art)
+python3 aa-1.1.x/gc_setup.py && python3 aa-1.1.x/gc_upload_images.py
 ```

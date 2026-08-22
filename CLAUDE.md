@@ -5042,11 +5042,29 @@ verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
   (sim-days to $100M, ascending — submits when nw_100000000 fires) and
   `aa.networth_day365` (net worth when the NEW `year_one` milestone fires at
   day 365; firedMilestones' persistence makes both once-per-save). Auth waits
-  for the splash to dismiss; GKAccessPoint shows on the load menu only.
-  Entitlement `com.apple.developer.game-center` added. **DESIGNER SIDE: the ASC
-  config (enable Game Center + create the 29 achievement / 2 leaderboard IDs)
-  is in `GAMEKIT_SETUP.md`** — until configured, submissions fail silently
-  server-side (safe to ship in either order).
+  for the splash to dismiss. Entitlement `com.apple.developer.game-center`
+  added. **The ASC config is DONE via the API** (`aa-1.1.x/gc_setup.py` +
+  `gc_upload_images.py`, idempotent; 29 achievements at 840 pts with a shared
+  gold-ring badge, 2 leaderboards, `gameCenterAppVersion` enabled on 1.4 —
+  see `GAMEKIT_SETUP.md`).
+  - **ENTRY POINT: NONE in 1.4, deliberately (builds 45→48 — the GC saga).**
+    Family finding (FC Architect's device A/B, 21 Aug; FCA shipped the same
+    posture in its build 35): an app that shipped to the App Store BEFORE its
+    GC integration existed (AA 1.0–1.3, FCA 1.0–1.1.1) carries a stale
+    server-side app-presence record that makes GameKit's own dashboard open
+    EMPTY. Never-released VA works — 3-for-3 confirms the server-side cause.
+    Every client-side workaround lost on the designer's device: Apple's
+    `GKAccessPoint` rocket (empty / never appeared), a custom trophy button
+    presenting `GKGameCenterViewController(.achievements)` (grid opens, then
+    DEAD-ENDS — its nav root is the poisoned dashboard), `.pageSheet` (iOS
+    forces GC full-screen, no swipe-down). So 1.4 is reporting-only; players
+    see achievements via AA's milestone toasts + the Apple Games app.
+    `setAccessPointActive` is a hard-off stub with the story at the site.
+    **The `gameCenterAppVersion` record enabled at submit is the heal
+    mechanism** (the artifact FCA found missing on both apps). AFTER 1.4 IS
+    LIVE: verify the rocket on device, then re-enable the standard
+    `GKAccessPoint` in a 1.4.1 on the load menu AND the naming screen (a fresh
+    install never sees the load menu — build 46's miss). No custom hacks.
 - **RIVAL FLAVOR + FREE-TIER DEPTH TEASER.** `tickRivalFlavor()` (daily 5%)
   logs cosmetic MARKET ops events about real `relevantCompetitors` profiles —
   a rival IPOs, expands a hub, courts a merger, posts results — so the world
@@ -5113,9 +5131,9 @@ verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
   GROUP → back to mainline → the Air Tina livery painted itself back on,
   operator line gone, registration kept. Game Center auth ran silently
   unauthenticated all session (no sheet on the sim, nothing blocked — the
-  degradation contract). STILL REMAINING: the ASC Game Center config
-  (designer, GAMEKIT_SETUP.md) and a real-device first-run pass before
-  submitting 1.4.
+  degradation contract). The designer's real-device TestFlight pass (builds
+  45–47) confirmed auth + reporting ("Signed in as mdspike", 29 achievements
+  counted, "First Jet" earned) and surfaced the entry-point saga above.
 
 ## Release status — see `HANDOFF.md`
 
