@@ -29,11 +29,11 @@ the CLI chain (build 48 Delivery UUID `db71f0fc-47fd-434b-90b1-3f3cb4544987`; su
 - **The ASC Game Center config is DONE, created via the API** (`aa-1.1.x/gc_setup.py` +
   `gc_upload_images.py`, both idempotent; shared gold-ring badge on all 29, delivery COMPLETE;
   see GAMEKIT_SETUP.md). It all goes live with the 1.4 release.
-- **REMAINING (designer): TestFlight first-run pass on build 48** — naming → livery → quest
-  card → buy → auto-staff, with a Game Center account signed in so "First Jet" pops, and the trophy button on the
-  load menu opens the achievements grid — then
-  create the 1.4 version record + What's New (livery-style, fare-lever-led) + submit.
-  Next new build after 48 = **49+**.
+- **SUBMITTED (21 Aug):** designer's TestFlight passes on 45–47 confirmed auth + reporting
+  ("Signed in as mdspike", 29 achievements counted, "First Jet" earned); 1.4 version record
+  + fare-lever-led What's New + build 48 attached + the Game Center per-version checkbox
+  enabled via API + App Review notes rewritten → `WAITING_FOR_REVIEW`. Auto-releases on
+  approval. Next new build after 48 = **49+**.
 
 **► WHAT THE NEXT SESSION SHOULD KNOW (21 Aug, end of the 1.4 session):**
 - **App Review notes for 1.4 were REWRITTEN via the API** (they were stale: subscription-era
