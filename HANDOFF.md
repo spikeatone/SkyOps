@@ -8,21 +8,30 @@ CLAUDE.md, CLAUDE.md wins.
 _Snapshot: 23 August 2026._
 
 **► 1.4 (build 48) = the GAMEPLAY PACK — LIVE (`READY_FOR_SALE`). ► 1.4.1 (build 49) = the
-Game Center rocket FIX — code done + build-verified on this branch, NOT yet committed/uploaded
-at the moment this line was written (see the 1.4.1 section below).**
+Game Center WAKE fix — code done, build 49 uploaded to ASC (Delivery UUID
+`d2b99eb5-9e0b-4da0-800c-aa384d66e2a3`), HELD (not submitted) pending a final rocket call — but
+that call is now MADE: ship the wake, rocket stays OFF (see below). Re-verify + re-upload needed
+after the rocket re-stub, then submit.**
 
-_1.4.1 in one paragraph:_ after 1.4 went live the designer checked the App-Store build on-device
-— the Apple Games dashboard was STILL EMPTY for AA (the "public release heals the stale record"
-theory FAILED). FC Architect's device A/B found the real trigger: a `GKAchievement.report` →
-`loadAchievements` ROUND-TRIP from a signed-in device. AA reported but NEVER loaded (that missing
-half is exactly why it stayed poisoned despite being live + reporting). 1.4.1 adds
-`GameCenter.wakeAccountRecord()` (the load call, once after auth), RE-ENABLES the standard native
-`GKAccessPoint` (no custom UI — FCA proved the native access point works once the record wakes),
-and fixes the build-46 fresh-install miss (the rocket now shows on the naming screen too, via
-`ContentView.atLaunchScreen`, not just the load menu). Build-verified (`xcodebuild` clean, installs
-+ launches; sim has no GC account so the rocket correctly stays hidden there — DEVICE confirmation
-is the real test). DO NOT re-add the dead workarounds (trophy button / `.pageSheet` / floating Done).
-Next new build after 49 = **50+**. Full detail: CLAUDE.md's GameKit note, "CORRECTION + FIX — 1.4.1".
+_1.4.1 in one paragraph:_ after 1.4 went live the designer checked the App-Store build on-device —
+the Apple Games dashboard was STILL EMPTY for AA (the "public release heals the stale record" theory
+FAILED). FC Architect's device A/B found the real trigger: a `GKAchievement.report` →
+`loadAchievements` ROUND-TRIP from a signed-in device. AA reported but NEVER loaded — that missing
+half is why it stayed poisoned despite being live + reporting. `GameCenter.wakeAccountRecord()` (the
+load call, once after auth) FIXES it — **verified on device (build 49): AA now shows in the Apple
+Games app "Now Playing", the in-app achievements pill reads 3/29, and the Apple Games grid renders
+our real badges with dates.** BUT the same device test showed the native `GKAccessPoint` rocket STILL
+opens a BLANK in-app dashboard, and FCA confirmed the IDENTICAL split on FCA (record woken + Apple
+Games populated, but rocket's in-app VC blank; restart doesn't clear it). So the blank dashboard is a
+SEPARATE GameKit issue, not fixable in our code — **1.4.1 ships the wake with NO in-app GC entry
+point; the rocket is re-stubbed OFF** (the `atLaunchScreen` + auth-gated wiring is documented at the
+site for a clean re-enable later). Players reach achievements via the Apple Games app (now populated)
++ the app's milestone toasts. DO NOT re-add the dead workarounds (trophy button / `.pageSheet` /
+floating Done). Two open probes may feed a 1.4.2: FCA is testing a
+`GKGameCenterViewController(state: .achievements)` button vs the rocket's `.dashboard` state, and both
+apps re-check the plain rocket in ~1 week for the "store-side GC declaration propagates after a GC
+release" theory (FCA 1.2 live ~2 days, still blank). Next new build after 49 = **50+**. Full detail:
+CLAUDE.md's GameKit note, "CORRECTION + FIX — 1.4.1".
 
 **► 1.4 (build 48) = the GAMEPLAY PACK — LIVE (`READY_FOR_SALE`).**
 (Builds 45–47 are SUPERSEDED. The Game Center ENTRY-POINT saga, condensed: an app that shipped

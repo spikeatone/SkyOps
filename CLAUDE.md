@@ -5078,24 +5078,38 @@ verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
     `GKAccessPoint` populated cleanly.** AA reported but NEVER loaded — `GameCenter.swift`
     had `report(...)` and no `loadAchievements` anywhere. That missing half is why
     AA (already live + reporting) stayed empty while the theory predicted a heal.
-    AA is now the clean isolation test: 1.4 is live + reporting + still-empty, so if
-    1.4.1's load call heals it, that pins the load call (not the public release) as
-    the fix. **1.4.1 ships THREE changes** (build-verified, launch-verified on the
-    sim; the sim has no GC account so the rocket correctly stays hidden there —
-    device confirmation is the real test): (1) `GameCenter.wakeAccountRecord()` — a
-    `loadAchievements` round-trip run once after auth succeeds (idempotent, no-op
-    when signed out); (2) `setAccessPointActive` RE-ENABLED — the standard native
-    `GKAccessPoint` (`.topLeading`, gated on `isAuthenticated`), NO custom UI (per
-    FCA: the native access point is fine once the record is woken); (3) the toggle
-    now keys off a new `ContentView.atLaunchScreen` (load menu OR naming screen OR
-    livery step) instead of `showLoadMenu` alone — fixing the build-46 fresh-install
-    miss where the rocket never showed for a new player (who never sees the load
-    menu). DO NOT re-add any of the dead client-side workarounds (trophy button,
-    `.pageSheet`, floating Done button) — FCA proved each fights the server-side
-    condition and loses. AFTER 1.4.1 IS LIVE: designer verifies the rocket populates
-    on the App-Store build on-device; if it does, the load-round-trip theory is
-    confirmed and the feature is done. If it does NOT, the record needs more than the
-    load call and the next diagnostic is FCA's `docs/game-center-rocket-bug.md`.
+    **1.4.1 (build 49) ships the wake fix + the `atLaunchScreen` wiring, but the
+    ROCKET STAYS OFF — settled by an on-device test of build 49, 2026-08-23.** The
+    build was driven on a real device (TestFlight, signed in as mdspike) and the
+    result SPLIT: the wake `loadAchievements` round-trip WORKS (AA now shows in the
+    Apple Games app "Now Playing", the in-app achievements pill reads 3/29, and the
+    Apple Games achievements grid renders our real badges — Border Crosser / City
+    Pair / First Jet — with dates; the stale-record poison is GONE) **but the
+    native `GKAccessPoint` rocket STILL opens a BLANK in-app dashboard.** FC
+    Architect confirmed the IDENTICAL split on FCA (record woken, Apple Games
+    populated, rocket's in-app `GKGameCenterViewController` still blank; a device
+    restart did not clear it). So the blank in-app dashboard is a SEPARATE GameKit
+    issue from the stale record, affecting BOTH apps, and it is NOT fixable by how
+    we present the VC. Leading theory (FCA): the in-app dashboard reads a STORE-SIDE
+    GC declaration that only propagates after a GC-carrying version is RELEASED
+    (FCA 1.2 live ~2 days, still blank → slow or gated; AA has never released a GC
+    version), so it may start working on its own — re-check the plain rocket on
+    device ~1 week after AA's first GC release with NO new build. **NET for build
+    49: ship the wake (real win — Apple Games now populated) with NO in-app GC entry
+    point; the rocket is re-stubbed OFF.** So 49's actual changes: (1)
+    `GameCenter.wakeAccountRecord()` — the `loadAchievements` round-trip after auth
+    (KEPT — proven to work); (2) `setAccessPointActive` back to a hard-off stub (the
+    `atLaunchScreen` + `active && isAuthenticated` wiring is documented at the site
+    for a clean re-enable once the dashboard is confirmed populating); (3)
+    `ContentView.atLaunchScreen` (load menu OR naming OR livery) — kept, harmless
+    with the stub, and the correct wiring for a future re-enable. DO NOT re-add the
+    dead client-side workarounds (trophy button, `.pageSheet`, floating Done) — FCA
+    re-confirmed they fight the same condition and lose. TWO open probes feeding a
+    possible 1.4.2: FCA is testing a `GKGameCenterViewController(state: .achievements)`
+    button vs the rocket's `.dashboard` state (if `.achievements` populates while
+    `.dashboard` is blank, that's a real button to add); and both apps re-check the
+    plain rocket in ~1 week for the store-side-propagation theory. Until an entry
+    point is CONFIRMED populating on device, neither app ships one.
 - **RIVAL FLAVOR + FREE-TIER DEPTH TEASER.** `tickRivalFlavor()` (daily 5%)
   logs cosmetic MARKET ops events about real `relevantCompetitors` profiles —
   a rival IPOs, expands a hub, courts a merger, posts results — so the world
