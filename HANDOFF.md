@@ -5,9 +5,26 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 21 August 2026._
+_Snapshot: 23 August 2026._
 
-**► 1.4 (build 48) = the GAMEPLAY PACK — SUBMITTED FOR REVIEW 21 Aug (`WAITING_FOR_REVIEW`).**
+**► 1.4 (build 48) = the GAMEPLAY PACK — LIVE (`READY_FOR_SALE`). ► 1.4.1 (build 49) = the
+Game Center rocket FIX — code done + build-verified on this branch, NOT yet committed/uploaded
+at the moment this line was written (see the 1.4.1 section below).**
+
+_1.4.1 in one paragraph:_ after 1.4 went live the designer checked the App-Store build on-device
+— the Apple Games dashboard was STILL EMPTY for AA (the "public release heals the stale record"
+theory FAILED). FC Architect's device A/B found the real trigger: a `GKAchievement.report` →
+`loadAchievements` ROUND-TRIP from a signed-in device. AA reported but NEVER loaded (that missing
+half is exactly why it stayed poisoned despite being live + reporting). 1.4.1 adds
+`GameCenter.wakeAccountRecord()` (the load call, once after auth), RE-ENABLES the standard native
+`GKAccessPoint` (no custom UI — FCA proved the native access point works once the record wakes),
+and fixes the build-46 fresh-install miss (the rocket now shows on the naming screen too, via
+`ContentView.atLaunchScreen`, not just the load menu). Build-verified (`xcodebuild` clean, installs
++ launches; sim has no GC account so the rocket correctly stays hidden there — DEVICE confirmation
+is the real test). DO NOT re-add the dead workarounds (trophy button / `.pageSheet` / floating Done).
+Next new build after 49 = **50+**. Full detail: CLAUDE.md's GameKit note, "CORRECTION + FIX — 1.4.1".
+
+**► 1.4 (build 48) = the GAMEPLAY PACK — LIVE (`READY_FOR_SALE`).**
 (Builds 45–47 are SUPERSEDED. The Game Center ENTRY-POINT saga, condensed: an app that shipped
 before its GC integration (AA 1.0–1.3, same as FCA) carries a stale server-side record that
 poisons GameKit's own dashboard UI — Apple's rocket opens empty, and every client-side

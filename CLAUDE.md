@@ -5065,6 +5065,37 @@ verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
     LIVE: verify the rocket on device, then re-enable the standard
     `GKAccessPoint` in a 1.4.1 on the load menu AND the naming screen (a fresh
     install never sees the load menu — build 46's miss). No custom hacks.
+  - **CORRECTION + FIX — 1.4.1 (build 49), 2026-08-23. The "release heals it"
+    prediction above was WRONG, and FC Architect found the real fix.** After 1.4
+    went LIVE the designer checked the App-Store build on-device: the Apple Games
+    dashboard was STILL EMPTY for AA (VA visible as the control, no rocket). So a
+    public GC-carrying release + working reporting is NOT sufficient on its own to
+    wake the stale record — 1.4 already reported (builds 45–47 confirmed "First Jet
+    earned, 29 counted") yet stayed poisoned. **The actual trigger (FC Architect's
+    device A/B, cross-app message 2026-08-23): a real `GKAchievement.report` →
+    `GKAchievement.loadAchievements` ROUND-TRIP from a signed-in device. The moment
+    the LOAD half ran, FCA appeared in the Apple Games app and its native
+    `GKAccessPoint` populated cleanly.** AA reported but NEVER loaded — `GameCenter.swift`
+    had `report(...)` and no `loadAchievements` anywhere. That missing half is why
+    AA (already live + reporting) stayed empty while the theory predicted a heal.
+    AA is now the clean isolation test: 1.4 is live + reporting + still-empty, so if
+    1.4.1's load call heals it, that pins the load call (not the public release) as
+    the fix. **1.4.1 ships THREE changes** (build-verified, launch-verified on the
+    sim; the sim has no GC account so the rocket correctly stays hidden there —
+    device confirmation is the real test): (1) `GameCenter.wakeAccountRecord()` — a
+    `loadAchievements` round-trip run once after auth succeeds (idempotent, no-op
+    when signed out); (2) `setAccessPointActive` RE-ENABLED — the standard native
+    `GKAccessPoint` (`.topLeading`, gated on `isAuthenticated`), NO custom UI (per
+    FCA: the native access point is fine once the record is woken); (3) the toggle
+    now keys off a new `ContentView.atLaunchScreen` (load menu OR naming screen OR
+    livery step) instead of `showLoadMenu` alone — fixing the build-46 fresh-install
+    miss where the rocket never showed for a new player (who never sees the load
+    menu). DO NOT re-add any of the dead client-side workarounds (trophy button,
+    `.pageSheet`, floating Done button) — FCA proved each fights the server-side
+    condition and loses. AFTER 1.4.1 IS LIVE: designer verifies the rocket populates
+    on the App-Store build on-device; if it does, the load-round-trip theory is
+    confirmed and the feature is done. If it does NOT, the record needs more than the
+    load call and the next diagnostic is FCA's `docs/game-center-rocket-bug.md`.
 - **RIVAL FLAVOR + FREE-TIER DEPTH TEASER.** `tickRivalFlavor()` (daily 5%)
   logs cosmetic MARKET ops events about real `relevantCompetitors` profiles —
   a rival IPOs, expands a hub, courts a merger, posts results — so the world
@@ -5144,18 +5175,19 @@ Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (whic
 version is live, what's in review, what the next build number must be), and in-flight
 task tracking lives in `TASKS.md`.
 
-As of 21 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) are ALL APPROVED +
-LIVE (`READY_FOR_SALE`) · 1.4 (build 48, the GAMEPLAY PACK — fare lever, first quest, session
-briefing, Game Center, rival flavor, subsidiary fleet growth) is SUBMITTED FOR REVIEW
-(`WAITING_FOR_REVIEW`, 21 Aug; build 48, Delivery UUID `db71f0fc-…`; builds 45-47 superseded — 48 ships NO in-app GC UI
-at all, following FCA build 35: the trophy/grid workarounds all dead-end against the stale
-server-side record; reporting stays, players use the Apple Games app, and the standard
-GKAccessPoint gets re-enabled in a 1.4.x once the record heals post-release), SUBMITTED** — auto-releases on approval. The Game Center per-version record was
-ENABLED via the API (gameCenterAppVersion, the checkbox ASC demanded at submit — and the very
-artifact whose absence poisons the GC dashboard; 1.4's release IS the heal mechanism). `gameplay-lever-pack` is MERGED to `main`; the ASC
-Game Center config + badge images are fully created (aa-1.1.x/gc_setup.py + gc_upload_images.py)
-and go live with 1.4. Next new build after 48 must be **49+**. Query review state directly rather than
-trusting any doc's snapshot:
+As of 23 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) · 1.4 (48, the
+GAMEPLAY PACK — fare lever, first quest, session briefing, Game Center, rival flavor, subsidiary
+fleet growth) are ALL LIVE (`READY_FOR_SALE`). · 1.4.1 (build 49) = the Game Center rocket FIX —
+in flight.** After 1.4 went live the designer checked the App-Store build on-device: the Apple
+Games dashboard was STILL EMPTY for AA, so the "the public GC-carrying release heals the stale
+server-side record" theory (and its "1.4's release IS the heal mechanism" claim above) is WRONG —
+a live + reporting build did NOT wake the record. FC Architect's device A/B found the actual
+trigger: a `GKAchievement.report` → `loadAchievements` ROUND-TRIP from a signed-in device (AA
+reported but never loaded — the missing half). 1.4.1 adds the load call (`wakeAccountRecord`),
+RE-ENABLES the standard native `GKAccessPoint` (no custom UI), and fixes the build-46 fresh-install
+miss (rocket on the naming screen too, via `atLaunchScreen`). See the full "CORRECTION + FIX —
+1.4.1" note in the GameKit section above. Next new build after 49 must be **50+**. Query review
+state directly rather than trusting any doc's snapshot:
 `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 
 ## Working agreement for future sessions

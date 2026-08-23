@@ -81,6 +81,7 @@ enum GameCenter {
                 topViewController()?.present(vc, animated: true)
             } else if GKLocalPlayer.local.isAuthenticated {
                 isAuthenticated = true
+                wakeAccountRecord()
                 onAuthenticated?()
             } else {
                 isAuthenticated = false
@@ -92,23 +93,45 @@ enum GameCenter {
         #endif
     }
 
-    /// ⚠️ **NO in-app Game Center UI right now — deliberately (family decision,
-    /// FC Architect build 35, 2026-08-21).** An app that shipped to the App
-    /// Store BEFORE its GC integration existed (FCA 1.0–1.1.1, and AA 1.0–1.3
-    /// — this app) carries a stale server-side app-presence record that poisons
-    /// GameKit's own dashboard/home UI: the floating access point opens EMPTY,
-    /// and every client-side workaround fought that condition and lost on
-    /// device (direct `.achievements` present → its back button dead-ends on
-    /// the empty root; `.pageSheet` → iOS forces GC full-screen, no swipe-down;
-    /// a floating Done button → GC renders in its own window and buries it).
-    /// Never-released VA works untouched — 3-for-3 confirms the server-side
-    /// cause. So, like FCA: reporting only, no entry point; players reach
-    /// achievements via the Apple Games app. The record should HEAL once a
-    /// GC-carrying version (1.4) is actually released — verify on device in a
-    /// 1.4.x, then re-enable Apple's standard `GKAccessPoint` here, clean.
+    /// Wake the account-side app-presence record with a real report→LOAD
+    /// round-trip (FC Architect's fix, 2026-08-23). An app that shipped to the
+    /// App Store BEFORE its GC integration carries a stale record that suppresses
+    /// GameKit's own UI (empty dashboard, non-appearing access point) even though
+    /// auth + reporting work. FCA found that a genuine `report` FOLLOWED BY
+    /// `loadAchievements` from a signed-in device registers the app (it then
+    /// appears in the Apple Games app and the native `GKAccessPoint` populates).
+    /// AA 1.4 reported but never loaded — the missing half. Idempotent + a no-op
+    /// when signed out; safe to run on every authenticated launch.
+    private static func wakeAccountRecord() {
+        #if canImport(GameKit)
+        guard isAuthenticated else { return }
+        GKAchievement.loadAchievements { _, error in
+            #if DEBUG
+            if let error { print("[GameCenter] loadAchievements failed: \(error.localizedDescription)") }
+            else { print("[GameCenter] account record woken (loadAchievements ok)") }
+            #endif
+        }
+        #endif
+    }
+
+    /// Apple's standard floating Game Center access point (the rocket), shown on
+    /// the launch screens only. **RE-ENABLED in 1.4.1 (2026-08-23), paired with
+    /// the `wakeAccountRecord` report→load round-trip above.**
+    ///
+    /// History: it was a hard-off stub through 1.4 because the app's stale
+    /// account-side record (shipped 1.0–1.3 pre-GC) opened the access point EMPTY,
+    /// and every client-side workaround fought that and lost. 1.4 being LIVE +
+    /// reporting did NOT heal it on its own (verified on device — dashboard still
+    /// empty). FC Architect then found the actual trigger is the missing LOAD half
+    /// of a report→load cycle (`wakeAccountRecord`), which AA never ran. So 1.4.1
+    /// adds the load AND turns the native access point back on — no custom UI.
+    /// Toggled by `atLaunchScreen` (load menu OR naming screen — a fresh install
+    /// never sees the load menu, the build-46 miss), and gated on auth so it can't
+    /// appear before sign-in resolves.
     static func setAccessPointActive(_ active: Bool) {
         #if canImport(GameKit)
-        GKAccessPoint.shared.isActive = false
+        GKAccessPoint.shared.location = .topLeading
+        GKAccessPoint.shared.isActive = active && isAuthenticated
         #endif
     }
 

@@ -53,6 +53,16 @@ struct ContentView: View {
     private var isPadLayout: Bool { hSize == .regular }
     @Environment(\.colorScheme) private var scheme
 
+    /// The Game Center access point (rocket) shows on the pre-game launch screens
+    /// only — the load menu OR the naming screen. A fresh install goes splash →
+    /// naming and never sees the load menu (the build-46 miss that left the rocket
+    /// hidden for new players), so `showLoadMenu` alone is not enough. Once
+    /// in-game (`playerAirlineName != nil`) the rocket must be OFF — it would
+    /// overlay the map. The livery step counts as pre-game (name set, not launched).
+    private var atLaunchScreen: Bool {
+        showLoadMenu || sim.playerAirlineName == nil || pendingLiveryName != nil
+    }
+
     /// Aviation pencil-sketch backdrop for the cold-launch surfaces (Figma
     /// 1:2 light / 1:456 dark). ONE grayscale PNG serves both themes — the
     /// backdrop blends it per theme (multiply on white, invert+screen on navy);
@@ -123,7 +133,7 @@ struct ContentView: View {
         // Game Center sign-in waits for the splash to finish so the sheet never
         // lands on the intro animation; the access point lives on the load menu.
         .onChange(of: showSplash) { _, showing in splashDismissed(showing) }
-        .onChange(of: showLoadMenu) { _, menu in GameCenter.setAccessPointActive(menu) }
+        .onChange(of: atLaunchScreen) { _, atLaunch in GameCenter.setAccessPointActive(atLaunch) }
         .onChange(of: sim.decisionQueue.count) { old, new in if new > old { Feedback.alert() } }
         .onChange(of: sim.isBankrupt) { _, bankrupt in if bankrupt { Feedback.gameOver() } }
         .overlay { firstLaunchFlow }
@@ -427,7 +437,7 @@ struct ContentView: View {
     /// Game Center auth once the cold-launch splash is gone.
     private func splashDismissed(_ stillShowing: Bool) {
         guard !stillShowing else { return }
-        GameCenter.configure(onAuthenticated: { GameCenter.setAccessPointActive(showLoadMenu) })
+        GameCenter.configure(onAuthenticated: { GameCenter.setAccessPointActive(atLaunchScreen) })
     }
 
     /// Session-opening ops briefing (extracted — inline it and ContentView's
