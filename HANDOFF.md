@@ -7,11 +7,11 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 23 August 2026._
 
-**► 1.4 (build 48) = the GAMEPLAY PACK — LIVE (`READY_FOR_SALE`). ► 1.4.1 (build 49) = the
-Game Center WAKE fix — code done, build 49 uploaded to ASC (Delivery UUID
-`d2b99eb5-9e0b-4da0-800c-aa384d66e2a3`), HELD (not submitted) pending a final rocket call — but
-that call is now MADE: ship the wake, rocket stays OFF (see below). Re-verify + re-upload needed
-after the rocket re-stub, then submit.**
+**► 1.4 (build 48) = the GAMEPLAY PACK — LIVE (`READY_FOR_SALE`). ► 1.4.1 (build 50) = the
+Game Center WAKE fix — the shippable cut. Build 49 was uploaded with the rocket ON, then the
+device test showed the rocket stays blank, so the rocket was re-stubbed OFF and rebuilt as
+build 50 (49 is DEAD in ASC — do NOT attach it). Build 50 needs archive→validate→upload, then
+create the 1.4.1 version record + attach build 50 + submit. Next new build after 50 = **51+**.**
 
 _1.4.1 in one paragraph:_ after 1.4 went live the designer checked the App-Store build on-device —
 the Apple Games dashboard was STILL EMPTY for AA (the "public release heals the stale record" theory
@@ -30,7 +30,7 @@ site for a clean re-enable later). Players reach achievements via the Apple Game
 floating Done). Two open probes may feed a 1.4.2: FCA is testing a
 `GKGameCenterViewController(state: .achievements)` button vs the rocket's `.dashboard` state, and both
 apps re-check the plain rocket in ~1 week for the "store-side GC declaration propagates after a GC
-release" theory (FCA 1.2 live ~2 days, still blank). Next new build after 49 = **50+**. Full detail:
+release" theory (FCA 1.2 live ~2 days, still blank). Next new build after 50 = **51+**. Full detail:
 CLAUDE.md's GameKit note, "CORRECTION + FIX — 1.4.1".
 
 **► 1.4 (build 48) = the GAMEPLAY PACK — LIVE (`READY_FOR_SALE`).**
