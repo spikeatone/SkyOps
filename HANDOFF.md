@@ -10,8 +10,11 @@ _Snapshot: 23 August 2026._
 **► 1.4 (build 48) = the GAMEPLAY PACK — LIVE (`READY_FOR_SALE`). ► 1.4.1 (build 50) = the
 Game Center WAKE fix — the shippable cut. Build 49 was uploaded with the rocket ON, then the
 device test showed the rocket stays blank, so the rocket was re-stubbed OFF and rebuilt as
-build 50 (49 is DEAD in ASC — do NOT attach it). Build 50 needs archive→validate→upload, then
-create the 1.4.1 version record + attach build 50 + submit. Next new build after 50 = **51+**.**
+build 50 (49 is DEAD in ASC — do NOT attach it). **Build 50 is UPLOADED (Delivery UUID
+`4ec96006-f95a-48c0-ab98-6a8a9471cb6c`) — ready to attach.** DESIGNER STEP (ASC, ~10 min once
+50 processes): create the 1.4.1 version record + attach build 50 + short What's New ("Game Center
+fix: achievements now sync to the Apple Games app") + submit. The `gameCenterAppVersion` checkbox
+may need re-enabling for 1.4.1 (POST the same as 1.4). Next new build after 50 = **51+**.**
 
 _1.4.1 in one paragraph:_ after 1.4 went live the designer checked the App-Store build on-device —
 the Apple Games dashboard was STILL EMPTY for AA (the "public release heals the stale record" theory
