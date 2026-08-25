@@ -8,14 +8,19 @@ CLAUDE.md, CLAUDE.md wins.
 _Snapshot: 24 August 2026._
 
 **► 1.4.1 (build 51) = ONE combined release — the Game Center WAKE fix + the Tech Ops
-modernization. SUBMITTED FOR REVIEW 24 Aug (`WAITING_FOR_REVIEW`), auto-releases on approval.**
-Both branches (`game-center-1.4.1`, `tech-ops-modernization`) are merged to `main`; build 51 carries
-both (build 50, the GC-only cut, is superseded). Version record `445c5eaf-b159-4fb2-94e5-2c086b0f0d89`,
-build 51 (`d7de6fc6-…`, VALID) attached, gameCenterAppVersion already enabled (auto-linked, no POST
-needed this time), What's New = "Game Center achievements now sync properly to the Apple Games app …
-Plus behind-the-scenes stability and reliability improvements", promo text = 1.4's evergreen line
-re-set (it resets every version), description/keywords/screenshots carried forward. Next new build
-after 51 = **52+**.
+modernization. APPROVED + LIVE (`READY_FOR_SALE`, 24 Aug).** Both branches (`game-center-1.4.1`,
+`tech-ops-modernization`) merged to `main`; build 51 carries both (build 50, the GC-only cut, was
+superseded). The GC wake fix (`wakeAccountRecord`) is now public — achievements sync to the Apple
+Games app; the rocket is OFF (blank in-app dashboard is a separate GameKit issue). Tech Ops
+(RC/Telemetry externalization + Test Store + MetricKit) is now the shipped mainline pattern. Next
+new build = **52+**.
+
+**► ONE FOLLOW-UP worth remembering (no build needed):** ~1 week after this release (so ~31 Aug),
+check whether Apple's Game Center rocket now populates on the LIVE build on-device (the store-side
+GC-declaration propagation theory — FCA is checking the same on their side). If it populates, a
+future 1.4.2 can re-enable the standard `GKAccessPoint` (wiring documented in `GameCenter.swift`).
+Also parked: a custom in-app SwiftUI achievements view (FCA's pattern; shape saved in memory) —
+build it if the rocket stays blank and the designer wants an in-app surface.
 
 **What's in build 51 — the GC wake fix:** after 1.4 went live the App-Store build's Apple Games
 dashboard was STILL EMPTY (the "public release heals the stale record" theory FAILED). FC Architect's
