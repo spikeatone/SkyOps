@@ -28,6 +28,28 @@ only, and update it in the same session as the work.
 
 ## In flight
 
+### Tech Ops modernization (24 Aug) — branch `tech-ops-modernization` (off `main`)
+Postmark Tech Ops cross-app audit: Airline was BEHIND its own siblings on the RC/TelemetryDeck
+patterns it inspired. Plumbing + observability only, NO gameplay change. Full detail in CLAUDE.md
+("Decided — Tech Ops modernization"). NOT yet in a shipped build — rides the next build after the
+1.4.x train (51+).
+- [x] Item 1 — RevenueCat key externalized (Secrets.xcconfig gitignored + .example template +
+      pbxproj baseConfigurationReference + Info.plist $(VAR) + Store.resolveKey Test Store path
+      + four isConfigured guards). Verified: Info.plist substitution, no appl_ literal left.
+- [x] Item 2 — Telemetry.isDriven guard (AA's launch hooks + persisted debugProKey future-proof)
+      + appID externalized + TelemetryTests.swift XCTest linkage proof. 9/9 pass.
+- [x] Item 3 — MetricKit CrashReporter.swift (ported from Flight Ops) → Telemetry.errorOccurred,
+      type-only, App-init after Telemetry.configure(), !isDriven. MXMetricManagerSubscriber in
+      the Release binary.
+- [ ] Item 4 (OPTIONAL, judgment call) — move `Sim/AircraftIcon.swift` + `Sim/SVGPath.swift`
+      (which import SwiftUI) to a Views/Rendering group so Sim/ is literally SwiftUI-free.
+      Cosmetic (harnesses already exclude them); parked pending designer OK — moving files in a
+      synchronized-group project can ripple the harness exclude patterns.
+- [ ] DESIGNER: paste the RevenueCat **Test Store** key (dashboard ▸ Apps ▸ Test Store ▸ Show
+      key) into the gitignored `Secrets.xcconfig` to enable simulator purchase testing. Until
+      then the slot is the placeholder and `-useTestStore` falls back to the App Store key.
+- [ ] Merge `tech-ops-modernization` → `main` when ready (own PR or fast-forward — designer's call).
+
 ### 1.4 (build 48) — SUBMITTED FOR REVIEW (21 Aug, `WAITING_FOR_REVIEW`)
 The GAMEPLAY PACK, from a designer-requested critical gameplay review (thesis: excellent sim,
 thin game). Branch `gameplay-lever-pack`, merged to `main`. Full notes in CLAUDE.md

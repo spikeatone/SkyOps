@@ -5,7 +5,20 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 21 August 2026._
+_Snapshot: 21 August 2026 (this branch: `tech-ops-modernization`, off `main`)._
+
+**► TECH OPS MODERNIZATION (24 Aug, THIS branch) — plumbing + observability parity, NO gameplay
+change, done + verified, NOT yet merged/shipped.** A Postmark Tech Ops audit found Airline behind
+its own siblings on the RC/TelemetryDeck patterns it inspired. Three items, three commits: (1)
+RevenueCat key externalized to a gitignored `Secrets.xcconfig` → Info.plist → `Store.resolveKey`
+with a Test Store path + the four `isConfigured` guards; (2) `Telemetry.isDriven` guard +
+externalized app ID + an XCTest linkage proof (`TelemetryTests`, 9/9); (3) MetricKit
+`CrashReporter.swift` (crash/hang TYPE-only → Telemetry Errors). Debug + Release both clean.
+Rides the next build after the 1.4.x train (51+). DESIGNER TODO: paste the RC **Test Store** key
+into `Secrets.xcconfig` for simulator purchase testing (AA has none yet). Item 4 (move two
+SwiftUI-importing files out of `Sim/`) is parked as an optional judgment call. Full detail:
+CLAUDE.md "Decided — Tech Ops modernization" + TASKS.md. **NOTE: the Game Center 1.4.1 wake fix
+lives on a SEPARATE branch `game-center-1.4.1` (build 50 uploaded) — not in this branch.**
 
 **► 1.4 (build 48) = the GAMEPLAY PACK — SUBMITTED FOR REVIEW 21 Aug (`WAITING_FOR_REVIEW`).**
 (Builds 45–47 are SUPERSEDED. The Game Center ENTRY-POINT saga, condensed: an app that shipped
