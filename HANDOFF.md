@@ -10,7 +10,8 @@ _Snapshot: 24 August 2026._
 **► 1.4.1 (build 51) = ONE combined release — the Game Center WAKE fix + the Tech Ops
 modernization, merged to `main` together.** Both branches (`game-center-1.4.1`, `tech-ops-modernization`)
 are merged; build 51 is the cut that carries both (build 50, the GC-only cut, is superseded — do NOT
-attach it). DESIGNER STEP (ASC, once 51 processes): create the 1.4.1 version record + attach build 51 +
+attach it). **Build 51 is UPLOADED (Delivery UUID `d7de6fc6-9087-4ea6-9bab-95f30cf5d3c3`) — ready to
+attach.** DESIGNER STEP (ASC, once 51 processes): create the 1.4.1 version record + attach build 51 +
 What's New ("Game Center: achievements now sync to the Apple Games app; behind-the-scenes stability
 improvements") + submit. The `gameCenterAppVersion` checkbox may need re-enabling for 1.4.1 (POST the
 same as 1.4). Next new build after 51 = **52+**.
