@@ -5261,8 +5261,8 @@ task tracking lives in `TASKS.md`.
 As of 24 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) · 1.4 (48, the
 GAMEPLAY PACK — fare lever, first quest, session briefing, Game Center, rival flavor, subsidiary
 fleet growth) are ALL LIVE (`READY_FOR_SALE`). · 1.4.1 (build 51) = the Game Center wake fix +
-the Tech Ops modernization, COMBINED into one release (both branches merged to `main`) — in
-flight.** After 1.4 went live the designer checked the App-Store build on-device: the Apple
+the Tech Ops modernization, COMBINED into one release (both branches merged to `main`) — SUBMITTED
+FOR REVIEW 24 Aug (`WAITING_FOR_REVIEW`), auto-releases on approval.** After 1.4 went live the designer checked the App-Store build on-device: the Apple
 Games dashboard was STILL EMPTY for AA, so the "the public GC-carrying release heals the stale
 server-side record" theory (and its "1.4's release IS the heal mechanism" claim above) is WRONG —
 a live + reporting build did NOT wake the record. FC Architect's device A/B found the actual

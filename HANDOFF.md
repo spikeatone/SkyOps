@@ -8,13 +8,14 @@ CLAUDE.md, CLAUDE.md wins.
 _Snapshot: 24 August 2026._
 
 **► 1.4.1 (build 51) = ONE combined release — the Game Center WAKE fix + the Tech Ops
-modernization, merged to `main` together.** Both branches (`game-center-1.4.1`, `tech-ops-modernization`)
-are merged; build 51 is the cut that carries both (build 50, the GC-only cut, is superseded — do NOT
-attach it). **Build 51 is UPLOADED (Delivery UUID `d7de6fc6-9087-4ea6-9bab-95f30cf5d3c3`) — ready to
-attach.** DESIGNER STEP (ASC, once 51 processes): create the 1.4.1 version record + attach build 51 +
-What's New ("Game Center: achievements now sync to the Apple Games app; behind-the-scenes stability
-improvements") + submit. The `gameCenterAppVersion` checkbox may need re-enabling for 1.4.1 (POST the
-same as 1.4). Next new build after 51 = **52+**.
+modernization. SUBMITTED FOR REVIEW 24 Aug (`WAITING_FOR_REVIEW`), auto-releases on approval.**
+Both branches (`game-center-1.4.1`, `tech-ops-modernization`) are merged to `main`; build 51 carries
+both (build 50, the GC-only cut, is superseded). Version record `445c5eaf-b159-4fb2-94e5-2c086b0f0d89`,
+build 51 (`d7de6fc6-…`, VALID) attached, gameCenterAppVersion already enabled (auto-linked, no POST
+needed this time), What's New = "Game Center achievements now sync properly to the Apple Games app …
+Plus behind-the-scenes stability and reliability improvements", promo text = 1.4's evergreen line
+re-set (it resets every version), description/keywords/screenshots carried forward. Next new build
+after 51 = **52+**.
 
 **What's in build 51 — the GC wake fix:** after 1.4 went live the App-Store build's Apple Games
 dashboard was STILL EMPTY (the "public release heals the stale record" theory FAILED). FC Architect's
