@@ -6,3 +6,11 @@ xcuserdata/
 *.xcuserstate
 DerivedData/
 build/
+
+# Secrets — never commit these.
+# Real API keys reach the Info.plist through Secrets.xcconfig (see Secrets.xcconfig.example,
+# which IS committed as the template). The real file holds the actual RevenueCat + TelemetryDeck
+# keys and must stay untracked — even though they are publishable CLIENT keys, the family rule is
+# "reference secrets via config, never hardcode a literal," and a committed test_ key WOULD be a
+# real leak (Vineyard shipped that mistake once).
+Secrets.xcconfig
