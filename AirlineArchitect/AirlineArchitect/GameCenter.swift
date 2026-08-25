@@ -81,6 +81,7 @@ enum GameCenter {
                 topViewController()?.present(vc, animated: true)
             } else if GKLocalPlayer.local.isAuthenticated {
                 isAuthenticated = true
+                wakeAccountRecord()
                 onAuthenticated?()
             } else {
                 isAuthenticated = false
@@ -92,20 +93,67 @@ enum GameCenter {
         #endif
     }
 
-    /// ⚠️ **NO in-app Game Center UI right now — deliberately (family decision,
-    /// FC Architect build 35, 2026-08-21).** An app that shipped to the App
-    /// Store BEFORE its GC integration existed (FCA 1.0–1.1.1, and AA 1.0–1.3
-    /// — this app) carries a stale server-side app-presence record that poisons
-    /// GameKit's own dashboard/home UI: the floating access point opens EMPTY,
-    /// and every client-side workaround fought that condition and lost on
-    /// device (direct `.achievements` present → its back button dead-ends on
-    /// the empty root; `.pageSheet` → iOS forces GC full-screen, no swipe-down;
-    /// a floating Done button → GC renders in its own window and buries it).
-    /// Never-released VA works untouched — 3-for-3 confirms the server-side
-    /// cause. So, like FCA: reporting only, no entry point; players reach
-    /// achievements via the Apple Games app. The record should HEAL once a
-    /// GC-carrying version (1.4) is actually released — verify on device in a
-    /// 1.4.x, then re-enable Apple's standard `GKAccessPoint` here, clean.
+    /// Wake the account-side app-presence record with a real report→LOAD
+    /// round-trip (FC Architect's fix, 2026-08-23). An app that shipped to the
+    /// App Store BEFORE its GC integration carries a stale record that suppresses
+    /// GameKit registration even though auth + reporting work. FCA found that a
+    /// genuine `report` FOLLOWED BY `loadAchievements` from a signed-in device
+    /// registers the app — AA 1.4 reported but never loaded, the missing half.
+    ///
+    /// **VERIFIED ON DEVICE (build 49): this WORKS for the wake.** After it runs,
+    /// AA appears in the Apple Games app ("Now Playing"), the in-app achievements
+    /// pill reads N/29, and the Apple Games achievements grid renders our real
+    /// badges with dates. The stale-record poison is gone.
+    ///
+    /// **WHAT IT DOES NOT FIX (confirmed on device, both AA + FCA): the in-app
+    /// `GKGameCenterViewController` dashboard the rocket opens still renders
+    /// BLANK** — a SEPARATE GameKit issue from the stale record, affecting both
+    /// apps identically, unfixed by a device restart. Leading theory (FCA): the
+    /// in-app dashboard reads a STORE-SIDE GC declaration that only propagates
+    /// after a GC-carrying version is RELEASED (FCA 1.2 live ~2 days, still blank
+    /// → propagation is slow or gated; AA has never released a GC version). So
+    /// Apple Games is the working surface today; the rocket is NOT shipped (see
+    /// `setAccessPointActive`). Idempotent + a no-op when signed out; safe to run
+    /// on every authenticated launch.
+    private static func wakeAccountRecord() {
+        #if canImport(GameKit)
+        guard isAuthenticated else { return }
+        GKAchievement.loadAchievements { _, error in
+            #if DEBUG
+            if let error { print("[GameCenter] loadAchievements failed: \(error.localizedDescription)") }
+            else { print("[GameCenter] account record woken (loadAchievements ok)") }
+            #endif
+        }
+        #endif
+    }
+
+    /// Apple's standard floating Game Center access point (the rocket). **STILL a
+    /// hard-off stub in 1.4.1 (build 49) — DELIBERATE, after an on-device test.**
+    ///
+    /// The story so far: it was off through 1.4 because the app's stale
+    /// account-side record (shipped 1.0–1.3 pre-GC) opened the access point EMPTY.
+    /// 1.4.1 first RE-ENABLED it, paired with `wakeAccountRecord` — but the device
+    /// test (build 49, 2026-08-23) showed the wake fixes the RECORD (Apple Games
+    /// fully populated) yet the rocket's in-app `GKGameCenterViewController`
+    /// dashboard STILL renders blank. FC Architect confirmed the identical result
+    /// on FCA — two apps, same blank in-app dashboard while Apple Games works. So
+    /// the blank dashboard is a SEPARATE GameKit issue we can't fix in code (no VC
+    /// present-timing change helps; a restart doesn't clear it). Shipping the
+    /// rocket would just hand players an empty popover. So it stays OFF; players
+    /// reach achievements via the Apple Games app (now populated by the wake) + the
+    /// app's own milestone toasts.
+    ///
+    /// Leading theory (FCA) for the blank dashboard: it reads a STORE-SIDE GC
+    /// declaration that only propagates after a GC-carrying version is RELEASED
+    /// (FCA 1.2 live ~2 days, still blank → slow or gated; AA has never released a
+    /// GC version). If so it may start working on its own — RE-CHECK the plain
+    /// rocket on device ~1 week after AA's first GC release with NO new build; if
+    /// it populates, re-enable here (the `active && isAuthenticated` +
+    /// `atLaunchScreen` wiring below is the clean re-enable, just restore
+    /// `isActive = active && isAuthenticated`). FCA is also testing a
+    /// `GKGameCenterViewController(state: .achievements)` button vs the rocket's
+    /// `.dashboard` state — if `.achievements` populates while `.dashboard` is
+    /// blank, that's a 1.4.2 button. Until confirmed populating: NO entry point.
     static func setAccessPointActive(_ active: Bool) {
         #if canImport(GameKit)
         GKAccessPoint.shared.isActive = false
