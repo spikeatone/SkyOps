@@ -28,8 +28,66 @@ import TelemetryDeck
 #endif
 
 enum Telemetry {
-    /// TelemetryDeck app ID (safe to embed — it's a client-side write key).
-    static let appID = "55DD6B12-BA78-4A08-8345-1FE29F9C4983"
+    /// The TelemetryDeck app ID, by the same route as `REVENUECAT_API_KEY`:
+    /// `Secrets.xcconfig` (gitignored) → Info.plist → here. It's a client-side
+    /// WRITE key (safe in a binary), but per the family rule it is NOT hardcoded.
+    /// A blank/placeholder value reads as "unset" and `configure()` declines to
+    /// initialize, so a keyless clone stays silent.
+    static let infoPlistKey = "TELEMETRYDECK_APP_ID"
+    /// The placeholder shipped in `Secrets.xcconfig.example`; treated as "unset".
+    static let placeholderAppID = "your_telemetrydeck_app_id_here"
+
+    static func appID(bundle: Bundle = .main) -> String? {
+        guard let raw = bundle.object(forInfoDictionaryKey: infoPlistKey) as? String else { return nil }
+        return usableAppID(raw)
+    }
+    /// Reject blank and placeholder values. Split out so the rule is testable
+    /// without a bundle — same shape as `Store.usableKey`.
+    static func usableAppID(_ raw: String?) -> String? {
+        guard let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty, trimmed != placeholderAppID else { return nil }
+        return trimmed
+    }
+
+    /// The launch arguments that mean "a developer is driving this, not a
+    /// player." Every one either fabricates game state, seeds a screenshot/gallery
+    /// scene, or skips a step a real player takes — so any session carrying one is
+    /// verification, not usage, and must emit nothing. `-useTestStore` is
+    /// deliberately NOT here: it's honoured only in DEBUG (where the SDK's
+    /// testMode routes to the dashboard's Test Data view anyway), and suppressing
+    /// it would make `Purchase.completed` — the one signal with real call-site
+    /// logic — impossible to exercise off-device.
+    static let drivingHooks = [
+        "-devScenario", "-freshFlow",
+        "-liveryGallery", "-liveryPreview",
+        "-galleryName", "-galleryPalette", "-galleryType",
+        "-backdropTest", "-backdropMode", "-backdropLight", "-backdropOpacity",
+        "-hideControls",
+    ]
+
+    /// Key for a persisted debug-Pro flag, IF one is ever added (a paywall "unlock
+    /// Pro for testing" button that persists across relaunch). AA's current DEV
+    /// Pro toggle is in-memory only (`store.isPro.toggle()`), so nothing writes
+    /// this today — but `isDriven` checks it so the guard is already correct the
+    /// day a persisted toggle lands. See FC's note: an arg list alone can't see a
+    /// persisted fake entitlement, and such a session emits a fabricated healthy
+    /// funnel forever.
+    static let debugProKey = "aa.debugPro"
+
+    /// Whether this launch is a driven session and must emit nothing. Pure, so the
+    /// rule is testable without a running app. The argument check is NOT wrapped
+    /// in `#if DEBUG` — the hooks are plain command-line arguments (one Set lookup,
+    /// can't misfire in the wild); the persisted-flag half is DEBUG-only because a
+    /// debug-Pro flag only exists in DEBUG.
+    static func isDriven(arguments: [String] = CommandLine.arguments,
+                         defaults: UserDefaults = .standard) -> Bool {
+        let args = Set(arguments)
+        if drivingHooks.contains(where: args.contains) { return true }
+        #if DEBUG
+        if defaults.bool(forKey: debugProKey) { return true }
+        #endif
+        return false
+    }
 
     /// Wall-clock start of this launch, so signals can carry "how long had they
     /// actually been playing" — the number that settles whether a cap lands too
@@ -38,11 +96,32 @@ enum Telemetry {
     private static var minutesPlayed: Int { max(0, Int(Date().timeIntervalSince(launchedAt) / 60)) }
 
     /// True once `configure()` has actually initialized TelemetryDeck. `send()`
-    /// guards on this so a signal fired before configure — or in a build where
-    /// TelemetryDeck isn't linked — is a clean no-op instead of a silent misfire.
+    /// guards on this so a signal fired before configure — in a keyless build, a
+    /// driven session, or a build where TelemetryDeck isn't linked — is a clean
+    /// no-op instead of a silent misfire.
     private(set) static var isConfigured = false
 
+    /// Initialize the SDK once, from the App's `init()` beside `Store.configure()`.
+    /// **A driven session ⇒ no initialize** (stronger than filtering at the send
+    /// site — nothing is even queued), and **no app ID ⇒ no initialize** (a keyless
+    /// clone stays silent). The SDK's `testMode` defaults to `#if DEBUG`, so a
+    /// hand-driven Debug build lands in the dashboard's Test Data view and Release
+    /// goes live — that separation is free; don't override it.
     static func configure() {
+        guard !isDriven() else {
+            #if DEBUG
+            let hooks = drivingHooks.filter(CommandLine.arguments.contains)
+            let why = hooks.isEmpty ? "persisted debug-Pro flag" : hooks.joined(separator: " ")
+            print("[Telemetry] Driven session (\(why)) — signals suppressed.")
+            #endif
+            return
+        }
+        guard let appID = appID() else {
+            #if DEBUG
+            print("[Telemetry] No \(infoPlistKey) — analytics disabled. Add it to Secrets.xcconfig.")
+            #endif
+            return
+        }
         #if canImport(TelemetryDeck)
         TelemetryDeck.initialize(config: TelemetryDeck.Config(appID: appID))
         isConfigured = true

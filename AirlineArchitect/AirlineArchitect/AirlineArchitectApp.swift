@@ -21,6 +21,10 @@ struct AirlineArchitectApp: App {
         // here in init() rather than in an .onAppear, so it's ready before the
         // first window is built.
         Telemetry.configure()
+        // Crash/hang visibility via MetricKit — routes crash TYPE (never a stack)
+        // to Telemetry's Errors bucket. After Telemetry.configure() so a report
+        // has somewhere to land; a driven session skips subscribing entirely.
+        CrashReporter.start()
     }
     var body: some Scene {
         WindowGroup {
