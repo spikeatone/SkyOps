@@ -5244,8 +5244,10 @@ a real leak (Vineyard shipped that once) — AA has none.
   exclude patterns). **ArchitectKit clock migration is explicitly OFF the list** — AA is the elder
   the package was extracted FROM; an accepted divergence, don't migrate without the Chef's say-so.
 - **App-init order is now Store → Telemetry → CrashReporter.** All three build clean (Debug +
-  Release). This work is NOT yet in a shipped build — it rides the next build after the current
-  1.4.x release train (i.e. build 51+, since 1.4.1/build 50 is the GC wake fix in flight).
+  Release). **MERGED to `main` and combined with the GC wake fix into ONE 1.4.1 / build 51**
+  (both `game-center-1.4.1` and `tech-ops-modernization` merged; build 50, the GC-only cut, is
+  superseded — attach build 51). Test Store path is LIVE-VERIFIED (the designer pasted the real
+  `test_` key; a `-useTestStore` Debug launch logged RevenueCat's "Using a Test Store API key").
 
 ## Release status — see `HANDOFF.md`
 
@@ -5256,18 +5258,21 @@ Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (whic
 version is live, what's in review, what the next build number must be), and in-flight
 task tracking lives in `TASKS.md`.
 
-As of 23 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) · 1.4 (48, the
+As of 24 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) · 1.4 (48, the
 GAMEPLAY PACK — fare lever, first quest, session briefing, Game Center, rival flavor, subsidiary
-fleet growth) are ALL LIVE (`READY_FOR_SALE`). · 1.4.1 (build 50) = the Game Center wake fix —
-in flight.** After 1.4 went live the designer checked the App-Store build on-device: the Apple
+fleet growth) are ALL LIVE (`READY_FOR_SALE`). · 1.4.1 (build 51) = the Game Center wake fix +
+the Tech Ops modernization, COMBINED into one release (both branches merged to `main`) — in
+flight.** After 1.4 went live the designer checked the App-Store build on-device: the Apple
 Games dashboard was STILL EMPTY for AA, so the "the public GC-carrying release heals the stale
 server-side record" theory (and its "1.4's release IS the heal mechanism" claim above) is WRONG —
 a live + reporting build did NOT wake the record. FC Architect's device A/B found the actual
 trigger: a `GKAchievement.report` → `loadAchievements` ROUND-TRIP from a signed-in device (AA
 reported but never loaded — the missing half). 1.4.1 adds the load call (`wakeAccountRecord`),
-RE-ENABLES the standard native `GKAccessPoint` (no custom UI), and fixes the build-46 fresh-install
-miss (rocket on the naming screen too, via `atLaunchScreen`). See the full "CORRECTION + FIX —
-1.4.1" note in the GameKit section above. Next new build after 50 must be **51+**. Query review
+which is device-verified to populate the Apple Games app — but the native `GKAccessPoint` rocket
+STILL opens a blank in-app dashboard (a separate GameKit issue, confirmed on FCA too), so **the
+rocket stays OFF** (no in-app GC entry point). 1.4.1 ALSO carries the Tech Ops work (RC/Telemetry
+externalization + Test Store + MetricKit — see "Decided — Tech Ops modernization"). Build 50 (the
+GC-only cut) is superseded by build 51 — attach 51. Next new build after 51 must be **52+**. Query review
 state directly rather than trusting any doc's snapshot:
 `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 
