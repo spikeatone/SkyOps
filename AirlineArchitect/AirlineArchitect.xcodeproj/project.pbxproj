@@ -35,6 +35,7 @@
 		ED35608830042BBF00DC0942 /* AirlineArchitectTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirlineArchitectTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED35609230042BBF00DC0942 /* AirlineArchitectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirlineArchitectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EDAAE2003005EDB9004E03F2 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		ED5EC0E7000000000000AA01 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -104,6 +105,7 @@
 				ED35609530042BBF00DC0942 /* AirlineArchitectUITests */,
 				ED35607830042BBE00DC0942 /* Products */,
 				EDAAE2003005EDB9004E03F2 /* AppIcon.icon */,
+				ED5EC0E7000000000000AA01 /* Secrets.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -304,6 +306,7 @@
 /* Begin XCBuildConfiguration section */
 		ED35609C30042BBF00DC0942 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = ED5EC0E7000000000000AA01 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -340,6 +343,7 @@
 		};
 		ED35609D30042BBF00DC0942 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = ED5EC0E7000000000000AA01 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

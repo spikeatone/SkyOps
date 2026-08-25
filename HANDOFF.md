@@ -5,16 +5,36 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 23 August 2026._
+_Snapshot: 24 August 2026._
 
-**► 1.4 (build 48) = the GAMEPLAY PACK — LIVE (`READY_FOR_SALE`). ► 1.4.1 (build 50) = the
-Game Center WAKE fix — the shippable cut. Build 49 was uploaded with the rocket ON, then the
-device test showed the rocket stays blank, so the rocket was re-stubbed OFF and rebuilt as
-build 50 (49 is DEAD in ASC — do NOT attach it). **Build 50 is UPLOADED (Delivery UUID
-`4ec96006-f95a-48c0-ab98-6a8a9471cb6c`) — ready to attach.** DESIGNER STEP (ASC, ~10 min once
-50 processes): create the 1.4.1 version record + attach build 50 + short What's New ("Game Center
-fix: achievements now sync to the Apple Games app") + submit. The `gameCenterAppVersion` checkbox
-may need re-enabling for 1.4.1 (POST the same as 1.4). Next new build after 50 = **51+**.**
+**► 1.4.1 (build 51) = ONE combined release — the Game Center WAKE fix + the Tech Ops
+modernization, merged to `main` together.** Both branches (`game-center-1.4.1`, `tech-ops-modernization`)
+are merged; build 51 is the cut that carries both (build 50, the GC-only cut, is superseded — do NOT
+attach it). DESIGNER STEP (ASC, once 51 processes): create the 1.4.1 version record + attach build 51 +
+What's New ("Game Center: achievements now sync to the Apple Games app; behind-the-scenes stability
+improvements") + submit. The `gameCenterAppVersion` checkbox may need re-enabling for 1.4.1 (POST the
+same as 1.4). Next new build after 51 = **52+**.
+
+**What's in build 51 — the GC wake fix:** after 1.4 went live the App-Store build's Apple Games
+dashboard was STILL EMPTY (the "public release heals the stale record" theory FAILED). FC Architect's
+device A/B found the trigger: a `GKAchievement.report` → `loadAchievements` ROUND-TRIP from a signed-in
+device. AA reported but NEVER loaded — the missing half. `GameCenter.wakeAccountRecord()` FIXES it
+(verified on device: AA now shows in the Apple Games app "Now Playing", achievements pill 3/29, real
+badges with dates). The native `GKAccessPoint` rocket STILL opens a BLANK in-app dashboard (a SEPARATE
+GameKit issue, confirmed identically on FCA, not fixable in our code), so **the rocket stays OFF** — no
+in-app GC entry point; players reach achievements via the Apple Games app + milestone toasts. DO NOT
+re-add the dead workarounds. Possible 1.4.2 follow-ups: a custom SwiftUI achievements view, and a
+~1-week re-check of the plain rocket (store-side-propagation theory). Full detail: CLAUDE.md's GameKit
+note, "CORRECTION + FIX — 1.4.1".
+
+**What's in build 51 — Tech Ops modernization (plumbing + observability, NO gameplay change):** a
+Postmark Tech Ops audit found Airline behind its own siblings on the RC/TelemetryDeck patterns it
+inspired. (1) RevenueCat key externalized to a gitignored `Secrets.xcconfig` → Info.plist →
+`Store.resolveKey` with a Test Store path + the four `isConfigured` guards — the Test Store path is
+LIVE-VERIFIED (the designer pasted the real `test_` key; a `-useTestStore` Debug launch logged
+RevenueCat's "Using a Test Store API key"). (2) `Telemetry.isDriven` guard + externalized app ID + an
+XCTest linkage proof (`TelemetryTests`, 9/9). (3) MetricKit `CrashReporter.swift` (crash/hang TYPE-only
+→ Telemetry Errors). Full detail: CLAUDE.md "Decided — Tech Ops modernization" + TASKS.md.
 
 _1.4.1 in one paragraph:_ after 1.4 went live the designer checked the App-Store build on-device —
 the Apple Games dashboard was STILL EMPTY for AA (the "public release heals the stale record" theory

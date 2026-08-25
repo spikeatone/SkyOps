@@ -34,9 +34,94 @@ import Foundation
 
 @MainActor @Observable
 final class Store {
-    /// RevenueCat App Store public SDK key (safe to embed — a client key shipped
-    /// inside the app). Production key for the "Airline Architect" App Store app.
-    static let apiKey = "appl_VrQXFZPLdMiMOFAQVErmwOeVdup"
+    /// The RevenueCat **public** App Store SDK key. It's a client key (safe in a
+    /// shipped binary), but per the family rule it is NOT hardcoded — it reaches
+    /// the app by indirection: `Secrets.xcconfig` (gitignored) → Info.plist →
+    /// here. Absent/placeholder ⇒ `nil` ⇒ the SDK is never configured (see
+    /// `configure()`), which keeps a keyless clone silent instead of 401-spamming.
+    static let infoPlistKey = "REVENUECAT_API_KEY"
+    /// The placeholder shipped in `Secrets.xcconfig.example`; treated as "unset".
+    static let placeholderKey = "appl_replace_with_your_revenuecat_key"
+
+    /// The **Test Store** key, by the same route. RevenueCat's Test Store is
+    /// selected by nothing but the key's `test_` prefix — no StoreKit config file,
+    /// no App Store Connect, no Apple Developer membership, no sandbox Apple
+    /// Account — which is what makes a purchase exercisable in the SIMULATOR,
+    /// where the DEV Pro toggle bypasses every line of RevenueCat and proves only
+    /// the gate. DEBUG builds only; see `resolveKey`.
+    static let testStoreInfoPlistKey = "REVENUECAT_TEST_API_KEY"
+    /// The placeholder shipped in `Secrets.xcconfig.example`; treated as "unset".
+    static let testStorePlaceholderKey = "test_replace_with_your_revenuecat_test_store_key"
+    /// RevenueCat's Test Store key prefix (the SDK's `simulatedStoreKeyPrefix`).
+    static let testStoreKeyPrefix = "test_"
+    /// The DEBUG launch argument that opts into the Test Store.
+    static let testStoreLaunchArg = "-useTestStore"
+
+    static func apiKey(bundle: Bundle = .main) -> String? {
+        key(forInfoDictionaryKey: infoPlistKey, placeholder: placeholderKey, bundle: bundle)
+    }
+    static func testStoreAPIKey(bundle: Bundle = .main) -> String? {
+        key(forInfoDictionaryKey: testStoreInfoPlistKey, placeholder: testStorePlaceholderKey, bundle: bundle)
+    }
+    private static func key(forInfoDictionaryKey name: String, placeholder: String, bundle: Bundle) -> String? {
+        guard let raw = bundle.object(forInfoDictionaryKey: name) as? String else { return nil }
+        return usableKey(raw, placeholder: placeholder)
+    }
+    private static func usableKey(_ key: String?, placeholder: String) -> String? {
+        guard let trimmed = key?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty, trimmed != placeholder else { return nil }
+        return trimmed
+    }
+
+    /// Which RevenueCat store the SDK was pointed at. The paywall shows the Test
+    /// Store one in DEBUG, because a simulated purchase that looks exactly like a
+    /// real one is worse than no test at all.
+    enum StoreKind: String, Equatable {
+        case appStore = "App Store"
+        case testStore = "RevenueCat Test Store"
+    }
+    struct KeyChoice: Equatable { let key: String; let kind: StoreKind }
+
+    /// Pick the key to configure the SDK with. Pure, so the rules are testable
+    /// without RevenueCat, a bundle, or a running app. Three rules, in priority:
+    ///
+    /// 1. **A DEBUG build that asked for the Test Store gets it**, when a
+    ///    well-formed `test_` key is actually present. Asking without one falls
+    ///    through to the App Store key rather than refusing to configure.
+    /// 2. **A `test_` key in the App Store slot is honoured in DEBUG and REFUSED
+    ///    in Release.** The SDK deliberately `fatalError`s on a Test Store key in
+    ///    a Release build; refusing to configure turns that launch crash into the
+    ///    same inert "purchases unavailable" state a missing key already produces.
+    /// 3. Otherwise the App Store key, or `nil` when there isn't one.
+    static func resolveKey(appStoreKey: String?,
+                           testStoreKey: String?,
+                           wantsTestStore: Bool,
+                           isDebugBuild: Bool) -> KeyChoice? {
+        let appStoreKey = usableKey(appStoreKey, placeholder: placeholderKey)
+        let testStoreKey = usableKey(testStoreKey, placeholder: testStorePlaceholderKey)
+        if isDebugBuild, wantsTestStore,
+           let testStoreKey, testStoreKey.hasPrefix(testStoreKeyPrefix) {
+            return KeyChoice(key: testStoreKey, kind: .testStore)
+        }
+        guard let appStoreKey else { return nil }
+        if appStoreKey.hasPrefix(testStoreKeyPrefix) {
+            return isDebugBuild ? KeyChoice(key: appStoreKey, kind: .testStore) : nil
+        }
+        return KeyChoice(key: appStoreKey, kind: .appStore)
+    }
+
+    /// Whether a real key was found and the SDK was configured. When false the
+    /// store is inert: no network and no purchases. **The guards on
+    /// `start`/`refresh`/`purchase`/`restore` are LOAD-BEARING** — `Purchases.shared`
+    /// traps when the SDK was never configured, so an ungated call turns "no key"
+    /// from silently inert into a crash on launch (this bit Golf when ported).
+    private(set) static var isConfigured = false
+    /// The store `configure()` actually pointed the SDK at; `nil` when it declined.
+    private(set) static var storeKind: StoreKind?
+    /// Whether this launch ASKED for the Test Store — so the paywall can tell
+    /// asked-and-got-it apart from asked-and-silently-fell-back (no key pasted).
+    private(set) static var testStoreRequested = false
+
     /// The entitlement identifier configured in the RevenueCat dashboard. Granted
     /// by BOTH one-time products AND the two legacy subscriptions.
     static let entitlementID = "Airline Architect Pro"
@@ -133,20 +218,57 @@ final class Store {
     #if canImport(RevenueCat)
     private var offering: Offering?
 
-    /// Configure the SDK once, before anything reads `Purchases.shared`.
+    /// Configure the SDK once, before anything reads `Purchases.shared`. Called
+    /// from App init. **No usable key ⇒ no configure.** A placeholder passes
+    /// RevenueCat's local format check, so configuring with it "succeeds" then
+    /// 401s on every backend call — staying unconfigured is quieter and honest.
     static func configure() {
+        #if DEBUG
+        let isDebugBuild = true
+        #else
+        let isDebugBuild = false
+        #endif
+        let wantsTestStore = CommandLine.arguments.contains(testStoreLaunchArg)
+        testStoreRequested = wantsTestStore
+        guard let choice = resolveKey(appStoreKey: apiKey(),
+                                      testStoreKey: testStoreAPIKey(),
+                                      wantsTestStore: wantsTestStore,
+                                      isDebugBuild: isDebugBuild) else {
+            isConfigured = false
+            storeKind = nil
+            #if DEBUG
+            print("[Store] No \(infoPlistKey) — purchases are disabled. Add it to Secrets.xcconfig.")
+            #endif
+            return
+        }
+        #if DEBUG
+        if wantsTestStore, choice.kind != .testStore {
+            print("""
+                  [Store] \(testStoreLaunchArg) was passed but no usable \(testStoreInfoPlistKey) was found \
+                  (it must start "\(testStoreKeyPrefix)"). Falling back to the App Store key, where a \
+                  purchase CANNOT complete in the simulator. Copy the Test Store key from the RevenueCat \
+                  dashboard (Apps ▸ Test Store ▸ Show key) into Secrets.xcconfig.
+                  """)
+        }
+        #endif
         Purchases.logLevel = .warn
-        Purchases.configure(withAPIKey: apiKey)
+        Purchases.configure(withAPIKey: choice.key)
+        isConfigured = true
+        storeKind = choice.kind
     }
 
     /// Load current entitlement + offering, then observe live updates
     /// (cross-device purchases, restores). Call from a long-lived `.task`.
+    /// ⚠️ Every entry point below is gated on `isConfigured` — the gate is
+    /// LOAD-BEARING: `Purchases.shared` traps when the SDK was never configured.
     func start() async {
+        guard Self.isConfigured else { return }
         await refresh()
         for await info in Purchases.shared.customerInfoStream { apply(info) }
     }
 
     func refresh() async {
+        guard Self.isConfigured else { return }
         if let info = try? await Purchases.shared.customerInfo() { apply(info) }
         await loadOffering()
     }
@@ -175,7 +297,7 @@ final class Store {
         clearFeedback()
         // Re-checks the window at tap time, so the product sold always matches the
         // window even if the paywall was left open across the flip date.
-        guard let pkg = activePackage() else {
+        guard Self.isConfigured, let pkg = activePackage() else {
             purchaseError = "The unlock isn’t available right now. Check back once billing is set up."
             return
         }
@@ -194,6 +316,10 @@ final class Store {
 
     func restore() async {
         clearFeedback()
+        guard Self.isConfigured else {
+            restoreNotice = "Purchases aren’t available right now. Check back once billing is set up."
+            return
+        }
         purchasing = true
         defer { purchasing = false }
         do {

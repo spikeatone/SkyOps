@@ -5182,6 +5182,71 @@ verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
   45–47) confirmed auth + reporting ("Signed in as mdspike", 29 achievements
   counted, "First Jet" earned) and surfaced the entry-point saga above.
 
+## Decided — Tech Ops modernization (secret hygiene + observability parity; 2026-08-24)
+
+A Postmark Tech Ops cross-app audit (`PostmarkOps/TECH_OPS.md` + `ARCHITECT_FAMILY.md`)
+found Airline — the family's *source material* — BEHIND its own siblings on the exact
+RevenueCat/TelemetryDeck patterns they copied from it. All plumbing + observability, NO
+gameplay change. Done on branch `tech-ops-modernization` (off `main`), items 1–3. **The
+severity is hygiene + parity, NOT a leak** — the `appl_` RC key and the TelemetryDeck app
+ID are publishable CLIENT keys, safe in a shipped binary. A committed `test_` key WOULD be
+a real leak (Vineyard shipped that once) — AA has none.
+
+- **RevenueCat key externalized + Test Store path + `isConfigured` guards.** The hardcoded
+  `appl_` key is GONE from `Store.swift`. It now flows `Secrets.xcconfig` (GITIGNORED —
+  added to `.gitignore` first) → `baseConfigurationReference` on the app target's Debug +
+  Release configs (hand-edited pbxproj — Golf was the closer template, both hand-authored
+  pbxproj) → Info.plist `$(REVENUECAT_API_KEY)` → `Bundle.main.object(forInfoDictionaryKey:)`.
+  `Secrets.xcconfig.example` (placeholders) IS committed as the template. `Store.resolveKey(...)`
+  is a PURE, testable picker: a `test_` key is honoured only in a DEBUG build launched with
+  `-useTestStore`, and REFUSED in Release (the SDK `fatalError`s on a `test_` key in Release —
+  refusing turns that launch crash into the same inert "purchases unavailable" state a missing
+  key produces). **The four `guard Self.isConfigured` gates (start/refresh/purchase/restore)
+  shipped WITH the no-key early return as ONE change** — porting the early return WITHOUT the
+  guards turns a keyless build from silently-inert into a CRASH on launch (`Purchases.shared`
+  traps when never configured; this bit Golf). ⚠️ **AA has NO `test_` key yet** — the slot stays
+  the placeholder (`resolveKey` treats it as unset), so simulator purchases can't be exercised
+  until the designer pastes the Test Store key from the RevenueCat dashboard (Apps ▸ Test Store ▸
+  Show key) into the gitignored `Secrets.xcconfig`. Founding pricing (compile-time `foundingUntil`,
+  two products) is UNCHANGED — it was already correct.
+- **TelemetryDeck: `isDriven` guard + externalized app ID + linkage test.** Signals used to
+  fire on EVERY launch, so dev/QA/gallery/screenshot runs polluted the live funnel.
+  `Telemetry.isDriven(arguments:defaults:)` now gates `configure()` (nothing is even queued in
+  a driven session). It checks BOTH AA's DEBUG launch hooks (`-devScenario`, `-freshFlow`,
+  `-liveryGallery`/`-liveryPreview`, `-galleryName`/`-galleryPalette`/`-galleryType`,
+  `-backdropTest`/`-backdropMode`/`-backdropLight`/`-backdropOpacity`, `-hideControls`) AND a
+  persisted `debugProKey` — the latter is FUTURE-PROOFING: AA's DEV Pro toggle is
+  `store.isPro.toggle()` (in-memory), so nothing writes that flag today, but the guard is
+  already correct for the day a persisted "unlock Pro for testing" affordance lands (an arg
+  list alone can't see a persisted fake entitlement, which would emit a fabricated healthy
+  funnel forever — FC/Vineyard's documented trap). The app ID is externalized the same pipeline
+  as the RC key (no hardcoded UUID left). `AirlineArchitectTests/TelemetryTests.swift` (XCTest —
+  the family model; AA's other tests use Swift Testing, both frameworks coexist) adds
+  `testTelemetryDeckIsActuallyLinked`, a COMPILE-TIME proof the package is really linked to the
+  target — the exact silent no-op AA shipped once (`Package.resolved` listing it proves nothing
+  about linkage). 9/9 pass.
+- **MetricKit crash/hang visibility (the family-wide gap — AA had NONE).** TelemetryDeck ships
+  no crash capture, so AA — a shipped app — was blind to its own crash/hang rate (the audit
+  found MetricKit in 1 of 10 apps). `CrashReporter.swift` ported VERBATIM from Flight Ops
+  Architect (the family reference): an `MXMetricManager` subscriber routes crash/hang TYPE ONLY
+  (signal/exception/termination codes + OS version, NEVER a call stack — same privacy rule as
+  Telemetry) to `Telemetry.errorOccurred(...)`, so a driven session reports nothing and a real
+  crash lands in the Errors dashboard bucket. Subscribed once from `AirlineArchitectApp.init()`
+  AFTER `Telemetry.configure()`, guarded on `!isDriven`. View layer only (`Sim/` stays
+  framework-free). `MXMetricManagerSubscriber` confirmed present in the Release binary. NOTE:
+  MetricKit is NOT real-time — the OS delivers diagnostics on a LATER launch (often the next,
+  sometimes batched ~24h), so this is "how often / what kind", not a live alert.
+- **NOT done, deliberately:** (item 4, optional) `Sim/AircraftIcon.swift` + `Sim/SVGPath.swift`
+  import SwiftUI, technically breaking "`Sim/` is framework-free" — but the headless harnesses
+  already EXCLUDE those two files (`grep -vE 'AircraftIcon|SVGPath'`), so they still compile
+  UF-free; moving the two rendering helpers to a `Views/`/`Rendering/` group is cosmetic hygiene,
+  left as a judgment call (moving files in a synchronized-group project can ripple the harness
+  exclude patterns). **ArchitectKit clock migration is explicitly OFF the list** — AA is the elder
+  the package was extracted FROM; an accepted divergence, don't migrate without the Chef's say-so.
+- **App-init order is now Store → Telemetry → CrashReporter.** All three build clean (Debug +
+  Release). This work is NOT yet in a shipped build — it rides the next build after the current
+  1.4.x release train (i.e. build 51+, since 1.4.1/build 50 is the GC wake fix in flight).
+
 ## Release status — see `HANDOFF.md`
 
 ⚠️ **`RELEASE_STATUS.md` NO LONGER EXISTS.** It covered the 1.0 / build 26 launch and
