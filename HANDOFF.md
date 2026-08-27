@@ -5,7 +5,19 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 24 August 2026._
+_Snapshot: 26 August 2026._
+
+**► 1.4.2 (build 52) = ASYNC SAVE fix — UPLOADED to ASC (Delivery UUID
+`9e4f8c31-6fdc-44e8-a563-0119e7db6e02`), merged to `main`, needs the version record + submit.**
+The MetricKit CrashReporter shipped in 1.4.1 surfaced its first real signal — `hang.under3s` ×13 in
+the TelemetryDeck Errors dashboard — traced to the synchronous main-thread save (encode + `.bak`
+re-decode + write + iCloud mirror, all on the main actor). Fixed: `GameStore.saveInBackground` runs
+the heavy work on a serial `DispatchQueue` off-main (snapshot still captured on main); autosave-on-
+background holds a UIKit `beginBackgroundTask` assertion so the write finishes before iOS suspends.
+Verified on device (SAVE + background both advance the save file, no hang, app survives) + harness
+RoundTripVerify 13/13. DESIGNER STEP: create the 1.4.2 version record + attach build 52 + What's New
+(a stability line) + submit. Next new build = **53+**. FOLLOW-UP: re-check the `hang.under3s` count in
+TD after 1.4.2 is live — it should drop. Full detail: CLAUDE.md "ASYNC SAVE".
 
 **► 1.4.1 (build 51) = ONE combined release — the Game Center WAKE fix + the Tech Ops
 modernization. APPROVED + LIVE (`READY_FOR_SALE`, 24 Aug).** Both branches (`game-center-1.4.1`,
