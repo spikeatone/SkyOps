@@ -561,6 +561,31 @@ enum GameStore {
         return (0..<slotCount).first { !hasSave($0) }
     }
 
+    /// A SERIAL queue for all background saves. Serialising matters: two saves to
+    /// the same slot firing close together (Save tap then background, a double
+    /// tap) would otherwise have two writers race on the `.bak` copy step. One
+    /// serial queue means saves run one at a time, in order, off the main thread.
+    private static let saveQueue = DispatchQueue(label: "com.postmark.airline.save", qos: .utility)
+
+    /// Persist a snapshot WITHOUT blocking the caller's thread. The `snapshot`
+    /// must already be captured on the main actor by the caller (`sim.snapshot()`
+    /// reads sim state, so it can't move off-main) — but everything expensive
+    /// AFTER that (a full `JSONEncoder().encode`, the `.bak` read-back that
+    /// re-decodes the existing save, the atomic disk write, and the iCloud mirror)
+    /// is pure work on an immutable value, so it runs on the serial save queue.
+    /// This is what keeps autosave-on-background / Save / Quit from stalling the
+    /// main thread — the documented `hang.under3s` residual of the build-27
+    /// save-hang fix (which capped save SIZE but left the encode on main).
+    /// `onDone` (optional) runs after the write completes, on the save queue —
+    /// callers that hold a UIKit background-task assertion end it there.
+    static func saveInBackground(_ snapshot: GameSnapshot, slot: Int,
+                                 onDone: (@Sendable () -> Void)? = nil) {
+        saveQueue.async {
+            save(snapshot, slot: slot)
+            onDone?()
+        }
+    }
+
     static func save(_ snapshot: GameSnapshot, slot: Int) {
         var snap = snapshot
         snap.savedAtEpoch = Date().timeIntervalSince1970

@@ -2315,6 +2315,31 @@ where numbers are involved.
   profile. **Neither is confirmable without the tester's symbolicated `.ips`**
   (ASC → TestFlight → Crashes / Feedback, or their device's Analytics Data) —
   get it: KVS/entitlement frames → cause 1, RevenueCat/StoreKit frames → cause 2.
+- **ASYNC SAVE — DONE (1.4.2 / build 52; the sequel to SAVE-SIZE HARDENING, driven
+  by real TelemetryDeck data).** The MetricKit CrashReporter (shipped in 1.4.1)
+  surfaced `hang.under3s` ×13 in the TD Errors dashboard — the FIRST real signal
+  the crash reporter produced, and it worked exactly as designed. Diagnosed to the
+  **synchronous main-thread save**: `GameStore.save` runs `JSONEncoder().encode` +
+  a `.bak` read-back that RE-DECODES the existing save (`validGame`) + an atomic
+  disk write + the iCloud mirror, ALL on the main actor, called from three
+  ContentView sites (autosave-on-background, the SAVE button, QUIT). This is the
+  same mechanism as the build-27 save-hang CRASH — the SAVE-SIZE HARDENING below
+  capped save SIZE (turning a fatal >10s watchdog kill into a survivable sub-3s
+  hang) but left the encode ON MAIN, so a heavy late-game save still briefly froze
+  the UI, worst on background/quit. **Fix: `GameStore.saveInBackground(_:slot:onDone:)`
+  runs the encode/validate/write/mirror on a SERIAL `DispatchQueue`** (serial so two
+  saves to one slot can't race on the `.bak` copy) — `snapshot()` is still captured
+  on the main actor by the caller (it reads sim state), only the heavy work moves
+  off-main. The sync `save()` is UNCHANGED (still the worker; the headless harness
+  calls it, and RoundTripVerify stays 13/13). **Autosave-on-background wraps the
+  call in a UIKit `beginBackgroundTask`/`endBackgroundTask` assertion** (in
+  ContentView, not Persistence — Persistence stays UIKit-free for the harness) so
+  iOS grants the seconds a ~tens-of-KB save needs before suspending. `GameSnapshot`
+  is a Codable struct of value types → implicitly Sendable, so passing it across the
+  queue is clean. Verified on the iPhone sim: SAVE button (file mtime advanced, no
+  hang, app alive) AND autosave-on-background (mtime advanced AFTER the HOME press —
+  the bg-task assertion let the detached write finish; app survived). Re-run the
+  `hang.under3s` count in TD after 1.4.2 is live to confirm it drops.
 - **SAVE-SIZE HARDENING — DONE (the strongest CODE fit for the launch crash).**
   Independent of the sweep: `Route.history` was persisted **completely uncapped**
   — a heavy tester (recall the 182-aircraft one) accumulates a **multi-MB save**,
