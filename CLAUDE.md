@@ -2315,8 +2315,8 @@ where numbers are involved.
   profile. **Neither is confirmable without the tester's symbolicated `.ips`**
   (ASC → TestFlight → Crashes / Feedback, or their device's Analytics Data) —
   get it: KVS/entitlement frames → cause 1, RevenueCat/StoreKit frames → cause 2.
-- **ASYNC SAVE — DONE (1.4.2 / build 52; the sequel to SAVE-SIZE HARDENING, driven
-  by real TelemetryDeck data).** The MetricKit CrashReporter (shipped in 1.4.1)
+- **ASYNC SAVE — DONE + LIVE (1.4.2 / build 52, `READY_FOR_SALE` 27 Aug; the sequel
+  to SAVE-SIZE HARDENING, driven by real TelemetryDeck data).** The MetricKit CrashReporter (shipped in 1.4.1)
   surfaced `hang.under3s` ×13 in the TD Errors dashboard — the FIRST real signal
   the crash reporter produced, and it worked exactly as designed. Diagnosed to the
   **synchronous main-thread save**: `GameStore.save` runs `JSONEncoder().encode` +
@@ -5283,11 +5283,11 @@ Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (whic
 version is live, what's in review, what the next build number must be), and in-flight
 task tracking lives in `TASKS.md`.
 
-As of 24 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) · 1.4 (48, the
+As of 27 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) · 1.4 (48, the
 GAMEPLAY PACK — fare lever, first quest, session briefing, Game Center, rival flavor, subsidiary
-fleet growth) are ALL LIVE (`READY_FOR_SALE`). · 1.4.1 (build 51) = the Game Center wake fix +
-the Tech Ops modernization, COMBINED into one release (both branches merged to `main`) — APPROVED +
-LIVE (`READY_FOR_SALE`, 24 Aug). Next new build = 52+.** After 1.4 went live the designer checked the App-Store build on-device: the Apple
+fleet growth) · 1.4.1 (51, Game Center wake fix + Tech Ops modernization) · 1.4.2 (52, ASYNC SAVE
+fix for the `hang.under3s` TelemetryDeck signal) are ALL LIVE (`READY_FOR_SALE`). Next new build =
+53+.** The 1.4.1 story below is kept for its GC detail. After 1.4 went live the designer checked the App-Store build on-device: the Apple
 Games dashboard was STILL EMPTY for AA, so the "the public GC-carrying release heals the stale
 server-side record" theory (and its "1.4's release IS the heal mechanism" claim above) is WRONG —
 a live + reporting build did NOT wake the record. FC Architect's device A/B found the actual

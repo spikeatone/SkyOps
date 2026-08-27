@@ -7,9 +7,11 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 26 August 2026._
 
-**► 1.4.2 (build 52) = ASYNC SAVE fix — SUBMITTED FOR REVIEW 27 Aug (`WAITING_FOR_REVIEW`),
-auto-releases on approval.** Merged to `main`; build 52 (`9e4f8c31-…`) attached, gameCenterAppVersion
-auto-enabled, What's New + promo set, submitted via the API (reviewSubmission `5a60e552-…`).
+**► 1.4.2 (build 52) = ASYNC SAVE fix — APPROVED + LIVE (`READY_FOR_SALE`, 27 Aug).** Merged to
+`main`; fixes the `hang.under3s` TelemetryDeck signal by moving the save encode/write/mirror off the
+main thread. Next new build = **53+**. FOLLOW-UP: re-check the `hang.under3s` count in TelemetryDeck
+now that it's live — it should drop toward zero (the observability loop the MetricKit work opened,
+closing).
 The MetricKit CrashReporter shipped in 1.4.1 surfaced its first real signal — `hang.under3s` ×13 in
 the TelemetryDeck Errors dashboard — traced to the synchronous main-thread save (encode + `.bak`
 re-decode + write + iCloud mirror, all on the main actor). Fixed: `GameStore.saveInBackground` runs
