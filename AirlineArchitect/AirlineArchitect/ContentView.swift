@@ -122,7 +122,7 @@ struct ContentView: View {
             // design forever.
             if inactive, sim.playerAirlineName != nil, !inLiveryStep,
                !sim.isBankrupt, let s = currentSlot {
-                GameStore.save(sim.snapshot(), slot: s)
+                autosaveInBackground(slot: s)
             }
             sim.isPaused = inactive || showLoadMenu || inLiveryStep
         }
@@ -347,7 +347,7 @@ struct ContentView: View {
                 sim.randomizeCalendarStart()   // new game starts on a random date + season
                 sim.seedFirstQuest()           // guaranteed first customer (directed first arc)
                 Telemetry.gameStarted(region: sim.homeRegion.rawValue)   // funnel denominator
-                if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
+                if let s = currentSlot { GameStore.saveInBackground(sim.snapshot(), slot: s) }
                 pendingLiveryName = nil
                 // Always run the walkthrough when creating a fresh airline (not when
                 // Continuing a save). No "seen once, ever" gate — that kept it from
@@ -412,10 +412,33 @@ struct ContentView: View {
 
     // MARK: - Save slots
 
-    /// SAVE button — persist the current game to its slot.
+    /// SAVE button — persist the current game to its slot. Off-main so the
+    /// encode/write never stalls the UI (the `hang.under3s` fix); `snapshot()` is
+    /// captured here on the main actor, the heavy work runs on a detached task.
     private func saveCurrent() {
         if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
-        if let s = currentSlot { GameStore.save(sim.snapshot(), slot: s) }
+        if let s = currentSlot { GameStore.saveInBackground(sim.snapshot(), slot: s) }
+    }
+
+    /// Autosave when the app is going inactive (scenePhase != .active). Same
+    /// off-main save as `saveCurrent`, but wrapped in a UIKit background-task
+    /// assertion: the app is being suspended, so without the assertion iOS could
+    /// suspend before the detached write finishes. `beginBackgroundTask` buys the
+    /// few seconds a ~tens-of-KB save needs; the assertion ends when the write
+    /// completes (or on the OS expiration handler). The snapshot is captured HERE
+    /// on the main actor, before the app suspends.
+    private func autosaveInBackground(slot: Int) {
+        let snapshot = sim.snapshot()
+        var bgTask: UIBackgroundTaskIdentifier = .invalid
+        bgTask = UIApplication.shared.beginBackgroundTask(withName: "AutosaveOnBackground") {
+            // Expiration handler — end the assertion if the OS reclaims it first.
+            if bgTask != .invalid { UIApplication.shared.endBackgroundTask(bgTask); bgTask = .invalid }
+        }
+        GameStore.saveInBackground(snapshot, slot: slot) {
+            Task { @MainActor in
+                if bgTask != .invalid { UIApplication.shared.endBackgroundTask(bgTask); bgTask = .invalid }
+            }
+        }
     }
 
     /// QUIT button — save the current game, then return to the load menu.
