@@ -7,14 +7,23 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 26 August 2026._
 
-**► 1.4.3 (build 53) = ASYNC SLOT DECODE — UPLOADED to ASC (Delivery UUID
-`03894115-c113-4e29-94ce-7375eb917426`), merged to `main`, version record `8fe65052-…` created +
-What's New/promo set; build 53 auto-attaches when it finishes processing, then submit.** The
-decode-side twin of the 1.4.2 save fix: `GameStore.slotInfos()` did up to 3 full save decodes
-synchronously on the main thread from the load menu (cold launch / QUIT / delete) — a stall on large
-saves. Now `slotInfosAsync` runs them on the shared serial `saveQueue` and populates on the main
-actor; SaveSlotsView shows a brief ProgressView until loaded. Verified: build clean, RoundTripVerify
-13/13, live on the sim (load menu populates off-main, no flash). Next new build = **54+**.
+**► 1.4.3 (build 53) = ASYNC SLOT DECODE — SUBMITTED FOR REVIEW 28 Aug (`WAITING_FOR_REVIEW`),
+auto-releases on approval.** Merged to `main`; the decode-side twin of the 1.4.2 save fix:
+`GameStore.slotInfos()` did up to 3 full save decodes synchronously on the main thread from the load
+menu — a stall on large saves. Now `slotInfosAsync` runs them on the shared serial `saveQueue` and
+populates on the main actor. Next new build = **54+**. ⚠️ **App Review notes carry the §1
+studio-context block (4.3(a) armor) — MANDATORY on every Architect submission now; see below.**
+
+**► ⚠️ APPLE 4.3(a) IS ACCOUNT-WIDE (as of 27–28 Aug) — read before ANY submission.** Apple's
+Guideline 4.3(a) "spam/repackaged-template" reflex rejected Vineyard 1.0, Foundry 1.0, AND FC
+Architect 1.3 (localization-only, after 5 prior approvals) in one window; a formal appeal covering all
+three was filed 28 Aug (awaiting Apple). Airline is SAFE (never rejected; 1.4.1/1.4.2/1.4.3 all cleared
+or are clearing during the cascade) — but a trivial update gets NO immunity (FC's localization-only 1.3
+proves it), so **every Airline submission now leads its App Review Notes with the studio-context block**
+(Airline's own approval history + the Postmark Digital studio framing + Airline's unique-systems
+paragraph). The canonical playbook + Airline's filled-in unique-systems paragraph live in
+`PostmarkOps/APP_REVIEW_NOTES.md`. The 1.4.3 notes (3988 chars, under the 4000 limit) are the template
+for the next one — reuse them, just update the version line.
 
 **► 1.4.2 (build 52) = ASYNC SAVE fix — APPROVED + LIVE (`READY_FOR_SALE`, 27 Aug).** Merged to
 `main`; fixes the `hang.under3s` TelemetryDeck signal by moving the save encode/write/mirror off the
