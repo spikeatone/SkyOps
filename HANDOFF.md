@@ -7,11 +7,22 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 26 August 2026._
 
+**► 1.4.3 (build 53) = ASYNC SLOT DECODE — UPLOADED to ASC (Delivery UUID
+`03894115-c113-4e29-94ce-7375eb917426`), merged to `main`, version record `8fe65052-…` created +
+What's New/promo set; build 53 auto-attaches when it finishes processing, then submit.** The
+decode-side twin of the 1.4.2 save fix: `GameStore.slotInfos()` did up to 3 full save decodes
+synchronously on the main thread from the load menu (cold launch / QUIT / delete) — a stall on large
+saves. Now `slotInfosAsync` runs them on the shared serial `saveQueue` and populates on the main
+actor; SaveSlotsView shows a brief ProgressView until loaded. Verified: build clean, RoundTripVerify
+13/13, live on the sim (load menu populates off-main, no flash). Next new build = **54+**.
+
 **► 1.4.2 (build 52) = ASYNC SAVE fix — APPROVED + LIVE (`READY_FOR_SALE`, 27 Aug).** Merged to
 `main`; fixes the `hang.under3s` TelemetryDeck signal by moving the save encode/write/mirror off the
-main thread. Next new build = **53+**. FOLLOW-UP: re-check the `hang.under3s` count in TelemetryDeck
-now that it's live — it should drop toward zero (the observability loop the MetricKit work opened,
-closing).
+main thread. FOLLOW-UP (still open, both fixes): the `hang.under3s` count in TelemetryDeck is the real
+verdict — but MetricKit tags a hang with the version running when DELIVERED, not when it OCCURRED, so
+1.4.1-vs-1.4.2-vs-1.4.3 attribution stays fuzzy. Read the count TREND over 1–2 weeks as adoption
+grows, not an instant before/after. A future touch could tag hang telemetry with the app version at
+occurrence to disambiguate — worth it only if the metric stays interesting.
 The MetricKit CrashReporter shipped in 1.4.1 surfaced its first real signal — `hang.under3s` ×13 in
 the TelemetryDeck Errors dashboard — traced to the synchronous main-thread save (encode + `.bak`
 re-decode + write + iCloud mirror, all on the main actor). Fixed: `GameStore.saveInBackground` runs
