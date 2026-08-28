@@ -485,7 +485,7 @@ extension LoanSave {
 
 /// Lightweight summary of a saved slot, for the load/quit menu without decoding
 /// the whole snapshot's object graph.
-struct SlotInfo: Identifiable {
+struct SlotInfo: Identifiable, Sendable {
     let index: Int
     let airlineName: String
     let day: Int
@@ -618,6 +618,21 @@ enum GameStore {
     }
 
     /// Summaries for every slot (nil where empty), for the load menu.
+    /// Build the load-menu summaries WITHOUT blocking the caller. `slotInfos()`
+    /// does up to 3 FULL `GameSnapshot` decodes (one per slot — it needs
+    /// `aircraft.count`/`routes.count`, not just header scalars), and it runs at
+    /// cold launch and on QUIT — moments the player waits. On a large save that
+    /// synchronous triple-decode is a main-thread stall (the DECODE-side twin of
+    /// the encode-side `hang.under3s` fixed in the save path). This runs the
+    /// decodes on the shared serial save queue and delivers the result back on the
+    /// main actor. `completion` always runs on the main actor.
+    static func slotInfosAsync(_ completion: @escaping @MainActor ([SlotInfo?]) -> Void) {
+        saveQueue.async {
+            let infos = slotInfos()
+            Task { @MainActor in completion(infos) }
+        }
+    }
+
     static func slotInfos() -> [SlotInfo?] {
         migrateLegacyIfNeeded()
         return (0..<slotCount).map { slot in
