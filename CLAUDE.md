@@ -2340,6 +2340,31 @@ where numbers are involved.
   hang, app alive) AND autosave-on-background (mtime advanced AFTER the HOME press —
   the bg-task assertion let the detached write finish; app survived). Re-run the
   `hang.under3s` count in TD after 1.4.2 is live to confirm it drops.
+- **ASYNC SLOT DECODE — DONE (1.4.3 / build 53; the DECODE-side twin of the async
+  save above).** After 1.4.2 shipped, the TD `hang.under3s` breakdown still showed
+  hangs attributed to 1.4.2 (ambiguous — MetricKit tags a hang with the version
+  running when it's DELIVERED, not when it OCCURRED, so some were likely late 1.4.1
+  reports; sample was only 3 users). Rather than wait, hunted OTHER synchronous
+  main-thread work and found a real second source: **`GameStore.slotInfos()` does up
+  to 3 FULL `GameSnapshot` decodes** (it needs `aircraft.count`/`routes.count`, so a
+  header-only decode won't do) and it ran **synchronously on the main thread** from
+  `SaveSlotsView` (a `@State` initializer at cold launch, `.onAppear`, and after a
+  delete). On a large save that triple-decode is a load-menu stall — the exact
+  decode-side mirror of the save-encode hang. Fix: `GameStore.slotInfosAsync(_:)`
+  runs the decodes on the SAME shared serial `saveQueue` and delivers back on the
+  main actor; `SaveSlotsView` starts with empty slots + a `loaded` flag (a brief
+  `ProgressView` instead of empty rows, so a real save never flashes as a tappable
+  "New Airline" before its summary arrives). `SlotInfo` marked `Sendable`. Other
+  suspects examined and CLEARED: `reconcileCloud` already uses a lightweight
+  `SaveHeader` decode + file-size guards (hardened earlier); `restore(from:)` is
+  bounded (Route.history cap 60, hub snapshots 120), so a normal load is fast; the
+  map's per-frame tiled redraw is Canvas work throttled to the redraw cadence, not a
+  250ms+ block. Verified: Debug build clean, RoundTripVerify 13/13, and live on the
+  sim (all 3 saves decode off-main and populate the load menu correctly, no flash).
+  KNOWN LIMITATION (worth a future touch if the metric stays interesting): the hang
+  telemetry still isn't tagged with the app version at OCCURRENCE, so 1.4.1-vs-1.4.3
+  attribution stays fuzzy until adoption grows — the honest read on whether these
+  two fixes cleared it is the TD count trend over 1–2 weeks, not an instant verdict.
 - **SAVE-SIZE HARDENING — DONE (the strongest CODE fit for the launch crash).**
   Independent of the sweep: `Route.history` was persisted **completely uncapped**
   — a heavy tester (recall the 182-aircraft one) accumulates a **multi-MB save**,

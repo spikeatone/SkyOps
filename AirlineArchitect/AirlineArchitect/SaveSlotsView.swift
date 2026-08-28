@@ -21,8 +21,15 @@ struct SaveSlotsView: View {
     var backdropOpacity: Double? = nil
     /// Tint for that motif — white on the dark theme, brand ink on the light one.
 
-    /// Rebuilt from disk whenever the menu appears or a slot is deleted.
-    @State private var slots: [SlotInfo?] = GameStore.slotInfos()
+    /// Rebuilt from disk (OFF the main thread) whenever the menu appears or a slot
+    /// is deleted. Starts empty + `loaded == false`: the up-to-3 full save decodes
+    /// `slotInfos()` does are a main-thread stall at cold launch / QUIT on a large
+    /// save (the decode-side twin of the `hang.under3s` save fix), so they run on a
+    /// background queue and populate here. `loaded` gates the rows so a real saved
+    /// slot never briefly renders as an empty "New Airline" (which a player could
+    /// tap and overwrite) before its summary arrives.
+    @State private var slots: [SlotInfo?] = Array(repeating: nil, count: GameStore.slotCount)
+    @State private var loaded = false
     /// Slot index awaiting delete confirmation (tap trash once to arm).
     @State private var confirmDelete: Int?
 
@@ -48,8 +55,16 @@ struct SaveSlotsView: View {
                         .multilineTextAlignment(.center)
                 }
                 VStack(spacing: 12) {
-                    ForEach(0..<GameStore.slotCount, id: \.self) { i in
-                        slotRow(i, info: slots[safe: i] ?? nil)
+                    if loaded {
+                        ForEach(0..<GameStore.slotCount, id: \.self) { i in
+                            slotRow(i, info: slots[safe: i] ?? nil)
+                        }
+                    } else {
+                        // Decoding the slots off-main; a brief, quiet placeholder
+                        // rather than empty rows the player could mis-tap.
+                        ProgressView()
+                            .tint(secondary)
+                            .frame(height: 88)
                     }
                 }
             }
@@ -58,7 +73,7 @@ struct SaveSlotsView: View {
         }
         // No in-app Game Center entry point for now — see the note in
         // GameCenter.swift (stale-record poisoning; revisit after 1.4 is live).
-        .onAppear { slots = GameStore.slotInfos() }
+        .onAppear { reloadSlots() }
     }
 
     @ViewBuilder
@@ -125,7 +140,17 @@ struct SaveSlotsView: View {
     private func performDelete(_ index: Int) {
         onDelete(index)
         confirmDelete = nil
-        slots = GameStore.slotInfos()
+        reloadSlots()
+    }
+
+    /// Decode the slot summaries OFF the main thread, then populate. Keeps the
+    /// existing rows visible while reloading (loaded stays true after the first
+    /// load), so a delete-refresh doesn't flash the spinner.
+    private func reloadSlots() {
+        GameStore.slotInfosAsync { infos in
+            slots = infos
+            loaded = true
+        }
     }
 
     private func emptyRow(_ index: Int) -> some View {
