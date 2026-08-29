@@ -5308,11 +5308,14 @@ Corrected 17 Aug 2026. **The current release state lives in `HANDOFF.md`** (whic
 version is live, what's in review, what the next build number must be), and in-flight
 task tracking lives in `TASKS.md`.
 
-As of 27 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) · 1.4 (48, the
+As of 28 Aug 2026: **1.2 (41) · 1.2.1 (43) · 1.3 (44, personalized livery) · 1.4 (48, the
 GAMEPLAY PACK — fare lever, first quest, session briefing, Game Center, rival flavor, subsidiary
 fleet growth) · 1.4.1 (51, Game Center wake fix + Tech Ops modernization) · 1.4.2 (52, ASYNC SAVE
-fix for the `hang.under3s` TelemetryDeck signal) are ALL LIVE (`READY_FOR_SALE`). Next new build =
-53+.** The 1.4.1 story below is kept for its GC detail. After 1.4 went live the designer checked the App-Store build on-device: the Apple
+fix for the `hang.under3s` TelemetryDeck signal) · 1.4.3 (53, ASYNC SLOT DECODE — the decode-side
+twin, load-menu off main) are ALL LIVE (`READY_FOR_SALE`). Next new build = 54+.** ⚠️ **App Review
+4.3(a) went ACCOUNT-WIDE this week (Vineyard/Foundry/FC-1.3 rejected, appeal filed) — every Airline
+submission now leads its App Review notes with the studio-context block; 1.4.3 was the first, approved
+same day. Reuse `aa-1.1.x/app-review-notes-1.4.3.txt`; playbook in `PostmarkOps/APP_REVIEW_NOTES.md`.** The 1.4.1 story below is kept for its GC detail. After 1.4 went live the designer checked the App-Store build on-device: the Apple
 Games dashboard was STILL EMPTY for AA, so the "the public GC-carrying release heals the stale
 server-side record" theory (and its "1.4's release IS the heal mechanism" claim above) is WRONG —
 a live + reporting build did NOT wake the record. FC Architect's device A/B found the actual
