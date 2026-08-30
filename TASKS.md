@@ -34,9 +34,11 @@ scoping in `aa-1.1.x/LOCALIZATION_SCOPING.md`. **Framing (designer): this is an 
 conversion lever for the DACH premium market, largely independent of current user count — the low
 German count is plausibly a consequence of being English-only, not a reason to skip.** So it's not
 "park until users grow"; it's "market entry, gated on timing, done properly."
-- [ ] INFRA (String Catalog + framework-free Sim shim) can start ANY TIME — it's not a shippable
-      localization diff by itself (no 4.3(a) exposure), and it's reusable for es/fr later. COPY FC
-      Architect's `Localizable.xcstrings`; FC has fr/it/es but NOT German, so AA would LEAD on German.
+- [x] INFRA — DONE (28 Aug, merged to `main`). `Resources/Localizable.xcstrings` (view-layer catalog,
+      auto-registered by the synchronized group), `de` in knownRegions, `Sim/Localization.swift` (the
+      framework-free `L()` shim for the ~124 Sim strings — compiles in the harness), `SimLocale.current`
+      set at launch, 1 reference conversion. English byte-identical; app build + harness 13/13 green.
+      Reusable for es/fr (fill more columns). AA now LEADS the family on German (FC has fr/it/es only).
 - [ ] Commission a NATIVE German translation pass when committing (never MT — a first-language market
       notices; bad German converts worse than clean English). This is the real spend + timeline.
 - [ ] SHIP GATE (timing, not merit): do NOT release the German build STANDALONE during the 4.3(a)
