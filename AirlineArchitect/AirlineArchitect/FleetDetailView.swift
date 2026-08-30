@@ -86,7 +86,7 @@ struct FleetDetailView: View {
                  : "Returns its crew to the pool.")
         }
         // PARK → close the route, keep the plane as an idle spare.
-        .confirmationDialog(parkRouteLabel.map { "Close \($0) and park \(aircraft.tail)?" } ?? "Park \(aircraft.tail)?",
+        .confirmationDialog(parkConfirmTitle,
                             isPresented: $confirmPark, titleVisibility: .visible) {
             Button("Close route & park") {
                 Feedback.impact(.light); sim.parkAircraft(aircraft)
@@ -187,9 +187,9 @@ struct FleetDetailView: View {
             let eta = ticksToArrival()
             let prog = legProgress()
             HStack(alignment: .top) {
-                labeled("Phase", aircraft.isIdleSpare ? "Idle — no route" : phaseLabel(aircraft.state))
+                labeled("Phase", aircraft.isIdleSpare ? String(localized: "Idle — no route") : phaseLabel(aircraft.state))
                 Spacer()
-                labeled("ETA", eta.map(etaString) ?? (aircraft.isIdleSpare ? "—" : "At gate"), trailing: true)
+                labeled("ETA", eta.map(etaString) ?? (aircraft.isIdleSpare ? "—" : String(localized: "At gate")), trailing: true)
             }
             progressBar(prog, planeTip: !aircraft.isIdleSpare)
             // Deferred reassignment: the aircraft finishes the leg it's flying
@@ -291,7 +291,7 @@ struct FleetDetailView: View {
         }
     }
 
-    private func econRow(_ label: String, _ value: Int, positive: Bool) -> some View {
+    private func econRow(_ label: LocalizedStringKey, _ value: Int, positive: Bool) -> some View {
         HStack {
             Text(label).font(.karla(14)).foregroundStyle(secondary)
             Spacer()
@@ -347,8 +347,15 @@ struct FleetDetailView: View {
         sim.currentRoute(of: aircraft).map { "\($0.originCode)–\($0.destCode)" }
     }
 
+    /// Park confirm title as a LocalizedStringKey (the `.map{}??` String form would
+    /// bypass the catalog via the StringProtocol overload).
+    private var parkConfirmTitle: LocalizedStringKey {
+        if let label = parkRouteLabel { return "Close \(label) and park \(aircraft.tail)?" }
+        return "Park \(aircraft.tail)?"
+    }
+
     /// Secondary outline action (matches the ASSIGN button chrome).
-    private func outlineButton(_ title: String, action: @escaping () -> Void) -> some View {
+    private func outlineButton(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.karla(15, .medium)).foregroundStyle(isDark ? .white : Color(skyHex: 0x4B4B4B))
@@ -386,7 +393,7 @@ struct FleetDetailView: View {
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
-    private func labeled(_ label: String, _ value: String, trailing: Bool = false) -> some View {
+    private func labeled(_ label: LocalizedStringKey, _ value: String, trailing: Bool = false) -> some View {
         VStack(alignment: trailing ? .trailing : .leading, spacing: 2) {
             Text(label).font(.karla(14)).foregroundStyle(secondary)
             Text(value).font(.karla(14, .bold)).foregroundStyle(primary)
@@ -409,7 +416,7 @@ struct FleetDetailView: View {
     }
 
     private var statusChip: some View {
-        let (text, color): (String, Color) = {
+        let (text, color): (LocalizedStringKey, Color) = {
             if aircraft.holdReason == .aog { return ("GROUNDED", red) }
             if aircraft.isIdleSpare { return ("IDLE", Color(skyHex: 0xFFB700)) }
             return ("FLYING", green)
@@ -493,15 +500,15 @@ struct FleetDetailView: View {
 
     private func phaseLabel(_ s: FlightState) -> String {
         switch s {
-        case .parked:     return "At gate (parked)"
-        case .boarding:   return "Boarding"
-        case .taxiOut:    return "Taxiing out"
-        case .takeoff:    return "Takeoff / climb"
-        case .cruise:     return "En-route (cruising)"
-        case .approach:   return "On approach"
-        case .landing:    return "Landing"
-        case .taxiIn:     return "Taxiing in"
-        case .turnaround: return "Turnaround"
+        case .parked:     return String(localized: "At gate (parked)")
+        case .boarding:   return String(localized: "Boarding")
+        case .taxiOut:    return String(localized: "Taxiing out")
+        case .takeoff:    return String(localized: "Takeoff / climb")
+        case .cruise:     return String(localized: "En-route (cruising)")
+        case .approach:   return String(localized: "On approach")
+        case .landing:    return String(localized: "Landing")
+        case .taxiIn:     return String(localized: "Taxiing in")
+        case .turnaround: return String(localized: "Turnaround")
         }
     }
 
@@ -539,14 +546,16 @@ private struct ReplaceOrCloseModal: View {
 
     var body: some View {
         let route = sim.currentRoute(of: aircraft)
-        let code = route.map { "\($0.originCode)–\($0.destCode)" } ?? "a route"
+        let code = route.map { "\($0.originCode)–\($0.destCode)" } ?? String(localized: "a route")
         let hasSpares = route.map { !sim.spareCandidates(for: $0).isEmpty } ?? false
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea().onTapGesture(perform: onCancel)
             VStack(alignment: .leading, spacing: 12) {
                 Text(aircraft.isLeased ? "Return \(aircraft.tail)?" : "Sell \(aircraft.tail)?")
                     .font(.karla(22, .heavy)).foregroundStyle(primary)
-                Text("\(aircraft.tail) is flying \(code). If you don't put another aircraft on the route, it closes when you \(aircraft.isLeased ? "hand this one back" : "sell it").")
+                Text(aircraft.isLeased
+                     ? "\(aircraft.tail) is flying \(code). If you don't put another aircraft on the route, it closes when you hand this one back."
+                     : "\(aircraft.tail) is flying \(code). If you don't put another aircraft on the route, it closes when you sell it.")
                     .font(.karla(14)).foregroundStyle(secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 VStack(spacing: 10) {
@@ -567,7 +576,7 @@ private struct ReplaceOrCloseModal: View {
         }
     }
 
-    private func button(_ title: String, _ style: Style, _ action: @escaping () -> Void) -> some View {
+    private func button(_ title: LocalizedStringKey, _ style: Style, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title).font(.karla(15, .bold))
                 .foregroundStyle(style == .filled ? .white : style == .destructive ? red : style == .plain ? secondary : primary)
@@ -614,7 +623,9 @@ private struct ReplacementPicker: View {
                     Image(systemName: "xmark.circle.fill").font(.system(size: 26)).foregroundStyle(secondary)
                 }.buttonStyle(.plain)
             }
-            Text("The picked aircraft takes the route; \(sell.tail) is \(sell.isLeased ? "handed back" : "sold").")
+            Text(sell.isLeased
+                 ? "The picked aircraft takes the route; \(sell.tail) is handed back."
+                 : "The picked aircraft takes the route; \(sell.tail) is sold.")
                 .font(.karla(13)).foregroundStyle(secondary)
             ScrollView {
                 VStack(spacing: 10) {
@@ -640,7 +651,9 @@ private struct ReplacementPicker: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(ac.tail).font(.karla(17, .heavy)).foregroundStyle(primary)
                 Text(ac.type.name).font(.karla(13)).foregroundStyle(secondary)
-                Text("\(ac.type.seats) seats · \(ac.type.rangeNM.formatted()) nm · \(ac.isLeased ? "leased" : "owned")")
+                Text(ac.isLeased
+                     ? "\(ac.type.seats) seats · \(ac.type.rangeNM.formatted()) nm · leased"
+                     : "\(ac.type.seats) seats · \(ac.type.rangeNM.formatted()) nm · owned")
                     .font(.karla(12)).foregroundStyle(secondary)
             }
             Spacer(minLength: 8)

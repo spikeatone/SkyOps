@@ -2,14 +2,14 @@
 
 ## ⏳ PROGRESS (branch `de-translation`, NOT merged, NOT ship-ready) — read this first
 
-**~236 catalog keys translated + category-2 code gaps fixed across 14 helpers, all verified live on
+**~303 catalog keys translated + category-2 code gaps fixed across 19 helpers, all verified live on
 device in German.** Register: **du**. AI-drafted (no native review — designer accepted that risk).
-Everything is on the `de-translation` branch, six commits, pushed. English is unchanged throughout (the
+Everything is on the `de-translation` branch, seven commits, pushed. English is unchanged throughout (the
 catalog only adds a `de` column; harness stays 13/13). NOT ship-ready — partial German is worse than
 none, so it stays on the branch until it's finished + timing clears the 4.3(a) cascade.
 
 **Assets created:**
-- `Resources/Localizable.xcstrings` — the view-layer String Catalog (236 keys, all with a `de` value).
+- `Resources/Localizable.xcstrings` — the view-layer String Catalog (303 keys, all with a `de` value).
 - `Sim/Localization.swift` — the framework-free `L()` shim (its `de` table is still EMPTY — Sim strings
   are NOT translated yet).
 - `aa-1.1.x/de-glossary.md` — the terminology glossary (du; Route/Slot/Gate/Crew kept as German
@@ -38,7 +38,13 @@ all confirmed compiled into `de.lproj` but not eyeballed because the sim ScrollV
 the automation drag — a known tooling flake, not an app issue) · **`FuelHedgePanel` — FULL** (its whole
 prose body incl. the "(%lld Flugzeuge im Besitz)" interpolation, the 30/60/90-day slots "%lld-Tage-Hedge:",
 "$%@ Prämie", active-hedge + empty-fleet states — verified live on the Ops tab; the title/BUY were already
-done in the earlier Figma restyle).
+done in the earlier Figma restyle) · **`FleetDetailView` — FULL** (FLUGZEUGDETAILS, the identity block,
+Aktueller Status card incl. the phaseLabel phases + ETA, Wartung & Wert (Zyklen/Marktwert/Wertverlust +
+the interpolated upkeep line), Wirtschaftlichkeit letzter Flug (Umsatz/Flughafengebühren/Betriebskosten/
+Nettoergebnis), the action buttons (NEUER ROUTE ZUWEISEN / PARKEN (ROUTE SCHLIESSEN) / FLUGZEUG VERKAUFEN /
+TRANSFER WITHIN GROUP), the sell/park/terminate confirm dialogs, the `ReplaceOrCloseModal`, and the
+`ReplacementPicker` — verified live: the whole detail scrolled through in German + the ReplaceOrCloseModal
+driven, all correct incl. the split-ternary bodies).
 
 **DELIBERATE DEFERRAL (not a miss):** `LiveryPalette.name` — the 10 palette names (Atlantic, Cardinal,
 Pacific, Meridian, Evergreen, Copper, Azure, Tropic, Burgundy, Velocity, in `Livery.swift`) stay ENGLISH.
@@ -63,14 +69,24 @@ fallback via `String(localized:)` so the format key stays clean `"Paint %@ onto 
 ternary-garbled literal, **`OpsView`** three helpers retyped to return/take `LocalizedStringKey`
 (`pendingStatus`, `relativeTime`, and `promoButton`'s `idle` param — the last localizes the Fare war /
 Ad campaign / Loyalty labels) + the `"%lld rival\(...s)"` plural split into two clean keys like the Crews
-labor-action string. **Every custom label helper with a `String` title/label param is a suspect** — audit
-each and change the DISPLAY param to `LocalizedStringKey` (keep VALUE params `String` — they carry data).
+labor-action string, **`FleetDetailView`** five helpers/sites — `statusChip`'s `(text, color)` tuple typed
+`(LocalizedStringKey, Color)` (GROUNDED/IDLE/FLYING), `econRow`/`labeled`(label)/`outlineButton`/
+`ReplaceOrCloseModal.button` params → `LocalizedStringKey`, `phaseLabel` returns `String(localized:)` per
+case + the inline "Idle — no route"/"At gate"/"a route" fallbacks wrapped in `String(localized:)`, the park
+confirm title moved to a `LocalizedStringKey` computed var, and 3 nested-ternary-in-interpolation bodies
+(ReplaceOrClose + ReplacementPicker) split into clean per-branch literals. **Every custom label helper with
+a `String` title/label param is a suspect** — audit each and change the DISPLAY param to
+`LocalizedStringKey` (keep VALUE params `String` — they carry data). **And a `.confirmationDialog` / `Button`
+/ `Menu` title built via `.map{}??` or any String-returning expression takes the StringProtocol overload →
+NOT localized; give it a `LocalizedStringKey` computed var instead** (the FleetDetailView park-dialog gotcha).
 
-**REMAINING (~140 strings) — the mechanical long tail for the next pass:**
+**REMAINING (~110 strings) — the mechanical long tail for the next pass:**
 1. **Whole screens not touched:** Network panels (Acquire/Routes/Hubs — `FuelHedgePanel` is now DONE),
-   aircraft detail (`FleetDetailView`), airport card, alerts/decision cards (`NeedsAttentionCard`),
-   Market Intelligence / Go Public views. (`LiveryDesignView` + the Ops tab view layer are now DONE —
-   see above.)
+   airport card (`AirportInfoCard`), alerts/decision cards (`NeedsAttentionCard`), Market Intelligence /
+   Go Public views, `FleetView` (the My Fleet/Marketplace home — its category filters + status chips are
+   the Sim-layer tail, item 5). (`LiveryDesignView`, the Ops tab view layer, and `FleetDetailView` are now
+   DONE — see above. `FleetDetailView`'s only remaining English is `aircraft.type.flavor`, a Sim-layer
+   AircraftType prop deferred to item 6.)
    - **Ops Sim-layer strings still English (deferred to the `L()` pass, item 7):** the event-log
      `e.title`/`e.subtitle`, the `OpsEvent.Category` rawValues (DISRUPTIONS/MARKET/STRUCTURAL, used as
      section headers), `reputationTier` (Poor/Fair/Good/Excellent), `opp.suggested` (Regional jet /
