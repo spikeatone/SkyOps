@@ -202,7 +202,7 @@ struct NetworkView: View {
     }
 
     /// The pick-step instruction that floats over the map (nil outside pick steps).
-    private var routePickHintText: String? {
+    private var routePickHintText: LocalizedStringKey? {
         switch routeMode {
         case .pickOrigin:
             if let ac = sim.pendingAssignment {
@@ -695,7 +695,7 @@ struct NetworkView: View {
     /// Figma "Alert box" (5:8040 / 19:6705): a solid dark bar with a single
     /// Karla-Bold instruction line. Cancel is the highlighted "Open Route"
     /// control-bar button (tapping it again exits the flow).
-    private func routeHint(_ text: String) -> some View {
+    private func routeHint(_ text: LocalizedStringKey) -> some View {
         HStack(spacing: 0) {
             Text(text)
                 .font(.karla(14, .bold))

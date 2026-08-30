@@ -161,7 +161,7 @@ struct CompetitorIntelView: View {
                     }
                     Text(p.region).font(.karla(12)).foregroundStyle(secondary)
                     HStack(spacing: 8) {
-                        chip(p.trend.rawValue.uppercased(), trendColor(p.trend))
+                        chip(LocalizedStringKey(p.trend.rawValue.uppercased()), trendColor(p.trend))
                         if sim.isSubsidiary(p.id) { chip("YOUR SUBSIDIARY", Sky.coreGreen) }
                         else if rivals.contains(p.name) { chip("CONTESTING YOU", red) }
                     }.padding(.top, 2)
@@ -399,7 +399,7 @@ struct CompetitorIntelView: View {
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
-    private func line(_ label: String, _ value: String, _ tint: Color? = nil) -> some View {
+    private func line(_ label: LocalizedStringKey, _ value: String, _ tint: Color? = nil) -> some View {
         HStack {
             Text(label).font(.karla(13)).foregroundStyle(secondary)
             Spacer()
@@ -408,7 +408,7 @@ struct CompetitorIntelView: View {
         }
     }
 
-    private func stat(_ label: String, _ value: String, _ tint: Color? = nil) -> some View {
+    private func stat(_ label: LocalizedStringKey, _ value: String, _ tint: Color? = nil) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(label).font(.karla(10)).foregroundStyle(secondary.opacity(0.9))
             Text(value).font(.karla(12, .semibold)).foregroundStyle(tint ?? primary)
@@ -416,7 +416,7 @@ struct CompetitorIntelView: View {
         }
     }
 
-    private func chip(_ text: String, _ tint: Color) -> some View {
+    private func chip(_ text: LocalizedStringKey, _ tint: Color) -> some View {
         Text(text).font(.karla(9, .bold)).foregroundStyle(tint)
             .padding(.horizontal, 6).padding(.vertical, 3)
             .background(tint.opacity(0.15))

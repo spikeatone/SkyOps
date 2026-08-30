@@ -152,7 +152,7 @@ struct GoPublicView: View {
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
-    private func line(_ label: String, _ value: String, _ tint: Color? = nil) -> some View {
+    private func line(_ label: LocalizedStringKey, _ value: String, _ tint: Color? = nil) -> some View {
         HStack {
             Text(label).font(.karla(13)).foregroundStyle(secondary)
             Spacer()
