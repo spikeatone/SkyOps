@@ -28,20 +28,25 @@ only, and update it in the same session as the work.
 
 ## In flight
 
-### German localization — SCOPED, PARKED (28 Aug)
+### German localization — SCOPED (28 Aug); a MARKET-ENTRY bet, not a demand response
 TelemetryDeck shows German = 16% of preferred language (#2 after English 76%, 10× Spanish). Full
-scoping in `aa-1.1.x/LOCALIZATION_SCOPING.md`. Key points:
-- [ ] VERIFY the absolute German user count in TD first (16% on a ~3-user base isn't a mandate).
-- [ ] Do NOT ship as a standalone localization update during the 4.3(a) cascade (FC's localization-only
-      1.3 got rejected) — bundle with a content update, or wait for the account to cool.
-- Infra: no localization exists yet (English-only). iOS 18 → use a String Catalog (`.xcstrings`).
-  COPY FC Architect's `Localizable.xcstrings` structure; FC has fr/it/es but NOT German, so AA would
-  LEAD the family on German (reusable by siblings).
+scoping in `aa-1.1.x/LOCALIZATION_SCOPING.md`. **Framing (designer): this is an ACQUISITION /
+conversion lever for the DACH premium market, largely independent of current user count — the low
+German count is plausibly a consequence of being English-only, not a reason to skip.** So it's not
+"park until users grow"; it's "market entry, gated on timing, done properly."
+- [ ] INFRA (String Catalog + framework-free Sim shim) can start ANY TIME — it's not a shippable
+      localization diff by itself (no 4.3(a) exposure), and it's reusable for es/fr later. COPY FC
+      Architect's `Localizable.xcstrings`; FC has fr/it/es but NOT German, so AA would LEAD on German.
+- [ ] Commission a NATIVE German translation pass when committing (never MT — a first-language market
+      notices; bad German converts worse than clean English). This is the real spend + timeline.
+- [ ] SHIP GATE (timing, not merit): do NOT release the German build STANDALONE during the 4.3(a)
+      cascade (FC's localization-only 1.3 was rejected) — bundle the `de` turn-on with a content
+      update, or ship after the account cools.
 - AA's unique wrinkle: the framework-free `Sim/` layer builds ~124 user-facing strings (Ops log,
-  decision copy) that can't use SwiftUI localization without breaking the harness → needs a small
-  framework-free shim (option 1 in the doc).
-- Real cost = a NATIVE German translation pass (not MT — German is a first-language market) + device
-  QA for German string lengths (~30% longer; tab bar / control-bar / chips at risk).
+  decision copy) that can't use SwiftUI localization without breaking the harness → small
+  framework-free shim.
+- Optional: pull the absolute German user count from TD for PRIORITIZATION vs other work (does not
+  veto the bet — a low count is expected pre-localization).
 
 ### Tech Ops modernization (24 Aug) — branch `tech-ops-modernization` (off `main`)
 Postmark Tech Ops cross-app audit: Airline was BEHIND its own siblings on the RC/TelemetryDeck

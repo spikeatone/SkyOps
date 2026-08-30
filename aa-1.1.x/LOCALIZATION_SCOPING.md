@@ -2,10 +2,17 @@
 
 **Why:** TelemetryDeck "New Users by Preferred Language" shows **German 16%** — the #2 language
 after English (76%), and 10× Spanish (1.3%). Region chart barely shows Germany, so these are
-German-language-device users spread across DE/AT/CH. A 16% cohort seeing an English-only app is real
-friction. ⚠️ **Sample-size caveat:** verify the absolute N behind that 16% before committing — a
-0.16% slice = 1 user, so 16% could be a few dozen or a handful. This doc scopes the WORK; it does not
-assert the mandate.
+German-language-device users spread across DE/AT/CH.
+
+**⭐ THE REAL CASE IS ACQUISITION, NOT SERVING EXISTING USERS (designer, 28 Aug).** The current
+German user count is nearly irrelevant to the decision. German localization is a **market-entry /
+conversion lever**, not a response to demand: DACH is one of the largest, highest-spending premium
+mobile-games markets, and a paid sim is exactly the genre where German players expect native
+localization and reward it with installs + purchases. The low current German count is plausibly a
+CONSEQUENCE of being English-only, not a reason to skip — you localize to ACQUIRE the users who
+aren't installing/buying because there's no German. So DO NOT read this as "park until the audience
+grows"; read it as **"a market-entry investment, gated on TIMING and done PROPERLY."** (The
+sample-size question still matters for PRIORITIZATION vs other work, but it does not veto the bet.)
 
 **⚠️ TIMING (do NOT ship standalone during the 4.3(a) cascade):** FC Architect 1.3 was rejected 4.3(a)
 for a **localization-only** update. Apple's spam reflex flags a pure-localization diff. So German
@@ -69,17 +76,30 @@ without the big refactor and keeps the harness working.
   overflow. Real QA time.
 
 **Total, honestly:** a **multi-day engineering effort + a paid human-translation pass + a device QA
-pass**, not a quick win. Worth it if the 16% is real N; not worth it on a handful of users.
+pass**, not a quick win. But framed as market entry (above), the ROI question is "does DACH premium
+conversion justify a few days of eng + one paid translation pass" — for a market that size, plausibly
+yes, largely independent of the current user count.
 
-## Recommended sequence (when the time comes)
+## Recommended sequence
 
-1. **Verify the sample** — get absolute German user count from TD, not just the %.
-2. **Wait for the 4.3(a) cascade to cool** (or bundle with a content update).
-3. Build the infra (String Catalog + Sim shim) — that's reusable for Spanish/French later (the family
-   already localizes: FC did fr/it/es), so this investment compounds across the series.
-4. Get a **native German** translation pass — don't ship MT.
-5. Device QA for German string lengths.
-6. German ASC listing + Game Center localizations.
+The acquisition framing changes what's a BLOCKER vs a GATE:
+1. **INFRA CAN START ANY TIME** — the String Catalog migration + the framework-free Sim shim are NOT
+   a shippable localization diff on their own (they add the plumbing, strings stay English until a
+   `de` column is filled). So this is pure de-risking work with no 4.3(a) exposure; do it whenever.
+   It's reusable for es/fr later (FC already localizes), so it compounds across the series.
+2. **Commission the NATIVE German translation** when you commit to the market-entry bet — this is the
+   real spend and the real timeline driver. Never MT (a first-language market notices; bad German
+   converts WORSE than clean English).
+3. **SHIP GATE (timing, not merit):** do NOT release the German-enabled build STANDALONE during the
+   4.3(a) cascade — FC's localization-only 1.3 was rejected for exactly that. Bundle the `de` turn-on
+   WITH a content/gameplay update, or ship after the account-wide cascade clears. This gate is about
+   Apple's current reflex, not about whether localization is worth doing.
+4. Device QA for German string lengths (~30% longer).
+5. German ASC listing + Game Center achievement localizations.
+
+Sample-size note (for PRIORITIZATION only, not veto): still worth pulling the absolute German user
+count from TD to sequence this against other work — but per the acquisition framing above, a low
+count is expected pre-localization and does not kill the bet.
 
 ## Family note (VERIFIED 2026-08-28)
 
