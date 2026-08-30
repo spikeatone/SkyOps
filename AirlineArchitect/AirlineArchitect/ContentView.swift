@@ -589,10 +589,10 @@ struct ContentView: View {
 /// 25×; "$30.1B" only moves once every few sim-minutes, so it reads as stable.
 func compactMoney(_ v: Int) -> String {
     let a = abs(v), sign = v < 0 ? "−" : ""
-    if a >= 1_000_000_000 { return sign + "$" + String(format: "%.1fB", Double(a) / 1_000_000_000) }
-    if a >= 1_000_000     { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-    if a >= 1_000         { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-    return sign + "$\(a)"
+    if a >= 1_000_000_000 { return sign + Currency.symbol + String(format: "%.1fB", Double(a) / 1_000_000_000) }
+    if a >= 1_000_000     { return sign + Currency.symbol + String(format: "%.1fM", Double(a) / 1_000_000) }
+    if a >= 1_000         { return sign + Currency.symbol + String(format: "%.0fk", Double(a) / 1_000) }
+    return sign + Currency.symbol + "\(a)"
 }
 
 /// Cash-on-hand display — MORE precise than compactMoney near thresholds so a
@@ -603,11 +603,11 @@ func compactMoney(_ v: Int) -> String {
 /// finer than the aircraft prices this number gets compared against.
 func cashLabel(_ v: Int) -> String {
     let a = abs(v), sign = v < 0 ? "−" : ""
-    if a >= 1_000_000_000 { return sign + "$" + String(format: "%.3fB", Double(a) / 1_000_000_000) }
-    if a >= 10_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-    if a >= 1_000_000  { return sign + "$" + String(format: "%.2fM", Double(a) / 1_000_000) }
-    if a >= 1_000      { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-    return sign + "$\(a)"
+    if a >= 1_000_000_000 { return sign + Currency.symbol + String(format: "%.3fB", Double(a) / 1_000_000_000) }
+    if a >= 10_000_000 { return sign + Currency.symbol + String(format: "%.1fM", Double(a) / 1_000_000) }
+    if a >= 1_000_000  { return sign + Currency.symbol + String(format: "%.2fM", Double(a) / 1_000_000) }
+    if a >= 1_000      { return sign + Currency.symbol + String(format: "%.0fk", Double(a) / 1_000) }
+    return sign + Currency.symbol + "\(a)"
 }
 
 
@@ -815,7 +815,7 @@ struct AircraftProfileCard: View {
     }
 
     private func money(_ v: Int) -> String {
-        "$" + v.formatted(.number.grouping(.automatic))
+        Currency.symbol + v.formatted(.number.grouping(.automatic))
     }
 }
 
@@ -870,7 +870,7 @@ struct RouteConfirmPanel: View {
                 Spacer(minLength: 0)
             }
             infoRow("Distance", "\(distanceNM.formatted()) nm", primaryC)
-            infoRow("Fare/seat", "$\(Int(FareModel.farePerSeat(distanceNM: Double(distanceNM)).rounded()))", primaryC)
+            infoRow("Fare/seat", "\(Currency.symbol)\(Int(FareModel.farePerSeat(distanceNM: Double(distanceNM)).rounded()))", primaryC)
             // Demand model (prototype): show this city pair's estimated daily
             // demand and the load factor the spare that'd be assigned would fly
             // it at — so the player can size the aircraft to the route.
@@ -891,7 +891,7 @@ struct RouteConfirmPanel: View {
                     slotsOK ? green : red)
             let cap = capability(spare)
             infoRow("Aircraft check", cap.text, cap.ok ? green : red)
-            infoRow("Opening cost", "$\(cost.formatted())", affordable ? green : red)
+            infoRow("Opening cost", "\(Currency.symbol)\(cost.formatted())", affordable ? green : red)
             // Reassigning an aircraft that's already flying closes the route it
             // leaves — say so BEFORE the player commits, not after.
             if let ac = sim.pendingAssignment, let rid = ac.assignedRouteId,
@@ -1205,7 +1205,7 @@ struct RoutesPanel: View {
         }
     }
 
-    private func money(_ v: Int) -> String { (v < 0 ? "−$" : "$") + abs(v).formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { (v < 0 ? "−" + Currency.symbol : Currency.symbol) + abs(v).formatted(.number.grouping(.automatic)) }
 }
 
 
@@ -1293,7 +1293,7 @@ struct RouteProfitChart: View {
 
         // Y labels: max (top), $0 (break-even), min (bottom).
         yLabel(ctx, money(Int(maxY)), CGPoint(x: leftPad - 5, y: sy(maxY)))
-        yLabel(ctx, "$0", CGPoint(x: leftPad - 5, y: zy))
+        yLabel(ctx, (Currency.symbol + "0"), CGPoint(x: leftPad - 5, y: zy))
         yLabel(ctx, money(Int(minY)), CGPoint(x: leftPad - 5, y: sy(minY)))
 
         // P&L line, split at each zero crossing and coloured by sign.
@@ -1330,9 +1330,9 @@ struct RouteProfitChart: View {
 
     private func money(_ v: Int) -> String {
         let a = abs(v), sign = v < 0 ? "−" : ""
-        if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-        return sign + "$\(a)"
+        if a >= 1_000_000 { return sign + Currency.symbol + String(format: "%.1fM", Double(a) / 1_000_000) }
+        if a >= 1_000     { return sign + Currency.symbol + String(format: "%.0fk", Double(a) / 1_000) }
+        return sign + Currency.symbol + "\(a)"
     }
 }
 
@@ -1502,7 +1502,7 @@ struct AircraftTooltip: View {
     }
 
     private func money(_ v: Int) -> String {
-        "$" + v.formatted(.number.grouping(.automatic))
+        Currency.symbol + v.formatted(.number.grouping(.automatic))
     }
 
     private var cyclesText: String {

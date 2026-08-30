@@ -39,6 +39,11 @@ enum SimLocale {
     /// Set by the view layer at launch (e.g. `SimLocale.current = Locale…languageCode`).
     /// Pure storage — no Foundation dependency here.
     nonisolated(unsafe) static var current: String = "en"
+
+    /// Displayed currency symbol — euro in German, dollar elsewhere. The economy
+    /// is USD-denominated internally; this is a symbol-only presentation swap (no
+    /// FX), matching the view layer's `Currency.symbol`. Framework-free.
+    static var currencySymbol: String { current == "de" ? "€" : "$" }
 }
 
 /// Per-language format tables: language code → (English source key → translated
@@ -50,14 +55,14 @@ private let simLocalizationTables: [String: [String: String]] = [
     "de": [
         " as the market consolidates": " im Zuge der Marktkonsolidierung",
         " — priced out by your fare war": " — verdrängt durch deinen Preiskampf",
-        "$%@ at %@%% · $%@/mo": "$%@ zu %@%% · $%@/Mon.",
-        "$%@ from recouping its opening cost.": "$%@ bis zur Amortisierung der Eröffnungskosten.",
-        "$%@ settled in full · no more interest": "$%@ vollständig getilgt · keine Zinsen mehr",
+        "$%@ at %@%% · $%@/mo": "€%@ zu %@%% · €%@/Mon.",
+        "$%@ from recouping its opening cost.": "€%@ bis zur Amortisierung der Eröffnungskosten.",
+        "$%@ settled in full · no more interest": "€%@ vollständig getilgt · keine Zinsen mehr",
         "%@ Club": "%@ Club",
         "%@ acquired": "%@ übernommen",
         "%@ aircraft and %@ routes join your group — %@ keeps flying under its own flag.": "%@ Flugzeuge und %@ Routen kommen zu deiner Gruppe — %@ fliegt weiter unter eigener Flagge.",
-        "%@ aircraft flying %@ route · $%@ on hand.": "%@ Flugzeuge auf %@ Route · $%@ verfügbar.",
-        "%@ aircraft flying %@ routes · $%@ on hand.": "%@ Flugzeuge auf %@ Routen · $%@ verfügbar.",
+        "%@ aircraft flying %@ route · $%@ on hand.": "%@ Flugzeuge auf %@ Route · €%@ verfügbar.",
+        "%@ aircraft flying %@ routes · $%@ on hand.": "%@ Flugzeuge auf %@ Routen · €%@ verfügbar.",
         "%@ aircraft in the fleet": "%@ Flugzeuge in der Flotte",
         "%@ aircraft · %@ routes": "%@ Flugzeuge · %@ Routen",
         "%@ aircraft · %@ · ~%@d through the shop": "%@ Flugzeuge · %@ · ~%@ T in der Werkstatt",
@@ -76,7 +81,7 @@ private let simLocalizationTables: [String: [String: String]] = [
         "%@ dumps capacity %@-%@": "%@ wirft Kapazität auf den Markt %@-%@",
         "%@ handed back to the lessor": "%@ an den Leasinggeber zurückgegeben",
         "%@ has gone public — shares opened strong.": "%@ ist an die Börse gegangen — die Aktie startete stark.",
-        "%@ heard a new airline is starting up — and they want to be your first customer. Fly %@ ↔ %@ and they'll waive every opening fee, plus a $%@ signing bonus. ~%@ travelers a day are waiting. Accept, then buy an aircraft that can fly it.": "%@ hat gehört, dass eine neue Airline startet — und will dein erster Kunde sein. Fliege %@ ↔ %@ und alle Eröffnungsgebühren werden erlassen, plus $%@ Willkommensbonus. ~%@ Reisende pro Tag warten. Nimm an und kaufe dann ein Flugzeug, das die Route fliegen kann.",
+        "%@ heard a new airline is starting up — and they want to be your first customer. Fly %@ ↔ %@ and they'll waive every opening fee, plus a $%@ signing bonus. ~%@ travelers a day are waiting. Accept, then buy an aircraft that can fly it.": "%@ hat gehört, dass eine neue Airline startet — und will dein erster Kunde sein. Fliege %@ ↔ %@ und alle Eröffnungsgebühren werden erlassen, plus €%@ Willkommensbonus. ~%@ Reisende pro Tag warten. Nimm an und kaufe dann ein Flugzeug, das die Route fliegen kann.",
         "%@ hold at %@": "%@-Sperre in %@",
         "%@ hub closed — the build-out is written off": "Drehkreuz %@ geschlossen — der Ausbau wird abgeschrieben",
         "%@ hub is understaffed": "Drehkreuz %@ ist unterbesetzt",
@@ -116,10 +121,10 @@ private let simLocalizationTables: [String: [String: String]] = [
         "%@ ↔\u{FE0E} %@ — %@ %@": "%@ ↔\u{FE0E} %@ — %@ %@",
         "%@ ↔\u{FE0E} %@ — locking in loyal flyers": "%@ ↔\u{FE0E} %@ — treue Vielflieger binden",
         "%@ ↔\u{FE0E} %@ — undercutting rivals to reclaim the route": "%@ ↔\u{FE0E} %@ — Konkurrenten unterbieten, um die Route zurückzugewinnen",
-        "%@ ↔\u{FE0E} %@: $%@": "%@ ↔\u{FE0E} %@: $%@",
-        "%@ ↔\u{FE0E} %@: %@ assigned · +$%@ bonus": "%@ ↔\u{FE0E} %@: %@ zugewiesen · +$%@ Bonus",
-        "%@ ↔\u{FE0E} %@: not staffed in time — $%@ bonus clawed back": "%@ ↔\u{FE0E} %@: nicht rechtzeitig besetzt — $%@ Bonus zurückgefordert",
-        "%@ ↔\u{FE0E} %@: staff within %@ days · +$%@ bonus": "%@ ↔\u{FE0E} %@: binnen %@ Tagen besetzen · +$%@ Bonus",
+        "%@ ↔\u{FE0E} %@: $%@": "%@ ↔\u{FE0E} %@: €%@",
+        "%@ ↔\u{FE0E} %@: %@ assigned · +$%@ bonus": "%@ ↔\u{FE0E} %@: %@ zugewiesen · +€%@ Bonus",
+        "%@ ↔\u{FE0E} %@: not staffed in time — $%@ bonus clawed back": "%@ ↔\u{FE0E} %@: nicht rechtzeitig besetzt — €%@ Bonus zurückgefordert",
+        "%@ ↔\u{FE0E} %@: staff within %@ days · +$%@ bonus": "%@ ↔\u{FE0E} %@: binnen %@ Tagen besetzen · +€%@ Bonus",
         "%@'s airport authority is courting you: fly %@ ↔ %@ and we'll waive every opening fee, plus a %@ marketing package. ~%@ travelers a day, and no direct link to your network yet.": "Die Flughafenbehörde von %@ umwirbt dich: fliege %@ ↔ %@ und wir erlassen alle Eröffnungsgebühren, plus ein %@ Marketing-Paket. ~%@ Reisende pro Tag, und noch keine direkte Anbindung an dein Netzwerk.",
         "%@'s bid for the %@ hub was turned down": "Das Gebot von %@ für das Drehkreuz %@ wurde abgelehnt",
         "%@'s curfew has lifted": "Das Nachtflugverbot in %@ wurde aufgehoben",

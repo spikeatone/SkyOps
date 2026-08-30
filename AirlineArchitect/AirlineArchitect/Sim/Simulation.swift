@@ -480,7 +480,7 @@ final class Simulation {
                airportCode: offer.airportCode)
     }
 
-    private func dollars(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+    private func dollars(_ v: Int) -> String { SimLocale.currencySymbol + v.formatted(.number.grouping(.automatic)) }
 
     // MARK: - Route competition (rival carriers reacting to the player)
 
@@ -1608,6 +1608,10 @@ final class Simulation {
 
         nameAirline("Air Tina", tailCode: "ZQ")
         setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "Air Tina")
+        // The Network shot frames GERMANY — start in Europe so the map centers there
+        // and the routes radiate from Frankfurt/Munich/Berlin. Every other shot keeps
+        // the default North-America home (its screens don't show the map).
+        if shot == "network" { setHomeRegion(.europe) }
         // calendarStartDay stays 0 (Jan) — deterministic, no seasonal snow glyphs.
         devInjectCash(1_700_000_000)   // ~$2.4B net worth with the fleet — a flagship figure
 
@@ -1617,10 +1621,14 @@ final class Simulation {
         for id in ids {
             if let t = AircraftType.all.first(where: { $0.id == id }) { _ = buyAircraft(t) }
         }
-        // Route flagships on marquee long-haul + trunk pairs; the rest take what
-        // they can fly. LHR/CDG/etc. give the Aircraft-Detail shot a real long leg.
-        let marquee: [(String, String)] = [("LHR", "JFK"), ("LAX", "JFK"), ("ORD", "LHR"),
-                                           ("DFW", "ATL"), ("SFO", "ORD"), ("MIA", "BOS"), ("SEA", "DEN")]
+        // Route flagships on marquee pairs; the rest take what they can fly. The
+        // Network shot uses GERMAN/European hubs so the framed map is full of routes;
+        // the others use the US marquee (their Aircraft-Detail leg reads LHR–JFK etc.).
+        let marquee: [(String, String)] = shot == "network"
+            ? [("FRA", "JFK"), ("MUC", "LHR"), ("BER", "CDG"), ("FRA", "MAD"),
+               ("DUS", "FCO"), ("HAM", "LHR"), ("MUC", "AMS")]
+            : [("LHR", "JFK"), ("LAX", "JFK"), ("ORD", "LHR"),
+               ("DFW", "ATL"), ("SFO", "ORD"), ("MIA", "BOS"), ("SEA", "DEN")]
         var mi = 0
         for ac in aircraft where ac.purchased && ac.assignedRouteId == nil {
             var opened = false
@@ -1643,6 +1651,8 @@ final class Simulation {
         for _ in 0..<150 { advanceTick() }
         // Clear any AOG/crew holds the warm-up may have raised so nothing reads red.
         for ac in aircraft where ac.purchased { ac.maint = false }
+        // Clear weather/ATC ground-stops so no red storm glyphs clutter the map.
+        for ap in airports { ap.groundStop = false; ap.groundStopTicksLeft = 0; ap.groundStopReason = nil; ap.curfew = false }
         // Record every milestone now met so the live loop can't re-fire one, then
         // drop the toast queue — a marketing shot must not have a celebration
         // banner over the header.
@@ -1685,7 +1695,7 @@ final class Simulation {
     private(set) var diligencedCarriers: Set<String> = []
 
     private func compactMoneySim(_ v: Int) -> String {
-        v >= 1_000_000 ? String(format: "$%.1fM", Double(v)/1e6) : "$\(v)"
+        v >= 1_000_000 ? SimLocale.currencySymbol + String(format: "%.1fM", Double(v)/1e6) : SimLocale.currencySymbol + "\(v)"
     }
 
     /// Cost to open a carrier's books: scales with the size of the business, so
@@ -3904,7 +3914,7 @@ final class Simulation {
 
     private func airportPitchText(originCity: String, destCity: String, originCode: String,
                                   destCode: String, demand: Int, bonus: Int) -> String {
-        let b = "$\(bonus.formatted())"
+        let b = SimLocale.currencySymbol + "\(bonus.formatted())"
         let templates = [
             L("%@'s airport authority is courting you: fly %@ ↔ %@ and we'll waive every opening fee, plus a %@ marketing package. ~%@ travelers a day, and no direct link to your network yet.", originCity, originCode, destCode, b, demand),
             L("%@ wants your airline. Launch %@ ↔ %@, pocket a %@ signing incentive, and we cover your setup costs. This market's been overlooked too long.", originCity, originCode, destCode, b),
@@ -4552,8 +4562,9 @@ final class Simulation {
         let nw = playerBalance + fleetMarketValue
         let owned = ownedCount
         if owned >= 1 {
-            for (t, label) in [(30_000_000, "$30M"), (50_000_000, "$50M"), (100_000_000, "$100M"),
-                               (250_000_000, "$250M"), (500_000_000, "$500M"), (1_000_000_000, "$1B")] where nw >= t {
+            let cs = SimLocale.currencySymbol
+            for (t, label) in [(30_000_000, "\(cs)30M"), (50_000_000, "\(cs)50M"), (100_000_000, "\(cs)100M"),
+                               (250_000_000, "\(cs)250M"), (500_000_000, "\(cs)500M"), (1_000_000_000, "\(cs)1B")] where nw >= t {
                 celebrate("nw_\(t)", "chart.line.uptrend.xyaxis", L("%@ net worth", label), L("The airline is really taking off."))
             }
         }

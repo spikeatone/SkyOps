@@ -165,7 +165,7 @@ struct AirportInfoCard: View {
         .disabled(!enabled)
     }
 
-    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
 
     private func row(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack {

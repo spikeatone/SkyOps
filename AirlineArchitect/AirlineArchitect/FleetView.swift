@@ -821,5 +821,5 @@ struct FleetView: View {
         }
     }
 
-    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
 }

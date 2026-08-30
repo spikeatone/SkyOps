@@ -90,7 +90,7 @@ struct AlertsModal: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(modalBorder, lineWidth: 1))
     }
 
-    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
 }
 
 // MARK: - Shared "Needs Attention" sub-card (used by the Alerts modal AND Ops)
@@ -308,5 +308,5 @@ struct NeedsAttentionCard: View {
         }
     }
 
-    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
 }

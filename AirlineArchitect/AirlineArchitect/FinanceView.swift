@@ -165,7 +165,7 @@ struct FinanceView: View {
                         Text(pc.ticker).font(.karla(13, .bold)).foregroundStyle(primary)
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(String(format: "$%.2f", price)).font(.karla(26, .heavy))
+                        Text((Currency.symbol + String(format: "%.2f", price))).font(.karla(26, .heavy))
                             .foregroundStyle(up ? green : red)
                         Text(String(format: "%@%.1f%% vs IPO", up ? "+" : "", (price/pc.ipoPrice - 1)*100))
                             .font(.karla(13, .semibold)).foregroundStyle(up ? green : red)
@@ -757,8 +757,8 @@ struct FinanceView: View {
     private func ledgerMoney(_ v: Int) -> String { compactMoney(abs(v)) }
     /// Full grouped figures — kept for the per-flight average, where a few
     /// hundred/thousand dollars is small enough to want the exact number.
-    private func money(_ v: Int) -> String { "$" + abs(v).formatted(.number.grouping(.automatic)) }
-    private func signedMoney(_ v: Int) -> String { (v < 0 ? "−$" : "+$") + abs(v).formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + abs(v).formatted(.number.grouping(.automatic)) }
+    private func signedMoney(_ v: Int) -> String { (v < 0 ? ("−" + Currency.symbol) : ("+" + Currency.symbol)) + abs(v).formatted(.number.grouping(.automatic)) }
 }
 
 /// A period's worth of financial activity (a difference between two snapshots,

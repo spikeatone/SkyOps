@@ -308,7 +308,7 @@ struct NetworkView: View {
             Text(pc.ticker).font(.karla(13, .bold)).foregroundStyle(isDark ? .white : .black)
             Image(systemName: up ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
                 .font(.system(size: 8)).foregroundStyle(tint)
-            Text(String(format: "$%.2f", price)).font(.karla(13, .semibold)).foregroundStyle(tint)
+            Text((Currency.symbol + String(format: "%.2f", price))).font(.karla(13, .semibold)).foregroundStyle(tint)
                 .contentTransition(.numericText())
                 .animation(.snappy(duration: 0.35), value: price)
         }
@@ -379,7 +379,11 @@ struct NetworkView: View {
                 speedBar.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
                 trafficBox.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
                 #if DEBUG
-                devToggles.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
+                // Hidden while an App Store screenshot seed is active — DEV toggles
+                // must not appear in a marketing image.
+                if !ContentView.isScreenshotShot {
+                    devToggles.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
+                }
                 #endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -918,7 +922,7 @@ struct AddCrewPanel: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
-    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
 }
 
 /// FUEL HEDGE — Figma "Fuel Hedge Card" (19:6920): title, an explainer, then a
@@ -977,7 +981,7 @@ struct FuelHedgePanel: View {
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(days)-day hedge:").font(.karla(14, .bold)).foregroundStyle(labelC)
-                Text("$\(premium.formatted()) premium").font(.karla(14)).foregroundStyle(bodyC)
+                Text("\(Currency.symbol)\(premium.formatted()) premium").font(.karla(14)).foregroundStyle(bodyC)
             }
             Spacer()
             Button { sim.buyFuelHedge(days: days) } label: {

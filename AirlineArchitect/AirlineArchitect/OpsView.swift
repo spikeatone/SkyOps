@@ -196,9 +196,9 @@ struct OpsView: View {
     }
     private func compact(_ v: Int) -> String {
         let a = abs(v), s = v < 0 ? "−" : ""
-        if a >= 1_000_000 { return s + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-        if a >= 1_000 { return s + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-        return s + "$\(a)"
+        if a >= 1_000_000 { return s + Currency.symbol + String(format: "%.1fM", Double(a) / 1_000_000) }
+        if a >= 1_000 { return s + Currency.symbol + String(format: "%.0fk", Double(a) / 1_000) }
+        return s + "\(Currency.symbol)\(a)"
     }
 
     // MARK: Reputation
@@ -332,7 +332,7 @@ struct OpsView: View {
     }
 
     private func promoCost(_ v: Int) -> String {
-        v >= 1_000_000 ? String(format: "$%.1fM", Double(v) / 1_000_000) : "$\(v / 1000)k"
+        v >= 1_000_000 ? (Currency.symbol + String(format: "%.1fM", Double(v) / 1_000_000)) : "\(Currency.symbol)\(v / 1000)k"
     }
 
     // MARK: Route Opportunities (underserved-markets finder)
