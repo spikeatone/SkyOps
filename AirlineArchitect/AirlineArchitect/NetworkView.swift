@@ -502,7 +502,11 @@ struct NetworkView: View {
         panel = (panel == p) ? .none : p
     }
 
-    private func barButton(_ title: String, font: CGFloat, active: Bool, action: @escaping () -> Void) -> some View {
+    // `LocalizedStringKey` (not String): the call sites pass string LITERALS
+    // ("Acquire A/C", "Open Route", …), so typing the param as LocalizedStringKey
+    // makes `Text(title)` localize them through the catalog. A String param would
+    // consume the literal as an already-resolved value and bypass localization.
+    private func barButton(_ title: LocalizedStringKey, font: CGFloat, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.karla(font, .semibold))   // uniform across the row (chosen by ViewThatFits)

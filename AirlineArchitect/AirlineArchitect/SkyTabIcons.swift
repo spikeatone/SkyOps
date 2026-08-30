@@ -88,7 +88,11 @@ struct SkyTabBar: View {
                                         .offset(x: 9, y: -6)
                                 }
                             }
-                        Text(item.title).font(.karla(12, .semibold)).foregroundStyle(c)
+                        // LocalizedStringKey, not the bare String: SwiftUI only
+                        // auto-localizes string LITERALS; a String variable (item.title
+                        // comes from the items array) is treated as already-resolved and
+                        // bypasses the catalog. Wrapping it opts this into localization.
+                        Text(LocalizedStringKey(item.title)).font(.karla(12, .semibold)).foregroundStyle(c)
                     }
                     .frame(maxWidth: .infinity)
                 }

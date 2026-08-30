@@ -1,7 +1,211 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-
+    "Acquire A/C" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Erwerben" } }
+      }
+    },
+    "ACQUISITION" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "ERWERB" } }
+      }
+    },
+    "Add Crew" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Crew hinzufügen" } }
+      }
+    },
+    "AIRCRAFT" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "FLUGZEUG" } }
+      }
+    },
+    "AIRCRAFT DETAIL" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "FLUGZEUGDETAILS" } }
+      }
+    },
+    "AIRLINE NAME" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "NAME DER AIRLINE" } }
+      }
+    },
+    "Airframe Life" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Zellenlebensdauer" } }
+      }
+    },
+    "Airline" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Airline" } }
+      }
+    },
+    "Airport Incentives" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Flughafen-Anreize" } }
+      }
+    },
+    "All aircraft" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle Flugzeuge" } }
+      }
+    },
+    "ASSIGN" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "ZUWEISEN" } }
+      }
+    },
+    "ASSIGN FROM FLEET" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "AUS FLOTTE ZUWEISEN" } }
+      }
+    },
+    "BORROW" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "KREDIT AUFNEHMEN" } }
+      }
+    },
+    "BUY" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "KAUFEN" } }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Abbrechen" } }
+      }
+    },
+    "CHOOSE YOUR FOUNDING REGION" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "WÄHLE DEINE HEIMATREGION" } }
+      }
+    },
+    "Crews" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Crews" } }
+      }
+    },
+    "Enter two letters." : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Gib zwei Buchstaben ein." } }
+      }
+    },
+    "Finance" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Finanzen" } }
+      }
+    },
+    "Fleet" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Flotte" } }
+      }
+    },
+    "FLEET TAIL CODE" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "KENNUNG DER FLOTTE" } }
+      }
+    },
+    "FOUNDING PLAYER" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "GRÜNDUNGSSPIELER" } }
+      }
+    },
+    "Fuel Hedge" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Treibstoff-Hedge" } }
+      }
+    },
+    "Hire Crew" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Crew einstellen" } }
+      }
+    },
+    "Hubs" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Drehkreuze" } }
+      }
+    },
+    "Launch Your Airline" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Airline starten" } }
+      }
+    },
+    "Manage subscription" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Abo verwalten" } }
+      }
+    },
+    "Network" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Netzwerk" } }
+      }
+    },
+    "No route" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Keine Route" } }
+      }
+    },
+    "One-time purchase — no subscription. Unlocks the full game forever and restores on any device signed in to the same Apple Account. Payment is charged to your Apple Account." : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Einmaliger Kauf – kein Abo. Schaltet das komplette Spiel für immer frei und wird auf jedem Gerät wiederhergestellt, das mit demselben Apple-Account angemeldet ist. Die Zahlung wird deinem Apple-Account belastet." } }
+      }
+    },
+    "One-time purchase — yours forever." : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Einmaliger Kauf – für immer deins." } }
+      }
+    },
+    "Open Route" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Route eröffnen" } }
+      }
+    },
+    "Ops" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Betrieb" } }
+      }
+    },
+    "Restore Purchase" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Kauf wiederherstellen" } }
+      }
+    },
+    "Routes" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Routen" } }
+      }
+    },
+    "SELL" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "VERKAUFEN" } }
+      }
+    },
+    "The sky is the limit.\nWhat shall we call your global airline empire?" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Der Himmel ist die Grenze.\nWie soll dein weltweites Airline-Imperium heißen?" } }
+      }
+    },
+    "Two letters, painted on every aircraft in your fleet. Can't match a real airline (UA, DL…)." : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Zwei Buchstaben, auf jedem Flugzeug deiner Flotte. Darf keiner echten Airline entsprechen (UA, DL…)." } }
+      }
+    },
+    "Unlock Full Game" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Vollversion freischalten" } }
+      }
+    },
+    "Welcome, COO!" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Willkommen, COO!" } }
+      }
+    },
+    "Your starting map focuses here — you can still fly anywhere." : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Deine Startkarte zeigt diese Region – fliegen kannst du trotzdem überallhin." } }
+      }
+    }
   },
   "version" : "1.0"
 }

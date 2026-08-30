@@ -42,6 +42,32 @@ cools (see `PostmarkOps/APP_REVIEW_NOTES.md`). This is scoping-ahead, not a ship
 - Deployment target iOS 18 → String Catalogs are the modern approach (Xcode extracts, one file,
   per-language columns, handles plurals/interpolation ordering).
 
+## ⚠️ CRITICAL FINDING (28 Aug) — many strings need a CODE change, not just translation
+
+SwiftUI **only auto-localizes string LITERALS passed directly to `Text("…")`** (they become
+`LocalizedStringKey`). A string that reaches `Text` as a **`String` variable** — from a data array,
+a model property, or a function parameter typed `String` — is treated as ALREADY RESOLVED and
+**bypasses the catalog entirely**, even with a perfect translation in it. This is not a translation
+gap; it's a code gap, and it's widespread in AA.
+
+Confirmed + fixed examples (the pattern to copy):
+- **Tab bar** (`SkyTabIcons.swift` / `SkySidebar.swift`): titles live in a `[(title: String, …)]`
+  array → `Text(item.title)` didn't localize. Fix: `Text(LocalizedStringKey(item.title))`.
+- **Control bar** (`NetworkView.barButton`): `barButton(_ title: String, …)` → `Text(title)` didn't
+  localize the literal call-site strings. Fix: change the PARAM TYPE to `LocalizedStringKey` — then
+  the literals at the call sites (`barButton("Open Route", …)`) localize with NO call-site changes.
+
+**So localizing AA is THREE kinds of work, not one:**
+1. Plain `Text("literal")` → translate only (works for free once the catalog has the key).
+2. Variable/array/param-fed `Text(someString)` → **code fix** (`LocalizedStringKey` wrap or param
+   retype) PLUS translate. Audit every custom label helper's param type.
+3. Sim-layer strings → the `L()` shim (framework-free) PLUS fill its `de` table.
+
+The verification method that catches #2: force-launch in German (`-AppleLanguages '(de)'
+-AppleLocale de_DE`) and eyeball each screen — a string that stays English despite being in the
+catalog is a category-2 code gap. German number formatting (17.646.949) confirms the locale IS active,
+so English text = a localizability bug, not a locale problem.
+
 ## The translation payload — by surface, hardest last
 
 | Surface | Volume | Notes |

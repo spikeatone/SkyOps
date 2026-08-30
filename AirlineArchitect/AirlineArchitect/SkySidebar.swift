@@ -90,7 +90,7 @@ struct SkySidebarRail: View {
                                 .offset(x: 8, y: -6)
                         }
                     }
-                Text(item.title).font(.karla(15, selected ? .bold : .medium)).foregroundStyle(c)
+                Text(LocalizedStringKey(item.title)).font(.karla(15, selected ? .bold : .medium)).foregroundStyle(c)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 12)
