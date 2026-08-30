@@ -41,7 +41,7 @@ struct AirlineNamingView: View {
         if c.count != 2 { return true }
         return Airline.realCodes[c] != nil
     }
-    private var tailHint: String {
+    private var tailHint: LocalizedStringKey {
         let c = tailCode.uppercased()
         if let owner = Airline.realCodes[c] { return "\(c) belongs to \(owner) — choose another." }
         if c.count == 1 { return "Enter two letters." }

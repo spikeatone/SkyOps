@@ -41,6 +41,16 @@
         }
       }
     },
+    "%@ belongs to %@ — choose another.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ gehört zu %@ — wähle ein anderes."
+          }
+        }
+      }
+    },
     "%@ can now fly in colors you choose — a palette, a tail emblem, and your name on the fuselage.": {
       "localizations": {
         "de": {
@@ -831,6 +841,16 @@
         }
       }
     },
+    "Africa": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afrika"
+          }
+        }
+      }
+    },
     "Airbus A220 family": {
       "localizations": {
         "de": {
@@ -1111,6 +1131,16 @@
         }
       }
     },
+    "Asia": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asien"
+          }
+        }
+      }
+    },
     "Asking price": {
       "localizations": {
         "de": {
@@ -1167,6 +1197,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Am Gate (geparkt)"
+          }
+        }
+      }
+    },
+    "Australia / New Zealand": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Australien / Neuseeland"
           }
         }
       }
@@ -1637,6 +1677,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Barmittel:"
+          }
+        }
+      }
+    },
+    "Central America & The Caribbean": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mittelamerika & Karibik"
           }
         }
       }
@@ -2417,6 +2467,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verliert %@/Min."
+          }
+        }
+      }
+    },
+    "Europe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Europa"
           }
         }
       }
@@ -3831,6 +3891,16 @@
         }
       }
     },
+    "North America": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nordamerika"
+          }
+        }
+      }
+    },
     "Not billed — it's income the fleet won't earn, not a charge. You pay the paint cost.": {
       "localizations": {
         "de": {
@@ -5107,6 +5177,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sortieren nach"
+          }
+        }
+      }
+    },
+    "South America": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Südamerika"
           }
         }
       }

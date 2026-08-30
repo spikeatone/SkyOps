@@ -1598,6 +1598,82 @@ final class Simulation {
         }
     }
 
+    /// SCREENSHOT SEED (-shot <name>): a rich, marketing-ready state — Air Tina with
+    /// its livery, a flagship fleet flying real routes, plenty of cash, staffed crews.
+    /// NOT committed to a save slot (the harness leaves currentSlot nil). Equivalent
+    /// to the App Store shots, not pixel-identical.
+    func seedForShot(_ shot: String) {
+        // Naming screen wants a CLEAN slate (no airline yet) so the form renders.
+        if shot == "naming" { return }
+
+        nameAirline("Air Tina", tailCode: "ZQ")
+        setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "Air Tina")
+        // calendarStartDay stays 0 (Jan) — deterministic, no seasonal snow glyphs.
+        devInjectCash(1_700_000_000)   // ~$2.4B net worth with the fleet — a flagship figure
+
+        // A flagship-heavy fleet: a Dreamliner + a widebody + narrowbodies + a
+        // regional + a turboprop, so every screen has variety to show.
+        let ids = ["B789", "A350", "B773", "A320", "A321", "CRJ900", "DH8B"]
+        for id in ids {
+            if let t = AircraftType.all.first(where: { $0.id == id }) { _ = buyAircraft(t) }
+        }
+        // Route flagships on marquee long-haul + trunk pairs; the rest take what
+        // they can fly. LHR/CDG/etc. give the Aircraft-Detail shot a real long leg.
+        let marquee: [(String, String)] = [("LHR", "JFK"), ("LAX", "JFK"), ("ORD", "LHR"),
+                                           ("DFW", "ATL"), ("SFO", "ORD"), ("MIA", "BOS"), ("SEA", "DEN")]
+        var mi = 0
+        for ac in aircraft where ac.purchased && ac.assignedRouteId == nil {
+            var opened = false
+            var tries = 0
+            while !opened && tries < marquee.count {
+                let (oc, dc) = marquee[(mi + tries) % marquee.count]
+                if let o = airports.first(where: { $0.code == oc }), let d = airports.first(where: { $0.code == dc }),
+                   routeBlock(for: ac, from: o, to: d) == nil,
+                   case .success = openRoute(from: o, to: d, using: ac) { opened = true; mi += 1 }
+                tries += 1
+            }
+        }
+        // Staff every owned family very generously (5 crews each) so aircraft
+        // NEVER hit a rest hold during the warm-up — a marketing shot must not
+        // fill the bell with crew-shortage cards.
+        for fam in ownedFamilies { for _ in 0..<5 { _ = hireCrew(family: fam) } }
+
+        // Advance a bit so aircraft are airborne (FLYING chips, en-route phases,
+        // a leg or two of history for the economics cards). ~2.5 sim-hours.
+        for _ in 0..<150 { advanceTick() }
+        // Clear any AOG/crew holds the warm-up may have raised so nothing reads red.
+        for ac in aircraft where ac.purchased { ac.maint = false }
+        // Record every milestone now met so the live loop can't re-fire one, then
+        // drop the toast queue — a marketing shot must not have a celebration
+        // banner over the header.
+        checkMilestones()
+        celebrations.removeAll()
+        // The Ops shot WANTS "Needs Attention" cards; every other shot should be
+        // clean (a stray AOG/crew card reads as a problem in a marketing image).
+        if shot == "ops" {
+            decisionQueue.removeAll()
+            // A slot-buyback offer on a real route + an airport recruitment offer —
+            // the two blue "Offer"/"Route offer" cards the marketing shot shows.
+            if let r = playerRoutes.first {
+                decisionQueue.append(Decision(id: "shot_offer", kind: .offer, aircraft: nil,
+                    offer: SlotOffer(routeId: r.id, originCode: r.originCode, destCode: r.destCode, amount: 659_399)))
+            }
+            if let o = airports.first(where: { $0.code == "OAX" }), let d = airports.first(where: { $0.code == "ATL" }) {
+                let oCity = o.info?.city ?? "Oaxaca", dCity = d.info?.city ?? "Atlanta"
+                let text = airportPitchText(originCity: oCity, destCity: dCity, originCode: o.code,
+                                            destCode: d.code, demand: 363, bonus: 208_900)
+                decisionQueue.append(Decision(id: "shot_airport", kind: .airportOffer, aircraft: nil,
+                    pitch: AirportPitch(originCode: o.code, destCode: d.code, originCity: oCity, destCity: dCity,
+                                        signingBonus: 208_900, demandPerDay: 363, expiryTick: tick + 12 * 1440, pitch: text)))
+            }
+        } else {
+            decisionQueue.removeAll()
+        }
+        // FREEZE the world for a static screenshot — no further ticks, so no new
+        // celebration/decision can pop over the UI after the seed returns.
+        isPaused = true
+    }
+
     #endif
 
     /// Airlines the player has bought. Each keeps flying under its own flag.

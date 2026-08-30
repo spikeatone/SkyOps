@@ -192,7 +192,7 @@ struct FleetView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: showLivery)
-        .onAppear { adoptOpenLiveryIfAny() }
+        .onAppear { adoptOpenLiveryIfAny(); applyShotDefaults() }
         .onChange(of: openLivery?.wrappedValue ?? false) { _, _ in adoptOpenLiveryIfAny() }
         .animation(.easeInOut(duration: 0.2), value: pendingLivery != nil)
     }
@@ -203,6 +203,27 @@ struct FleetView: View {
         showLivery = true
         openLivery?.wrappedValue = false
     }
+
+    #if DEBUG
+    /// App Store screenshot seed (-shot): pick the Marketplace segment or auto-open
+    /// an aircraft's detail so those shots land on the right screen with no taps.
+    private func applyShotDefaults() {
+        guard let shot = ContentView.shotName, detailID == nil else { return }
+        switch shot {
+        case "marketplace":
+            segment = .marketplace
+        case "fleetdetail", "liveryInGame":
+            segment = .myFleet
+            // Prefer a Dreamliner (matches the marketing shots); else the first owned.
+            let owned = sim.aircraft.filter { $0.purchased }
+            detailID = (owned.first { $0.type.id == "B789" } ?? owned.first)?.id
+        default:
+            break
+        }
+    }
+    #else
+    private func applyShotDefaults() {}
+    #endif
 
     /// Always persist a livery change right away so it survives even if the app is
     /// killed before the next autosave (true is fine; kept as a named flag for clarity).

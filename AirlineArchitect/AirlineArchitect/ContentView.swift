@@ -84,7 +84,37 @@ struct ContentView: View {
         guard let i = a.firstIndex(of: "-devScenario"), i + 1 < a.count else { return nil }
         return Simulation.DevScenario(rawValue: a[i + 1])
     }()
+
+    /// `-shot <name>` or the `SIMCTL_CHILD_SHOT` env var — App Store screenshot seed
+    /// (see `Simulation.seedForShot`). Names: naming, network, marketplace, myfleet,
+    /// fleetdetail, ops, finance, crews, liveryCreate, liveryInGame.
+    static let shotName: String? = {
+        let a = ProcessInfo.processInfo.arguments
+        if let i = a.firstIndex(of: "-shot"), i + 1 < a.count { return a[i + 1] }
+        return ProcessInfo.processInfo.environment["SIMCTL_CHILD_SHOT"]
+    }()
+    /// Which bottom-tab a given screenshot lands on (0 Network … 4 Finance).
+    static func shotTab(_ shot: String) -> Int {
+        switch shot {
+        case "marketplace", "myfleet", "fleetdetail", "liveryInGame": return 1   // Fleet
+        case "crews":   return 2
+        case "ops":     return 3
+        case "finance": return 4
+        default:        return 0   // Network
+        }
+    }
     #endif
+
+    /// True while an App Store screenshot seed is active (DEBUG only) — suppresses
+    /// the milestone toast so it can't land over the header in a marketing image.
+    /// Always false in Release.
+    static var isScreenshotShot: Bool {
+        #if DEBUG
+        return shotName != nil
+        #else
+        return false
+        #endif
+    }
 
     /// First half of body's modifier chain — split in two because the single
     /// chain outgrew the type-checker's expression budget when the briefing +
@@ -212,7 +242,7 @@ struct ContentView: View {
         }
         // Milestone celebrations — glide down from the top, auto-dismiss.
         .overlay(alignment: .top) {
-            if let c = sim.celebrations.first {
+            if let c = sim.celebrations.first, !Self.isScreenshotShot {
                 MilestoneToast(celebration: c)
                     .id(c.id)
                     .padding(.top, 8)
@@ -247,7 +277,12 @@ struct ContentView: View {
         // DEBUG (-liveryPreview): drive/tune the livery design screen directly.
         .overlay {
             if showLiveryPreview {
-                LiveryDesignView(airlineName: "Aster Air", backdropOpacity: coldLaunchBackdrop) { _, _, _, _ in
+                // The screenshot seed (-shot liveryCreate) wants "Air Tina" with its
+                // fuselage text pre-filled; the plain -liveryPreview uses Aster Air.
+                let previewName = (Self.isScreenshotShot ? "Air Tina" : "Aster Air")
+                LiveryDesignView(airlineName: previewName,
+                                 backdropOpacity: coldLaunchBackdrop,
+                                 initialText: Self.isScreenshotShot ? "Air Tina" : nil) { _, _, _, _ in
                     showLiveryPreview = false
                 }
                 .ignoresSafeArea()
@@ -269,6 +304,21 @@ struct ContentView: View {
     /// expression past the type-checker's budget.
     private func coldLaunch() {
             #if DEBUG
+            // -shot <name> (or SIMCTL_CHILD_SHOT env) — App Store screenshot seed.
+            if let shot = Self.shotName {
+                showSplash = false
+                switch shot {
+                case "naming":
+                    break   // clean slate: the naming screen renders (sim has no airline)
+                case "liveryCreate":
+                    sim.nameAirline("Air Tina", tailCode: "ZQ")
+                    showLiveryPreview = true   // the livery design screen (Air Tina)
+                default:
+                    sim.seedForShot(shot)
+                    tab = Self.shotTab(shot)
+                }
+                return
+            }
             if CommandLine.arguments.contains("-liveryPreview") {   // DEBUG: drive the livery screen directly
                 showSplash = false; showLiveryPreview = true; return
             }
