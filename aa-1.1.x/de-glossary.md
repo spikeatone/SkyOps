@@ -93,6 +93,10 @@ native German aviation speaker should sanity-check the starred (★) terms.
   Gate, Crew, Leasing, Hub, Lounge, Upgrade) — do NOT over-Germanize; that reads as stilted.
 - German compound nouns get long — for tight UI (tab bar, chips, control-bar buttons) prefer the
   shortest acceptable form and rely on `minimumScaleFactor` (already 0.7 on the control bar).
-- Currency stays `$` (the game is USD-denominated) — do not convert to €.
+- Currency is shown in **€** in the German build (designer direction, 30 Aug) — a
+  symbol-only presentation swap via `Currency.symbol` (view) / `SimLocale.currencySymbol`
+  (Sim); the economy stays USD-denominated internally, NO FX conversion, so the numbers
+  are identical and every balance/invariant is unchanged. (Supersedes the earlier
+  "currency stays `$`" note.) English build keeps `$`.
 - Airport codes, aircraft type names (Boeing 737, Airbus A320), and real airline names are PROPER
   NOUNS — never translate them.
