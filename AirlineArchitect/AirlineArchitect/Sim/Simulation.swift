@@ -383,7 +383,12 @@ final class Simulation {
         totalHubSpend += cost
         hubs[code] = Hub(establishedTick: tick)
         ensureHubLedger(code, establishCost: cost)
-        logOps(.structural, "Hub established at \(code)",
+        // Localization reference example (see Sim/Localization.swift): the Sim
+        // layer wraps a user-facing string in L(...) with %@ placeholders so a
+        // translation can reorder words. English passthrough today — identical
+        // output until a language table is filled. The other ~123 Sim strings
+        // convert the same way during the translation pass (not part of infra).
+        logOps(.structural, L("Hub established at %@", code),
                "\(playerAirlineName ?? "Your airline") invested \(dollars(cost)) in a new hub", airportCode: code)
         return true
     }

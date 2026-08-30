@@ -15,6 +15,16 @@ import SwiftUI
 @main
 struct AirlineArchitectApp: App {
     init() {
+        // Tell the framework-free Sim layer what language to localize its own
+        // strings in (Ops log, decision copy). Sim/ has no Locale access, so the
+        // view layer sets it once here from the system locale. English-only today
+        // (the Sim table is empty), so this is a no-op until a language is filled
+        // in — see Sim/Localization.swift + LOCALIZATION_SCOPING.md.
+        if #available(iOS 16, *) {
+            SimLocale.current = Locale.current.language.languageCode?.identifier ?? "en"
+        } else {
+            SimLocale.current = Locale.current.languageCode ?? "en"
+        }
         // Configure RevenueCat once, before anything reads Purchases.shared.
         Store.configure()
         // Analytics (anonymous, no IDFA). TelemetryDeck asks to be initialized
