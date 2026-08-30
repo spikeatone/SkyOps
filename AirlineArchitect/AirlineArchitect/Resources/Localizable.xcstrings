@@ -1,6 +1,66 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "$%@ premium": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$%@ Prämie"
+          }
+        }
+      }
+    },
+    "%@ nm · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ nm · %@"
+          }
+        }
+      }
+    },
+    "%@ – %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ – %@"
+          }
+        }
+      }
+    },
+    "%@%lld%%": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@%lld%%"
+          }
+        }
+      }
+    },
+    "%lld rival": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Konkurrent"
+          }
+        }
+      }
+    },
+    "%lld rivals": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Konkurrenten"
+          }
+        }
+      }
+    },
     "%lld sidelined; labor action — %lld day left": {
       "localizations": {
         "de": {
@@ -21,12 +81,92 @@
         }
       }
     },
+    "%lld%% demand": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% Nachfrage"
+          }
+        }
+      }
+    },
+    "%lld-day hedge:": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld-Tage-Hedge:"
+          }
+        }
+      }
+    },
+    "%lldd ago": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vor %lld Tagen"
+          }
+        }
+      }
+    },
+    "%lldd left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "noch %lld Tage"
+          }
+        }
+      }
+    },
+    "%lldh ago": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vor %lld Std."
+          }
+        }
+      }
+    },
+    "%lldm ago": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vor %lld Min."
+          }
+        }
+      }
+    },
+    "+%@ bonus": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%@ Bonus"
+          }
+        }
+      }
+    },
     "A full month of history appears here after your first sim-month of operations.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Ein ganzer Monat Verlauf erscheint hier nach deinem ersten Sim-Monat Betrieb."
+          }
+        }
+      }
+    },
+    "A genuine price drop still helps you — the hedge only removes the upside risk, not the downside benefit.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein echter Preisrückgang nützt dir weiterhin — der Hedge nimmt nur das Aufwärtsrisiko, nicht den Abwärtsvorteil."
           }
         }
       }
@@ -107,6 +247,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Erwirb Flugzeuge über den Netzwerk-Tab oder den Marktplatz."
+          }
+        }
+      }
+    },
+    "Ad campaign": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Werbekampagne"
           }
         }
       }
@@ -241,6 +391,26 @@
         }
       }
     },
+    "Awaiting aircraft · %lldd left to staff": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warte auf Flugzeug · noch %lld Tage zur Besetzung"
+          }
+        }
+      }
+    },
+    "Awaiting aircraft — acquire one in range": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warte auf Flugzeug — erwirb eines mit passender Reichweite"
+          }
+        }
+      }
+    },
     "BORROW": {
       "localizations": {
         "de": {
@@ -271,12 +441,32 @@
         }
       }
     },
+    "BY HUB": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NACH DREHKREUZ"
+          }
+        }
+      }
+    },
     "Board patience": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Geduld des Vorstands"
+          }
+        }
+      }
+    },
+    "Built by on-time flights; hurt by groundings and crew holds.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wächst durch pünktliche Flüge; leidet unter Grounds und Crew-Wartezeiten."
           }
         }
       }
@@ -421,6 +611,16 @@
         }
       }
     },
+    "Competition": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konkurrenz"
+          }
+        }
+      }
+    },
     "Confirm": {
       "localizations": {
         "de": {
@@ -467,6 +667,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "DIVIDENDE"
+          }
+        }
+      }
+    },
+    "Deals you accepted — waived opening fees and marketing bonuses.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angenommene Deals — erlassene Eröffnungsgebühren und Marketing-Boni."
           }
         }
       }
@@ -527,6 +737,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Eingeworbenes Kapital"
+          }
+        }
+      }
+    },
+    "Events": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ereignisse"
           }
         }
       }
@@ -621,6 +841,16 @@
         }
       }
     },
+    "Fare war": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preiskampf"
+          }
+        }
+      }
+    },
     "Finance": {
       "localizations": {
         "de": {
@@ -661,6 +891,16 @@
         }
       }
     },
+    "From %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ab %@"
+          }
+        }
+      }
+    },
     "Fuel Hedge": {
       "localizations": {
         "de": {
@@ -677,6 +917,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Treibstoff-Hedges"
+          }
+        }
+      }
+    },
+    "Fuel hedging locks your operating costs at a baseline for the chosen term, regardless of future oil-price spikes. Premium is based on your current fleet's real hold cost (%lld aircraft owned). Real airline fuel hedges work the same way, priced against expected consumption at purchase time and not adjusted later if your fleet size changes.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Treibstoff-Hedge fixiert deine Betriebskosten für die gewählte Laufzeit auf einem Basiswert, unabhängig von künftigen Ölpreisspitzen. Die Prämie basiert auf den realen Standkosten deiner aktuellen Flotte (%lld Flugzeuge im Besitz). Echte Treibstoff-Hedges von Airlines funktionieren genauso — beim Kauf gegen den erwarteten Verbrauch bepreist und später nicht angepasst, wenn sich deine Flottengröße ändert."
           }
         }
       }
@@ -721,6 +971,16 @@
         }
       }
     },
+    "Hedge active · %lld days left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hedge aktiv · noch %lld Tage"
+          }
+        }
+      }
+    },
     "High to low": {
       "localizations": {
         "de": {
@@ -761,6 +1021,16 @@
         }
       }
     },
+    "Hubs & Clubs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drehkreuze & Lounges"
+          }
+        }
+      }
+    },
     "Hubs & clubs built": {
       "localizations": {
         "de": {
@@ -777,6 +1047,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inaktiv"
+          }
+        }
+      }
+    },
+    "In service": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Einsatz"
           }
         }
       }
@@ -921,6 +1201,16 @@
         }
       }
     },
+    "Loyalty": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Treue"
+          }
+        }
+      }
+    },
     "MARKET INTELLIGENCE": {
       "localizations": {
         "de": {
@@ -1041,6 +1331,16 @@
         }
       }
     },
+    "Needs Attention": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erfordert Aufmerksamkeit"
+          }
+        }
+      }
+    },
     "Network": {
       "localizations": {
         "de": {
@@ -1111,6 +1411,26 @@
         }
       }
     },
+    "No aircraft owned yet — nothing to crew.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Flugzeuge im Besitz — keine Crew nötig."
+          }
+        }
+      }
+    },
+    "No aircraft owned yet — nothing to hedge. The premium is priced against your current fleet's real hold cost, so buy an aircraft first.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Flugzeuge im Besitz — nichts abzusichern. Die Prämie richtet sich nach den realen Standkosten deiner aktuellen Flotte, kaufe also zuerst ein Flugzeug."
+          }
+        }
+      }
+    },
     "No aircraft yet": {
       "localizations": {
         "de": {
@@ -1141,12 +1461,62 @@
         }
       }
     },
+    "No new markets from %@ right now.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuell keine neuen Märkte ab %@."
+          }
+        }
+      }
+    },
+    "No opportunities to show yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Chancen vorhanden."
+          }
+        }
+      }
+    },
+    "No recent events.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine aktuellen Ereignisse."
+          }
+        }
+      }
+    },
+    "No rival carriers on your routes. Profitable routes attract competitors — your reputation helps keep them out.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine konkurrierenden Airlines auf deinen Routen. Profitable Routen ziehen Konkurrenten an — deine Reputation hält sie fern."
+          }
+        }
+      }
+    },
     "No route": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Keine Route"
+          }
+        }
+      }
+    },
+    "Nothing to report yet — a quiet day on the network.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nichts zu melden — ein ruhiger Tag im Netzwerk."
           }
         }
       }
@@ -1167,6 +1537,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "BETRIEBS-BRIEFING"
+          }
+        }
+      }
+    },
+    "OPS HOME": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BETRIEBS-ZENTRALE"
           }
         }
       }
@@ -1231,6 +1611,16 @@
         }
       }
     },
+    "Operating": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Betrieb"
+          }
+        }
+      }
+    },
     "Operating costs": {
       "localizations": {
         "de": {
@@ -1247,6 +1637,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Betriebsgewinn"
+          }
+        }
+      }
+    },
+    "Operating · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Betrieb · %@"
           }
         }
       }
@@ -1317,6 +1717,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bringe %@ auf die Flotte."
+          }
+        }
+      }
+    },
+    "Passenger demand": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passagiernachfrage"
           }
         }
       }
@@ -1401,6 +1811,16 @@
         }
       }
     },
+    "Reputation": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reputation"
+          }
+        }
+      }
+    },
     "Reserve": {
       "localizations": {
         "de": {
@@ -1427,6 +1847,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kauf wiederherstellen"
+          }
+        }
+      }
+    },
+    "Route Opportunities": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Routen-Chancen"
           }
         }
       }
@@ -1537,6 +1967,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktienrückkäufe"
+          }
+        }
+      }
+    },
+    "Show on map": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf Karte zeigen"
           }
         }
       }
@@ -1701,6 +2141,26 @@
         }
       }
     },
+    "UNDERSTAFFED — %lld/%lld routes (benefits suspended, bills continue)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UNTERBESETZT — %lld/%lld Routen (Vorteile ausgesetzt, Kosten laufen weiter)"
+          }
+        }
+      }
+    },
+    "Underserved markets you don't fly yet — tap one to preview it on the map.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterversorgte Märkte, die du noch nicht bedienst — tippe einen an, um ihn auf der Karte zu sehen."
+          }
+        }
+      }
+    },
     "Unlock Full Game": {
       "localizations": {
         "de": {
@@ -1791,6 +2251,16 @@
         }
       }
     },
+    "Your rivals build hubs, go public, and buy airlines. So can you — unlock the full game.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Konkurrenten bauen Drehkreuze, gehen an die Börse und kaufen Airlines. Du kannst das auch — schalte das volle Spiel frei."
+          }
+        }
+      }
+    },
     "Your stake": {
       "localizations": {
         "de": {
@@ -1811,12 +2281,82 @@
         }
       }
     },
+    "opening waived (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eröffnung erlassen (%@)"
+          }
+        }
+      }
+    },
+    "sold to %@ — their fortress now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "an %@ verkauft — jetzt deren Festung"
+          }
+        }
+      }
+    },
+    "vs %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gegen %@"
+          }
+        }
+      }
+    },
     "your airline": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "deine Airline"
+          }
+        }
+      }
+    },
+    "~%@/day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "~%@/Tag"
+          }
+        }
+      }
+    },
+    "· %lld/100": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld/100"
+          }
+        }
+      }
+    },
+    "−%@/mo labor": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "−%@/Mon. Personal"
+          }
+        }
+      }
+    },
+    "−%@/mo rent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "−%@/Mon. Miete"
           }
         }
       }

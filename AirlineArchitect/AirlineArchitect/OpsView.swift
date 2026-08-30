@@ -186,7 +186,7 @@ struct OpsView: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
     /// Pending routes show the fulfillment countdown; staffed ones "In service".
-    private func pendingStatus(_ r: Route, pending: Bool) -> String {
+    private func pendingStatus(_ r: Route, pending: Bool) -> LocalizedStringKey {
         guard pending else { return "In service" }
         if let dl = r.fulfillByTick {
             let daysLeft = max(0, (dl - sim.displayTick) / 1440)
@@ -270,7 +270,7 @@ struct OpsView: View {
                             Spacer(minLength: 8)
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text("\(pct)% demand").font(.karla(15, .bold)).foregroundStyle(Sky.red)
-                                Text("\(r.competitionLevel) rival\(r.competitionLevel == 1 ? "" : "s")")
+                                Text(r.competitionLevel == 1 ? "\(r.competitionLevel) rival" : "\(r.competitionLevel) rivals")
                                     .font(.karla(12)).foregroundStyle(secondary)
                             }
                         }
@@ -312,12 +312,12 @@ struct OpsView: View {
         }
     }
 
-    private func promoButton(idle: String, active: Bool, daysLeft: Int, cost: Int,
+    private func promoButton(idle: LocalizedStringKey, active: Bool, daysLeft: Int, cost: Int,
                              color: Color, afford: Bool, action: @escaping () -> Void) -> some View {
         let enabled = !active && afford
         return Button(action: action) {
             VStack(spacing: 1) {
-                Text(active ? idle : idle).font(.karla(11, .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                Text(idle).font(.karla(11, .bold)).lineLimit(1).minimumScaleFactor(0.7)
                 Text(active ? "\(daysLeft)d left" : promoCost(cost)).font(.karla(9)).opacity(0.85).lineLimit(1)
             }
             .foregroundStyle(active ? .white : (enabled ? color : secondary))
@@ -530,7 +530,7 @@ struct OpsView: View {
     }
 
     // MARK: Helpers
-    private func relativeTime(_ eventTick: Int) -> String {
+    private func relativeTime(_ eventTick: Int) -> LocalizedStringKey {
         let mins = max(0, sim.tick - eventTick)   // 1 tick = 1 sim-minute
         if mins < 60 { return "\(mins)m ago" }
         if mins < 1440 { return "\(mins / 60)h ago" }

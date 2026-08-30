@@ -2,14 +2,14 @@
 
 ## ⏳ PROGRESS (branch `de-translation`, NOT merged, NOT ship-ready) — read this first
 
-**~182 catalog keys translated + category-2 code gaps fixed across 11 helpers, all verified live on
+**~236 catalog keys translated + category-2 code gaps fixed across 14 helpers, all verified live on
 device in German.** Register: **du**. AI-drafted (no native review — designer accepted that risk).
-Everything is on the `de-translation` branch, five commits, pushed. English is unchanged throughout (the
+Everything is on the `de-translation` branch, six commits, pushed. English is unchanged throughout (the
 catalog only adds a `de` column; harness stays 13/13). NOT ship-ready — partial German is worse than
 none, so it stays on the branch until it's finished + timing clears the 4.3(a) cascade.
 
 **Assets created:**
-- `Resources/Localizable.xcstrings` — the view-layer String Catalog (182 keys, all with a `de` value).
+- `Resources/Localizable.xcstrings` — the view-layer String Catalog (236 keys, all with a `de` value).
 - `Sim/Localization.swift` — the framework-free `L()` shim (its `de` table is still EMPTY — Sim strings
   are NOT translated yet).
 - `aa-1.1.x/de-glossary.md` — the terminology glossary (du; Route/Slot/Gate/Crew kept as German
@@ -29,7 +29,16 @@ progress, and `-devScenario` seeds skip the load path, but all three keys are co
 **`LiveryDesignView` — FULL** (Gestalte/Passe deine Lackierung an, "Bringe %@ auf die Flotte.",
 RUMPFBESCHRIFTUNG/SCHRIFTART/FARBPALETTE/HECKEMBLEM, the fuselage helper line, commit buttons
 Airline starten / Lackierung speichern / Flotte neu lackieren — verified live via the in-game Livery
-re-customise flow).
+re-customise flow) · **Ops tab — VIEW LAYER FULL** (BETRIEBS-ZENTRALE, Routen-Chancen + subtitle,
+Drehkreuze & Lounges, Flughafen-Anreize, Reputation/Passagiernachfrage, Konkurrenz + the 3 promo levers
+Preiskampf/Werbekampagne/Treue, Ereignisse, the free-tier depth teaser, relative timestamps "vor N
+Min./Std./Tagen", and the interpolated "~N/Tag" opportunity rows — verified live to the Fuel Hedge card;
+the Competition/Reputation/Events groups below it are plain-Text literals + the two code-fixed helpers,
+all confirmed compiled into `de.lproj` but not eyeballed because the sim ScrollView wouldn't respond to
+the automation drag — a known tooling flake, not an app issue) · **`FuelHedgePanel` — FULL** (its whole
+prose body incl. the "(%lld Flugzeuge im Besitz)" interpolation, the 30/60/90-day slots "%lld-Tage-Hedge:",
+"$%@ Prämie", active-hedge + empty-fleet states — verified live on the Ops tab; the title/BUY were already
+done in the earlier Figma restyle).
 
 **DELIBERATE DEFERRAL (not a miss):** `LiveryPalette.name` — the 10 palette names (Atlantic, Cardinal,
 Pacific, Meridian, Evergreen, Copper, Azure, Tropic, Burgundy, Velocity, in `Livery.swift`) stay ENGLISH.
@@ -51,16 +60,23 @@ catalog manually with the exact English source), **`LiveryDesignView.section`** 
 default; its callers in `FleetView` only ever pass literals, so no call-site change) + the subtitle
 restructured to `"Paint \(paintTarget) onto the fleet."` where `paintTarget` resolves the empty-name
 fallback via `String(localized:)` so the format key stays clean `"Paint %@ onto the fleet."` instead of a
-ternary-garbled literal. **Every custom label helper with a `String` title/label param is a suspect** —
-audit each and change the DISPLAY param to `LocalizedStringKey` (keep VALUE params `String` — they carry
-data).
+ternary-garbled literal, **`OpsView`** three helpers retyped to return/take `LocalizedStringKey`
+(`pendingStatus`, `relativeTime`, and `promoButton`'s `idle` param — the last localizes the Fare war /
+Ad campaign / Loyalty labels) + the `"%lld rival\(...s)"` plural split into two clean keys like the Crews
+labor-action string. **Every custom label helper with a `String` title/label param is a suspect** — audit
+each and change the DISPLAY param to `LocalizedStringKey` (keep VALUE params `String` — they carry data).
 
-**REMAINING (~185 strings) — the mechanical long tail for the next pass:**
-1. **Whole screens not touched:** Ops (OPS HOME, Route Opportunities + its subtitle, "N/day",
-   Regional jet/Narrowbody/Widebody class labels), Network panels (Acquire/Routes/FuelHedge/Hubs),
-   aircraft detail (`FleetDetailView`), airport card, alerts/decision cards, Market Intelligence /
-   Go Public views. (`LiveryDesignView` is now DONE — see above, minus the deliberately-deferred palette
-   names.)
+**REMAINING (~140 strings) — the mechanical long tail for the next pass:**
+1. **Whole screens not touched:** Network panels (Acquire/Routes/Hubs — `FuelHedgePanel` is now DONE),
+   aircraft detail (`FleetDetailView`), airport card, alerts/decision cards (`NeedsAttentionCard`),
+   Market Intelligence / Go Public views. (`LiveryDesignView` + the Ops tab view layer are now DONE —
+   see above.)
+   - **Ops Sim-layer strings still English (deferred to the `L()` pass, item 7):** the event-log
+     `e.title`/`e.subtitle`, the `OpsEvent.Category` rawValues (DISRUPTIONS/MARKET/STRUCTURAL, used as
+     section headers), `reputationTier` (Poor/Fair/Good/Excellent), `opp.suggested` (Regional jet /
+     Narrowbody / Widebody — visible on every opportunity row), `pendingStaffingReason`, and `clubName`
+     ("<Airline> Club"). These are all Simulation.swift / OpsEvent.swift and belong with the Sim shim,
+     NOT a view-side wrap.
 2. **`SaveSlotsView` category-2/interpolated tail (found this pass):** "New Airline" (the DEFAULT
    airline name — a `String` model prop, bypasses catalog), the slot summary "Day N · $X · N aircraft ·
    N routes", "Saved Xm ago"/"Saved just now", "Empty slot", and the "Delete this airline?" confirm.
