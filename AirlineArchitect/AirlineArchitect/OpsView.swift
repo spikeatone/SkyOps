@@ -217,7 +217,7 @@ struct OpsView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("Reputation").font(.karla(20, .heavy)).foregroundStyle(primary)
                 Spacer()
-                Text(sim.reputationTier).font(.karla(14, .bold)).foregroundStyle(repColor(rep))
+                Text(LocalizedStringKey(sim.reputationTier)).font(.karla(14, .bold)).foregroundStyle(repColor(rep))
                 Text("· \(Int(rep.rounded()))/100").font(.karla(14, .bold)).foregroundStyle(primary)
             }
             // Score bar
@@ -382,7 +382,7 @@ struct OpsView: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("~\(opp.demandPerDay.formatted())/day")
                         .font(.karla(15, .bold)).foregroundStyle(Sky.coreGreen)
-                    Text("\(opp.distanceNM.formatted()) nm · \(opp.suggested)")
+                    (Text("\(opp.distanceNM.formatted()) nm · ") + Text(LocalizedStringKey(opp.suggested)))
                         .font(.karla(12)).foregroundStyle(secondary)
                 }
                 Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
@@ -469,7 +469,7 @@ struct OpsView: View {
                     let events = sim.opsEventLog.filter { $0.category == cat }
                     if !events.isEmpty {
                         HStack(spacing: 8) {
-                            Text(cat.rawValue).font(.karla(14)).foregroundStyle(sectionLabel)
+                            Text(LocalizedStringKey(cat.rawValue)).font(.karla(14)).foregroundStyle(sectionLabel)
                             Rectangle().fill(cardBorder).frame(height: 1)
                         }
                         ForEach(events.prefix(6).map { $0 }) { eventCard($0) }

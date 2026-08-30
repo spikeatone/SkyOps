@@ -174,7 +174,7 @@ struct FinanceView: View {
                     ledgerLine("Market cap", compactMoney(Int(sim.marketCap)))
                     ledgerLine("Raised (IPO + secondary)", compactMoney(sim.totalEquityRaised))
                     let risk = Simulation.controlRisk(stake: pc.playerStake)
-                    Text(risk.rawValue)
+                    Text(LocalizedStringKey(risk.rawValue))
                         .font(.karla(11, .semibold))
                         .foregroundStyle(pc.playerStake >= 0.5 ? green : red)
                     // Board pressure — visceral once it's actually building. Only

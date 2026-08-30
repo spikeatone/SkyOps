@@ -1021,6 +1021,16 @@
         }
       }
     },
+    "Below majority — the board can act": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unter der Mehrheit — der Vorstand kann handeln"
+          }
+        }
+      }
+    },
     "Best guesses from public numbers. Open their books for a firmer picture.": {
       "localizations": {
         "de": {
@@ -1501,6 +1511,16 @@
         }
       }
     },
+    "DISRUPTIONS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STÖRUNGEN"
+          }
+        }
+      }
+    },
     "DIVIDEND": {
       "localizations": {
         "de": {
@@ -1801,6 +1821,16 @@
         }
       }
     },
+    "Excellent": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgezeichnet"
+          }
+        }
+      }
+    },
     "FALLING": {
       "localizations": {
         "de": {
@@ -1927,6 +1957,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "RUMPFBESCHRIFTUNG"
+          }
+        }
+      }
+    },
+    "Fair": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mäßig"
           }
         }
       }
@@ -2067,6 +2107,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "AM BODEN"
+          }
+        }
+      }
+    },
+    "Good": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gut"
           }
         }
       }
@@ -2541,6 +2591,16 @@
         }
       }
     },
+    "MARKET": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MARKT"
+          }
+        }
+      }
+    },
     "MARKET INTELLIGENCE": {
       "localizations": {
         "de": {
@@ -2691,6 +2751,16 @@
         }
       }
     },
+    "Minority — little protection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minderheit — wenig Schutz"
+          }
+        }
+      }
+    },
     "Monthly Lease": {
       "localizations": {
         "de": {
@@ -2767,6 +2837,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schmal"
+          }
+        }
+      }
+    },
+    "Narrowbody": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schmalrumpf"
           }
         }
       }
@@ -3561,6 +3641,16 @@
         }
       }
     },
+    "Poor": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlecht"
+          }
+        }
+      }
+    },
     "Practical Range": {
       "localizations": {
         "de": {
@@ -3801,6 +3891,16 @@
         }
       }
     },
+    "Regional jet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regionaljet"
+          }
+        }
+      }
+    },
     "Renewal capital": {
       "localizations": {
         "de": {
@@ -4037,6 +4137,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "STABIL"
+          }
+        }
+      }
+    },
+    "STRUCTURAL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STRUKTUR"
           }
         }
       }
@@ -4841,6 +4951,16 @@
         }
       }
     },
+    "Widebody": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Großraum"
+          }
+        }
+      }
+    },
     "YOUR SUBSIDIARY": {
       "localizations": {
         "de": {
@@ -4861,12 +4981,32 @@
         }
       }
     },
+    "You barely own your airline": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dir gehört kaum noch deine Airline"
+          }
+        }
+      }
+    },
     "You keep %lld%%": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Du behältst %lld%%"
+          }
+        }
+      }
+    },
+    "You keep control": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du behältst die Kontrolle"
           }
         }
       }

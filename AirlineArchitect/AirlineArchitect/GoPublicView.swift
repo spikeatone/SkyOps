@@ -98,7 +98,7 @@ struct GoPublicView: View {
             HStack {
                 Text("You keep \(Int(stake*100))%").font(.karla(12, .semibold)).foregroundStyle(primary)
                 Spacer()
-                Text(risk.rawValue).font(.karla(12, .semibold))
+                Text(LocalizedStringKey(risk.rawValue)).font(.karla(12, .semibold))
                     .foregroundStyle(stake >= 0.5 ? Sky.coreGreen : red)
             }
             // The visceral part: dilution risk, spelled out.
