@@ -2,12 +2,25 @@
 
 ## ⏳ PROGRESS (branch `de-translation`, NOT merged, NOT ship-ready) — read this first
 
-**THE VIEW LAYER IS NOW COMPLETE — ~518 catalog keys translated + category-2 code gaps fixed across
-~29 helpers.** Register: **du**. AI-drafted (no native review — designer accepted that risk). Everything is
-on the `de-translation` branch, eight commits, pushed. English is unchanged throughout (the catalog only
-adds a `de` column; harness stays 13/13). NOT ship-ready — partial German is worse than none, and the
-Sim-layer `L()` table is still EMPTY (see below), so it stays on the branch until BOTH the Sim strings are
-done AND timing clears the 4.3(a) cascade.
+**ALL FUNCTIONAL UI IS NOW TRANSLATED — the view layer (620 catalog keys) AND the Sim layer (237 `L()`
+shim keys) are both done.** Register: **du**. AI-drafted (no native review — designer accepted that risk).
+Everything is on the `de-translation` branch, twelve commits, pushed. English is unchanged throughout (the
+catalog only adds a `de` column; the shim returns the English key at the "en" locale — RoundTripVerify
+13/13 + the 6/6-seed soak both GREEN). **The ONLY things still in English are the marketing FLAVOR PROSE
+(deliberately deferred for native review — see below) and the ASC store listing.** NOT ship-ready until
+the flavor prose is natively written AND timing clears the 4.3(a) cascade.
+
+**THE SIM `L()` SHIM IS FILLED (batch 11).** `Sim/Localization.swift`'s `simLocalizationTables["de"]` now
+has 237 entries covering every user-facing Sim string: all 67 `logOps` title+subtitle pairs (the Ops event
+feed), the ~25 `celebrate()` milestone toasts, all 9 session-briefing items, the EconomicEvent labels +
+`opsEventSubtitle`, `seasonalWeatherReason`, the airport-recruitment pitches, and the assorted reason/note/
+clubName literals. Every Sim string is wrapped `L("… %@", args)` (%@ only — the shim's positional
+formatter; Ints pass via `String(describing:)`), with nested-ternary/String-var interpolations pre-computed
+into clean per-branch keys. **KEY GOTCHA (handled):** the table keys must be the RUNTIME string, so the
+route-arrow keys use the actual U+FE0E character (not the literal `\u{FE0E}` source text) — the generator
+evaluates the Swift escapes. Verified with a standalone shim test AND a live German drive (the Alerts modal
+is fully German — "N1ZQ — keine legale Crew in ORD", Reserve/Einstellen/Warten). Re-run `RoundTripVerify`
++ the soak after ANY further `Sim/` string touch.
 
 **The ONLY untranslated view-layer keys left are intentional non-translations:** bare symbols/emoji
 (`·` `—` `✈️` `:` `9+` `%lld` `%lld/%lld` `%@:`), the `Airline Architect` / `Architect` brand wordmark
@@ -86,34 +99,22 @@ a `String` title/label param is a suspect** — audit each and change the DISPLA
 / `Menu` title built via `.map{}??` or any String-returning expression takes the StringProtocol overload →
 NOT localized; give it a `LocalizedStringKey` computed var instead** (the FleetDetailView park-dialog gotcha).
 
-**REMAINING — the view layer is DONE; what's left is the Sim layer, flavor prose, and ASC:**
-1. **The Sim `L()` German table — THE BIG REMAINING PIECE (~124 strings).** `Sim/` builds user-facing
-   English via `logOps(...)`, decision-card copy, offer pitches, closure messages, etc. Because `Sim/`
-   must stay framework-free (the headless harnesses compile it with plain `swiftc`), these can't use the
-   String Catalog — they go through the framework-free `L("… %@", args)` shim + a filled
-   `simLocalizationTables["de"]` in `Sim/Localization.swift`. ONE reference example is done
-   (`establishHub`'s "Hub established at %@"); the rest need converting AND translating. This is where the
-   view-layer-deferred strings live — the ones a German player currently still sees in English:
-   - **Ops event log** `e.title` / `e.subtitle` (weather/economic/structural events).
-   - **`OpsEvent.Category` rawValues** (DISRUPTIONS/MARKET/STRUCTURAL — Ops section headers).
-   - **`reputationTier`** (Poor/Fair/Good/Excellent), **`ControlRisk` rawValues** ("You keep control" …,
-     the Finance board-risk line), **`opp.suggested`** class labels (Regional jet / Narrowbody / Widebody,
-     visible on every Route-Opportunity row), **`FleetView` sort-value** was fixed view-side but any other
-     Sim-enum display strings belong here.
-   - **`pendingStaffingReason`**, **`clubName`** ("<Airline> Club"), **`AircraftType.flavor`** (35 lines,
-     shown in Fleet detail), decision/offer pitch text, milestone/celebration copy that originates in Sim.
-   - Re-run `RoundTripVerify` (and the soak) after ANY `Sim/` touch — the shim must not break the harness.
-2. **Flavor prose (marketing-quality, do LAST + native-review):** ~50 `Airport.destinationFlavor` +
-   the 35 `AircraftType.flavor` lines. These read as evocative copy; MT is worst here. Route them through
-   the Sim `L()` shim (they're `Sim/` data) but treat the German as a native-writer task, not a
-   mechanical swap.
-3. **ASC-side (separate from the binary):** German App Store listing (name/subtitle/description/
+**REMAINING — only the FLAVOR PROSE and the ASC listing are left:**
+1. **Flavor prose — the ONE thing deliberately NOT machine-translated (native writer, do LAST):**
+   `AircraftType.flavor` (35 lines, e.g. "Dreamliner, stretched for range", shown in Fleet detail) +
+   `Airport.destinationFlavor` (~50 evocative one-liners, shown on the airport card). These read as
+   marketing copy; AI/MT German is worst exactly here, and a first-language market notices. They live in
+   `Sim/` (AircraftType.swift / Airport.swift) so they route through the SAME `L()` shim as everything
+   else — the mechanism is ready, they just need real German written by a person, then added to
+   `simLocalizationTables["de"]`. Leave them English until that pass.
+2. **ASC-side (separate from the binary):** German App Store listing (name/subtitle/description/
    keywords/screenshots) + German Game Center achievement localizations.
 
-**Note on identity/DEBUG keys deliberately left untranslated in the view layer:** bare symbols (`·` `—`
-`:` `✈️` `9+` `%lld`), the `Airline Architect`/`Architect` wordmark (proper noun), and the `#if DEBUG`
-harness strings (`ArchitectBackdropTestView`, the LiveryDesignView emblem gallery). None ship in Release
-or render any differently in German — not gaps.
+**Deliberately left untranslated in the app (NOT gaps — none ship in Release or differ in German):**
+bare symbols/emoji (`·` `—` `:` `✈️` `9+` `%lld`), the `Airline Architect`/`Architect` wordmark and the
+pure-proper-name crew families (Beechcraft 1900 / ATR 42 / Dornier 328 / De Havilland Dash 8 — no English
+word), and the `#if DEBUG` harness strings (`ArchitectBackdropTestView`, the LiveryDesignView emblem
+gallery). Aircraft type names, airline names, airport codes, and tickers are proper nouns throughout.
 
 **Method note that saved time this pass:** the exact auto-extracted catalog KEYS (esp. the `%lld`/`%@`
 format specs for interpolated strings) can be read from Xcode's per-file extraction output —

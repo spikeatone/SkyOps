@@ -34,10 +34,14 @@ DACH market-ENTRY/conversion bet, not a demand response. Two things exist:
     (`Resources/Localizable.xcstrings`), `de` in knownRegions, a framework-free `Sim/Localization.swift`
     `L()` shim (for the Sim layer's ~124 strings — compiles in the headless harness), `SimLocale.current`
     wired at launch. Does nothing until a `de` column is filled, so zero 4.3(a) exposure.
-(2) **Translation — on `de-translation`, ~141 of ~370 strings done + 7 category-2 code fixes, verified
-    live in German** (tab bar, control bar, Finance, Fleet/Marketplace, Save/Quit, naming/paywall).
-    Register **du**; AI-drafted, no native review (designer accepted the risk). NOT ship-ready — partial
-    German is worse than none.
+(2) **Translation — on `de-translation`, ALL FUNCTIONAL UI DONE (620 catalog keys + a filled 237-entry
+    Sim `L()` shim table), 12 commits, verified live + harness/soak GREEN.** Every screen, panel, alert/
+    decision card, and the Sim event log / milestones / briefing are German. Register **du**; AI-drafted,
+    NO native review (designer accepted the risk). **The ONLY thing still English is the marketing FLAVOR
+    PROSE — deliberately deferred for a native writer:** `AircraftType.flavor` (35) +
+    `Airport.destinationFlavor` (~50). The shim/catalog mechanism is ready for them; they need real German
+    by a person, not MT. NOT ship-ready until that + the ASC listing. English output is byte-identical
+    (RoundTripVerify 13/13, 6/6-seed soak GREEN — the shim returns the English key at the "en" locale).
 ⚠️ **THE KEY GOTCHA (documented in `aa-1.1.x/LOCALIZATION_SCOPING.md`):** SwiftUI only auto-localizes
 string LITERALS in `Text("…")`. A string reaching `Text` as a `String` VARIABLE (data array, model prop,
 or a `String`-typed helper param) silently bypasses the catalog even with a perfect translation. Fix =
