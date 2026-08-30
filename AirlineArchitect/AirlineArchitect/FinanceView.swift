@@ -136,7 +136,7 @@ struct FinanceView: View {
             ForEach(Section.allCases, id: \.self) { s in
                 let on = section == s
                 Button { section = s } label: {
-                    Text(s.rawValue)
+                    Text(LocalizedStringKey(s.rawValue))
                         .font(.karla(14, .bold))
                         .foregroundStyle(on ? segActiveText : segInactiveText)
                         .lineLimit(1).minimumScaleFactor(0.8)
@@ -351,7 +351,7 @@ struct FinanceView: View {
             ForEach(Period.allCases, id: \.self) { p in
                 let on = period == p
                 Button { period = p } label: {
-                    Text(p.rawValue)
+                    Text(LocalizedStringKey(p.rawValue))
                         .font(.karla(14, .semibold))
                         .foregroundStyle(on ? segActiveText : segInactiveText)
                         .lineLimit(1).minimumScaleFactor(0.8)

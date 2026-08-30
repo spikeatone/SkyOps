@@ -43,7 +43,7 @@ struct SaveQuitBar: View {
         .fixedSize(horizontal: true, vertical: false)
     }
 
-    private func pill(_ label: String, _ icon: String, action: @escaping () -> Void) -> some View {
+    private func pill(_ label: LocalizedStringKey, _ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 3) {
                 Image(systemName: icon).font(.system(size: 11, weight: .semibold))

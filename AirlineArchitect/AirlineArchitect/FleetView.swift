@@ -307,7 +307,7 @@ struct FleetView: View {
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
-    private func segButton(_ title: String, _ seg: Segment) -> some View {
+    private func segButton(_ title: LocalizedStringKey, _ seg: Segment) -> some View {
         let active = segment == seg
         // Switching My Fleet ↔ Marketplace resets the category/sort so each
         // starts fresh (avoids e.g. a "Wide" market filter hiding your fleet).
@@ -346,7 +346,7 @@ struct FleetView: View {
 
     /// Tapping a box filters the fleet list to that state (tap again, or tap
     /// Total, to clear). The active filter shows a ring in the box's own colour.
-    private func statusBox(_ label: String, _ value: Int, _ color: Color, filter: FleetStatus?) -> some View {
+    private func statusBox(_ label: LocalizedStringKey, _ value: Int, _ color: Color, filter: FleetStatus?) -> some View {
         let selected = fleetFilter != nil && fleetFilter == filter
         return VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.karla(14)).foregroundStyle(statusLabel)

@@ -1100,6 +1100,316 @@
           }
         }
       }
+    },
+    "My Fleet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meine Flotte"
+          }
+        }
+      }
+    },
+    "Marketplace": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marktplatz"
+          }
+        }
+      }
+    },
+    "FLEET HOME": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLOTTE"
+          }
+        }
+      }
+    },
+    "MARKETPLACE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MARKTPLATZ"
+          }
+        }
+      }
+    },
+    "Total": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamt"
+          }
+        }
+      }
+    },
+    "Flying": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Flug"
+          }
+        }
+      }
+    },
+    "Idle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inaktiv"
+          }
+        }
+      }
+    },
+    "Grounded": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am Boden"
+          }
+        }
+      }
+    },
+    "Owned": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Eigentum"
+          }
+        }
+      }
+    },
+    "OWNED": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IM EIGENTUM"
+          }
+        }
+      }
+    },
+    "Leased": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geleast"
+          }
+        }
+      }
+    },
+    "LEASED": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GELEAST"
+          }
+        }
+      }
+    },
+    "Seats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sitze"
+          }
+        }
+      }
+    },
+    "Range": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reichweite"
+          }
+        }
+      }
+    },
+    "Price": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preis"
+          }
+        }
+      }
+    },
+    "Practical Range": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Praktische Reichweite"
+          }
+        }
+      }
+    },
+    "Avg Lifespan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ø Lebensdauer"
+          }
+        }
+      }
+    },
+    "Buy new": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu kaufen"
+          }
+        }
+      }
+    },
+    "Lease new": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu leasen"
+          }
+        }
+      }
+    },
+    "Buy used": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gebraucht kaufen"
+          }
+        }
+      }
+    },
+    "High to low": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Absteigend"
+          }
+        }
+      }
+    },
+    "Low to high": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufsteigend"
+          }
+        }
+      }
+    },
+    "No aircraft yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Flugzeuge"
+          }
+        }
+      }
+    },
+    "No aircraft in this category.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Flugzeuge in dieser Kategorie."
+          }
+        }
+      }
+    },
+    "Acquire aircraft from the Network tab or the Marketplace.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erwirb Flugzeuge über den Netzwerk-Tab oder den Marktplatz."
+          }
+        }
+      }
+    },
+    "Scheduled for repaint": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neulackierung geplant"
+          }
+        }
+      }
+    },
+    "LIVERY UPDATE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LACKIERUNG AKTUALISIEREN"
+          }
+        }
+      }
+    },
+    "This month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Monat"
+          }
+        }
+      }
+    },
+    "Last month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzter Monat"
+          }
+        }
+      }
+    },
+    "REPORTS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BERICHTE"
+          }
+        }
+      }
+    },
+    "FUNDING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FINANZIERUNG"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
