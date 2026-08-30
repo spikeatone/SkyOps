@@ -417,7 +417,7 @@ struct FinanceView: View {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.system(size: 15)).foregroundStyle(accent)
             VStack(alignment: .leading, spacing: 3) {
-                Text("Market: \(ev.label)").font(.karla(14, .bold)).foregroundStyle(primary)
+                (Text("Market: ") + Text(LocalizedStringKey(ev.label))).font(.karla(14, .bold)).foregroundStyle(primary)
                 Text("Fares \(pct(ev.fareMultiplier)) · Fuel \(pct(ev.costMultiplier)) · Demand \(pct(ev.loadMultiplier))")
                     .font(.karla(12)).foregroundStyle(secondary)
             }

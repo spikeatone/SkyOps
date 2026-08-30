@@ -311,7 +311,7 @@ final class Simulation {
     }
     var operatingClubCount: Int { hubs.keys.filter { clubOperating($0) }.count }
     /// Auto-named per designer: "{Airline name} Club".
-    var clubName: String { "\(playerAirlineName ?? "Airline") Club" }
+    var clubName: String { L("%@ Club", playerAirlineName ?? L("Airline")) }
     private func routeTouchesOperatingHub(_ a: String, _ b: String) -> Bool {
         hubOperating(a) || hubOperating(b)
     }
@@ -405,8 +405,8 @@ final class Simulation {
         hubs[code] = hub
         ensureHubLedger(code)
         hubLedgers[code]?.clubBuildCost += cost
-        logOps(.structural, "\(clubName) opens at \(code)",
-               "Premium lounge built for \(dollars(cost)) — loyalty starts here", airportCode: code)
+        logOps(.structural, L("%@ opens at %@", clubName, code),
+               L("Premium lounge built for %@ — loyalty starts here", dollars(cost)), airportCode: code)
         return true
     }
 
@@ -416,7 +416,7 @@ final class Simulation {
         guard hubs[code] != nil else { return }
         hubs[code] = nil
         hubLedgers[code] = nil
-        logOps(.structural, "Hub decommissioned", "\(code) hub closed — the build-out is written off", airportCode: code)
+        logOps(.structural, L("Hub decommissioned"), L("%@ hub closed — the build-out is written off", code), airportCode: code)
     }
 
     /// Monthly hub labor + club rent, on the same recurring-billing cadence as
@@ -466,7 +466,7 @@ final class Simulation {
         defer { decisionQueue.removeAll { $0.id == decision.id } }
         guard accept, let offer = decision.hubOffer, hubs[offer.airportCode] != nil else {
             if let o = decision.hubOffer {
-                logOps(.market, "Hub offer declined", "\(o.rival)'s bid for the \(o.airportCode) hub was turned down")
+                logOps(.market, L("Hub offer declined"), L("%@'s bid for the %@ hub was turned down", o.rival, o.airportCode))
             }
             return
         }
@@ -475,8 +475,8 @@ final class Simulation {
         hubs[offer.airportCode] = nil          // club (if any) closes with the sale
         hubLedgers[offer.airportCode] = nil
         rivalHubs[offer.airportCode] = offer.rival
-        logOps(.structural, "Hub SOLD to \(offer.rival)",
-               "\(offer.airportCode) is now a \(offer.rival) hub — \(dollars(offer.price)) banked, gates gone for good",
+        logOps(.structural, L("Hub SOLD to %@", offer.rival),
+               L("%@ is now a %@ hub — %@ banked, gates gone for good", offer.airportCode, offer.rival, dollars(offer.price)),
                airportCode: offer.airportCode)
     }
 
@@ -557,9 +557,9 @@ final class Simulation {
                     let name = competitorName(excluding: r.competitors)
                     r.competitionLevel += 1
                     r.competitors.append(name)
-                    let why = subsidiaries.isEmpty ? "" : " as the market consolidates"
-                    logOps(.market, "Competitor entered your market",
-                           "\(name) now flies \(r.originCode) ↔\u{FE0E} \(r.destCode)\(why)")
+                    let why = subsidiaries.isEmpty ? "" : L(" as the market consolidates")
+                    logOps(.market, L("Competitor entered your market"),
+                           L("%@ now flies %@ ↔\u{FE0E} %@%@", name, r.originCode, r.destCode, why))
                 }
             }
             // A player fare war on this route drives rivals off faster.
@@ -568,9 +568,9 @@ final class Simulation {
             if r.competitionLevel > 0, Double.random(in: 0..<1) < exitProb {
                 let name = r.competitors.popLast() ?? "A rival"
                 r.competitionLevel -= 1
-                let why = fareWarActive(r.id) ? " — priced out by your fare war" : ""
-                logOps(.market, "Competitor exited",
-                       "\(name) pulled out of \(r.originCode) ↔\u{FE0E} \(r.destCode)\(why)")
+                let why = fareWarActive(r.id) ? L(" — priced out by your fare war") : ""
+                logOps(.market, L("Competitor exited"),
+                       L("%@ pulled out of %@ ↔\u{FE0E} %@%@", name, r.originCode, r.destCode, why))
             }
         }
     }
@@ -684,7 +684,7 @@ final class Simulation {
         let cost = fareWarCost(r); guard playerBalance >= cost else { return false }
         playerBalance -= cost; totalMarketingSpend += cost
         playerFareWarUntil[id] = tick + Simulation.promoFareWarDurationDays * 1440
-        logOps(.market, "Fare war launched", "\(r.originCode) ↔\u{FE0E} \(r.destCode) — undercutting rivals to reclaim the route")
+        logOps(.market, L("Fare war launched"), L("%@ ↔\u{FE0E} %@ — undercutting rivals to reclaim the route", r.originCode, r.destCode))
         return true
     }
     @discardableResult func launchAdCampaign(_ id: Int) -> Bool {
@@ -692,7 +692,7 @@ final class Simulation {
         let cost = adCampaignCost(r); guard playerBalance >= cost else { return false }
         playerBalance -= cost; totalMarketingSpend += cost
         adCampaignUntil[id] = tick + Simulation.promoAdDurationDays * 1440
-        logOps(.market, "Ad campaign launched", "\(r.originCode) ↔\u{FE0E} \(r.destCode)")
+        logOps(.market, L("Ad campaign launched"), L("%@ ↔\u{FE0E} %@", r.originCode, r.destCode))
         return true
     }
     @discardableResult func startLoyaltyPush(_ id: Int) -> Bool {
@@ -700,7 +700,7 @@ final class Simulation {
         let cost = loyaltyPushCost(r); guard playerBalance >= cost else { return false }
         playerBalance -= cost; totalMarketingSpend += cost
         loyaltyPushUntil[id] = tick + Simulation.promoLoyaltyDurationDays * 1440
-        logOps(.market, "Loyalty push launched", "\(r.originCode) ↔\u{FE0E} \(r.destCode) — locking in loyal flyers")
+        logOps(.market, L("Loyalty push launched"), L("%@ ↔\u{FE0E} %@ — locking in loyal flyers", r.originCode, r.destCode))
         return true
     }
 
@@ -1115,10 +1115,10 @@ final class Simulation {
         lastDividendTick = tick   // the income clock starts at listing
         nextSentimentTick = tick + Simulation.ticksPerMonth
 
-        logOps(.market, "\(ticker) is public",
-               "Listed at \(compactMoneySim(Int(ipoPrice)))/share. Raised \(compactMoneySim(proceeds)) selling \(Int((fraction*100).rounded()))%.")
-        celebrate("ipo", "chart.line.uptrend.xyaxis", "\(ticker) went public",
-                  "Raised \(compactMoneySim(proceeds))")
+        logOps(.market, L("%@ is public", ticker),
+               L("Listed at %@/share. Raised %@ selling %@%%.", compactMoneySim(Int(ipoPrice)), compactMoneySim(proceeds), Int((fraction*100).rounded())))
+        celebrate("ipo", "chart.line.uptrend.xyaxis", L("%@ went public", ticker),
+                  L("Raised %@", compactMoneySim(proceeds)))
         return true
     }
 
@@ -1213,8 +1213,8 @@ final class Simulation {
         totalDividendsPaid += cost
         lastDividendTick = tick
         marketSentiment = min(Simulation.sentimentCeiling, marketSentiment + min(0.15, max(0, yield) * 2.0))
-        logOps(.market, "\(pc.ticker) paid a dividend",
-               "Special dividend of \(compactMoneySim(cost)) to shareholders.")
+        logOps(.market, L("%@ paid a dividend", pc.ticker),
+               L("Special dividend of %@ to shareholders.", compactMoneySim(cost)))
         // A dividend is the fastest way to make an activist stand down (spec).
         if activistCampaign != nil { endActivistCampaign(reason: .dividend) }
         return true
@@ -1234,8 +1234,8 @@ final class Simulation {
         totalBuybackSpend += cost
         publicCompany?.sharesOutstanding = pc.sharesOutstanding - shares
         if let updated = publicCompany {
-            logOps(.market, "\(updated.ticker) bought back stock",
-                   "Repurchased \(compactMoneySim(cost)) of shares; your stake is now \(Int((updated.playerStake*100).rounded()))%.")
+            logOps(.market, L("%@ bought back stock", updated.ticker),
+                   L("Repurchased %@ of shares; your stake is now %@%%.", compactMoneySim(cost), Int((updated.playerStake*100).rounded())))
         }
         return true
     }
@@ -1255,8 +1255,8 @@ final class Simulation {
         playerBalance += proceeds
         totalEquityRaised += proceeds
         if let updated = publicCompany {
-            logOps(.market, "\(updated.ticker) secondary offering",
-                   "Raised \(compactMoneySim(proceeds)); your stake is now \(Int((updated.playerStake*100).rounded()))%.")
+            logOps(.market, L("%@ secondary offering", updated.ticker),
+                   L("Raised %@; your stake is now %@%%.", compactMoneySim(proceeds), Int((updated.playerStake*100).rounded())))
         }
         return true
     }
@@ -1299,8 +1299,8 @@ final class Simulation {
               !decisionQueue.contains(where: { $0.kind == .activist }) else { return }
         activistCampaign = ActivistCampaign(stake: min(pc.floatFraction, Simulation.activistInitialStake),
                                             escalation: 0, startedTick: tick)
-        logOps(.market, "\(pc.ticker): activist investor",
-               "An activist took a \(Int((activistCampaign!.stake*100).rounded()))% stake, pressing for change while the stock trades below its IPO price.")
+        logOps(.market, L("%@: activist investor", pc.ticker),
+               L("An activist took a %@%% stake, pressing for change while the stock trades below its IPO price.", Int((activistCampaign!.stake*100).rounded())))
         pushActivistDemand()
     }
 
@@ -1339,11 +1339,11 @@ final class Simulation {
         if let pc = publicCompany {
             let why: String
             switch reason {
-            case .complied:  why = "The activist's demand was met and they stood down."
-            case .dividend:  why = "A dividend satisfied the activist and they stood down."
-            case .recovered: why = "The recovering share price sent the activist packing."
+            case .complied:  why = L("The activist's demand was met and they stood down.")
+            case .dividend:  why = L("A dividend satisfied the activist and they stood down.")
+            case .recovered: why = L("The recovering share price sent the activist packing.")
             }
-            logOps(.market, "\(pc.ticker): activist stands down", why)
+            logOps(.market, L("%@: activist stands down", pc.ticker), why)
         }
     }
 
@@ -1371,8 +1371,8 @@ final class Simulation {
         camp.stake = min(pc.floatFraction, camp.stake + Simulation.activistStakeGrowth)
         activistCampaign = camp
         marketSentiment = max(Simulation.sentimentFloor, marketSentiment - Simulation.activistRefuseSentimentHit)
-        logOps(.market, "\(pc.ticker): activist rebuffed",
-               "The activist grew to \(Int((camp.stake*100).rounded()))% and is escalating (round \(camp.escalation)).")
+        logOps(.market, L("%@: activist rebuffed", pc.ticker),
+               L("The activist grew to %@%% and is escalating (round %@).", Int((camp.stake*100).rounded()), camp.escalation))
     }
 
     /// Close and archive a player route (freeing its aircraft as a spare), with no
@@ -1392,8 +1392,8 @@ final class Simulation {
             ac.crewId = nil
             ac.holdReason = nil
         }
-        logOps(.structural, "Route closed",
-               "\(r.originCode) ↔\u{FE0E} \(r.destCode) closed under activist pressure")
+        logOps(.structural, L("Route closed"),
+               L("%@ ↔\u{FE0E} %@ closed under activist pressure", r.originCode, r.destCode))
         return true
     }
 
@@ -1443,8 +1443,8 @@ final class Simulation {
         boardPressure = min(1.0, max(0.0, boardPressure + rate))
         if boardPressure >= 1.0 { oustByBoard(); return }
         if was < 0.5, boardPressure >= 0.5 {
-            logOps(.market, "\(pc.ticker): the board is restless",
-                   "The board is weighing your removal. Rebuild your stake above 50% or lift the share price.")
+            logOps(.market, L("%@: the board is restless", pc.ticker),
+                   L("The board is weighing your removal. Rebuild your stake above 50%% or lift the share price."))
         }
     }
 
@@ -1452,8 +1452,8 @@ final class Simulation {
         oustedByBoard = true
         isBankrupt = true   // reuse the game-over gate/plumbing; only the recap differs
         if let pc = publicCompany {
-            logOps(.market, "\(pc.ticker): ousted by the board",
-                   "Control lost and the stock in the doldrums — the board voted you out.")
+            logOps(.market, L("%@: ousted by the board", pc.ticker),
+                   L("Control lost and the stock in the doldrums — the board voted you out."))
         }
     }
 
@@ -1628,7 +1628,7 @@ final class Simulation {
         playerBalance -= cost
         totalDiligenceSpend += cost
         diligencedCarriers.insert(p.id)
-        logOps(.market, "Due diligence: \(p.name)", "Books opened for \(compactMoneySim(cost)).")
+        logOps(.market, L("Due diligence: %@", p.name), L("Books opened for %@.", compactMoneySim(cost)))
         return true
     }
     private(set) var totalDiligenceSpend = 0
@@ -1669,8 +1669,11 @@ final class Simulation {
         applySeniorityDispute()
 
         reputation = max(0, reputation - Simulation.acquisitionReputationHit)
-        logOps(.disruption, "Integration underway",
-               "\(p.name) integration runs \(months) months. \(disputed.isEmpty ? "No overlapping type ratings." : "Seniority dispute across \(disputed.count) crew families.")")
+        let disputeNote = disputed.isEmpty
+            ? L("No overlapping type ratings.")
+            : L("Seniority dispute across %@ crew families.", disputed.count)
+        logOps(.disruption, L("Integration underway"),
+               L("%@ integration runs %@ months. %@", p.name, months, disputeNote))
     }
 
     /// Sideline a fraction of each disputed family's crew. Reuses the labor-action
@@ -1704,8 +1707,8 @@ final class Simulation {
         ig.senioritySettlementCost = nil
         ig.seniorityExpiryTick = tick
         activeIntegration = ig
-        logOps(.structural, settled ? "Seniority agreement signed" : "Seniority dispute resolved",
-               "\(ig.subsidiaryName) crews are back on the line.")
+        logOps(.structural, settled ? L("Seniority agreement signed") : L("Seniority dispute resolved"),
+               L("%@ crews are back on the line.", ig.subsidiaryName))
     }
 
     /// Pay to end the seniority dispute now — the clearest "manage it well" lever
@@ -1741,10 +1744,10 @@ final class Simulation {
         }
         if tick >= ig.endTick {
             if !ig.isSettled { endSeniorityDispute(settled: false) }
-            logOps(.structural, "Integration complete",
-                   "\(ig.subsidiaryName) is fully integrated after \(Simulation.integrationMonths) months.")
+            logOps(.structural, L("Integration complete"),
+                   L("%@ is fully integrated after %@ months.", ig.subsidiaryName, Simulation.integrationMonths))
             celebrate("integ_\(ig.subsidiaryCode)", "checkmark.seal.fill",
-                      "\(ig.subsidiaryName) integrated", "The merger is complete")
+                      L("%@ integrated", ig.subsidiaryName), L("The merger is complete"))
             activeIntegration = nil
         }
     }
@@ -1769,10 +1772,10 @@ final class Simulation {
                                        fleetInherited: fleet.count, routesInherited: routes))
 
         beginIntegration(p, price: price)
-        logOps(.structural, "Acquired \(p.name)",
-               "\(fleet.count) aircraft and \(routes) routes join your group — \(p.name) keeps flying under its own flag.")
-        celebrate("acq_\(p.id)", "building.2.fill", "\(p.name) acquired",
-                  "\(fleet.count) aircraft · \(routes) routes")
+        logOps(.structural, L("Acquired %@", p.name),
+               L("%@ aircraft and %@ routes join your group — %@ keeps flying under its own flag.", fleet.count, routes, p.name))
+        celebrate("acq_\(p.id)", "building.2.fill", L("%@ acquired", p.name),
+                  L("%@ aircraft · %@ routes", fleet.count, routes))
         return true
     }
 
@@ -2211,8 +2214,8 @@ final class Simulation {
         repaintProgramTotal = owned.count
         fillPaintShop()
 
-        logOps(.structural, "Fleet repaint scheduled",
-               "\(owned.count) aircraft · \(compactMoneySim(bill)) · ~\(repaintProgramDays)d through the shop")
+        logOps(.structural, L("Fleet repaint scheduled"),
+               L("%@ aircraft · %@ · ~%@d through the shop", owned.count, compactMoneySim(bill), repaintProgramDays))
         return true
     }
 
@@ -2247,8 +2250,8 @@ final class Simulation {
         // A freed slot immediately takes the next aircraft in the queue.
         if released { fillPaintShop() }
         if released && !repaintInProgress {
-            logOps(.structural, "Fleet repaint complete",
-                   "All \(repaintProgramTotal) aircraft are back in service in the new livery")
+            logOps(.structural, L("Fleet repaint complete"),
+                   L("All %@ aircraft are back in service in the new livery", repaintProgramTotal))
             repaintProgramTotal = 0
         }
     }
@@ -2383,11 +2386,11 @@ final class Simulation {
             guard ac.subsidiaryCode != sub.code else { return }
             ac.subsidiaryCode = sub.code
             ac.airlineName = sub.name
-            logOps(.structural, "Fleet transfer", "\(ac.tail) now flies for \(sub.name).")
+            logOps(.structural, L("Fleet transfer"), L("%@ now flies for %@.", ac.tail, sub.name))
         } else if code == nil, ac.subsidiaryCode != nil {
             ac.subsidiaryCode = nil
             ac.airlineName = nil
-            logOps(.structural, "Fleet transfer", "\(ac.tail) returns to the mainline fleet.")
+            logOps(.structural, L("Fleet transfer"), L("%@ returns to the mainline fleet.", ac.tail))
         } else { return }
         bumpRouteEdit()   // Aircraft isn't @Observable-diffed by identity — nudge the panels
     }
@@ -2542,7 +2545,7 @@ final class Simulation {
         nextRouteId += 1
         playerRoutes.append(r)
         routeOpenPulse = RoutePulse(a: origin.code, b: dest.code, tick: tick)   // map ripple
-        logOps(.structural, "Route opened", "\(origin.code) ↔︎ \(dest.code)")
+        logOps(.structural, L("Route opened"), L("%@ ↔︎ %@", origin.code, dest.code))
         return r
     }
 
@@ -2605,13 +2608,14 @@ final class Simulation {
         ac.pendingRouteId = nil
         detachFromRoute(ac)
         assign(ac, to: r, origin: o, dest: d)
-        logOps(.structural, "Aircraft reassigned", "\(ac.tail) → \(r.originCode) ↔\u{FE0E} \(r.destCode)")
+        logOps(.structural, L("Aircraft reassigned"), L("%@ → %@ ↔\u{FE0E} %@", ac.tail, r.originCode, r.destCode))
     }
 
     /// Archive the aircraft's current route (if any) and free it up. Mirrors the
     /// route half of `liquidate` — the aircraft itself is kept. `note` names the
     /// reason in the Ops log (reassigned vs parked).
-    private func detachFromRoute(_ ac: Aircraft, note: String = "reassigned") {
+    private func detachFromRoute(_ ac: Aircraft, note noteArg: String? = nil) {
+        let note = noteArg ?? L("reassigned")
         guard let id = ac.assignedRouteId,
               let idx = playerRoutes.firstIndex(where: { $0.id == id }) else { return }
         ac.assignedRouteId = nil
@@ -2621,7 +2625,7 @@ final class Simulation {
         decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == id }
         airports.first { $0.code == r.originCode }?.slotsAvailable += 1
         airports.first { $0.code == r.destCode }?.slotsAvailable += 1
-        logOps(.structural, "Route closed", "\(r.originCode) ↔︎ \(r.destCode) — \(ac.tail) \(note)")
+        logOps(.structural, L("Route closed"), L("%@ ↔︎ %@ — %@ %@", r.originCode, r.destCode, ac.tail, note))
     }
 
     /// Close the aircraft's current route and leave it as an IDLE SPARE — the plane
@@ -2650,11 +2654,11 @@ final class Simulation {
         }
         if isEnRoute(ac) {
             ac.pendingPark = true
-            logOps(.structural, "Parking scheduled",
-                   "\(ac.tail) parks as a spare after it lands at \(ac.dest.code)")
+            logOps(.structural, L("Parking scheduled"),
+                   L("%@ parks as a spare after it lands at %@", ac.tail, ac.dest.code))
             return true
         }
-        detachFromRoute(ac, note: "parked as spare")
+        detachFromRoute(ac, note: L("parked as spare"))
         return true
     }
 
@@ -2678,14 +2682,14 @@ final class Simulation {
         // Surfacing: the moment an airport reaches hub eligibility, say so.
         for code in [origin.code, dest.code]
         where routesAt(code) == Simulation.hubMinRoutes && hubs[code] == nil && rivalHubs[code] == nil {
-            logOps(.structural, "\(code) reached hub eligibility",
-                   "\(Simulation.hubMinRoutes) routes now use \(code) — you can establish a hub (tap the airport)",
+            logOps(.structural, L("%@ reached hub eligibility", code),
+                   L("%@ routes now use %@ — you can establish a hub (tap the airport)", Simulation.hubMinRoutes, code),
                    airportCode: code)
         }
         if defer_ {
             ac.pendingRouteId = r.id
-            logOps(.structural, "Reassignment scheduled",
-                   "\(ac.tail) moves to \(origin.code) ↔\u{FE0E} \(dest.code) after it lands at \(ac.dest.code)")
+            logOps(.structural, L("Reassignment scheduled"),
+                   L("%@ moves to %@ ↔\u{FE0E} %@ after it lands at %@", ac.tail, origin.code, dest.code, ac.dest.code))
         } else {
             assign(ac, to: r, origin: origin, dest: dest)
         }
@@ -2787,7 +2791,7 @@ final class Simulation {
             guard let o = airport(r.originCode), let d = airport(r.destCode) else { continue }
             if let spare = idleSpares.first(where: { routeBlock(for: $0, from: o, to: d) == nil }) {
                 assign(spare, to: r, origin: o, dest: d)
-                logOps(.structural, "Aircraft assigned", "\(spare.tail) → \(r.originCode) ↔\u{FE0E} \(r.destCode)")
+                logOps(.structural, L("Aircraft assigned"), L("%@ → %@ ↔\u{FE0E} %@", spare.tail, r.originCode, r.destCode))
             }
         }
     }
@@ -3162,7 +3166,7 @@ final class Simulation {
         if n > 0 { crewTrainingExpiryByFamily[family] = tick + Simulation.crewTrainingDowntimeDays * 1440 }
         crewTrainingDueByFamily[family] = tick + Simulation.crewTrainingIntervalDays * 1440
         crewTrainingDeferredByFamily[family] = nil
-        logOps(.structural, "Crew training", "\(CREW_FAMILY_INFO[family]?.name ?? family): \(n) crew in recurrent training")
+        logOps(.structural, L("Crew training"), L("%@: %@ crew in recurrent training", CREW_FAMILY_INFO[family]?.name ?? family, n))
     }
 
     /// Per-day: return crews whose training window ended, execute any deferred
@@ -3206,7 +3210,7 @@ final class Simulation {
         guard let fam = decision.trainingFamily else { return }
         crewTrainingDeferredByFamily[fam] = tick + Simulation.crewTrainingDeferDays * 1440
         crewTrainingDueByFamily[fam] = tick + (Simulation.crewTrainingDeferDays + Simulation.crewTrainingIntervalDays) * 1440
-        logOps(.structural, "Crew training deferred", "\(CREW_FAMILY_INFO[fam]?.name ?? fam): scheduled in 30 days")
+        logOps(.structural, L("Crew training deferred"), L("%@: scheduled in 30 days", CREW_FAMILY_INFO[fam]?.name ?? fam))
     }
 
     /// Hire one crew into a family if affordable (real playerBalance cost).
@@ -3463,11 +3467,11 @@ final class Simulation {
 
     private func opsEventSubtitle(_ e: EconomicEvent) -> String {
         switch e.id {
-        case "OIL_SPIKE": return "Fuel costs surge \(Int(((e.costMultiplier - 1) * 100).rounded()))%"
-        case "FUEL_GLUT": return "Fuel costs drop \(Int(((1 - e.costMultiplier) * 100).rounded()))%"
-        case "ECON_BOOM": return "Demand up — fares +\(Int(((e.fareMultiplier - 1) * 100).rounded()))%"
-        case "RECESSION": return "Fares down \(Int(((1 - e.fareMultiplier) * 100).rounded()))%"
-        case "FFR_SURGE": return "Seats fill (+\(Int(((e.loadMultiplier - 1) * 100).rounded()))%), less cash per seat"
+        case "OIL_SPIKE": return L("Fuel costs surge %@%%", Int(((e.costMultiplier - 1) * 100).rounded()))
+        case "FUEL_GLUT": return L("Fuel costs drop %@%%", Int(((1 - e.costMultiplier) * 100).rounded()))
+        case "ECON_BOOM": return L("Demand up — fares +%@%%", Int(((e.fareMultiplier - 1) * 100).rounded()))
+        case "RECESSION": return L("Fares down %@%%", Int(((1 - e.fareMultiplier) * 100).rounded()))
+        case "FFR_SURGE": return L("Seats fill (+%@%%), less cash per seat", Int(((e.loadMultiplier - 1) * 100).rounded()))
         default:          return e.label
         }
     }
@@ -3540,7 +3544,7 @@ final class Simulation {
         for (fam, expiry) in laborActionExpiryByFamily where tick >= expiry {
             for c in crewPoolsByFamily[fam] ?? [] where c.status == .sidelined { c.status = .available }
             laborActionExpiryByFamily[fam] = nil
-            logOps(.disruption, "Labor action resolved", CREW_FAMILY_INFO[fam]?.name ?? fam)
+            logOps(.disruption, L("Labor action resolved"), CREW_FAMILY_INFO[fam]?.name ?? fam)
         }
 
         // #9 Labor Action — sideline a real fraction (~40%) of ONE crew family's
@@ -3554,7 +3558,7 @@ final class Simulation {
             for c in sidelined { c.status = .sidelined }
             if !sidelined.isEmpty {
                 laborActionExpiryByFamily[fam] = tick + (3 + Int.random(in: 0...5)) * 1440
-                logOps(.disruption, "Labor action", "\(CREW_FAMILY_INFO[fam]?.name ?? fam): \(sidelined.count) crew sidelined")
+                logOps(.disruption, L("Labor action"), L("%@: %@ crew sidelined", CREW_FAMILY_INFO[fam]?.name ?? fam, sidelined.count))
             }
         }
 
@@ -3567,7 +3571,7 @@ final class Simulation {
                 let affected = aircraft.filter { $0.purchased && $0.type.id == typeId && !$0.maint }
                 for ac in affected { ac.maint = true }
                 if let name = affected.first?.type.name {
-                    logOps(.disruption, "Airworthiness Directive", "\(name): \(affected.count) grounded")
+                    logOps(.disruption, L("Airworthiness Directive"), L("%@: %@ grounded", name, affected.count))
                 }
             }
         }
@@ -3575,20 +3579,20 @@ final class Simulation {
         // moderate duration (2.5–5 sim-hours).
         if Double.random(in: 0..<1) < Simulation.atcDailyProbability {
             let hit = Array(airports.shuffled().prefix(Int.random(in: 2...4)))
-            for ap in hit { ap.groundStop = true; ap.groundStopTicksLeft = 150 + Int.random(in: 0...150); ap.groundStopReason = "ATC staffing shortage" }
-            logOps(.disruption, "ATC staffing shortage", "Ground stops: \(hit.map { $0.code }.joined(separator: ", "))")
+            for ap in hit { ap.groundStop = true; ap.groundStopTicksLeft = 150 + Int.random(in: 0...150); ap.groundStopReason = L("ATC staffing shortage") }
+            logOps(.disruption, L("ATC staffing shortage"), L("Ground stops: %@", hit.map { $0.code }.joined(separator: ", ")))
         }
         // Security incident — single airport, sharper & SHORTER than weather
         // (0.75–2 sim-hours vs weather's 1.5–5.5).
         if Double.random(in: 0..<1) < Simulation.securityDailyProbability, let ap = airports.randomElement() {
-            ap.groundStop = true; ap.groundStopTicksLeft = 45 + Int.random(in: 0...75); ap.groundStopReason = "Security incident"
-            logOps(.disruption, "Security incident", "Ground stop at \(ap.code)", airportCode: ap.code)
+            ap.groundStop = true; ap.groundStopTicksLeft = 45 + Int.random(in: 0...75); ap.groundStopReason = L("Security incident")
+            logOps(.disruption, L("Security incident"), L("Ground stop at %@", ap.code), airportCode: ap.code)
         }
         // Airport expansion — PERMANENT slot capacity increase (durable).
         if Double.random(in: 0..<1) < Simulation.expansionDailyProbability, let ap = airports.randomElement() {
             let added = Int.random(in: 2...3)
             ap.slotsTotal += added; ap.slotsAvailable += added
-            logOps(.structural, "\(ap.code) capacity expansion", "\(added) new slots available", airportCode: ap.code)
+            logOps(.structural, L("%@ capacity expansion", ap.code), L("%@ new slots available", added), airportCode: ap.code)
         }
         // Slot-value buyback — an airport offers to buy back one route's slot.
         // The one event that's a real player CHOICE (Accept/Decline card), not a
@@ -3610,18 +3614,18 @@ final class Simulation {
         // #11 Insurance hard market — a temporary spike in the recurring premium.
         if !insuranceHardMarketActive, Double.random(in: 0..<1) < Simulation.insuranceHardMarketDailyProbability {
             insuranceHardMarketExpiryTick = tick + (15 + Int.random(in: 0...20)) * 1440
-            logOps(.market, "Insurance hard market", "Premiums up \(Int((Simulation.insuranceHardMarketMultiplier - 1) * 100))%")
+            logOps(.market, L("Insurance hard market"), L("Premiums up %@%%", Int((Simulation.insuranceHardMarketMultiplier - 1) * 100)))
         }
         // #12 Maintenance cost inflation — parts/MRO spike (AOG repair cost only).
         if tick >= maintInflationExpiryTick, Double.random(in: 0..<1) < Simulation.maintInflationDailyProbability {
             maintInflationExpiryTick = tick + (5 + Int.random(in: 0...8)) * 1440
-            logOps(.market, "Maintenance cost inflation", "Repair costs +\(Int((Simulation.maintInflationMultiplier - 1) * 100))%")
+            logOps(.market, L("Maintenance cost inflation"), L("Repair costs +%@%%", Int((Simulation.maintInflationMultiplier - 1) * 100)))
         }
         // #13 FX shock — widebody fares only (needs at least one owned widebody).
         if !fxShockActive, Double.random(in: 0..<1) < Simulation.fxShockDailyProbability,
            aircraft.contains(where: { $0.purchased && $0.type.bodyType.usesWidebodyGateFee }) {
             fxShockExpiryTick = tick + (5 + Int.random(in: 0...10)) * 1440
-            logOps(.market, "FX shock", "Widebody fares −\(Int((1 - Simulation.fxFareMultiplier) * 100))%")
+            logOps(.market, L("FX shock"), L("Widebody fares −%@%%", Int((1 - Simulation.fxFareMultiplier) * 100)))
         }
         // #14 Competitor fare war — depresses ONE existing player route's fare.
         if fareWarRouteId == nil, Double.random(in: 0..<1) < Simulation.fareWarDailyProbability,
@@ -3629,7 +3633,7 @@ final class Simulation {
             fareWarRouteId = r.id
             fareWarExpiryTick = tick + (4 + Int.random(in: 0...8)) * 1440
             let comp = ["American Airlines", "Delta Air Lines", "Southwest Airlines", "United Airlines"].randomElement()!
-            logOps(.market, "Fare war", "\(comp) dumps capacity \(r.originCode)-\(r.destCode)")
+            logOps(.market, L("Fare war"), L("%@ dumps capacity %@-%@", comp, r.originCode, r.destCode))
         }
     }
 
@@ -3669,7 +3673,7 @@ final class Simulation {
             ac.crewId = nil
             ac.holdReason = nil
         }
-        logOps(.structural, "Slot sold", "\(offer.originCode) ↔\u{FE0E} \(offer.destCode): $\(offer.amount.formatted())")
+        logOps(.structural, L("Slot sold"), L("%@ ↔\u{FE0E} %@: $%@", offer.originCode, offer.destCode, offer.amount.formatted()))
     }
 
     /// OFFER card: decline — keep the route.
@@ -3746,7 +3750,7 @@ final class Simulation {
             pitch: AirportPitch(originCode: origin.code, destCode: dest.code, originCity: oCity, destCity: dCity,
                                 signingBonus: bonus, demandPerDay: demand,
                                 expiryTick: tick + Simulation.airportOfferDurationDays * 1440, pitch: pitchText)))
-        logOps(.structural, "Route offer", "\(oCity) is courting you for \(origin.code) ↔\u{FE0E} \(dest.code)")
+        logOps(.structural, L("Route offer"), L("%@ is courting you for %@ ↔\u{FE0E} %@", oCity, origin.code, dest.code))
     }
 
     // MARK: - Rival flavor (world texture + depth signal)
@@ -3764,14 +3768,17 @@ final class Simulation {
         let owned = Set(subsidiaries.map { $0.code })
         let pool = relevantCompetitors.filter { !owned.contains($0.code) && !$0.code.isEmpty }
         guard let p = pool.randomElement() else { return }
+        let doublesDown = p.hubCodes.first.map { L("%@ is expanding its %@ hub operation.", p.name, $0) } ?? L("%@ is expanding hub operations.", p.name)
+        let results = p.operatingMargin >= 0.04
+            ? L("Strong quarter — %@%% load factor and healthy margins.", Int((p.loadFactor * 100).rounded()))
+            : L("A rough quarter — margins under pressure and costs climbing.")
+        let fleetSignal = p.trend == .growing ? L("an aggressive growth push") : L("a bid to cut operating costs")
         let templates: [(String, String)] = [
-            ("\(p.name) rings the bell", "\(p.name) has gone public — shares opened strong."),
-            ("\(p.name) doubles down", p.hubCodes.first.map { "\(p.name) is expanding its \($0) hub operation." } ?? "\(p.name) is expanding hub operations."),
-            ("Merger chatter", "Analysts say \(p.name) could be an acquisition target this year."),
-            ("\(p.name) posts results", p.operatingMargin >= 0.04
-                ? "Strong quarter — \(Int((p.loadFactor * 100).rounded()))% load factor and healthy margins."
-                : "A rough quarter — margins under pressure and costs climbing."),
-            ("\(p.name) refreshes its fleet", "New aircraft orders signal \(p.trend == .growing ? "an aggressive growth push" : "a bid to cut operating costs")."),
+            (L("%@ rings the bell", p.name), L("%@ has gone public — shares opened strong.", p.name)),
+            (L("%@ doubles down", p.name), doublesDown),
+            (L("Merger chatter"), L("Analysts say %@ could be an acquisition target this year.", p.name)),
+            (L("%@ posts results", p.name), results),
+            (L("%@ refreshes its fleet", p.name), L("New aircraft orders signal %@.", fleetSignal)),
         ]
         let t = templates.randomElement()!
         logOps(.market, t.0, t.1)
@@ -3811,21 +3818,21 @@ final class Simulation {
         guard let (origin, dest, demand) = best else { return }
         let bonus = min(500_000, 100_000 + demand * 300)
         let oCity = origin.info?.city ?? origin.code, dCity = dest.info?.city ?? dest.code
-        let pitch = "\(oCity) heard a new airline is starting up — and they want to be your first customer. Fly \(origin.code) ↔ \(dest.code) and they'll waive every opening fee, plus a $\(bonus.formatted()) signing bonus. ~\(demand) travelers a day are waiting. Accept, then buy an aircraft that can fly it."
+        let pitch = L("%@ heard a new airline is starting up — and they want to be your first customer. Fly %@ ↔ %@ and they'll waive every opening fee, plus a $%@ signing bonus. ~%@ travelers a day are waiting. Accept, then buy an aircraft that can fly it.", oCity, origin.code, dest.code, bonus.formatted(), demand)
         decisionQueue.append(Decision(id: "airport_first_\(origin.code)", kind: .airportOffer, aircraft: nil,
             pitch: AirportPitch(originCode: origin.code, destCode: dest.code, originCity: oCity, destCity: dCity,
                                 signingBonus: bonus, demandPerDay: demand,
                                 expiryTick: tick + 21 * 1440, pitch: pitch)))
-        logOps(.structural, "Your first customer", "\(oCity) wants to fund your first route: \(origin.code) ↔\u{FE0E} \(dest.code)")
+        logOps(.structural, L("Your first customer"), L("%@ wants to fund your first route: %@ ↔\u{FE0E} %@", oCity, origin.code, dest.code))
     }
 
     private func airportPitchText(originCity: String, destCity: String, originCode: String,
                                   destCode: String, demand: Int, bonus: Int) -> String {
         let b = "$\(bonus.formatted())"
         let templates = [
-            "\(originCity)'s airport authority is courting you: fly \(originCode) ↔ \(destCode) and we'll waive every opening fee, plus a \(b) marketing package. ~\(demand) travelers a day, and no direct link to your network yet.",
-            "\(originCity) wants your airline. Launch \(originCode) ↔ \(destCode), pocket a \(b) signing incentive, and we cover your setup costs. This market's been overlooked too long.",
-            "Straight talk from \(originCity): ~\(demand) passengers a day are driving hours to the nearest hub. Open \(originCode) ↔ \(destCode) on us — zero opening cost, plus \(b) to get started.",
+            L("%@'s airport authority is courting you: fly %@ ↔ %@ and we'll waive every opening fee, plus a %@ marketing package. ~%@ travelers a day, and no direct link to your network yet.", originCity, originCode, destCode, b, demand),
+            L("%@ wants your airline. Launch %@ ↔ %@, pocket a %@ signing incentive, and we cover your setup costs. This market's been overlooked too long.", originCity, originCode, destCode, b),
+            L("Straight talk from %@: ~%@ passengers a day are driving hours to the nearest hub. Open %@ ↔ %@ on us — zero opening cost, plus %@ to get started.", originCity, demand, originCode, destCode, b),
         ]
         return templates[abs(tick) % templates.count]
     }
@@ -3845,13 +3852,13 @@ final class Simulation {
         totalOfferIncome += p.signingBonus
         if let spare = eligibleSpareForOffer(p) {
             assign(spare, to: r, origin: o, dest: d)
-            logOps(.structural, "Route offer accepted",
-                   "\(o.code) ↔\u{FE0E} \(d.code): \(spare.tail) assigned · +$\(p.signingBonus.formatted()) bonus")
+            logOps(.structural, L("Route offer accepted"),
+                   L("%@ ↔\u{FE0E} %@: %@ assigned · +$%@ bonus", o.code, d.code, spare.tail, p.signingBonus.formatted()))
         } else {
             // Pending: the player has a deadline to staff it or forfeit the bonus.
             r.fulfillByTick = tick + Simulation.offerFulfillmentDays * 1440
-            logOps(.structural, "Route offer accepted",
-                   "\(o.code) ↔\u{FE0E} \(d.code): staff within \(Simulation.offerFulfillmentDays) days · +$\(p.signingBonus.formatted()) bonus")
+            logOps(.structural, L("Route offer accepted"),
+                   L("%@ ↔\u{FE0E} %@: staff within %@ days · +$%@ bonus", o.code, d.code, Simulation.offerFulfillmentDays, p.signingBonus.formatted()))
         }
     }
 
@@ -3871,8 +3878,8 @@ final class Simulation {
                 airport(r.originCode)?.slotsAvailable += 1
                 airport(r.destCode)?.slotsAvailable += 1
                 r.closedTick = tick
-                logOps(.structural, "Route offer forfeited",
-                       "\(r.originCode) ↔\u{FE0E} \(r.destCode): not staffed in time — $\(r.incentiveBonus.formatted()) bonus clawed back")
+                logOps(.structural, L("Route offer forfeited"),
+                       L("%@ ↔\u{FE0E} %@: not staffed in time — $%@ bonus clawed back", r.originCode, r.destCode, r.incentiveBonus.formatted()))
                 closedPlayerRoutes.append(r)
             }
         }
@@ -3917,7 +3924,7 @@ final class Simulation {
             let days = Double(Simulation.economicEventMinDurationDays)
                      + Double.random(in: 0..<1) * Double(Simulation.economicEventMaxDurationDays - Simulation.economicEventMinDurationDays)
             economicEventTicksLeft = Int((days * 24 * 60).rounded())
-            logOps(.market, currentEvent.label, opsEventSubtitle(currentEvent))
+            logOps(.market, L(currentEvent.label), opsEventSubtitle(currentEvent))
         }
     }
 
@@ -4043,8 +4050,8 @@ final class Simulation {
                           remainingPrincipal: Double(offer.principal), monthlyRate: offer.monthlyRate,
                           monthlyPayment: offer.monthlyPayment, termMonths: offer.termMonths, takenTick: tick))
         nextLoanId += 1
-        logOps(.structural, "Loan drawn",
-               "$\(offer.principal.formatted()) at \(Int((offer.apr * 100).rounded()))% · $\(offer.monthlyPayment.formatted())/mo")
+        logOps(.structural, L("Loan drawn"),
+               L("$%@ at %@%% · $%@/mo", offer.principal.formatted(), Int((offer.apr * 100).rounded()), offer.monthlyPayment.formatted()))
         return true
     }
 
@@ -4070,8 +4077,8 @@ final class Simulation {
         playerBalance -= cost
         totalDebtService += cost
         loans.remove(at: idx)
-        logOps(.structural, "Loan paid off early",
-               "$\(cost.formatted()) settled in full · no more interest")
+        logOps(.structural, L("Loan paid off early"),
+               L("$%@ settled in full · no more interest", cost.formatted()))
         return true
     }
 
@@ -4354,7 +4361,7 @@ final class Simulation {
             let r = playerRoutes.remove(at: idx)
             r.closedTick = tick
             closedPlayerRoutes.append(r)
-            logOps(.structural, "Route closed", "\(r.originCode) ↔︎ \(r.destCode)")
+            logOps(.structural, L("Route closed"), L("%@ ↔︎ %@", r.originCode, r.destCode))
             decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == id }
             airports.first { $0.code == r.originCode }?.slotsAvailable += 1
             airports.first { $0.code == r.destCode }?.slotsAvailable += 1
@@ -4385,8 +4392,8 @@ final class Simulation {
         if playerBalance < 0 {
             if insolventSinceTick == nil {
                 insolventSinceTick = tick
-                logOps(.structural, "Cash on hand is negative",
-                       "Recover within 14 days or assets will be liquidated")
+                logOps(.structural, L("Cash on hand is negative"),
+                       L("Recover within 14 days or assets will be liquidated"))
             } else if tick - insolventSinceTick! >= Simulation.bankruptcyGraceTicks {
                 forcedLiquidation()
             }
@@ -4401,19 +4408,19 @@ final class Simulation {
     private func forcedLiquidation() {
         for ac in aircraft.filter({ $0.purchased && !$0.isLeased })
                           .sorted(by: { sellValue(of: $0) > sellValue(of: $1) }) where playerBalance < 0 {
-            logOps(.structural, "Forced sale", "\(ac.tail) liquidated to cover debt")
+            logOps(.structural, L("Forced sale"), L("%@ liquidated to cover debt", ac.tail))
             sellAircraft(ac)
         }
         if playerBalance < 0 {
             for ac in aircraft.filter({ $0.purchased && $0.isLeased }) {
-                logOps(.structural, "Lease returned", "\(ac.tail) handed back to the lessor")
+                logOps(.structural, L("Lease returned"), L("%@ handed back to the lessor", ac.tail))
                 liquidate(ac, proceeds: 0)
             }
         }
         if playerBalance < 0 && !aircraft.contains(where: { $0.purchased }) {
             isBankrupt = true
             insolventSinceTick = nil
-            logOps(.structural, "BANKRUPTCY", "The airline is insolvent — game over")
+            logOps(.structural, L("BANKRUPTCY"), L("The airline is insolvent — game over"))
         } else {
             insolventSinceTick = nil   // recovered; reset the clock
         }
@@ -4451,18 +4458,18 @@ final class Simulation {
     func dismissCelebration(_ id: Int) { celebrations.removeAll { $0.id == id } }
     /// Route recoup is celebrated from settleLeg; expose the trigger.
     fileprivate func celebrateRecoup(_ r: Route) {
-        celebrate("recoup_\(r.id)", "chart.line.uptrend.xyaxis", "Route is profitable!",
-                  "Recouped its opening cost.", originCode: r.originCode, destCode: r.destCode)
+        celebrate("recoup_\(r.id)", "chart.line.uptrend.xyaxis", L("Route is profitable!"),
+                  L("Recouped its opening cost."), originCode: r.originCode, destCode: r.destCode)
     }
 
     /// Checked once per tick — net-worth thresholds, fleet size, flight counts.
     private func checkMilestones() {
         guard playerAirlineName != nil, !isBankrupt else { return }
-        if ownedCount >= 1 { celebrate("first_aircraft", "airplane", "First jet purchased!", "Your fleet has its first aircraft.") }
-        if totalFlightsFlown >= 1 { celebrate("first_flight", "airplane.departure", "First flight complete!", "Wheels up — welcome to the skies.") }
-        if totalFlightsFlown >= 1000 { celebrate("flights_1k", "trophy.fill", "1,000 flights flown", "The network is humming.") }
-        if !hubs.isEmpty { celebrate("first_hub", "building.2.crop.circle", "First hub established!", "Your fortress takes shape.") }
-        if hubs.values.contains(where: { $0.hasClub }) { celebrate("first_club", "cup.and.saucer.fill", "First club opened!", "Loyalty has a lounge now.") }
+        if ownedCount >= 1 { celebrate("first_aircraft", "airplane", L("First jet purchased!"), L("Your fleet has its first aircraft.")) }
+        if totalFlightsFlown >= 1 { celebrate("first_flight", "airplane.departure", L("First flight complete!"), L("Wheels up — welcome to the skies.")) }
+        if totalFlightsFlown >= 1000 { celebrate("flights_1k", "trophy.fill", L("1,000 flights flown"), L("The network is humming.")) }
+        if !hubs.isEmpty { celebrate("first_hub", "building.2.crop.circle", L("First hub established!"), L("Your fortress takes shape.")) }
+        if hubs.values.contains(where: { $0.hasClub }) { celebrate("first_club", "cup.and.saucer.fill", L("First club opened!"), L("Loyalty has a lounge now.")) }
         // Net-worth ladder. Gated on owning at least one aircraft so nothing
         // fires before the player has deployed any capital (net worth == the $20M
         // starting stake). The lowest tier ($30M) is real growth above the start.
@@ -4471,60 +4478,60 @@ final class Simulation {
         if owned >= 1 {
             for (t, label) in [(30_000_000, "$30M"), (50_000_000, "$50M"), (100_000_000, "$100M"),
                                (250_000_000, "$250M"), (500_000_000, "$500M"), (1_000_000_000, "$1B")] where nw >= t {
-                celebrate("nw_\(t)", "chart.line.uptrend.xyaxis", "\(label) net worth", "The airline is really taking off.")
+                celebrate("nw_\(t)", "chart.line.uptrend.xyaxis", L("%@ net worth", label), L("The airline is really taking off."))
             }
         }
-        for (n, sub) in [(5, "A real fleet now."), (10, "Double digits!"),
-                         (25, "A major carrier."), (50, "A powerhouse of the skies.")] where owned >= n {
-            celebrate("fleet_\(n)", "airplane.circle.fill", "\(n) aircraft in the fleet", sub)
+        for (n, sub) in [(5, L("A real fleet now.")), (10, L("Double digits!")),
+                         (25, L("A major carrier.")), (50, L("A powerhouse of the skies."))] where owned >= n {
+            celebrate("fleet_\(n)", "airplane.circle.fill", L("%@ aircraft in the fleet", n), sub)
         }
 
         // --- Network / route milestones ---
         let routeCount = playerRoutes.count
         if routeCount >= 1, let r = playerRoutes.first {
-            celebrate("first_route", "point.3.connected.trianglepath.dotted", "First route opened!",
-                      "Your first city pair is live.", originCode: r.originCode, destCode: r.destCode)
+            celebrate("first_route", "point.3.connected.trianglepath.dotted", L("First route opened!"),
+                      L("Your first city pair is live."), originCode: r.originCode, destCode: r.destCode)
         }
-        for (n, sub) in [(5, "A real network."), (10, "The map is filling in."),
-                         (25, "A serious network.")] where routeCount >= n {
-            celebrate("routes_\(n)", "point.3.connected.trianglepath.dotted", "\(n) routes in the network", sub)
+        for (n, sub) in [(5, L("A real network.")), (10, L("The map is filling in.")),
+                         (25, L("A serious network."))] where routeCount >= n {
+            celebrate("routes_\(n)", "point.3.connected.trianglepath.dotted", L("%@ routes in the network", n), sub)
         }
         if let intl = playerRoutes.first(where: { Airline.region($0.originCode) != Airline.region($0.destCode) }) {
-            celebrate("first_intl", "globe.americas.fill", "First international route!", "You're crossing borders now.",
+            celebrate("first_intl", "globe.americas.fill", L("First international route!"), L("You're crossing borders now."),
                       originCode: intl.originCode, destCode: intl.destCode)
         }
         let regionsServed = Set(playerRoutes.flatMap { [Airline.region($0.originCode), Airline.region($0.destCode)] }).count
-        if regionsServed >= 4 { celebrate("regions_4", "globe", "Four regions in your network", "Your reach is spreading.") }
-        if regionsServed >= 7 { celebrate("regions_7", "globe", "Seven regions served", "A sprawling, worldwide map.") }
+        if regionsServed >= 4 { celebrate("regions_4", "globe", L("Four regions in your network"), L("Your reach is spreading.")) }
+        if regionsServed >= 7 { celebrate("regions_7", "globe", L("Seven regions served"), L("A sprawling, worldwide map.")) }
 
         // --- Flight-count beats (100 sits between first_flight and 1,000) ---
-        if totalFlightsFlown >= 100 { celebrate("flights_100", "airplane.departure", "100 flights flown", "Finding your rhythm.") }
+        if totalFlightsFlown >= 100 { celebrate("flights_100", "airplane.departure", L("100 flights flown"), L("Finding your rhythm.")) }
 
         // --- One year in — also the Game Center "net worth at day 365" moment
         // (the GC layer reads net worth when this key fires; firedMilestones'
         // persistence is what makes the submission once-per-save). ---
         if Simulation.gameDay(at: tick) >= 365, ownedCount >= 1 {
-            celebrate("year_one", "calendar.badge.checkmark", "One year in the sky",
-                      "365 days of operations — your first anniversary.")
+            celebrate("year_one", "calendar.badge.checkmark", L("One year in the sky"),
+                      L("365 days of operations — your first anniversary."))
         }
 
         // --- Fleet & iconic-destination flavor ---
         if aircraft.contains(where: { $0.purchased && ($0.type.bodyType == .widebody2Engine || $0.type.bodyType == .widebody4Engine) }) {
-            celebrate("first_widebody", "airplane.circle", "First widebody!", "The big metal has arrived.")
+            celebrate("first_widebody", "airplane.circle", L("First widebody!"), L("The big metal has arrived."))
         }
         // Hard-to-reach fields you genuinely EARN (SBH's 2,000ft strip is DH8B-only).
         if let sbh = playerRoutes.first(where: { $0.originCode == "SBH" || $0.destCode == "SBH" }) {
-            celebrate("iconic_SBH", "beach.umbrella.fill", "You now serve St. Barths!",
-                      "That 2,000-ft strip is a badge of honor.", originCode: sbh.originCode, destCode: sbh.destCode)
+            celebrate("iconic_SBH", "beach.umbrella.fill", L("You now serve St. Barths!"),
+                      L("That 2,000-ft strip is a badge of honor."), originCode: sbh.originCode, destCode: sbh.destCode)
         }
         if let ppt = playerRoutes.first(where: { $0.originCode == "PPT" || $0.destCode == "PPT" }) {
-            celebrate("iconic_PPT", "beach.umbrella.fill", "Paradise on your map!",
-                      "Tahiti joins the network.", originCode: ppt.originCode, destCode: ppt.destCode)
+            celebrate("iconic_PPT", "beach.umbrella.fill", L("Paradise on your map!"),
+                      L("Tahiti joins the network."), originCode: ppt.originCode, destCode: ppt.destCode)
         }
 
         // --- Endgame milestones ---
-        if !subsidiaries.isEmpty { celebrate("first_subsidiary", "building.2.fill", "First airline acquired!", "Your empire grows by merger.") }
-        if isPublic { celebrate("went_public", "chart.line.uptrend.xyaxis", "You're publicly traded!", "The airline rings the opening bell.") }
+        if !subsidiaries.isEmpty { celebrate("first_subsidiary", "building.2.fill", L("First airline acquired!"), L("Your empire grows by merger.")) }
+        if isPublic { celebrate("went_public", "chart.line.uptrend.xyaxis", L("You're publicly traded!"), L("The airline rings the opening bell.")) }
     }
 
     // MARK: - Session briefing (the re-entry hook)
@@ -4547,50 +4554,53 @@ final class Simulation {
         // 1. Insolvency — the one thing that can end the game on a clock.
         if let d = insolvencyDaysLeft {
             items.append(.init(symbol: "exclamationmark.triangle.fill",
-                               title: "Cash is negative",
-                               detail: "\(d) day\(d == 1 ? "" : "s") to raise funds before forced liquidation.",
+                               title: L("Cash is negative"),
+                               detail: d == 1 ? L("%@ day to raise funds before forced liquidation.", d)
+                                              : L("%@ days to raise funds before forced liquidation.", d),
                                urgent: true))
         }
         // 2. Decisions waiting in the queue.
         if !decisionQueue.isEmpty {
             let n = decisionQueue.count
             items.append(.init(symbol: "bell.badge.fill",
-                               title: "\(n) decision\(n == 1 ? "" : "s") waiting",
-                               detail: "Check the alerts bell — aircraft or offers need a call.",
+                               title: n == 1 ? L("%@ decision waiting", n) : L("%@ decisions waiting", n),
+                               detail: L("Check the alerts bell — aircraft or offers need a call."),
                                urgent: decisionQueue.contains { $0.kind == .aog || $0.kind == .crew }))
         }
         // 3. Board / activist pressure (public company).
         if let c = activistCampaign {
             items.append(.init(symbol: "megaphone.fill",
-                               title: "Activist investor campaign",
-                               detail: "They hold \(Int((c.stake * 100).rounded()))% and want change — settle it or outperform it.",
+                               title: L("Activist investor campaign"),
+                               detail: L("They hold %@%% and want change — settle it or outperform it.", Int((c.stake * 100).rounded())),
                                urgent: true))
         } else if isPublic, boardPressure > 0.35 {
             items.append(.init(symbol: "person.3.fill",
-                               title: "The board is restless",
-                               detail: "Lift the share price or rebuild your stake before patience runs out.",
+                               title: L("The board is restless"),
+                               detail: L("Lift the share price or rebuild your stake before patience runs out."),
                                urgent: boardPressure > 0.7))
         }
         // 4. Offer-opened routes still awaiting an aircraft (fulfillment clock).
         for r in pendingRoutes where r.fulfillByTick != nil {
             let d = max(0, ((r.fulfillByTick ?? tick) - tick) / 1440)
             items.append(.init(symbol: "airplane.arrival",
-                               title: "\(r.originCode)–\(r.destCode) needs an aircraft",
-                               detail: "\(d) day\(d == 1 ? "" : "s") to staff it or the deal is forfeited.",
+                               title: L("%@–%@ needs an aircraft", r.originCode, r.destCode),
+                               detail: d == 1 ? L("%@ day to staff it or the deal is forfeited.", d)
+                                              : L("%@ days to staff it or the deal is forfeited.", d),
                                urgent: d <= 4))
         }
         // 5. Understaffed hubs — benefits suspended, bills still running.
         for (code, _) in hubs.sorted(by: { $0.key < $1.key }) where hubUnderstaffed(code) {
             items.append(.init(symbol: "building.2.crop.circle",
-                               title: "\(code) hub is understaffed",
-                               detail: "Below 5 routes — benefits suspended while the bills keep coming.",
+                               title: L("%@ hub is understaffed", code),
+                               detail: L("Below 5 routes — benefits suspended while the bills keep coming."),
                                urgent: false))
         }
         // 6. An economic event in progress.
         if currentEvent.id != EconomicEvent.normal.id {
             items.append(.init(symbol: "chart.line.downtrend.xyaxis",
-                               title: currentEvent.label,
-                               detail: "\(eventDaysLeft) day\(eventDaysLeft == 1 ? "" : "s") left — margins are moving.",
+                               title: L(currentEvent.label),
+                               detail: eventDaysLeft == 1 ? L("%@ day left — margins are moving.", eventDaysLeft)
+                                                          : L("%@ days left — margins are moving.", eventDaysLeft),
                                urgent: false))
         }
         // 7. Routes on the verge of recouping — the near-win worth watching.
@@ -4599,17 +4609,20 @@ final class Simulation {
             let avgNet = r.flights > 0 ? max(1, r.cumulativeNet / r.flights) : 1
             if short > 0, avgNet > 0, short <= avgNet * 8 {
                 items.append(.init(symbol: "chart.line.uptrend.xyaxis",
-                                   title: "\(r.originCode)–\(r.destCode) is almost profitable",
-                                   detail: "$\(short.formatted()) from recouping its opening cost.",
+                                   title: L("%@–%@ is almost profitable", r.originCode, r.destCode),
+                                   detail: L("$%@ from recouping its opening cost.", short.formatted()),
                                    urgent: false))
             }
         }
         // Fallback so the card never comes up empty on a healthy airline.
         if items.isEmpty {
             let flying = aircraft.filter { $0.purchased && $0.assignedRouteId != nil }.count
+            let routeWord = playerRoutes.count == 1
+                ? L("%@ aircraft flying %@ route · $%@ on hand.", flying, playerRoutes.count, playerBalance.formatted())
+                : L("%@ aircraft flying %@ routes · $%@ on hand.", flying, playerRoutes.count, playerBalance.formatted())
             items.append(.init(symbol: "checkmark.circle.fill",
-                               title: "All quiet on the network",
-                               detail: "\(flying) aircraft flying \(playerRoutes.count) route\(playerRoutes.count == 1 ? "" : "s") · $\(playerBalance.formatted()) on hand.",
+                               title: L("All quiet on the network"),
+                               detail: routeWord,
                                urgent: false))
         }
         return Array(items.prefix(5))
@@ -4943,7 +4956,7 @@ final class Simulation {
                 // It has landed and settled — now honour any deferred move. Park
                 // wins if both are somehow set (parkAircraft clears pendingRouteId,
                 // so they're normally mutually exclusive).
-                if ac.pendingPark { ac.pendingPark = false; detachFromRoute(ac, note: "parked as spare") }
+                if ac.pendingPark { ac.pendingPark = false; detachFromRoute(ac, note: L("parked as spare")) }
                 else if ac.pendingRouteId != nil { completePendingReassignment(ac) }
             case nil:                  break
             }
@@ -5051,11 +5064,11 @@ final class Simulation {
     private func seasonalWeatherReason(_ ap: Airport) -> String {
         let m = monthOfYear
         switch weatherZone(ap) {
-        case .hurricane where m >= 7 && m <= 9:            return "Hurricane"     // Aug-Oct
-        case .northWinter where m == 11 || m <= 1:         return "Winter storm"  // Dec-Feb
-        case .southWinter where m >= 5 && m <= 7:          return "Winter storm"  // Jun-Aug
-        case .monsoon where m >= 5 && m <= 8:              return "Monsoon"       // Jun-Sep
-        default:                                           return "Weather"
+        case .hurricane where m >= 7 && m <= 9:            return L("Hurricane")     // Aug-Oct
+        case .northWinter where m == 11 || m <= 1:         return L("Winter storm")  // Dec-Feb
+        case .southWinter where m >= 5 && m <= 7:          return L("Winter storm")  // Jun-Aug
+        case .monsoon where m >= 5 && m <= 8:              return L("Monsoon")       // Jun-Sep
+        default:                                           return L("Weather")
         }
     }
     // Leisure demand season — island/beach markets peak in NORTHERN winter (the
@@ -5072,14 +5085,14 @@ final class Simulation {
                 if ap.groundStopTicksLeft <= 0 {
                     ap.groundStop = false
                     ap.groundStopReason = nil
-                    if relevant.contains(ap.code) { logOps(.disruption, "Ground stop lifted", ap.code) }
+                    if relevant.contains(ap.code) { logOps(.disruption, L("Ground stop lifted"), ap.code) }
                 }
             } else if Double.random(in: 0..<1) < ap.groundStopsPerMonth * seasonalWeatherFactor(ap) / Double(Simulation.ticksPerMonth) {
                 let reason = seasonalWeatherReason(ap)
                 ap.groundStop = true
                 ap.groundStopTicksLeft = 90 + Int.random(in: 0...240)
                 ap.groundStopReason = reason
-                if relevant.contains(ap.code) { logOps(.disruption, "Ground stop", "\(reason) hold at \(ap.code)", airportCode: ap.code) }
+                if relevant.contains(ap.code) { logOps(.disruption, L("Ground stop"), L("%@ hold at %@", reason, ap.code), airportCode: ap.code) }
             }
         }
     }
@@ -5098,8 +5111,8 @@ final class Simulation {
             if ap.curfew != active {
                 ap.curfew = active
                 if playerRouteCodes.contains(ap.code) {
-                    logOps(.disruption, active ? "Night curfew" : "Curfew lifted",
-                           active ? "\(ap.code) is closed for its night curfew" : "\(ap.code)'s curfew has lifted",
+                    logOps(.disruption, active ? L("Night curfew") : L("Curfew lifted"),
+                           active ? L("%@ is closed for its night curfew", ap.code) : L("%@'s curfew has lifted", ap.code),
                            airportCode: ap.code)
                 }
             }
