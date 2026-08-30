@@ -3811,6 +3811,26 @@
         }
       }
     },
+    "No flights flown yet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Flüge absolviert."
+          }
+        }
+      }
+    },
+    "No flights in this period.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Flüge in diesem Zeitraum."
+          }
+        }
+      }
+    },
     "No flights yet.": {
       "localizations": {
         "de": {

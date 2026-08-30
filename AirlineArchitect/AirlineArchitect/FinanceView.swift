@@ -571,7 +571,7 @@ struct FinanceView: View {
                 ledgerRow(f.operatingProfit >= 0 ? "Operating profit" : "Operating loss",
                           f.operatingProfit, sign: .net, bold: true)
                 Text(f.flights == 0
-                     ? "No flights \(period == .total ? "flown yet" : "in this period")."
+                     ? (period == .total ? "No flights flown yet." : "No flights in this period.")
                      : "\(f.flights) flights · avg \(signedMoney(f.operatingProfit / max(1, f.flights)))/flight")
                     .font(.karla(11)).foregroundStyle(secondary)
             }
