@@ -27,6 +27,27 @@ paragraph). The canonical playbook + Airline's filled-in unique-systems paragrap
 `PostmarkOps/APP_REVIEW_NOTES.md`. The 1.4.3 notes (3988 chars, under the 4000 limit) are the template
 for the next one — reuse them, just update the version line.
 
+**► 🇩🇪 GERMAN LOCALIZATION — IN PROGRESS on branch `de-translation` (NOT merged, NOT ship-ready).**
+Driven by TelemetryDeck data (German = 16% of preferred language, #2 after English) — framed as a
+DACH market-ENTRY/conversion bet, not a demand response. Two things exist:
+(1) **Infra — MERGED to `main`, English-unchanged, shippable anytime:** a view-layer String Catalog
+    (`Resources/Localizable.xcstrings`), `de` in knownRegions, a framework-free `Sim/Localization.swift`
+    `L()` shim (for the Sim layer's ~124 strings — compiles in the headless harness), `SimLocale.current`
+    wired at launch. Does nothing until a `de` column is filled, so zero 4.3(a) exposure.
+(2) **Translation — on `de-translation`, ~141 of ~370 strings done + 7 category-2 code fixes, verified
+    live in German** (tab bar, control bar, Finance, Fleet/Marketplace, Save/Quit, naming/paywall).
+    Register **du**; AI-drafted, no native review (designer accepted the risk). NOT ship-ready — partial
+    German is worse than none.
+⚠️ **THE KEY GOTCHA (documented in `aa-1.1.x/LOCALIZATION_SCOPING.md`):** SwiftUI only auto-localizes
+string LITERALS in `Text("…")`. A string reaching `Text` as a `String` VARIABLE (data array, model prop,
+or a `String`-typed helper param) silently bypasses the catalog even with a perfect translation. Fix =
+change the display param to `LocalizedStringKey`. Verify by force-launching in German (`-AppleLanguages
+'(de)'`); English text despite a catalog entry = a code gap, not a locale problem.
+**To finish:** `aa-1.1.x/LOCALIZATION_SCOPING.md` has the exact done/remaining map + method + the
+`aa-1.1.x/de-glossary.md` terminology. **SHIP GATE:** never release standalone during the 4.3(a) cascade
+(FC's localization-only 1.3 was rejected) — bundle the `de` turn-on with a content update, or wait for
+the account to cool. Ideally a native-German review pass before it goes live.
+
 **► 1.4.2 (build 52) = ASYNC SAVE fix — APPROVED + LIVE (`READY_FOR_SALE`, 27 Aug).** Merged to
 `main`; fixes the `hang.under3s` TelemetryDeck signal by moving the save encode/write/mirror off the
 main thread. FOLLOW-UP (still open, both fixes): the `hang.under3s` count in TelemetryDeck is the real
