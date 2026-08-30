@@ -256,7 +256,7 @@ struct FinanceView: View {
         }
     }
 
-    private func ledgerLine(_ label: String, _ value: String) -> some View {
+    private func ledgerLine(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack {
             Text(label).font(.karla(13)).foregroundStyle(secondary)
             Spacer()
@@ -274,7 +274,7 @@ struct FinanceView: View {
         let action: () -> Void
     }
 
-    private func leverSection(_ title: String, _ subtitle: String, _ options: [LeverOption]) -> some View {
+    private func leverSection(_ title: LocalizedStringKey, _ subtitle: LocalizedStringKey, _ options: [LeverOption]) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title).font(.karla(11, .bold)).foregroundStyle(titleColor)
             Text(subtitle).font(.karla(10)).foregroundStyle(secondary)
@@ -713,7 +713,7 @@ struct FinanceView: View {
 
     private enum Sign { case plus, minus, net }
 
-    private func ledgerRow(_ label: String, _ value: Int, sign: Sign, bold: Bool = false) -> some View {
+    private func ledgerRow(_ label: LocalizedStringKey, _ value: Int, sign: Sign, bold: Bool = false) -> some View {
         let text: String
         let color: Color
         switch sign {
@@ -728,7 +728,7 @@ struct FinanceView: View {
         }
     }
 
-    private func miniStat(_ label: String, _ value: String, _ color: Color) -> some View {
+    private func miniStat(_ label: LocalizedStringKey, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label).font(.karla(12)).foregroundStyle(secondary)
             Text(value).font(.karla(18, .heavy)).foregroundStyle(color)
@@ -736,7 +736,7 @@ struct FinanceView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func sectionTitle(_ t: String) -> some View {
+    private func sectionTitle(_ t: LocalizedStringKey) -> some View {
         Text(t).font(.karla(12, .bold)).foregroundStyle(titleColor).tracking(0.5)
     }
 
