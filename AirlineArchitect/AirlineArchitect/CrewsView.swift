@@ -20,7 +20,7 @@ struct CrewsView: View {
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
 
-    @State private var successMessage: String?
+    @State private var successMessage: LocalizedStringKey?
 
     // Theme tokens (light Figma / dark Sky).
     private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
@@ -89,7 +89,7 @@ struct CrewsView: View {
     }
 
     // MARK: Success banner (hire confirmation)
-    private func successBanner(_ msg: String) -> some View {
+    private func successBanner(_ msg: LocalizedStringKey) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "hand.thumbsup.fill").font(.system(size: 16)).foregroundStyle(.white)
             Text(msg).font(.karla(14, .bold)).foregroundStyle(.white)
@@ -169,7 +169,9 @@ struct CrewsView: View {
         let red = isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000)
         return HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 14)).foregroundStyle(red)
-            Text("\(sidelined) sidelined; labor action — \(daysLeft) day\(daysLeft == 1 ? "" : "s") left")
+            Text(daysLeft == 1
+                 ? "\(sidelined) sidelined; labor action — \(daysLeft) day left"
+                 : "\(sidelined) sidelined; labor action — \(daysLeft) days left")
                 .font(.karla(14, .bold)).foregroundStyle(red)
             Spacer(minLength: 0)
         }
@@ -180,7 +182,7 @@ struct CrewsView: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(red, lineWidth: 1))
     }
 
-    private func dataBox(_ label: String, _ value: Int, _ boxBG: Color, _ textColor: Color) -> some View {
+    private func dataBox(_ label: LocalizedStringKey, _ value: Int, _ boxBG: Color, _ textColor: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.karla(14)).foregroundStyle(textColor.opacity(0.95))
             Text("\(value)").font(.karla(24, .heavy)).foregroundStyle(textColor)
@@ -203,7 +205,7 @@ struct CrewsView: View {
     private func hire(_ fam: String, name: String) {
         guard sim.hireCrew(family: fam) != nil else { return }
         Feedback.crewHired()
-        withAnimation { successMessage = "New \(name) crew successfully hired!" }
+        withAnimation { successMessage = "New \(name) crew successfully hired!" as LocalizedStringKey }
         Task {
             try? await Task.sleep(for: .seconds(3))
             withAnimation { if successMessage != nil { successMessage = nil } }

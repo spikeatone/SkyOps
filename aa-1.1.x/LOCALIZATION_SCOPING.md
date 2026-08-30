@@ -2,14 +2,14 @@
 
 ## ⏳ PROGRESS (branch `de-translation`, NOT merged, NOT ship-ready) — read this first
 
-**~141 of ~370 strings translated + 7 category-2 code gaps fixed, all verified live on device in
-German.** Register: **du**. AI-drafted (no native review — designer accepted that risk). Everything is
-on the `de-translation` branch, three commits, pushed. English is unchanged throughout (the catalog
-only adds a `de` column; harness stays 13/13). NOT ship-ready — partial German is worse than none, so
-it stays on the branch until it's finished + timing clears the 4.3(a) cascade.
+**~169 catalog keys translated + category-2 code gaps fixed across 10 helpers, all verified live on
+device in German.** Register: **du**. AI-drafted (no native review — designer accepted that risk).
+Everything is on the `de-translation` branch, four commits, pushed. English is unchanged throughout (the
+catalog only adds a `de` column; harness stays 13/13). NOT ship-ready — partial German is worse than
+none, so it stays on the branch until it's finished + timing clears the 4.3(a) cascade.
 
 **Assets created:**
-- `Resources/Localizable.xcstrings` — the view-layer String Catalog (141 keys, all with a `de` value).
+- `Resources/Localizable.xcstrings` — the view-layer String Catalog (169 keys, all with a `de` value).
 - `Sim/Localization.swift` — the framework-free `L()` shim (its `de` table is still EMPTY — Sim strings
   are NOT translated yet).
 - `aa-1.1.x/de-glossary.md` — the terminology glossary (du; Route/Slot/Gate/Crew kept as German
@@ -19,29 +19,61 @@ it stays on the branch until it's finished + timing clears the 4.3(a) cascade.
 **DONE (verified in German on the sim):** tab bar (Netzwerk/Flotte/Crews/Betrieb/Finanzen) · Network
 control bar (Erwerben/Route eröffnen/Routen/Crew einstellen) · Finance tab (FINANZEN, NETTOVERMÖGEN,
 GRATIS-VERSION, all ledger/card labels, REPORTS/FUNDING + period selectors) · Fleet/Marketplace (FLOTTE,
-Meine Flotte, Marktplatz, status boxes, aircraft labels, OWNED/LEASED) · Save/Quit (shared, all 5 tabs)
-· core Naming + Paywall strings.
+Meine Flotte, Marktplatz, status boxes, aircraft labels, OWNED/LEASED, empty state) · Save/Quit (shared,
+all 5 tabs) · core Naming + Paywall strings · **Crews tab — FULL** (CREW-ZENTRALE, the 2×2 data boxes
+Verfügbar/Im Dienst/Ruhephase/Reserve, KNAPP BESETZT, Neue Crew/EINSTELLEN, hire banner + labor-action
+plurals) · **Tutorial — FULL** (all 5 coach cards, title + body, verified stepping through in German) ·
+**Session Briefing — strings translated + compiled** (BETRIEBS-BRIEFING / "Willkommen zurück bei %@" /
+"Übernimm die Steuerung"; not eyeballed rendering — the briefing only shows on loading a save with real
+progress, and `-devScenario` seeds skip the load path, but all three keys are confirmed in `de.lproj`).
 
 **Category-2 code gaps FIXED so far** (the pattern — see the CRITICAL FINDING section below): tab bar
 (`SkyTabIcons`/`SkySidebar`), `NetworkView.barButton`, `FinanceView` sectionTitle/ledgerLine/ledgerRow/
 miniStat/leverSection + the section/period `Text(rawValue)` selectors, `FleetView` segButton/statusBox,
-`SaveQuitBar.pill`. **Every custom label helper with a `String` title/label param is a suspect** — audit
-each and change the DISPLAY param to `LocalizedStringKey` (keep VALUE params `String` — they carry data).
+`SaveQuitBar.pill`, **`CrewsView.dataBox`** (param → `LocalizedStringKey`) + **`successMessage`/
+`successBanner`** (`String?` → `LocalizedStringKey?`, so the interpolated hire banner localizes),
+**`Tutorial`** (`Text(LocalizedStringKey(step.title/step.body))` — the tutorial title/body are `String`
+array fields, so they need the wrap; the extractor CANNOT auto-add them, so their keys were added to the
+catalog manually with the exact English source). **Every custom label helper with a `String` title/label
+param is a suspect** — audit each and change the DISPLAY param to `LocalizedStringKey` (keep VALUE params
+`String` — they carry data).
 
-**REMAINING (~230 strings) — the mechanical long tail for the next pass:**
-1. **Whole screens not touched:** Crews, Ops, Network panels (Acquire/Routes/Hire/FuelHedge/Hubs),
-   aircraft detail (`FleetDetailView`), airport card, alerts/decision cards, session briefing, tutorial.
-2. **Interpolated strings** (deliberately deferred — need `%@`/`%lld` format-string care + German word
+**REMAINING (~200 strings) — the mechanical long tail for the next pass:**
+1. **Whole screens not touched:** Ops (OPS HOME, Route Opportunities + its subtitle, "N/day",
+   Regional jet/Narrowbody/Widebody class labels), Network panels (Acquire/Routes/FuelHedge/Hubs),
+   aircraft detail (`FleetDetailView`), airport card, alerts/decision cards, **`LiveryDesignView`** (a
+   big untouched surface — "Design your livery", FUSELAGE TEXT, TITLE FONT, COLOR PALETTE, TAIL EMBLEM,
+   the 10 palette names, "Launch Airline"), Market Intelligence / Go Public views.
+2. **`SaveSlotsView` category-2/interpolated tail (found this pass):** "New Airline" (the DEFAULT
+   airline name — a `String` model prop, bypasses catalog), the slot summary "Day N · $X · N aircraft ·
+   N routes", "Saved Xm ago"/"Saved just now", "Empty slot", and the "Delete this airline?" confirm.
+   The load-menu CHROME (title, subtitle, Löschen, Neue Airline) is already German.
+3. **Screen HEADERS that are separate literals from the tab labels:** the Network screen header still
+   reads **"NETWORK"** (tab bar says Netzwerk) — likely an all-caps literal in `NetworkView`. Audit each
+   tab's screen-title literal (`OPS HOME` is English too — that's item 1).
+4. **Interpolated strings** (deliberately deferred — need `%@`/`%lld` format-string care + German word
    order): "N cycles / X%", "$X since launch", "N/6 aircraft · M/5 routes", demand/event lines, offer
    pitches, milestone/celebration copy. ~75 in the view layer.
-3. **Category-2 tail:** Fleet category filters (Turbo/RJ/Narrow/Wide — likely `BodyType`-derived),
-   status chips (FLYING/IDLE/GROUNDED), Show/Sort dropdown labels, and any other data-driven labels.
-4. **Flavor text:** ~50 `Airport.destinationFlavor` + 35 `AircraftType.flavor` (marketing prose).
-5. **The Sim `L()` German table:** ~124 Sim-layer strings (Ops log, decision copy) — convert each
-   `logOps(...)`/decision string to `L("… %@", args)` (ONE reference example done in `establishHub`)
-   AND fill `simLocalizationTables["de"]`.
-6. **ASC-side (separate from the binary):** German App Store listing (name/subtitle/description/
+5. **Category-2 tail:** Fleet category filters (All/Turbo/RJ/Narrow/Wide — likely `BodyType`-derived),
+   status chips (FLYING/IDLE/GROUNDED), Show/Sort dropdown labels, "Livery" button, and any other
+   data-driven labels. **DEV controls** (Competitive Traffic, Pro (DEV), Demand (DEV)) — low priority,
+   compiled out of Release.
+6. **Flavor text:** ~50 `Airport.destinationFlavor` + 35 `AircraftType.flavor` (marketing prose).
+7. **The Sim `L()` German table:** ~124 Sim-layer strings (Ops log, decision copy, crew-family
+   `CREW_FAMILY_INFO` coverage strings like "Covers Dash 8-200") — convert each `logOps(...)`/decision
+   string to `L("… %@", args)` (ONE reference example done in `establishHub`) AND fill
+   `simLocalizationTables["de"]`.
+8. **ASC-side (separate from the binary):** German App Store listing (name/subtitle/description/
    keywords/screenshots) + German Game Center achievement localizations.
+
+**Method note that saved time this pass:** the exact auto-extracted catalog KEYS (esp. the `%lld`/`%@`
+format specs for interpolated strings) can be read from Xcode's per-file extraction output —
+`DerivedData/…/Build/Intermediates.noindex/AirlineArchitect.build/…/Objects-normal/arm64/<File>.stringsdata`
+(`strings <File>.stringsdata | grep '"key"'`). Dynamic `LocalizedStringKey(someString)` conversions do
+NOT appear there (the extractor can't see the literal), so those keys must be added to the catalog by
+hand with the exact English source text. After editing the catalog, `xcodebuild` compiles it into
+`AirlineArchitect.app/de.lproj/Localizable.strings` — grep that to CONFIRM a key made it in
+(`plutil -convert xml1 -o - …/de.lproj/Localizable.strings`).
 
 **Method for the next session:** work screen-by-screen; for each, force-launch in German
 (`xcrun simctl launch … -AppleLanguages '(de)' -AppleLocale de_DE`), screenshot, and any string that
