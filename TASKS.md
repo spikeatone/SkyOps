@@ -28,6 +28,21 @@ only, and update it in the same session as the work.
 
 ## In flight
 
+### German localization — SCOPED, PARKED (28 Aug)
+TelemetryDeck shows German = 16% of preferred language (#2 after English 76%, 10× Spanish). Full
+scoping in `aa-1.1.x/LOCALIZATION_SCOPING.md`. Key points:
+- [ ] VERIFY the absolute German user count in TD first (16% on a ~3-user base isn't a mandate).
+- [ ] Do NOT ship as a standalone localization update during the 4.3(a) cascade (FC's localization-only
+      1.3 got rejected) — bundle with a content update, or wait for the account to cool.
+- Infra: no localization exists yet (English-only). iOS 18 → use a String Catalog (`.xcstrings`).
+  COPY FC Architect's `Localizable.xcstrings` structure; FC has fr/it/es but NOT German, so AA would
+  LEAD the family on German (reusable by siblings).
+- AA's unique wrinkle: the framework-free `Sim/` layer builds ~124 user-facing strings (Ops log,
+  decision copy) that can't use SwiftUI localization without breaking the harness → needs a small
+  framework-free shim (option 1 in the doc).
+- Real cost = a NATIVE German translation pass (not MT — German is a first-language market) + device
+  QA for German string lengths (~30% longer; tab bar / control-bar / chips at risk).
+
 ### Tech Ops modernization (24 Aug) — branch `tech-ops-modernization` (off `main`)
 Postmark Tech Ops cross-app audit: Airline was BEHIND its own siblings on the RC/TelemetryDeck
 patterns it inspired. Plumbing + observability only, NO gameplay change. Full detail in CLAUDE.md
