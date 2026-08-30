@@ -31,12 +31,32 @@
         }
       }
     },
+    "%@ Accepting opens the route now — you'll have %lld days to put an in-range aircraft on it, or the bonus is clawed back.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Bei Annahme wird die Route sofort eröffnet — du hast %lld Tage, um ein Flugzeug mit passender Reichweite einzusetzen, sonst wird der Bonus zurückgefordert."
+          }
+        }
+      }
+    },
     "%@ can now fly in colors you choose — a palette, a tail emblem, and your name on the fuselage.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ kann jetzt in Farben deiner Wahl fliegen — eine Palette, ein Heckemblem und dein Name auf dem Rumpf."
+          }
+        }
+      }
+    },
+    "%@ crews due for recurrent training": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@-Crews sind zur Wiederholungsschulung fällig"
           }
         }
       }
@@ -57,6 +77,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ Zyklen / %lld%%"
+          }
+        }
+      }
+    },
+    "%@ grounded at %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ am Boden in %@"
           }
         }
       }
@@ -111,6 +141,26 @@
         }
       }
     },
+    "%@ nearing end of life": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ nähert sich dem Lebensende"
+          }
+        }
+      }
+    },
+    "%@ nearing retirement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ nähert sich der Ausmusterung"
+          }
+        }
+      }
+    },
     "%@ nm · %@": {
       "localizations": {
         "de": {
@@ -121,12 +171,62 @@
         }
       }
     },
+    "%@ offered for the understaffed hub. Selling is permanent: %@ becomes a %@ hub — stronger rival pressure there, and you can never re-hub it. Any club closes with it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ geboten für das unterbesetzte Drehkreuz. Der Verkauf ist endgültig: %@ wird zu einem %@-Drehkreuz — stärkerer Konkurrenzdruck dort, und du kannst es nie wieder zum Drehkreuz machen. Eine etwaige Lounge schließt mit."
+          }
+        }
+      }
+    },
+    "%@ offered. Selling is permanent: %@ becomes a %@ hub — stronger rival pressure there, and you can never re-hub it. Any club closes with it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ geboten. Der Verkauf ist endgültig: %@ wird zu einem %@-Drehkreuz — stärkerer Konkurrenzdruck dort, und du kannst es nie wieder zum Drehkreuz machen. Eine etwaige Lounge schließt mit."
+          }
+        }
+      }
+    },
     "%@ to go": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "noch %@"
+          }
+        }
+      }
+    },
+    "%@ wants to buy your slot back": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ will deinen Slot zurückkaufen"
+          }
+        }
+      }
+    },
+    "%@ wants your %@ hub": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ will dein %@-Drehkreuz"
+          }
+        }
+      }
+    },
+    "%@ wants your airline": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ will deine Airline"
           }
         }
       }
@@ -157,6 +257,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ – %@"
+          }
+        }
+      }
+    },
+    "%@ — no legal crew at %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ — keine legale Crew in %@"
+          }
+        }
+      }
+    },
+    "%@ ↔︎ %@: %@ offered": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ↔︎ %@: %@ geboten"
           }
         }
       }
@@ -391,6 +511,26 @@
         }
       }
     },
+    "%lld%% of lifespan · sell value %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% der Lebensdauer · Verkaufswert %@"
+          }
+        }
+      }
+    },
+    "%lld%% of lifespan · terminate lease for a %@ fee": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% der Lebensdauer · Leasing beenden für %@ Gebühr"
+          }
+        }
+      }
+    },
     "%lld-day hedge:": {
       "localizations": {
         "de": {
@@ -541,6 +681,16 @@
         }
       }
     },
+    "AOG": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AOG"
+          }
+        }
+      }
+    },
     "ASSIGN": {
       "localizations": {
         "de": {
@@ -581,6 +731,26 @@
         }
       }
     },
+    "Accept": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annehmen"
+          }
+        }
+      }
+    },
+    "Accept · +%@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annehmen · +%@"
+          }
+        }
+      }
+    },
     "Acquire A/C": {
       "localizations": {
         "de": {
@@ -607,6 +777,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Erwirb Flugzeuge über den Netzwerk-Tab oder den Marktplatz."
+          }
+        }
+      }
+    },
+    "Activist demand": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivisten-Forderung"
+          }
+        }
+      }
+    },
+    "Activist investor": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivistischer Investor"
           }
         }
       }
@@ -811,6 +1001,16 @@
         }
       }
     },
+    "An activist holds %lld%% and wants change": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Aktivist hält %lld%% und will Veränderung"
+          }
+        }
+      }
+    },
     "An airport is already courting you — tap the bell (top right) to see their offer: opening fees waived plus a signing bonus. Accept it, then buy an aircraft that can fly the route. Match the plane to the market — a small turboprop or regional jet fills up; a big jet flies half-empty. Or skip it and open any route you like with Open Route.": {
       "localizations": {
         "de": {
@@ -951,6 +1151,16 @@
         }
       }
     },
+    "Awaiting a rested crew": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warte auf eine ausgeruhte Crew"
+          }
+        }
+      }
+    },
     "Awaiting aircraft · %lldd left to staff": {
       "localizations": {
         "de": {
@@ -1087,6 +1297,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wächst durch pünktliche Flüge; leidet unter Grounds und Crew-Wartezeiten."
+          }
+        }
+      }
+    },
+    "Buy back · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurückkaufen · %@"
           }
         }
       }
@@ -1331,6 +1551,16 @@
         }
       }
     },
+    "Close %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ schließen"
+          }
+        }
+      }
+    },
     "Close %@ and park %@?": {
       "localizations": {
         "de": {
@@ -1471,6 +1701,26 @@
         }
       }
     },
+    "Crew": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crew"
+          }
+        }
+      }
+    },
+    "Crew training": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crew-Schulung"
+          }
+        }
+      }
+    },
     "Crews": {
       "localizations": {
         "de": {
@@ -1597,6 +1847,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Schuldendienst"
+          }
+        }
+      }
+    },
+    "Decline": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ablehnen"
+          }
+        }
+      }
+    },
+    "Defer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufschieben"
+          }
+        }
+      }
+    },
+    "Defer 30 days · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 Tage aufschieben · %@"
           }
         }
       }
@@ -1771,6 +2051,16 @@
         }
       }
     },
+    "End of service": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betriebsende"
+          }
+        }
+      }
+    },
     "Enter a ticker to list": {
       "localizations": {
         "de": {
@@ -1801,6 +2091,16 @@
         }
       }
     },
+    "Eroding %@/min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verliert %@/Min."
+          }
+        }
+      }
+    },
     "Events": {
       "localizations": {
         "de": {
@@ -1827,6 +2127,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ausgezeichnet"
+          }
+        }
+      }
+    },
+    "Expedite $15,000": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beschleunigen $15.000"
           }
         }
       }
@@ -2201,12 +2511,32 @@
         }
       }
     },
+    "Hire %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellen %@"
+          }
+        }
+      }
+    },
     "Hire Crew": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Crew einstellen"
+          }
+        }
+      }
+    },
+    "Hub buyout offer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drehkreuz-Kaufangebot"
           }
         }
       }
@@ -2227,6 +2557,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Drehkreuz-Personal"
+          }
+        }
+      }
+    },
+    "Hub offer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drehkreuz-Angebot"
           }
         }
       }
@@ -2327,6 +2667,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Versicherungsprämien"
+          }
+        }
+      }
+    },
+    "Keep flying": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter fliegen"
           }
         }
       }
@@ -3281,6 +3631,16 @@
         }
       }
     },
+    "Offer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angebot"
+          }
+        }
+      }
+    },
     "On approach": {
       "localizations": {
         "de": {
@@ -3611,6 +3971,16 @@
         }
       }
     },
+    "Pay dividend · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dividende zahlen · %@"
+          }
+        }
+      }
+    },
     "Pay shareholders — lifts sentiment, costs cash": {
       "localizations": {
         "de": {
@@ -3891,6 +4261,16 @@
         }
       }
     },
+    "Refuse": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verweigern"
+          }
+        }
+      }
+    },
     "Regional jet": {
       "localizations": {
         "de": {
@@ -3947,6 +4327,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reserve"
+          }
+        }
+      }
+    },
+    "Reserve $5k": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reserve $5k"
           }
         }
       }
@@ -4027,6 +4417,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Routen-Chancen"
+          }
+        }
+      }
+    },
+    "Route offer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Routen-Angebot"
           }
         }
       }
@@ -4221,6 +4621,16 @@
         }
       }
     },
+    "Sell %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ verkaufen"
+          }
+        }
+      }
+    },
     "Sell %@?": {
       "localizations": {
         "de": {
@@ -4267,6 +4677,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neue Aktien für Kapital verkaufen — verwässert deinen Anteil"
+          }
+        }
+      }
+    },
+    "Sell · +%@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verkaufen · +%@"
           }
         }
       }
@@ -4327,6 +4747,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Überspringen"
+          }
+        }
+      }
+    },
+    "Slot buyback": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slot-Rückkauf"
           }
         }
       }
@@ -4397,6 +4827,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Startkapital"
+          }
+        }
+      }
+    },
+    "Std Repair": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Std.-Reparatur"
           }
         }
       }
@@ -4561,6 +5001,16 @@
         }
       }
     },
+    "Terminate · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beenden · %@"
+          }
+        }
+      }
+    },
     "Terminate · %@ fee": {
       "localizations": {
         "de": {
@@ -4681,6 +5131,36 @@
         }
       }
     },
+    "They demand you close the money-losing %@. Refusing lets them escalate toward the board.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie fordern die Schließung der defizitären %@. Eine Verweigerung lässt sie in Richtung Vorstand eskalieren."
+          }
+        }
+      }
+    },
+    "They demand you pay shareholders a special dividend. Refusing lets them escalate toward the board.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie fordern eine Sonderdividende an die Aktionäre. Eine Verweigerung lässt sie in Richtung Vorstand eskalieren."
+          }
+        }
+      }
+    },
+    "They demand you return capital via a share buyback. Refusing lets them escalate toward the board.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie fordern eine Kapitalrückführung per Aktienrückkauf. Eine Verweigerung lässt sie in Richtung Vorstand eskalieren."
+          }
+        }
+      }
+    },
     "This is permanent. %@ leaves your balance now.": {
       "localizations": {
         "de": {
@@ -4737,6 +5217,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gesamtschulden"
+          }
+        }
+      }
+    },
+    "Train now (some crews off-line ~4 days) or defer 30 days for more": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt schulen (einige Crews ~4 Tage außer Dienst) oder 30 Tage aufschieben für mehr"
+          }
+        }
+      }
+    },
+    "Train now · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt schulen · %@"
+          }
+        }
+      }
+    },
+    "Training due": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schulung fällig"
           }
         }
       }
@@ -4867,6 +5377,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "GEPRÜFT"
+          }
+        }
+      }
+    },
+    "Wait": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warten"
           }
         }
       }
@@ -5177,6 +5697,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "profitabel"
+          }
+        }
+      }
+    },
+    "route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Route"
           }
         }
       }

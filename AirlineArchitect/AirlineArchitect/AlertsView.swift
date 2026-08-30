@@ -147,8 +147,9 @@ struct NeedsAttentionCard: View {
     }
 
     private struct AlertModel {
-        let accent: Color, icon: String, category: String, title: String, subtitle: String
-        let buttons: [(label: String, action: () -> Void)]
+        let accent: Color, icon: String
+        let category: LocalizedStringKey, title: LocalizedStringKey, subtitle: LocalizedStringKey
+        let buttons: [(label: LocalizedStringKey, action: () -> Void)]
     }
 
     private func model(for d: Simulation.Decision) -> AlertModel {
@@ -186,13 +187,13 @@ struct NeedsAttentionCard: View {
             // Accept ALWAYS opens the route (free) + banks the bonus. If no spare
             // is in range, it opens PENDING and auto-staffs once you get an
             // aircraft — no more dead-end.
-            let note = sim.eligibleSpareForOffer(p) == nil
-                ? " Accepting opens the route now — you'll have \(Simulation.offerFulfillmentDays) days to put an in-range aircraft on it, or the bonus is clawed back."
-                : ""
+            let subtitle: LocalizedStringKey = sim.eligibleSpareForOffer(p) == nil
+                ? "\(p.pitch) Accepting opens the route now — you'll have \(Simulation.offerFulfillmentDays) days to put an in-range aircraft on it, or the bonus is clawed back."
+                : "\(p.pitch)"
             return AlertModel(
                 accent: accentBlue, icon: "megaphone.fill", category: "Route offer",
                 title: "\(p.originCity) wants your airline",
-                subtitle: p.pitch + note,
+                subtitle: subtitle,
                 buttons: [
                     ("Accept · +\(compactMoney(p.signingBonus))", { Feedback.impact(.medium); sim.resolveAirportOfferAccept(d) }),
                     ("Decline", { sim.resolveAirportOfferDecline(d) }),
@@ -201,7 +202,7 @@ struct NeedsAttentionCard: View {
         // Activist investor pressing a demand — comply (forces the action) or
         // refuse (they escalate). Red, because a refusal walks toward the board.
         if d.kind == .activist, let a = d.activist {
-            let comply: (label: String, action: () -> Void)
+            let comply: (label: LocalizedStringKey, action: () -> Void)
             switch a.ask {
             case .dividend:
                 let cost = sim.dividendCost(yield: Simulation.activistDividendYield)
@@ -210,27 +211,29 @@ struct NeedsAttentionCard: View {
                 let cost = sim.buybackCost(floatFraction: Simulation.activistBuybackFraction)
                 comply = ("Buy back · \(compactMoney(cost))", { Feedback.impact(.light); sim.resolveActivistComply(d) })
             case .closeRoute:
-                comply = ("Close \(a.routeLabel ?? "route")", { Feedback.impact(.light); sim.resolveActivistComply(d) })
+                comply = ("Close \(a.routeLabel ?? String(localized: "route"))", { Feedback.impact(.light); sim.resolveActivistComply(d) })
             }
-            let demandText: String
+            let demandText: LocalizedStringKey
             switch a.ask {
-            case .dividend:  demandText = "pay shareholders a special dividend"
-            case .buyback:   demandText = "return capital via a share buyback"
-            case .closeRoute: demandText = "close the money-losing \(a.routeLabel ?? "route")"
+            case .dividend:  demandText = "They demand you pay shareholders a special dividend. Refusing lets them escalate toward the board."
+            case .buyback:   demandText = "They demand you return capital via a share buyback. Refusing lets them escalate toward the board."
+            case .closeRoute: demandText = "They demand you close the money-losing \(a.routeLabel ?? String(localized: "route")). Refusing lets them escalate toward the board."
             }
             return AlertModel(
                 accent: accentRed, icon: "megaphone.fill", category: "Activist investor",
                 title: "An activist holds \(a.stakePct)% and wants change",
-                subtitle: "They demand you \(demandText). Refusing lets them escalate toward the board.",
+                subtitle: demandText,
                 buttons: [comply, ("Refuse", { sim.resolveActivistRefuse(d) })])
         }
         if d.kind == .hubOffer, let h = d.hubOffer {
             let understaffed = sim.hubUnderstaffed(h.airportCode)
+            let subtitle: LocalizedStringKey = understaffed
+                ? "\(money(h.price)) offered for the understaffed hub. Selling is permanent: \(h.airportCode) becomes a \(h.rival) hub — stronger rival pressure there, and you can never re-hub it. Any club closes with it."
+                : "\(money(h.price)) offered. Selling is permanent: \(h.airportCode) becomes a \(h.rival) hub — stronger rival pressure there, and you can never re-hub it. Any club closes with it."
             return AlertModel(
                 accent: accentBlue, icon: "building.2.fill", category: "Hub buyout offer",
                 title: "\(h.rival) wants your \(h.airportCode) hub",
-                subtitle: "\(money(h.price)) offered\(understaffed ? " for the understaffed hub" : "")."
-                    + " Selling is permanent: \(h.airportCode) becomes a \(h.rival) hub — stronger rival pressure there, and you can never re-hub it. Any club closes with it.",
+                subtitle: subtitle,
                 buttons: [
                     ("Sell · +\(compactMoney(h.price))", { Feedback.impact(.medium); sim.resolveHubSale(d, accept: true) }),
                     ("Decline", { sim.resolveHubSale(d, accept: false) }),
@@ -249,7 +252,7 @@ struct NeedsAttentionCard: View {
                     ("Std Repair", { sim.resolveAOGStandard(d) }),
                 ])
         case .crew:
-            var btns: [(String, () -> Void)] = []
+            var btns: [(LocalizedStringKey, () -> Void)] = []
             if sim.hasReserve(for: ac) { btns.append(("Reserve $5k", { sim.resolveCrewReserve(d) })) }
             if sim.canAffordCrewHire(for: ac) {
                 btns.append(("Hire \(compactMoney(sim.crewHireCost(family: ac.type.family)))", { Feedback.crewHired(); sim.resolveCrewHire(d) }))
