@@ -408,9 +408,9 @@ struct FleetView: View {
 
     private func filterLabel(_ f: FleetStatus) -> String {
         switch f {
-        case .flying:   return "flying"
-        case .idle:     return "idle"
-        case .grounded: return "grounded"
+        case .flying:   return String(localized: "flying")
+        case .idle:     return String(localized: "idle")
+        case .grounded: return String(localized: "grounded")
         }
     }
 
@@ -534,7 +534,7 @@ struct FleetView: View {
     }
 
     private func statusChip(_ st: FleetStatus) -> some View {
-        let (text, color): (String, Color) = {
+        let (text, color): (LocalizedStringKey, Color) = {
             switch st {
             case .flying:   return ("FLYING", Sky.coreGreen)
             case .idle:     return ("IDLE", yellow)

@@ -118,8 +118,8 @@ struct CrewsView: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(info.name).font(.karla(20, .heavy)).foregroundStyle(primary)
-                    Text(info.coverage).font(.karla(14)).foregroundStyle(secondary)
+                    Text(LocalizedStringKey(info.name)).font(.karla(20, .heavy)).foregroundStyle(primary)
+                    Text(LocalizedStringKey(info.coverage)).font(.karla(14)).foregroundStyle(secondary)
                 }
                 Spacer()
                 if thin { runningThinChip }

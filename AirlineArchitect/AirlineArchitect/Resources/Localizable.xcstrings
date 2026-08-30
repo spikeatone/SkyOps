@@ -831,6 +831,66 @@
         }
       }
     },
+    "Airbus A220 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airbus A220-Familie"
+          }
+        }
+      }
+    },
+    "Airbus A320 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airbus A320-Familie"
+          }
+        }
+      }
+    },
+    "Airbus A330 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airbus A330-Familie"
+          }
+        }
+      }
+    },
+    "Airbus A340 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airbus A340-Familie"
+          }
+        }
+      }
+    },
+    "Airbus A350 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airbus A350-Familie"
+          }
+        }
+      }
+    },
+    "Airbus A380 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airbus A380-Familie"
+          }
+        }
+      }
+    },
     "Aircraft": {
       "localizations": {
         "de": {
@@ -1271,6 +1331,56 @@
         }
       }
     },
+    "Boeing 737 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boeing 737-Familie"
+          }
+        }
+      }
+    },
+    "Boeing 747 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boeing 747-Familie"
+          }
+        }
+      }
+    },
+    "Boeing 777 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boeing 777-Familie"
+          }
+        }
+      }
+    },
+    "Boeing 787 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boeing 787-Familie"
+          }
+        }
+      }
+    },
+    "Bombardier CRJ family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bombardier CRJ-Familie"
+          }
+        }
+      }
+    },
     "Build the sky.": {
       "localizations": {
         "de": {
@@ -1701,6 +1811,186 @@
         }
       }
     },
+    "Covers 737-700/800/900/MAX 8/9": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst 737-700/800/900/MAX 8/9"
+          }
+        }
+      }
+    },
+    "Covers 747-400": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst 747-400"
+          }
+        }
+      }
+    },
+    "Covers 777-300": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst 777-300"
+          }
+        }
+      }
+    },
+    "Covers 787-8/9/10": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst 787-8/9/10"
+          }
+        }
+      }
+    },
+    "Covers A220-100/300": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst A220-100/300"
+          }
+        }
+      }
+    },
+    "Covers A319/320/321 (ceo + neo)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst A319/320/321 (ceo + neo)"
+          }
+        }
+      }
+    },
+    "Covers A330-900": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst A330-900"
+          }
+        }
+      }
+    },
+    "Covers A340-300": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst A340-300"
+          }
+        }
+      }
+    },
+    "Covers A350-900": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst A350-900"
+          }
+        }
+      }
+    },
+    "Covers A380": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst A380"
+          }
+        }
+      }
+    },
+    "Covers ATR 42-600": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst ATR 42-600"
+          }
+        }
+      }
+    },
+    "Covers Beechcraft 1900D": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst Beechcraft 1900D"
+          }
+        }
+      }
+    },
+    "Covers CRJ900/1000": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst CRJ900/1000"
+          }
+        }
+      }
+    },
+    "Covers Dash 8-200": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst Dash 8-200"
+          }
+        }
+      }
+    },
+    "Covers Dornier 328-110": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst Dornier 328-110"
+          }
+        }
+      }
+    },
+    "Covers E170/175": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst E170/175"
+          }
+        }
+      }
+    },
+    "Covers E190/195": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst E190/195"
+          }
+        }
+      }
+    },
+    "Covers ERJ135/140/145": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfasst ERJ135/140/145"
+          }
+        }
+      }
+    },
     "Crew": {
       "localizations": {
         "de": {
@@ -2017,6 +2307,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vorzeitiges Beenden gibt den Jet zurück und kostet %@ Strafe (≈3 Monatsraten). Die Crew geht zurück in den Pool."
+          }
+        }
+      }
+    },
+    "Embraer E170 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Embraer E170-Familie"
+          }
+        }
+      }
+    },
+    "Embraer E190 family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Embraer E190-Familie"
+          }
+        }
+      }
+    },
+    "Embraer ERJ family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Embraer ERJ-Familie"
           }
         }
       }
@@ -5677,6 +5997,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "z. B. ZQ"
+          }
+        }
+      }
+    },
+    "flying": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "im Flug"
+          }
+        }
+      }
+    },
+    "grounded": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am Boden"
+          }
+        }
+      }
+    },
+    "idle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ungenutzt"
           }
         }
       }
