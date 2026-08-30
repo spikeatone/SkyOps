@@ -2,14 +2,14 @@
 
 ## ⏳ PROGRESS (branch `de-translation`, NOT merged, NOT ship-ready) — read this first
 
-**~169 catalog keys translated + category-2 code gaps fixed across 10 helpers, all verified live on
+**~182 catalog keys translated + category-2 code gaps fixed across 11 helpers, all verified live on
 device in German.** Register: **du**. AI-drafted (no native review — designer accepted that risk).
-Everything is on the `de-translation` branch, four commits, pushed. English is unchanged throughout (the
+Everything is on the `de-translation` branch, five commits, pushed. English is unchanged throughout (the
 catalog only adds a `de` column; harness stays 13/13). NOT ship-ready — partial German is worse than
 none, so it stays on the branch until it's finished + timing clears the 4.3(a) cascade.
 
 **Assets created:**
-- `Resources/Localizable.xcstrings` — the view-layer String Catalog (169 keys, all with a `de` value).
+- `Resources/Localizable.xcstrings` — the view-layer String Catalog (182 keys, all with a `de` value).
 - `Sim/Localization.swift` — the framework-free `L()` shim (its `de` table is still EMPTY — Sim strings
   are NOT translated yet).
 - `aa-1.1.x/de-glossary.md` — the terminology glossary (du; Route/Slot/Gate/Crew kept as German
@@ -25,7 +25,19 @@ Verfügbar/Im Dienst/Ruhephase/Reserve, KNAPP BESETZT, Neue Crew/EINSTELLEN, hir
 plurals) · **Tutorial — FULL** (all 5 coach cards, title + body, verified stepping through in German) ·
 **Session Briefing — strings translated + compiled** (BETRIEBS-BRIEFING / "Willkommen zurück bei %@" /
 "Übernimm die Steuerung"; not eyeballed rendering — the briefing only shows on loading a save with real
-progress, and `-devScenario` seeds skip the load path, but all three keys are confirmed in `de.lproj`).
+progress, and `-devScenario` seeds skip the load path, but all three keys are confirmed in `de.lproj`) ·
+**`LiveryDesignView` — FULL** (Gestalte/Passe deine Lackierung an, "Bringe %@ auf die Flotte.",
+RUMPFBESCHRIFTUNG/SCHRIFTART/FARBPALETTE/HECKEMBLEM, the fuselage helper line, commit buttons
+Airline starten / Lackierung speichern / Flotte neu lackieren — verified live via the in-game Livery
+re-customise flow).
+
+**DELIBERATE DEFERRAL (not a miss):** `LiveryPalette.name` — the 10 palette names (Atlantic, Cardinal,
+Pacific, Meridian, Evergreen, Copper, Azure, Tropic, Burgundy, Velocity, in `Livery.swift`) stay ENGLISH.
+They're aesthetic brand/style labels, not domain terms, and translating them is a genuine judgment call
+(keep "Burgundy" or "Burgunder"? "Velocity" reads fine in German as-is) — exactly the kind of call the
+glossary flags for a NATIVE reviewer, not AI. To localize later: `Livery.swift` is a view-layer file
+(imports SwiftUI), so wrap the display site `Text(LocalizedStringKey(p.name))` in `LiveryDesignView`
+(+ the swatch label) and add catalog entries; the `name` field stays `String` (it's model data).
 
 **Category-2 code gaps FIXED so far** (the pattern — see the CRITICAL FINDING section below): tab bar
 (`SkyTabIcons`/`SkySidebar`), `NetworkView.barButton`, `FinanceView` sectionTitle/ledgerLine/ledgerRow/
@@ -34,16 +46,21 @@ miniStat/leverSection + the section/period `Text(rawValue)` selectors, `FleetVie
 `successBanner`** (`String?` → `LocalizedStringKey?`, so the interpolated hire banner localizes),
 **`Tutorial`** (`Text(LocalizedStringKey(step.title/step.body))` — the tutorial title/body are `String`
 array fields, so they need the wrap; the extractor CANNOT auto-add them, so their keys were added to the
-catalog manually with the exact English source). **Every custom label helper with a `String` title/label
-param is a suspect** — audit each and change the DISPLAY param to `LocalizedStringKey` (keep VALUE params
-`String` — they carry data).
+catalog manually with the exact English source), **`LiveryDesignView.section`** (title param →
+`LocalizedStringKey`, localizes the 4 section headers) + **`commitTitle`** (`String` → `LocalizedStringKey`
+default; its callers in `FleetView` only ever pass literals, so no call-site change) + the subtitle
+restructured to `"Paint \(paintTarget) onto the fleet."` where `paintTarget` resolves the empty-name
+fallback via `String(localized:)` so the format key stays clean `"Paint %@ onto the fleet."` instead of a
+ternary-garbled literal. **Every custom label helper with a `String` title/label param is a suspect** —
+audit each and change the DISPLAY param to `LocalizedStringKey` (keep VALUE params `String` — they carry
+data).
 
-**REMAINING (~200 strings) — the mechanical long tail for the next pass:**
+**REMAINING (~185 strings) — the mechanical long tail for the next pass:**
 1. **Whole screens not touched:** Ops (OPS HOME, Route Opportunities + its subtitle, "N/day",
    Regional jet/Narrowbody/Widebody class labels), Network panels (Acquire/Routes/FuelHedge/Hubs),
-   aircraft detail (`FleetDetailView`), airport card, alerts/decision cards, **`LiveryDesignView`** (a
-   big untouched surface — "Design your livery", FUSELAGE TEXT, TITLE FONT, COLOR PALETTE, TAIL EMBLEM,
-   the 10 palette names, "Launch Airline"), Market Intelligence / Go Public views.
+   aircraft detail (`FleetDetailView`), airport card, alerts/decision cards, Market Intelligence /
+   Go Public views. (`LiveryDesignView` is now DONE — see above, minus the deliberately-deferred palette
+   names.)
 2. **`SaveSlotsView` category-2/interpolated tail (found this pass):** "New Airline" (the DEFAULT
    airline name — a `String` model prop, bypasses catalog), the slot summary "Day N · $X · N aircraft ·
    N routes", "Saved Xm ago"/"Saved just now", "Empty slot", and the "Delete this airline?" confirm.

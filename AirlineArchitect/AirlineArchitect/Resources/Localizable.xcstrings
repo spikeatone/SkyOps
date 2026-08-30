@@ -331,6 +331,16 @@
         }
       }
     },
+    "COLOR PALETTE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FARBPALETTE"
+          }
+        }
+      }
+    },
     "CREWS HOME": {
       "localizations": {
         "de": {
@@ -441,6 +451,16 @@
         }
       }
     },
+    "Customize your livery": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passe deine Lackierung an"
+          }
+        }
+      }
+    },
     "DIVIDEND": {
       "localizations": {
         "de": {
@@ -467,6 +487,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Löschen"
+          }
+        }
+      }
+    },
+    "Design your livery": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestalte deine Lackierung"
           }
         }
       }
@@ -577,6 +607,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "FINANZIERUNG"
+          }
+        }
+      }
+    },
+    "FUSELAGE TEXT": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RUMPFBESCHRIFTUNG"
           }
         }
       }
@@ -797,6 +837,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Starten"
+          }
+        }
+      }
+    },
+    "Launch Airline": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airline starten"
           }
         }
       }
@@ -1261,6 +1311,16 @@
         }
       }
     },
+    "Paint %@ onto the fleet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bringe %@ auf die Flotte."
+          }
+        }
+      }
+    },
     "Practical Range": {
       "localizations": {
         "de": {
@@ -1327,6 +1387,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reichweite"
+          }
+        }
+      }
+    },
+    "Repaint Fleet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flotte neu lackieren"
           }
         }
       }
@@ -1421,6 +1491,16 @@
         }
       }
     },
+    "Save Livery": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lackierung speichern"
+          }
+        }
+      }
+    },
     "Scheduled for repaint": {
       "localizations": {
         "de": {
@@ -1511,12 +1591,42 @@
         }
       }
     },
+    "TAIL EMBLEM": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HECKEMBLEM"
+          }
+        }
+      }
+    },
+    "TITLE FONT": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SCHRIFTART"
+          }
+        }
+      }
+    },
     "Take the controls": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Übernimm die Kontrolle"
+          }
+        }
+      }
+    },
+    "Text on your planes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text auf deinen Flugzeugen"
           }
         }
       }
@@ -1651,6 +1761,16 @@
         }
       }
     },
+    "What's painted on the fuselage — usually a short form of your name.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was auf dem Rumpf steht — meist eine Kurzform deines Namens."
+          }
+        }
+      }
+    },
     "Your first customer is calling": {
       "localizations": {
         "de": {
@@ -1687,6 +1807,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Deine Startkarte zeigt diese Region – fliegen kannst du trotzdem überallhin."
+          }
+        }
+      }
+    },
+    "your airline": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "deine Airline"
           }
         }
       }

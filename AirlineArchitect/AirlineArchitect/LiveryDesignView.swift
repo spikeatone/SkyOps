@@ -20,7 +20,7 @@ struct LiveryDesignView: View {
     var initialLivery: Livery? = nil
     var initialText: String? = nil
     /// The commit button label ("Launch Airline" at creation, "Save Livery" in-game).
-    var commitTitle: String = "Launch Airline"
+    var commitTitle: LocalizedStringKey = "Launch Airline"
     /// Optional back/close affordance (in-game edit shows a chevron to return to Fleet).
     var onCancel: (() -> Void)? = nil
     /// Called with the chosen font / palette / tail-emblem indices + the fuselage
@@ -43,6 +43,14 @@ struct LiveryDesignView: View {
 
     private var livery: Livery {
         Livery(fontIndex: fontIndex, paletteIndex: paletteIndex, tailArtIndex: tailIndex)
+    }
+
+    /// The airline name for the "Paint X onto the fleet." subtitle — the real name,
+    /// or a localized stand-in when it's empty. Resolved to a String here (the name is
+    /// a proper noun, the fallback is localized) so the subtitle's format key stays the
+    /// clean "Paint %@ onto the fleet." rather than a ternary-garbled literal.
+    private var paintTarget: String {
+        airlineName.isEmpty ? String(localized: "your airline") : airlineName
     }
 
     // Tokens (match AirlineNamingView)
@@ -130,7 +138,7 @@ struct LiveryDesignView: View {
                 Text(initialLivery == nil ? "Design your livery" : "Customize your livery")
                     .font(.karla(22, .bold))
                     .foregroundStyle(titleColor)
-                Text("Paint \(airlineName.isEmpty ? "your airline" : airlineName) onto the fleet.")
+                Text("Paint \(paintTarget) onto the fleet.")
                     .font(.karla(15))
                     .foregroundStyle(subtitleColor)
                     .multilineTextAlignment(.center)
@@ -315,7 +323,7 @@ struct LiveryDesignView: View {
 
     // MARK: Section chrome
 
-    @ViewBuilder private func section<V: View>(_ title: String, @ViewBuilder _ content: () -> V) -> some View {
+    @ViewBuilder private func section<V: View>(_ title: LocalizedStringKey, @ViewBuilder _ content: () -> V) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(title)
                 .font(.karla(12, .semibold))
