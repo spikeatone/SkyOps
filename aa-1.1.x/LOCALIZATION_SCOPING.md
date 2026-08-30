@@ -21,10 +21,26 @@ cools (see `PostmarkOps/APP_REVIEW_NOTES.md`). This is scoping-ahead, not a ship
 
 ## Current state
 
-- **No localization infrastructure at all** — English-only, hardcoded string literals. No `.lproj`,
-  no `Localizable.strings`, no `.xcstrings` catalog.
-- Deployment target iOS 18 → **String Catalogs (`.xcstrings`) are available** and are the right modern
-  approach (Xcode extracts, one file, per-language columns, handles plurals/interpolation ordering).
+- **INFRASTRUCTURE BUILT (28 Aug, branch `localization-infra`) — English unchanged, no shippable
+  localization diff.** What now exists:
+  - **`Resources/Localizable.xcstrings`** — the view-layer String Catalog (empty; source language en).
+    The synchronized group auto-registered it (the build runs `xcstringstool` — no manual pbxproj file
+    ref needed, unlike FC's hand-authored project). SwiftUI `Text("…")` localizes through this for free
+    once a `de` column is filled.
+  - **`de` added to `knownRegions`** in the pbxproj (alongside en, Base).
+  - **`Sim/Localization.swift`** — the framework-free shim for the Sim layer's ~124 user-facing
+    strings. `L("… %@ …", args)` looks up a per-language format table (empty today → English
+    passthrough) and substitutes `%@` positionally so translations can reorder words. NO imports
+    (pure Swift) → compiles in the headless harness. Verified: 4/4 shim unit checks + harness 13/13.
+  - **`SimLocale.current` set at launch** from the system locale (in `AirlineArchitectApp.init`, view
+    side — Sim/ has no Locale access). No-op until a table is filled.
+  - **One reference conversion** done as the pattern example: `Simulation.establishHub`'s
+    "Hub established at %@" now flows through `L(...)`. The other ~123 Sim strings convert the same way
+    during the TRANSLATION pass (not part of this infra commit).
+- **What's left = the translation pass** (fill the `de` catalog column + the Sim `de` table with NATIVE
+  German) + device QA + ASC listing. All gated on timing per the top of this doc.
+- Deployment target iOS 18 → String Catalogs are the modern approach (Xcode extracts, one file,
+  per-language columns, handles plurals/interpolation ordering).
 
 ## The translation payload — by surface, hardest last
 
