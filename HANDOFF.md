@@ -40,11 +40,20 @@ paragraph). The canonical playbook + Airline's filled-in unique-systems paragrap
 `PostmarkOps/APP_REVIEW_NOTES.md`. The 1.4.3 notes (3988 chars, under the 4000 limit) are the template
 for the next one — reuse them, just update the version line.
 
-**► 🇩🇪 GERMAN LOCALIZATION — IN-APP TRANSLATION IS COMPLETE (branch `de-translation`, NOT merged). What's
-left: a NATIVE-GERMAN REVIEW, device string-length QA, and the ASC listing — plus the ship-timing gate.**
-⚠️ **`git checkout de-translation`** — all the translation + glossary live THERE, not on `main`.
-Driven by TelemetryDeck data (German = 16% of preferred language, #2 after English) — a DACH
-market-ENTRY/conversion bet, not a demand response. Register **du** throughout.
+**► 🇩🇪 GERMAN LOCALIZATION — MERGED TO `main` and SHIPPING IN 1.6.0 (31 Aug).** `de-translation` merged
+to `main` (merge commit `3ed01e9`, direct no-ff, pushed) once 1.5.0 went `READY_FOR_SALE`. The whole app
+is German (648 catalog keys + Sim `L()` shim + flavor prose); English byte-identical; build clean; the
+comprehensive `de.lproj` gap scan (`aa-1.1.x/de-findgaps.py`) shows 0 real gaps. **Designer chose to ship
+German AI-drafted — NO native review** (the standing gate was waived; the risk is a first-language market
+noticing MT, and the 4.3(a) localization-only reflex, which 1.6 dodges by ALSO shipping the city assets).
+**ASC de-DE localization CREATED on the v1.6 record** (id `c32607c7…` under version `cae19c1c…`): Promo /
+Description (2688 chars) / What's New / Keywords all set via `asc.py`; en-US What's New set too. Designer
+adds the 20 de screenshots (ready in `App Store Screenshots/de/`). Currency shows € on German devices
+(symbol-only, no FX). Driven by TelemetryDeck (German = 16% of preferred language, #2). Register **du**.
+⚠️ **1.6.0 BUILD NOT CUT YET** — held at 1.5/54 until the `airport-heroes-achievements` branch (city
+assets + GC per-achievement icons) also merges to `main`, so build 55 carries BOTH. Then bump
+`CURRENT_PROJECT_VERSION` (6 configs) → 1.6.0/build 55 → archive → upload. Reuse
+`aa-1.1.x/app-review-notes-1.5.0.txt` (§1 studio block, bump the version line) + add a German line.
 
 **DONE 30 Aug (5 commits on top of the earlier 12 — the whole app is now German):**
 - **`main` MERGED IN** (0 behind — carries the 1.5 A350-1000/747-8i + map throttle; their 2 flavor lines
