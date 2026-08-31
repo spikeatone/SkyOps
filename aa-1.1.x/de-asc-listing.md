@@ -22,11 +22,12 @@ Alternatives if you want a different angle:
 - `Baue deine Fluggesellschaft`  (27)
 
 ## Promotional Text  (≤170 chars — editable anytime, NO review)
-**`Bau aus einem Flugzeug und 20 Mio. $ eine globale Airline. Jetzt mit A350-1000 und Boeing 747-8i. Passe den Jet zum Markt, führe den Betrieb, beherrsche den Himmel.`**
-(163 chars — dropped "Airbus" to fit ≤170.)
+**LIVE on v1.6 (version-agnostic, set 31 Aug — designer's call):**
+- **de-DE (157):** `Bau aus einem einzigen Flugzeug und 20 Mio. $ eine globale Airline. Passe den richtigen Jet zum richtigen Markt, führe den Betrieb und beherrsche den Himmel.`
+- **en-US (121):** `Build a global airline from one plane and $20M. Match the right jet to the right market, run the ops, and rule the skies.`
 
-Version-agnostic option (drop the aircraft mention, so it survives past 1.6, 157 chars):
-`Bau aus einem einzigen Flugzeug und 20 Mio. $ eine globale Airline. Passe den richtigen Jet zum richtigen Markt, führe den Betrieb und beherrsche den Himmel.`
+(Earlier 1.5-flavored draft that mentioned the A350-1000/747-8i was superseded — those
+aircraft are a version behind now; the version-agnostic pair survives future releases.)
 
 ## Keywords  (≤100 chars, comma-separated, NO spaces after commas)
 **`airline,tycoon,flugzeug,luftfahrt,flug,simulator,management,strategie,route,flotte,flughafen,aufbausim`**
