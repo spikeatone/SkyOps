@@ -74,7 +74,7 @@ struct GameOverView: View {
         }
     }
 
-    private func statRow(_ label: String, _ value: String) -> some View {
+    private func statRow(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack {
             Text(label).font(.karla(14)).foregroundStyle(secondary)
             Spacer()

@@ -244,7 +244,7 @@ private struct HubProfitChart: View {
 
         // Y labels: max (top), $0 (break-even), min (bottom).
         yLabel(ctx, money(Int(maxY)), CGPoint(x: leftPad - 5, y: sy(maxY)))
-        yLabel(ctx, "$0", CGPoint(x: leftPad - 5, y: zy))
+        yLabel(ctx, (Currency.symbol + "0"), CGPoint(x: leftPad - 5, y: zy))
         yLabel(ctx, money(Int(minY)), CGPoint(x: leftPad - 5, y: sy(minY)))
 
         // Payback line, split at each zero crossing and coloured by sign.
@@ -279,8 +279,8 @@ private struct HubProfitChart: View {
 
     private func money(_ v: Int) -> String {
         let a = abs(v), sign = v < 0 ? "−" : ""
-        if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-        return sign + "$\(a)"
+        if a >= 1_000_000 { return sign + Currency.symbol + String(format: "%.1fM", Double(a) / 1_000_000) }
+        if a >= 1_000     { return sign + Currency.symbol + String(format: "%.0fk", Double(a) / 1_000) }
+        return sign + Currency.symbol + "\(a)"
     }
 }

@@ -58,7 +58,7 @@ struct FleetView: View {
     @State private var ownership: OwnershipFilter = .all
     enum OwnershipFilter: Hashable {
         case all, owned, leased
-        var label: String { switch self { case .all: return "All"; case .owned: return "Owned"; case .leased: return "Leased" } }
+        var label: String { switch self { case .all: return String(localized: "All"); case .owned: return String(localized: "Owned"); case .leased: return String(localized: "Leased") } }
         func matches(_ ac: Aircraft) -> Bool {
             switch self { case .all: return true; case .owned: return !ac.isLeased; case .leased: return ac.isLeased }
         }
@@ -192,7 +192,7 @@ struct FleetView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: showLivery)
-        .onAppear { adoptOpenLiveryIfAny() }
+        .onAppear { adoptOpenLiveryIfAny(); applyShotDefaults() }
         .onChange(of: openLivery?.wrappedValue ?? false) { _, _ in adoptOpenLiveryIfAny() }
         .animation(.easeInOut(duration: 0.2), value: pendingLivery != nil)
     }
@@ -203,6 +203,27 @@ struct FleetView: View {
         showLivery = true
         openLivery?.wrappedValue = false
     }
+
+    #if DEBUG
+    /// App Store screenshot seed (-shot): pick the Marketplace segment or auto-open
+    /// an aircraft's detail so those shots land on the right screen with no taps.
+    private func applyShotDefaults() {
+        guard let shot = ContentView.shotName, detailID == nil else { return }
+        switch shot {
+        case "marketplace":
+            segment = .marketplace
+        case "fleetdetail", "liveryInGame":
+            segment = .myFleet
+            // Prefer a Dreamliner (matches the marketing shots); else the first owned.
+            let owned = sim.aircraft.filter { $0.purchased }
+            detailID = (owned.first { $0.type.id == "B789" } ?? owned.first)?.id
+        default:
+            break
+        }
+    }
+    #else
+    private func applyShotDefaults() {}
+    #endif
 
     /// Always persist a livery change right away so it survives even if the app is
     /// killed before the next autosave (true is fine; kept as a named flag for clarity).
@@ -307,7 +328,7 @@ struct FleetView: View {
         .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
-    private func segButton(_ title: String, _ seg: Segment) -> some View {
+    private func segButton(_ title: LocalizedStringKey, _ seg: Segment) -> some View {
         let active = segment == seg
         // Switching My Fleet ↔ Marketplace resets the category/sort so each
         // starts fresh (avoids e.g. a "Wide" market filter hiding your fleet).
@@ -346,7 +367,7 @@ struct FleetView: View {
 
     /// Tapping a box filters the fleet list to that state (tap again, or tap
     /// Total, to clear). The active filter shows a ring in the box's own colour.
-    private func statusBox(_ label: String, _ value: Int, _ color: Color, filter: FleetStatus?) -> some View {
+    private func statusBox(_ label: LocalizedStringKey, _ value: Int, _ color: Color, filter: FleetStatus?) -> some View {
         let selected = fleetFilter != nil && fleetFilter == filter
         return VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.karla(14)).foregroundStyle(statusLabel)
@@ -408,9 +429,9 @@ struct FleetView: View {
 
     private func filterLabel(_ f: FleetStatus) -> String {
         switch f {
-        case .flying:   return "flying"
-        case .idle:     return "idle"
-        case .grounded: return "grounded"
+        case .flying:   return String(localized: "flying")
+        case .idle:     return String(localized: "idle")
+        case .grounded: return String(localized: "grounded")
         }
     }
 
@@ -534,7 +555,7 @@ struct FleetView: View {
     }
 
     private func statusChip(_ st: FleetStatus) -> some View {
-        let (text, color): (String, Color) = {
+        let (text, color): (LocalizedStringKey, Color) = {
             switch st {
             case .flying:   return ("FLYING", Sky.coreGreen)
             case .idle:     return ("IDLE", yellow)
@@ -611,7 +632,7 @@ struct FleetView: View {
         }
         .padding(4).background(segBG).clipShape(RoundedRectangle(cornerRadius: 4))
     }
-    private func categoryBox(_ label: String, _ cat: MarketCategory?, _ count: Int) -> some View {
+    private func categoryBox(_ label: LocalizedStringKey, _ cat: MarketCategory?, _ count: Int) -> some View {
         let selected = marketCategory == cat
         return VStack(spacing: 2) {
             Text(label).font(.karla(12)).foregroundStyle(statusLabel).lineLimit(1).minimumScaleFactor(0.65)
@@ -635,7 +656,7 @@ struct FleetView: View {
             }
         }
     }
-    private func categoryPill(_ label: String, _ cat: MarketCategory?) -> some View {
+    private func categoryPill(_ label: LocalizedStringKey, _ cat: MarketCategory?) -> some View {
         let selected = marketCategory == cat
         return Button { withAnimation(Motion.glide) { marketCategory = selected ? nil : cat } } label: {
             Text(label).font(.karla(13, .medium)).lineLimit(1).fixedSize()
@@ -649,9 +670,9 @@ struct FleetView: View {
     /// A compact labeled dropdown — deliberately styled UNLIKE the filter pills
     /// (rounded rect + caret + a "Label:" prefix) so sorting is never mistaken
     /// for another filter chip.
-    private func menuControl(_ title: String, _ value: String) -> some View {
+    private func menuControl(_ title: LocalizedStringKey, _ value: String) -> some View {
         HStack(spacing: 4) {
-            Text("\(title):").font(.karla(12)).foregroundStyle(statusLabel)
+            (Text(title) + Text(":")).font(.karla(12)).foregroundStyle(statusLabel)
             Text(value).font(.karla(13, .semibold)).foregroundStyle(primary)
             Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
                 .foregroundStyle(statusLabel)
@@ -678,7 +699,7 @@ struct FleetView: View {
     private var sortValueLabel: String {
         let name: String
         switch marketSort {
-        case .price: name = "Price"; case .seats: name = "Seats"; case .range: name = "Range"
+        case .price: name = String(localized: "Price"); case .seats: name = String(localized: "Seats"); case .range: name = String(localized: "Range")
         }
         return "\(name) \(sortAsc ? "↑" : "↓")"
     }
@@ -733,7 +754,7 @@ struct FleetView: View {
                 Spacer()
                 spec("Practical Range:", "\(type.rangeNM.formatted()) NM")
                 Spacer()
-                spec("Avg Lifespan:", "\(type.expectedLifespanCycles.formatted()) cycles")
+                spec("Avg Lifespan:", String(localized: "\(type.expectedLifespanCycles.formatted()) cycles"))
             }
             Rectangle().fill(cardBorder).frame(height: 1)
             // Buy new
@@ -751,7 +772,7 @@ struct FleetView: View {
             ForEach(used.sorted { $0.price < $1.price }) { listing in
                 let pct = 100 * listing.cyclesAccrued / max(1, type.expectedLifespanCycles)
                 offerRow("Buy used:",
-                         "\(money(listing.price)) · \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
+                         String(localized: "\(money(listing.price)) · \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)"),
                          kind: .buy, cost: listing.price) {
                     gatedAcquire { if sim.buyUsedAircraft(listing) != nil { Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1) } }
                 }
@@ -764,7 +785,7 @@ struct FleetView: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
-    private func spec(_ label: String, _ value: String) -> some View {
+    private func spec(_ label: LocalizedStringKey, _ value: String) -> some View {
         VStack(spacing: 2) {
             Text(label).font(.karla(14, .bold)).foregroundStyle(secondary)
             Text(value).font(.karla(14)).foregroundStyle(secondary)
@@ -772,7 +793,7 @@ struct FleetView: View {
     }
 
     private enum OfferKind { case buy, lease }
-    private func offerRow(_ label: String, _ detail: String, kind: OfferKind,
+    private func offerRow(_ label: LocalizedStringKey, _ detail: String, kind: OfferKind,
                           cost: Int, action: @escaping () -> Void) -> some View {
         let afford = sim.playerBalance >= cost
         let short = cost - sim.playerBalance
@@ -800,5 +821,5 @@ struct FleetView: View {
         }
     }
 
-    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
 }

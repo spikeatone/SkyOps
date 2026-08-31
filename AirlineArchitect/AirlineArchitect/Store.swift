@@ -165,9 +165,9 @@ final class Store {
     func capMessage(_ gate: Gate) -> String {
         switch gate {
         case .fleet:
-            return "The free preview flies \(Self.freeFleetCap) aircraft. Unlock the full game for an unlimited fleet — widebodies, long-haul, and a network big enough to need them."
+            return String(localized: "The free preview flies \(Self.freeFleetCap) aircraft. Unlock the full game for an unlimited fleet — widebodies, long-haul, and a network big enough to need them.")
         case .route:
-            return "The free preview opens \(Self.freeRouteCap) routes. Unlock the full game to expand the network, build more hubs, take the airline public, and buy out your rivals."
+            return String(localized: "The free preview opens \(Self.freeRouteCap) routes. Unlock the full game to expand the network, build more hubs, take the airline public, and buy out your rivals.")
         }
     }
 

@@ -84,7 +84,37 @@ struct ContentView: View {
         guard let i = a.firstIndex(of: "-devScenario"), i + 1 < a.count else { return nil }
         return Simulation.DevScenario(rawValue: a[i + 1])
     }()
+
+    /// `-shot <name>` or the `SIMCTL_CHILD_SHOT` env var — App Store screenshot seed
+    /// (see `Simulation.seedForShot`). Names: naming, network, marketplace, myfleet,
+    /// fleetdetail, ops, finance, crews, liveryCreate, liveryInGame.
+    static let shotName: String? = {
+        let a = ProcessInfo.processInfo.arguments
+        if let i = a.firstIndex(of: "-shot"), i + 1 < a.count { return a[i + 1] }
+        return ProcessInfo.processInfo.environment["SIMCTL_CHILD_SHOT"]
+    }()
+    /// Which bottom-tab a given screenshot lands on (0 Network … 4 Finance).
+    static func shotTab(_ shot: String) -> Int {
+        switch shot {
+        case "marketplace", "myfleet", "fleetdetail", "liveryInGame": return 1   // Fleet
+        case "crews":   return 2
+        case "ops":     return 3
+        case "finance": return 4
+        default:        return 0   // Network
+        }
+    }
     #endif
+
+    /// True while an App Store screenshot seed is active (DEBUG only) — suppresses
+    /// the milestone toast so it can't land over the header in a marketing image.
+    /// Always false in Release.
+    static var isScreenshotShot: Bool {
+        #if DEBUG
+        return shotName != nil
+        #else
+        return false
+        #endif
+    }
 
     /// First half of body's modifier chain — split in two because the single
     /// chain outgrew the type-checker's expression budget when the briefing +
@@ -212,7 +242,7 @@ struct ContentView: View {
         }
         // Milestone celebrations — glide down from the top, auto-dismiss.
         .overlay(alignment: .top) {
-            if let c = sim.celebrations.first {
+            if let c = sim.celebrations.first, !Self.isScreenshotShot {
                 MilestoneToast(celebration: c)
                     .id(c.id)
                     .padding(.top, 8)
@@ -247,7 +277,12 @@ struct ContentView: View {
         // DEBUG (-liveryPreview): drive/tune the livery design screen directly.
         .overlay {
             if showLiveryPreview {
-                LiveryDesignView(airlineName: "Aster Air", backdropOpacity: coldLaunchBackdrop) { _, _, _, _ in
+                // The screenshot seed (-shot liveryCreate) wants "Air Tina" with its
+                // fuselage text pre-filled; the plain -liveryPreview uses Aster Air.
+                let previewName = (Self.isScreenshotShot ? "Air Tina" : "Aster Air")
+                LiveryDesignView(airlineName: previewName,
+                                 backdropOpacity: coldLaunchBackdrop,
+                                 initialText: Self.isScreenshotShot ? "Air Tina" : nil) { _, _, _, _ in
                     showLiveryPreview = false
                 }
                 .ignoresSafeArea()
@@ -269,6 +304,21 @@ struct ContentView: View {
     /// expression past the type-checker's budget.
     private func coldLaunch() {
             #if DEBUG
+            // -shot <name> (or SIMCTL_CHILD_SHOT env) — App Store screenshot seed.
+            if let shot = Self.shotName {
+                showSplash = false
+                switch shot {
+                case "naming":
+                    break   // clean slate: the naming screen renders (sim has no airline)
+                case "liveryCreate":
+                    sim.nameAirline("Air Tina", tailCode: "ZQ")
+                    showLiveryPreview = true   // the livery design screen (Air Tina)
+                default:
+                    sim.seedForShot(shot)
+                    tab = Self.shotTab(shot)
+                }
+                return
+            }
             if CommandLine.arguments.contains("-liveryPreview") {   // DEBUG: drive the livery screen directly
                 showSplash = false; showLiveryPreview = true; return
             }
@@ -539,10 +589,10 @@ struct ContentView: View {
 /// 25×; "$30.1B" only moves once every few sim-minutes, so it reads as stable.
 func compactMoney(_ v: Int) -> String {
     let a = abs(v), sign = v < 0 ? "−" : ""
-    if a >= 1_000_000_000 { return sign + "$" + String(format: "%.1fB", Double(a) / 1_000_000_000) }
-    if a >= 1_000_000     { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-    if a >= 1_000         { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-    return sign + "$\(a)"
+    if a >= 1_000_000_000 { return sign + Currency.symbol + String(format: "%.1fB", Double(a) / 1_000_000_000) }
+    if a >= 1_000_000     { return sign + Currency.symbol + String(format: "%.1fM", Double(a) / 1_000_000) }
+    if a >= 1_000         { return sign + Currency.symbol + String(format: "%.0fk", Double(a) / 1_000) }
+    return sign + Currency.symbol + "\(a)"
 }
 
 /// Cash-on-hand display — MORE precise than compactMoney near thresholds so a
@@ -553,11 +603,11 @@ func compactMoney(_ v: Int) -> String {
 /// finer than the aircraft prices this number gets compared against.
 func cashLabel(_ v: Int) -> String {
     let a = abs(v), sign = v < 0 ? "−" : ""
-    if a >= 1_000_000_000 { return sign + "$" + String(format: "%.3fB", Double(a) / 1_000_000_000) }
-    if a >= 10_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-    if a >= 1_000_000  { return sign + "$" + String(format: "%.2fM", Double(a) / 1_000_000) }
-    if a >= 1_000      { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-    return sign + "$\(a)"
+    if a >= 1_000_000_000 { return sign + Currency.symbol + String(format: "%.3fB", Double(a) / 1_000_000_000) }
+    if a >= 10_000_000 { return sign + Currency.symbol + String(format: "%.1fM", Double(a) / 1_000_000) }
+    if a >= 1_000_000  { return sign + Currency.symbol + String(format: "%.2fM", Double(a) / 1_000_000) }
+    if a >= 1_000      { return sign + Currency.symbol + String(format: "%.0fk", Double(a) / 1_000) }
+    return sign + Currency.symbol + "\(a)"
 }
 
 
@@ -680,7 +730,7 @@ struct AircraftProfileCard: View {
                 Spacer()
                 spec("Practical Range:", "\(type.rangeNM.formatted()) NM")
                 Spacer()
-                spec("Avg Lifespan:", "\(type.expectedLifespanCycles.formatted()) cycles")
+                spec("Avg Lifespan:", String(localized: "\(type.expectedLifespanCycles.formatted()) cycles"))
             }
 
             Rectangle().fill(cardBorder).frame(height: 1)
@@ -690,14 +740,14 @@ struct AircraftProfileCard: View {
                 gated { if let ac = sim.buyAircraft(type) { onBought(ac) } }
             }
             row("Lease new:",
-                "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
+                String(localized: "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo"),
                 lease: true, cost: sim.leaseUpfront(type)) {
                 gated { if let ac = sim.leaseAircraft(type) { onBought(ac) } }
             }
             ForEach(sim.usedInventory[type.id] ?? []) { listing in
                 let pct = 100 * listing.cyclesAccrued / max(1, type.expectedLifespanCycles)
                 row("Buy used:",
-                    "\(money(listing.price)) - \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
+                    String(localized: "\(money(listing.price)) - \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)"),
                     lease: false, cost: listing.price) {
                     gated { if let ac = sim.buyUsedAircraft(listing) { onBought(ac) } }
                 }
@@ -732,14 +782,14 @@ struct AircraftProfileCard: View {
         }
     }
 
-    private func spec(_ label: String, _ value: String) -> some View {
+    private func spec(_ label: LocalizedStringKey, _ value: String) -> some View {
         VStack(spacing: 2) {
             Text(label).font(.karla(14, .bold)).foregroundStyle(labelC)
             Text(value).font(.karla(14)).foregroundStyle(bodyC)
         }
     }
 
-    private func row(_ label: String, _ detail: String, lease: Bool, cost: Int,
+    private func row(_ label: LocalizedStringKey, _ detail: String, lease: Bool, cost: Int,
                      action: @escaping () -> Void) -> some View {
         let afford = sim.playerBalance >= cost
         let short = cost - sim.playerBalance
@@ -765,7 +815,7 @@ struct AircraftProfileCard: View {
     }
 
     private func money(_ v: Int) -> String {
-        "$" + v.formatted(.number.grouping(.automatic))
+        Currency.symbol + v.formatted(.number.grouping(.automatic))
     }
 }
 
@@ -820,16 +870,16 @@ struct RouteConfirmPanel: View {
                 Spacer(minLength: 0)
             }
             infoRow("Distance", "\(distanceNM.formatted()) nm", primaryC)
-            infoRow("Fare/seat", "$\(Int(FareModel.farePerSeat(distanceNM: Double(distanceNM)).rounded()))", primaryC)
+            infoRow("Fare/seat", "\(Currency.symbol)\(Int(FareModel.farePerSeat(distanceNM: Double(distanceNM)).rounded()))", primaryC)
             // Demand model (prototype): show this city pair's estimated daily
             // demand and the load factor the spare that'd be assigned would fly
             // it at — so the player can size the aircraft to the route.
             if sim.useDemandModel {
-                infoRow("Est. demand", "\(sim.routeDailyDemand(origin, dest).formatted()) pax/day", primaryC)
+                infoRow("Est. demand", String(localized: "\(sim.routeDailyDemand(origin, dest).formatted()) pax/day"), primaryC)
                 // Network/hub effect: connecting pax from your other routes here.
                 let hubBonus = sim.hubBonusPercent(originCode: origin.code, destCode: dest.code)
                 if hubBonus > 0 {
-                    infoRow("Hub bonus", "+\(hubBonus)% (connecting traffic)", green)
+                    infoRow("Hub bonus", String(localized: "+\(hubBonus)% (connecting traffic)"), green)
                 }
                 if let spare {
                     let lf = sim.projectedLoadFactor(seats: spare.type.seats, from: origin, to: dest)
@@ -837,19 +887,19 @@ struct RouteConfirmPanel: View {
                     infoRow("Projected load", "\(Int((lf * 100).rounded()))% · \(spare.type.name)", c)
                 }
             }
-            infoRow("Slots", slotsOK ? "Avail both ends" : "Buyout needed",
+            infoRow("Slots", slotsOK ? String(localized: "Avail both ends") : String(localized: "Buyout needed"),
                     slotsOK ? green : red)
             let cap = capability(spare)
             infoRow("Aircraft check", cap.text, cap.ok ? green : red)
-            infoRow("Opening cost", "$\(cost.formatted())", affordable ? green : red)
+            infoRow("Opening cost", "\(Currency.symbol)\(cost.formatted())", affordable ? green : red)
             // Reassigning an aircraft that's already flying closes the route it
             // leaves — say so BEFORE the player commits, not after.
             if let ac = sim.pendingAssignment, let rid = ac.assignedRouteId,
                let old = sim.playerRoutes.first(where: { $0.id == rid }) {
                 let flying = sim.isEnRoute(ac)
                 infoRow("Leaves",
-                        flying ? "\(old.originCode)–\(old.destCode) · closes after this leg"
-                               : "\(old.originCode)–\(old.destCode) · that route closes", red)
+                        flying ? String(localized: "\(old.originCode)–\(old.destCode) · closes after this leg")
+                               : String(localized: "\(old.originCode)–\(old.destCode) · that route closes"), red)
             }
 
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
@@ -868,7 +918,7 @@ struct RouteConfirmPanel: View {
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 
-    private func infoRow(_ label: String, _ value: String, _ valueColor: Color) -> some View {
+    private func infoRow(_ label: LocalizedStringKey, _ value: String, _ valueColor: Color) -> some View {
         HStack {
             Text(label).font(.karla(14)).foregroundStyle(labelC)
             Spacer()
@@ -902,14 +952,14 @@ struct RouteConfirmPanel: View {
     /// Whether the spare that would be assigned can PHYSICALLY fly this route —
     /// range + runway at both ends. Blocks Open Route when it can't.
     private func capability(_ spare: Aircraft?) -> (text: String, ok: Bool) {
-        guard let spare else { return ("a/c not assigned", false) }
+        guard let spare else { return (String(localized: "a/c not assigned"), false) }
         switch sim.routeBlock(for: spare, from: origin, to: dest) {
         case .range:
-            return ("out of range (\(spare.type.rangeNM.formatted()) nm max)", false)
+            return (String(localized: "out of range (\(spare.type.rangeNM.formatted()) nm max)"), false)
         case .runway(let code):
-            return ("\(code) runway too short for \(spare.type.name)", false)
+            return (String(localized: "\(code) runway too short for \(spare.type.name)"), false)
         case nil:
-            return ("in range · runway OK", true)
+            return (String(localized: "in range · runway OK"), true)
         }
     }
 }
@@ -992,7 +1042,7 @@ struct RoutesPanel: View {
         }
     }
 
-    private func section(_ title: String, _ routes: [Route]) -> some View {
+    private func section(_ title: LocalizedStringKey, _ routes: [Route]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text(title).font(.karla(14)).foregroundStyle(labelColor)
@@ -1050,13 +1100,13 @@ struct RoutesPanel: View {
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(profitable ? Sky.coreGreen : Sky.lightYellow, lineWidth: 1))
     }
 
-    private func labeled(_ label: String, _ value: String, _ align: HorizontalAlignment) -> some View {
+    private func labeled(_ label: LocalizedStringKey, _ value: String, _ align: HorizontalAlignment) -> some View {
         VStack(alignment: align, spacing: 0) {
             Text(label).font(.karla(14)).foregroundStyle(labelColor)
             Text(value).font(.karla(16, .semibold)).foregroundStyle(primaryC)
         }
     }
-    private func labeledValue(_ label: String, _ value: String, _ color: Color, _ align: HorizontalAlignment) -> some View {
+    private func labeledValue(_ label: LocalizedStringKey, _ value: String, _ color: Color, _ align: HorizontalAlignment) -> some View {
         VStack(alignment: align, spacing: 0) {
             Text(label).font(.karla(14)).foregroundStyle(labelColor)
             Text(value).font(.karla(16, .semibold)).foregroundStyle(color)
@@ -1138,16 +1188,23 @@ struct RoutesPanel: View {
         let farePct = Int(((f - 1) * 100).rounded())
         let demandPct = Int(((d - 1) * 100).rounded())
         if r.fareLevel == Route.standardFareLevel {
-            return "Market-rate fares. Raise them on a route that's overflowing; cut them to fill seats or defend against rivals."
+            return String(localized: "Market-rate fares. Raise them on a route that's overflowing; cut them to fill seats or defend against rivals.")
         }
-        let fareStr = "\(farePct >= 0 ? "+" : "")\(farePct)% fares · \(demandPct >= 0 ? "+" : "")\(demandPct)% demand"
+        let fareSigned = "\(farePct >= 0 ? "+" : "")\(farePct)"
+        let demandSigned = "\(demandPct >= 0 ? "+" : "")\(demandPct)"
+        let fareStr = String(localized: "\(fareSigned)% fares · \(demandSigned)% demand")
+        let contested = r.competitionLevel > 0
         if r.fareLevel > Route.standardFareLevel {
-            return fareStr + (r.competitionLevel > 0 ? " · concedes some share to rivals. Pays when the aircraft is full anyway." : ". Pays when the aircraft is full anyway.")
+            return contested
+                ? String(localized: "\(fareStr) · concedes some share to rivals. Pays when the aircraft is full anyway.")
+                : String(localized: "\(fareStr). Pays when the aircraft is full anyway.")
         }
-        return fareStr + (r.competitionLevel > 0 ? " · defends share against rivals." : ". Fills seats on a thin route.")
+        return contested
+            ? String(localized: "\(fareStr) · defends share against rivals.")
+            : String(localized: "\(fareStr). Fills seats on a thin route.")
     }
 
-    private func line(_ label: String, _ value: String) -> some View {
+    private func line(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack {
             Text(label).font(.karla(12)).foregroundStyle(labelColor).frame(width: 112, alignment: .leading)
             Text(value).font(.karla(12, .semibold)).foregroundStyle(primaryC)
@@ -1155,7 +1212,7 @@ struct RoutesPanel: View {
         }
     }
 
-    private func money(_ v: Int) -> String { (v < 0 ? "−$" : "$") + abs(v).formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { (v < 0 ? "−" + Currency.symbol : Currency.symbol) + abs(v).formatted(.number.grouping(.automatic)) }
 }
 
 
@@ -1243,7 +1300,7 @@ struct RouteProfitChart: View {
 
         // Y labels: max (top), $0 (break-even), min (bottom).
         yLabel(ctx, money(Int(maxY)), CGPoint(x: leftPad - 5, y: sy(maxY)))
-        yLabel(ctx, "$0", CGPoint(x: leftPad - 5, y: zy))
+        yLabel(ctx, (Currency.symbol + "0"), CGPoint(x: leftPad - 5, y: zy))
         yLabel(ctx, money(Int(minY)), CGPoint(x: leftPad - 5, y: sy(minY)))
 
         // P&L line, split at each zero crossing and coloured by sign.
@@ -1280,9 +1337,9 @@ struct RouteProfitChart: View {
 
     private func money(_ v: Int) -> String {
         let a = abs(v), sign = v < 0 ? "−" : ""
-        if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-        return sign + "$\(a)"
+        if a >= 1_000_000 { return sign + Currency.symbol + String(format: "%.1fM", Double(a) / 1_000_000) }
+        if a >= 1_000     { return sign + Currency.symbol + String(format: "%.0fk", Double(a) / 1_000) }
+        return sign + Currency.symbol + "\(a)"
     }
 }
 
@@ -1332,7 +1389,7 @@ struct AircraftTooltip: View {
                 row("Airline", mine, valueColor: greenValue)
             }
             routeRow
-            row("Tail", aircraft.isLeased ? "\(aircraft.tail) (leased)" : aircraft.tail)
+            row("Tail", aircraft.isLeased ? String(localized: "\(aircraft.tail) (leased)") : aircraft.tail)
             row("Type", aircraft.type.name)
             row("Status", statusText, valueColor: aircraft.isHeld ? heldColor : valueColor)
 
@@ -1365,9 +1422,9 @@ struct AircraftTooltip: View {
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 
-    private func row(_ label: String, _ value: String, valueColor: Color? = nil) -> some View {
+    private func row(_ label: LocalizedStringKey, _ value: String, valueColor: Color? = nil) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("\(label):")
+            (Text(label) + Text(":"))
                 .font(.karla(14, .bold))
                 .foregroundStyle(labelColor)
             Text(value)
@@ -1410,9 +1467,9 @@ struct AircraftTooltip: View {
         guard let id = aircraft.assignedRouteId,
               let r = sim.playerRoutes.first(where: { $0.id == id }) else { return nil }
         if r.isProfitable {
-            return ("recouped its \(money(r.openingCost)) opening cost, +\(money(r.netVsOpeningCost))", true)
+            return (String(localized: "recouped its \(money(r.openingCost)) opening cost, +\(money(r.netVsOpeningCost))"), true)
         } else {
-            return ("\(money(-r.netVsOpeningCost)) short of \(money(r.openingCost)) opening cost", false)
+            return (String(localized: "\(money(-r.netVsOpeningCost)) short of \(money(r.openingCost)) opening cost"), false)
         }
     }
 
@@ -1420,11 +1477,11 @@ struct AircraftTooltip: View {
         switch aircraft.holdReason {
         case .weather:
             return aircraft.state == .approach
-                ? "HELD — holding pattern at \(aircraft.dest.code) (weather)"
-                : "HELD — ground stop at \(aircraft.origin.code)"
-        case .rejoin:  return "Rejoining approach at \(aircraft.dest.code)"
-        case .aog:     return "AOG — grounded at \(aircraft.origin.code)"
-        case .crew:    return "HELD — no legal crew at \(aircraft.origin.code)"
+                ? String(localized: "HELD — holding pattern at \(aircraft.dest.code) (weather)")
+                : String(localized: "HELD — ground stop at \(aircraft.origin.code)")
+        case .rejoin:  return String(localized: "Rejoining approach at \(aircraft.dest.code)")
+        case .aog:     return String(localized: "AOG — grounded at \(aircraft.origin.code)")
+        case .crew:    return String(localized: "HELD — no legal crew at \(aircraft.origin.code)")
         case nil:      return phaseLabel(aircraft.state)
         }
     }
@@ -1432,9 +1489,9 @@ struct AircraftTooltip: View {
     /// Crew legal hours (Part 117 duty clock), or the reason there's no crew.
     /// Figma phrasing: "N.N hrs remaining".
     private var crewText: String {
-        if aircraft.holdReason == .crew { return "none — awaiting legal crew" }
+        if aircraft.holdReason == .crew { return String(localized: "none — awaiting legal crew") }
         guard let d = sim.crewDuty(for: aircraft) else { return "—" }
-        return String(format: "%.1f hrs remaining", max(0, d.max - d.used))
+        return String(localized: "\(String(format: "%.1f", max(0, d.max - d.used))) hrs remaining")
     }
 
     private var crewValueColor: Color {
@@ -1448,11 +1505,11 @@ struct AircraftTooltip: View {
 
     private var loadText: String {
         let pct = Int((aircraft.currentLoadFactor * 100).rounded())
-        return "\(aircraft.currentPax) / \(aircraft.type.seats) pax (\(pct)%)"
+        return String(localized: "\(aircraft.currentPax) / \(aircraft.type.seats) pax (\(pct)%)")
     }
 
     private func money(_ v: Int) -> String {
-        "$" + v.formatted(.number.grouping(.automatic))
+        Currency.symbol + v.formatted(.number.grouping(.automatic))
     }
 
     private var cyclesText: String {
@@ -1461,9 +1518,19 @@ struct AircraftTooltip: View {
     }
 
     private func phaseLabel(_ state: FlightState) -> String {
-        String(describing: state)
-            .replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
-            .uppercased()
+        // Uppercased status shown in the aircraft tooltip. Localized per phase
+        // (the old String(describing:) leaked the English enum names).
+        switch state {
+        case .parked:     return String(localized: "PARKED")
+        case .boarding:   return String(localized: "BOARDING")
+        case .taxiOut:    return String(localized: "TAXI OUT")
+        case .takeoff:    return String(localized: "TAKEOFF")
+        case .cruise:     return String(localized: "CRUISE")
+        case .approach:   return String(localized: "APPROACH")
+        case .landing:    return String(localized: "LANDING")
+        case .taxiIn:     return String(localized: "TAXI IN")
+        case .turnaround: return String(localized: "TURNAROUND")
+        }
     }
 }
 

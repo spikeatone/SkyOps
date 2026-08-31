@@ -202,7 +202,7 @@ struct NetworkView: View {
     }
 
     /// The pick-step instruction that floats over the map (nil outside pick steps).
-    private var routePickHintText: String? {
+    private var routePickHintText: LocalizedStringKey? {
         switch routeMode {
         case .pickOrigin:
             if let ac = sim.pendingAssignment {
@@ -308,7 +308,7 @@ struct NetworkView: View {
             Text(pc.ticker).font(.karla(13, .bold)).foregroundStyle(isDark ? .white : .black)
             Image(systemName: up ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
                 .font(.system(size: 8)).foregroundStyle(tint)
-            Text(String(format: "$%.2f", price)).font(.karla(13, .semibold)).foregroundStyle(tint)
+            Text((Currency.symbol + String(format: "%.2f", price))).font(.karla(13, .semibold)).foregroundStyle(tint)
                 .contentTransition(.numericText())
                 .animation(.snappy(duration: 0.35), value: price)
         }
@@ -379,7 +379,11 @@ struct NetworkView: View {
                 speedBar.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
                 trafficBox.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
                 #if DEBUG
-                devToggles.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
+                // Hidden while an App Store screenshot seed is active — DEV toggles
+                // must not appear in a marketing image.
+                if !ContentView.isScreenshotShot {
+                    devToggles.opacity(showOverlays ? 1 : 0).allowsHitTesting(showOverlays)
+                }
                 #endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -502,7 +506,11 @@ struct NetworkView: View {
         panel = (panel == p) ? .none : p
     }
 
-    private func barButton(_ title: String, font: CGFloat, active: Bool, action: @escaping () -> Void) -> some View {
+    // `LocalizedStringKey` (not String): the call sites pass string LITERALS
+    // ("Acquire A/C", "Open Route", …), so typing the param as LocalizedStringKey
+    // makes `Text(title)` localize them through the catalog. A String param would
+    // consume the literal as an already-resolved value and bypass localization.
+    private func barButton(_ title: LocalizedStringKey, font: CGFloat, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(.karla(font, .semibold))   // uniform across the row (chosen by ViewThatFits)
@@ -691,7 +699,7 @@ struct NetworkView: View {
     /// Figma "Alert box" (5:8040 / 19:6705): a solid dark bar with a single
     /// Karla-Bold instruction line. Cancel is the highlighted "Open Route"
     /// control-bar button (tapping it again exits the flow).
-    private func routeHint(_ text: String) -> some View {
+    private func routeHint(_ text: LocalizedStringKey) -> some View {
         HStack(spacing: 0) {
             Text(text)
                 .font(.karla(14, .bold))
@@ -914,7 +922,7 @@ struct AddCrewPanel: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
-    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
 }
 
 /// FUEL HEDGE — Figma "Fuel Hedge Card" (19:6920): title, an explainer, then a
@@ -973,7 +981,7 @@ struct FuelHedgePanel: View {
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(days)-day hedge:").font(.karla(14, .bold)).foregroundStyle(labelC)
-                Text("$\(premium.formatted()) premium").font(.karla(14)).foregroundStyle(bodyC)
+                Text("\(Currency.symbol)\(premium.formatted()) premium").font(.karla(14)).foregroundStyle(bodyC)
             }
             Spacer()
             Button { sim.buyFuelHedge(days: days) } label: {

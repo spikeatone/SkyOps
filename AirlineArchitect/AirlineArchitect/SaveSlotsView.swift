@@ -173,9 +173,9 @@ struct SaveSlotsView: View {
 
     private func money(_ v: Int) -> String {
         let a = abs(v), sign = v < 0 ? "−" : ""
-        if a >= 1_000_000 { return sign + "$" + String(format: "%.1fM", Double(a) / 1_000_000) }
-        if a >= 1_000     { return sign + "$" + String(format: "%.0fk", Double(a) / 1_000) }
-        return sign + "$\(a)"
+        if a >= 1_000_000 { return sign + Currency.symbol + String(format: "%.1fM", Double(a) / 1_000_000) }
+        if a >= 1_000     { return sign + Currency.symbol + String(format: "%.0fk", Double(a) / 1_000) }
+        return sign + Currency.symbol + "\(a)"
     }
 
     /// Relative "saved …" label. Wall-clock, so it reads naturally in the menu.

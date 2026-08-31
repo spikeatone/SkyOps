@@ -127,7 +127,7 @@ struct AirportInfoCard: View {
             }
             row("Hub labor", "\(money(sim.hubMonthlyLabor(code)))/mo")
             if sim.hubs[code]?.hasClub == true {
-                row(sim.clubName, "\(money(sim.clubMonthlyRent(airport)))/mo rent")
+                row(LocalizedStringKey(sim.clubName), String(localized: "\(money(sim.clubMonthlyRent(airport)))/mo rent"))
             } else if operating {
                 actionButton("BUILD \(sim.clubName.uppercased()) — \(money(sim.clubBuildCost(airport)))",
                              enabled: sim.playerBalance >= sim.clubBuildCost(airport)) {
@@ -148,11 +148,11 @@ struct AirportInfoCard: View {
             Text("Then \(money(sim.hubMonthlyLabor(code)))/mo ground staff. Benefits suspend below \(Simulation.hubMinRoutes) routes.")
                 .font(.karla(11)).foregroundStyle(labelColor)
         } else if sim.routesAt(code) > 0 {
-            row("Hub eligibility", "\(sim.routesAt(code))/\(Simulation.hubMinRoutes) routes")
+            row("Hub eligibility", String(localized: "\(sim.routesAt(code))/\(Simulation.hubMinRoutes) routes"))
         }
     }
 
-    private func actionButton(_ label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+    private func actionButton(_ label: LocalizedStringKey, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(label)
                 .font(.karla(13, .bold)).foregroundStyle(.white)
@@ -165,9 +165,9 @@ struct AirportInfoCard: View {
         .disabled(!enabled)
     }
 
-    private func money(_ v: Int) -> String { "$" + v.formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
 
-    private func row(_ label: String, _ value: String) -> some View {
+    private func row(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack {
             Text(label).font(.karla(14, .bold)).foregroundStyle(labelColor)
             Spacer(minLength: 8)

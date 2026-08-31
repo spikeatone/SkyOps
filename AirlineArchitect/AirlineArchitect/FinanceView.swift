@@ -59,9 +59,10 @@ struct FinanceView: View {
     private var netWorth: Int { cash + fleetValue }
     private var fleetFootnote: String {
         let n = sim.ownedOutrightCount
-        let base = "Fleet value = resale value of \(n) aircraft owned outright"
         let leased = sim.leasedCount
-        return leased > 0 ? base + " (\(leased) leased, not counted)." : base + "."
+        return leased > 0
+            ? String(localized: "Fleet value = resale value of \(n) aircraft owned outright (\(leased) leased, not counted).")
+            : String(localized: "Fleet value = resale value of \(n) aircraft owned outright.")
     }
 
     var body: some View {
@@ -136,7 +137,7 @@ struct FinanceView: View {
             ForEach(Section.allCases, id: \.self) { s in
                 let on = section == s
                 Button { section = s } label: {
-                    Text(s.rawValue)
+                    Text(LocalizedStringKey(s.rawValue))
                         .font(.karla(14, .bold))
                         .foregroundStyle(on ? segActiveText : segInactiveText)
                         .lineLimit(1).minimumScaleFactor(0.8)
@@ -165,7 +166,7 @@ struct FinanceView: View {
                         Text(pc.ticker).font(.karla(13, .bold)).foregroundStyle(primary)
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(String(format: "$%.2f", price)).font(.karla(26, .heavy))
+                        Text((Currency.symbol + String(format: "%.2f", price))).font(.karla(26, .heavy))
                             .foregroundStyle(up ? green : red)
                         Text(String(format: "%@%.1f%% vs IPO", up ? "+" : "", (price/pc.ipoPrice - 1)*100))
                             .font(.karla(13, .semibold)).foregroundStyle(up ? green : red)
@@ -174,7 +175,7 @@ struct FinanceView: View {
                     ledgerLine("Market cap", compactMoney(Int(sim.marketCap)))
                     ledgerLine("Raised (IPO + secondary)", compactMoney(sim.totalEquityRaised))
                     let risk = Simulation.controlRisk(stake: pc.playerStake)
-                    Text(risk.rawValue)
+                    Text(LocalizedStringKey(risk.rawValue))
                         .font(.karla(11, .semibold))
                         .foregroundStyle(pc.playerStake >= 0.5 ? green : red)
                     // Board pressure — visceral once it's actually building. Only
@@ -256,7 +257,7 @@ struct FinanceView: View {
         }
     }
 
-    private func ledgerLine(_ label: String, _ value: String) -> some View {
+    private func ledgerLine(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack {
             Text(label).font(.karla(13)).foregroundStyle(secondary)
             Spacer()
@@ -274,7 +275,7 @@ struct FinanceView: View {
         let action: () -> Void
     }
 
-    private func leverSection(_ title: String, _ subtitle: String, _ options: [LeverOption]) -> some View {
+    private func leverSection(_ title: LocalizedStringKey, _ subtitle: LocalizedStringKey, _ options: [LeverOption]) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title).font(.karla(11, .bold)).foregroundStyle(titleColor)
             Text(subtitle).font(.karla(10)).foregroundStyle(secondary)
@@ -351,7 +352,7 @@ struct FinanceView: View {
             ForEach(Period.allCases, id: \.self) { p in
                 let on = period == p
                 Button { period = p } label: {
-                    Text(p.rawValue)
+                    Text(LocalizedStringKey(p.rawValue))
                         .font(.karla(14, .semibold))
                         .foregroundStyle(on ? segActiveText : segInactiveText)
                         .lineLimit(1).minimumScaleFactor(0.8)
@@ -417,7 +418,7 @@ struct FinanceView: View {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.system(size: 15)).foregroundStyle(accent)
             VStack(alignment: .leading, spacing: 3) {
-                Text("Market: \(ev.label)").font(.karla(14, .bold)).foregroundStyle(primary)
+                (Text("Market: ") + Text(LocalizedStringKey(ev.label))).font(.karla(14, .bold)).foregroundStyle(primary)
                 Text("Fares \(pct(ev.fareMultiplier)) · Fuel \(pct(ev.costMultiplier)) · Demand \(pct(ev.loadMultiplier))")
                     .font(.karla(12)).foregroundStyle(secondary)
             }
@@ -469,9 +470,9 @@ struct FinanceView: View {
     }
     private var deltaLabel: String {
         switch period {
-        case .total: return "since launch"
-        case .thisMonth: return "this month"
-        case .lastMonth: return "last month"
+        case .total: return String(localized: "since launch")
+        case .thisMonth: return String(localized: "this month")
+        case .lastMonth: return String(localized: "last month")
         }
     }
 
@@ -571,7 +572,7 @@ struct FinanceView: View {
                 ledgerRow(f.operatingProfit >= 0 ? "Operating profit" : "Operating loss",
                           f.operatingProfit, sign: .net, bold: true)
                 Text(f.flights == 0
-                     ? "No flights \(period == .total ? "flown yet" : "in this period")."
+                     ? (period == .total ? "No flights flown yet." : "No flights in this period.")
                      : "\(f.flights) flights · avg \(signedMoney(f.operatingProfit / max(1, f.flights)))/flight")
                     .font(.karla(11)).foregroundStyle(secondary)
             }
@@ -681,7 +682,7 @@ struct FinanceView: View {
         let ok = sim.canBorrow(offer)
         return HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(offer.name) · \(compactMoney(offer.principal))").font(.karla(14, .bold)).foregroundStyle(primary)
+                (Text(LocalizedStringKey(offer.name)) + Text(" · \(compactMoney(offer.principal))")).font(.karla(14, .bold)).foregroundStyle(primary)
                 Text("\(Int((offer.apr * 100).rounded()))% APR · \(offer.termMonths) mo · \(compactMoney(offer.monthlyPayment))/mo")
                     .font(.karla(12)).foregroundStyle(secondary)
             }
@@ -713,7 +714,7 @@ struct FinanceView: View {
 
     private enum Sign { case plus, minus, net }
 
-    private func ledgerRow(_ label: String, _ value: Int, sign: Sign, bold: Bool = false) -> some View {
+    private func ledgerRow(_ label: LocalizedStringKey, _ value: Int, sign: Sign, bold: Bool = false) -> some View {
         let text: String
         let color: Color
         switch sign {
@@ -728,7 +729,7 @@ struct FinanceView: View {
         }
     }
 
-    private func miniStat(_ label: String, _ value: String, _ color: Color) -> some View {
+    private func miniStat(_ label: LocalizedStringKey, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label).font(.karla(12)).foregroundStyle(secondary)
             Text(value).font(.karla(18, .heavy)).foregroundStyle(color)
@@ -736,7 +737,7 @@ struct FinanceView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func sectionTitle(_ t: String) -> some View {
+    private func sectionTitle(_ t: LocalizedStringKey) -> some View {
         Text(t).font(.karla(12, .bold)).foregroundStyle(titleColor).tracking(0.5)
     }
 
@@ -757,8 +758,8 @@ struct FinanceView: View {
     private func ledgerMoney(_ v: Int) -> String { compactMoney(abs(v)) }
     /// Full grouped figures — kept for the per-flight average, where a few
     /// hundred/thousand dollars is small enough to want the exact number.
-    private func money(_ v: Int) -> String { "$" + abs(v).formatted(.number.grouping(.automatic)) }
-    private func signedMoney(_ v: Int) -> String { (v < 0 ? "−$" : "+$") + abs(v).formatted(.number.grouping(.automatic)) }
+    private func money(_ v: Int) -> String { Currency.symbol + abs(v).formatted(.number.grouping(.automatic)) }
+    private func signedMoney(_ v: Int) -> String { (v < 0 ? ("−" + Currency.symbol) : ("+" + Currency.symbol)) + abs(v).formatted(.number.grouping(.automatic)) }
 }
 
 /// A period's worth of financial activity (a difference between two snapshots,

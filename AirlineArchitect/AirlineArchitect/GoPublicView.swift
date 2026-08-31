@@ -98,7 +98,7 @@ struct GoPublicView: View {
             HStack {
                 Text("You keep \(Int(stake*100))%").font(.karla(12, .semibold)).foregroundStyle(primary)
                 Spacer()
-                Text(risk.rawValue).font(.karla(12, .semibold))
+                Text(LocalizedStringKey(risk.rawValue)).font(.karla(12, .semibold))
                     .foregroundStyle(stake >= 0.5 ? Sky.coreGreen : red)
             }
             // The visceral part: dilution risk, spelled out.
@@ -152,7 +152,7 @@ struct GoPublicView: View {
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
-    private func line(_ label: String, _ value: String, _ tint: Color? = nil) -> some View {
+    private func line(_ label: LocalizedStringKey, _ value: String, _ tint: Color? = nil) -> some View {
         HStack {
             Text(label).font(.karla(13)).foregroundStyle(secondary)
             Spacer()

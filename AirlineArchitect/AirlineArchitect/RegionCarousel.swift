@@ -83,7 +83,7 @@ private struct RegionCard: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 78)
                 .padding(.top, 10)
-            Text(region.label)
+            Text(LocalizedStringKey(region.label))
                 .font(.karla(19, .heavy))
                 .foregroundStyle(nameColor)
                 .lineLimit(1)

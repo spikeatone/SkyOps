@@ -72,8 +72,8 @@ struct TutorialCard: View {
                         .font(.karla(13, .semibold)).foregroundStyle(secondary).pressable()
                 }
             }
-            Text(step.title).font(.karla(19, .bold)).foregroundStyle(primary)
-            Text(step.body).font(.karla(14)).foregroundStyle(secondary)
+            Text(LocalizedStringKey(step.title)).font(.karla(19, .bold)).foregroundStyle(primary)
+            Text(LocalizedStringKey(step.body)).font(.karla(14)).foregroundStyle(secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Button(action: onNext) {
                 Text(index == total - 1 ? "Start playing" : "Next")
