@@ -36,13 +36,19 @@ ship-ready until a native pass AND timing clears the 4.3(a) cascade.
 5. **Removed 2 dead `$`-bearing catalog keys** (`Reserve $5k`, `Expedite $15,000`) superseded by the `%@`
    versions.
 
-**COMPLETENESS PROVEN, not just sampled:** a scan of the SHIPPED `de.lproj` (648 keys) for any key where
-`de == en` returns only loanwords (Crew/Route/Reputation/Marketing), the brand wordmark, `Pro (DEV)`
-(DEBUG-only), and pure format specifiers (`%@ nm · %@`, `· %lld/100`). **Zero real translatable strings
-are left English in the view layer.** Paywall strings (incl. the Pro-state "Vollversion freigeschaltet –
-danke…") are all translated (pure `Text` literals). This is the reliable "did I catch the category-2
-gaps" check — re-run it (`plutil -convert xml1` the built `de.lproj`, diff key vs value) after any string
-touch.
+**COMPLETENESS PROVEN by the RIGHT scan — and the FIRST scan lied.** ⚠️ **A `de.lproj` `de==en` scan
+CANNOT find category-2 gaps** — a string that reaches `Text` as a `String` (param / computed var /
+concatenation) never enters the catalog at all, so it's simply ABSENT from `de.lproj`, not present-as-
+`de==en`. The reliable check is: **extract every key the app actually needs from ALL `*.stringsdata`
+files** (`Build/Intermediates.noindex/AirlineArchitect.build/…/Objects-normal/arm64/*.stringsdata`, grep
+`"key"`) and diff against the catalog's translated keys. See `scratchpad/findgaps2.py` — it globs ALL 69
+stringsdata files. **A hand-picked file list misses gaps** (my first pass listed ~20 files, reported
+"complete", and still missed AirportInfoCard's hub strings + the whole Network ACQUIRE card + the paywall
+pitch + the RoutesPanel/tooltip drill-ins — all found only when the iPad-landscape drive opened those
+panels). Final comprehensive scan: **641 keys, 0 real gaps** — the only 3 hits are 2 `#if DEBUG`
+LiveryDesignView gallery strings (don't ship) + 1 false positive (the `\n` naming subtitle, which IS
+translated; the stringsdata escapes the newline so a literal match fails). RUN `findgaps2.py` (all
+stringsdata, not a subset) after ANY string touch — it's the only scan that catches category-2.
 
 **SURFACES VISUALLY CONFIRMED in German (30 Aug, iPhone 17 Pro Max sim):** naming screen (Willkommen COO /
 region carousel "Nordamerika" / tail-code hint) · all 5 tabs (Netzwerk / Flotte / Crews / Betrieb /
