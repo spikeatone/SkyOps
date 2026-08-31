@@ -27,7 +27,16 @@ paragraph). The canonical playbook + Airline's filled-in unique-systems paragrap
 `PostmarkOps/APP_REVIEW_NOTES.md`. The 1.4.3 notes (3988 chars, under the 4000 limit) are the template
 for the next one — reuse them, just update the version line.
 
-**► 🇩🇪 GERMAN LOCALIZATION — IN PROGRESS on branch `de-translation` (NOT merged, NOT ship-ready).**
+**► 🇩🇪 GERMAN LOCALIZATION — NEXT SESSION'S FOCUS: FINALIZE (on this branch, `de-translation`).**
+▸ **NEXT SESSION START HERE (30 Aug):** (1) **VISUAL PASS FIRST — the designer's explicit ask:**
+force-launch the sim in German (`-AppleLanguages '(de)'`) and walk EVERY screen, screenshotting each,
+hunting untranslated English / truncated German (~30% longer) / awkward phrasing. This catches the
+catalog-bypass gaps a key-count can't. (2) Then the **FLAVOR PROSE** (still English — see below) +
+the **native review** + ASC listing. (3) **MERGE `main` IN FIRST** — this branch is **7 commits
+behind** (missing 1.5's A350-1000/747-8i + map throttle); pull main, then translate the two new
+aircraft flavor lines. (Verified count 30 Aug: **646/646** view-catalog keys translated — the "620"
+below is a slightly stale earlier count, not a regression.)
+
 Driven by TelemetryDeck data (German = 16% of preferred language, #2 after English) — framed as a
 DACH market-ENTRY/conversion bet, not a demand response. Two things exist:
 (1) **Infra — MERGED to `main`, English-unchanged, shippable anytime:** a view-layer String Catalog
