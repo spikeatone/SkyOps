@@ -1014,7 +1014,13 @@ private struct LiveMap: View {
     let highlightCodes: Set<String>
     let mapWidth: CGFloat?
     var body: some View {
-        MapView(sim: sim, tick: sim.tick,
+        // Reads the THROTTLED `mapTick` (~30fps), not raw `tick`. That both caps
+        // how often this body re-runs AND feeds MapView a throttled tick, so the
+        // full-world Canvas repaints ≤30×/sec instead of ~125×/sec at 25× — the
+        // thermal/battery fix. Aircraft position is a function of tick, so motion
+        // stays smooth. The sim still ticks at full speed; only the map redraw is
+        // capped. (Same isolation idea as before — see `Simulation.mapTick`.)
+        MapView(sim: sim, tick: sim.mapTick,
                 cameraZoom: sim.cameraZoom, cameraCenter: sim.cameraCenter,
                 selectedID: selectedID, highlightCodes: highlightCodes)
             .frame(width: mapWidth)

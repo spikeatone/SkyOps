@@ -46,6 +46,10 @@ struct LiveryPlacement {
         case "A339": return .init(titleCX: 0.277, titleCY: 0.63, titleW: 0.42, titleScale: 0.144, tailCX: 0.876, tailCY: 0.293, tailScale: 1.018) // tuned
         case "A340": return .init(titleCX: 0.292, titleCY: 0.653, titleW: 0.42, titleScale: 0.144, tailCX: 0.838, tailCY: 0.298, tailScale: 0.979) // tuned
         case "A359": return .init(titleCX: 0.301, titleCY: 0.632, titleW: 0.42, titleScale: 0.145, tailCX: 0.852, tailCY: 0.273, tailScale: 0.849) // tuned
+        // A350-1000: a STRETCHED A350-900, so the titles sit further FORWARD than the
+        // -900 — centred between the forward door and the engines (titleCX 0.24).
+        // Fin is aft on the longer body (tailCX 0.905, from the traced fin mask).
+        case "A35K": return .init(titleCX: 0.24, titleCY: 0.63, titleW: 0.42, titleScale: 0.145, tailCX: 0.905, tailCY: 0.27, tailScale: 0.86) // tuned
         case "A380": return .init(titleCX: 0.295, titleCY: 0.685, titleW: 0.42, titleScale: 0.125, tailCX: 0.864, tailCY: 0.3, tailScale: 0.875) // tuned
         case "AT46": return .init(titleCX: 0.655, titleCY: 0.655, titleW: 0.32, titleScale: 0.128, tailCX: 0.786, tailCY: 0.385, tailScale: 0.56) // tuned
         case "B1900": return .init(titleCX: 0.625, titleCY: 0.61, titleW: 0.32, titleScale: 0.125, tailCX: 0.819, tailCY: 0.384, tailScale: 0.53) // tuned
@@ -53,6 +57,10 @@ struct LiveryPlacement {
         case "B737800": return .init(titleCX: 0.298, titleCY: 0.674, titleW: 0.42, titleScale: 0.125, tailCX: 0.843, tailCY: 0.289, tailScale: 0.91) // tuned
         case "B739": return .init(titleCX: 0.306, titleCY: 0.675, titleW: 0.42, titleScale: 0.125, tailCX: 0.851, tailCY: 0.283, tailScale: 0.807) // tuned
         case "B747": return .init(titleCX: 0.255, titleCY: 0.673, titleW: 0.42, titleScale: 0.145, tailCX: 0.877, tailCY: 0.286, tailScale: 0.94) // tuned
+        // 747-8i: titles halfway between the forward door and the engines (titleCX
+        // 0.255, like the -1000's forward placement). Fin re-traced with the base at
+        // the fuselage crown (0.547) so the mask doesn't hang below the fin root.
+        case "B748": return .init(titleCX: 0.255, titleCY: 0.632, titleW: 0.42, titleScale: 0.145, tailCX: 0.90, tailCY: 0.28, tailScale: 0.9) // tuned
         case "B773": return .init(titleCX: 0.262, titleCY: 0.668, titleW: 0.42, titleScale: 0.145, tailCX: 0.886, tailCY: 0.299, tailScale: 0.804) // tuned
         case "B788": return .init(titleCX: 0.282, titleCY: 0.649, titleW: 0.42, titleScale: 0.135, tailCX: 0.872, tailCY: 0.294, tailScale: 0.861) // tuned
         case "B789": return .init(titleCX: 0.27, titleCY: 0.645, titleW: 0.42, titleScale: 0.145, tailCX: 0.873, tailCY: 0.293, tailScale: 0.895) // tuned
