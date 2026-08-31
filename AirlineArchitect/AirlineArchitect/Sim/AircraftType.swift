@@ -134,7 +134,7 @@ struct AircraftType: Identifiable {
     var fuelIntensity: Double {
         switch id {
         case "A319NEO", "A320NEO", "A321NEO", "MAX8", "MAX9",
-             "B788", "B789", "B78J", "A339", "A359", "A220100", "A220300":
+             "B788", "B789", "B78J", "A339", "A359", "A35K", "A220100", "A220300":
             return 0.72
         default:
             return bodyType == .widebody4Engine ? 1.6 : 1.0
@@ -155,7 +155,8 @@ struct AircraftType: Identifiable {
         "A220100": "Small, modern, remarkably quiet", "B773": "The mighty Triple Seven",
         "B788": "The Dreamliner", "B789": "Dreamliner, stretched for range",
         "B78J": "The longest Dreamliner", "A339": "The modern A330neo",
-        "A359": "Extra-wide body, extra range", "B747": "Queen of the Skies",
+        "A359": "Extra-wide body, extra range", "A35K": "The long-range leader",
+        "B747": "Queen of the Skies", "B748": "The final Queen of the Skies",
         "A380": "The Superjumbo", "A340": "Four engines, long-haul stalwart",
         "E170": "The regional jet debut", "E175": "The regional workhorse",
         "E190": "The bigger E-Jet", "E195": "Stretched regional flagship",
@@ -174,7 +175,8 @@ struct AircraftType: Identifiable {
         "B737700": 3010, "B737800": 2935, "B739": 2950, "MAX8": 3550, "MAX9": 3300,
         "A220300": 3350, "A220100": 3400,
         "B773": 6014, "B788": 7355, "B789": 7565, "B78J": 6330, "A339": 7200, "A359": 8100,
-        "B747": 7260, "A380": 8000, "A340": 7400,
+        "A35K": 8700,
+        "B747": 7260, "B748": 7730, "A380": 8000, "A340": 7400,
         "E170": 2150, "E175": 2200, "E190": 2450, "E195": 2300,
         "CRJ900": 1550, "CRJ1000": 1650,
         "ERJ135": 1750, "ERJ140": 1630, "ERJ145": 1550,
@@ -212,6 +214,12 @@ struct AircraftType: Identifiable {
         .init(id: "B78J",    name: "Boeing 787-10 Dreamliner", seats: 330, family: "B787", bodyType: .widebody2Engine, weight: 7,  mlwLbs: 445000, costPerHour: 12500, purchasePrice: 250_000_000, expectedLifespanCycles: 44000),
         .init(id: "A339",    name: "Airbus A330-900",      seats: 300, family: "A330", bodyType: .widebody2Engine, weight: 10, mlwLbs: 421082, costPerHour: 11500, purchasePrice: 230_000_000, expectedLifespanCycles: 44000),
         .init(id: "A359",    name: "Airbus A350-900",      seats: 306, family: "A350", bodyType: .widebody2Engine, weight: 8,  mlwLbs: 456357, costPerHour: 13500, purchasePrice: 300_000_000, expectedLifespanCycles: 44000),
+        // A350-1000: the A350-900's bigger, longer-range sister. Shares the A350
+        // type rating (same crew family). Real ops: Qatar (launch)/BA/Cathay/Virgin/
+        // JAL/Etihad/Air France. Seats 327 (Qatar 2-class), MLW 233t = 513,700 lb,
+        // range 8,700 NM (the game's longest-range twin). Market ~$320M (above the
+        // -900, below the A380); $14,500/hr (a bit above the -900's 13,500).
+        .init(id: "A35K",    name: "Airbus A350-1000",     seats: 327, family: "A350", bodyType: .widebody2Engine, weight: 6,  mlwLbs: 513700, costPerHour: 14500, purchasePrice: 320_000_000, expectedLifespanCycles: 44000),
         // Four-engine widebodies — each its own crew family
         // 747-400 (not the -8: the -8 passenger variant never really sold — it
         // was essentially freighter-only). Real 747-400 profile: an aging,
@@ -220,6 +228,14 @@ struct AircraftType: Identifiable {
         // costPerHour/purchasePrice are representative for a retiring jumbo
         // (higher op cost than the more-efficient -8; much lower price).
         .init(id: "B747",    name: "Boeing 747-400",  seats: 416, family: "B747", bodyType: .widebody4Engine, weight: 6, mlwLbs: 652700,  costPerHour: 26000, purchasePrice: 130_000_000, expectedLifespanCycles: 20000),
+        // 747-8 Intercontinental: the LAST passenger 747, newer/heavier than the
+        // -400 (its OWN 4-engine crew family — the -8 is a different type rating
+        // from the -400). Real passenger ops: Lufthansa/Korean Air/Air China. Seats
+        // 364 (Lufthansa 4-class), MLW 306t = 675,000 lb (above the -400's 652,700),
+        // range 7,730 NM. Market ~$185M (above the aging -400, below the A380);
+        // $29,000/hr (top of the jumbo range). GEnx engines but still a thirsty
+        // 4-engine jet → fuelIntensity 1.6 (auto, widebody4Engine).
+        .init(id: "B748",    name: "Boeing 747-8i",   seats: 364, family: "B747-8", bodyType: .widebody4Engine, weight: 4, mlwLbs: 675000,  costPerHour: 29000, purchasePrice: 185_000_000, expectedLifespanCycles: 20000),
         .init(id: "A380",    name: "Airbus A380",   seats: 555, family: "A380", bodyType: .widebody4Engine, weight: 2, mlwLbs: 1133000, costPerHour: 28000, purchasePrice: 342_000_000, expectedLifespanCycles: 19000),
         .init(id: "A340",    name: "Airbus A340-300", seats: 295, family: "A340", bodyType: .widebody4Engine, weight: 1, mlwLbs: 380000, costPerHour: 18000, purchasePrice: 183_000_000, expectedLifespanCycles: 20000),
         // Regional jets — real type-rating splits (E170/E175 vs E190/E195)

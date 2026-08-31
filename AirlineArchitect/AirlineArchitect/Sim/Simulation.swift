@@ -30,9 +30,23 @@ final class Simulation {
     /// Throttled UI heartbeat: mirrors `tick` but only advances a few times a
     /// second regardless of sim speed. List/HUD views (Ops/Fleet/Finance/Crews)
     /// observe THIS instead of `tick`, so scrolling a long list doesn't fight a
-    /// per-frame full-body re-eval when the sim is running at 10×/25×. The map
-    /// keeps reading `tick` for smooth per-tick aircraft motion.
+    /// per-frame full-body re-eval when the sim is running at 10×/25×.
     private(set) var displayTick: Int = 0
+
+    /// The tick the MAP renders against — throttled to ~`mapRenderFPS` frames/sec
+    /// (below), NOT the raw `tick`. At 1× the sim ticks ~4×/sec so the map already
+    /// draws every tick; but at 25× the raw tick fires ~125×/sec, and the map's
+    /// full-world Canvas (wrap-around basemap + every airport + every aircraft)
+    /// repainting that often spins the GPU and heats the device — the #1 thermal/
+    /// battery cost, and a real player complaint. Capping the map's redraw cadence
+    /// keeps aircraft motion smooth (30 fps) while cutting high-speed repaint load
+    /// ~4×. Position is a function of tick, so a throttled tick still animates
+    /// correctly — it just redraws less often. The sim itself is UNAFFECTED (it
+    /// still ticks at full `speed`); only how often the map repaints changes.
+    private(set) var mapTick: Int = 0
+    /// Map redraw cap. 30 fps is fluid to the eye and a fraction of the ~125/sec a
+    /// raw 25× tick would force. (The sim keeps ticking at full speed regardless.)
+    static let mapRenderFPS: Double = 30
     private(set) var airports: [Airport] = []
     private(set) var aircraft: [Aircraft] = []
 
@@ -5112,6 +5126,8 @@ final class Simulation {
     func run() async {
         var last = ContinuousClock.now
         var lastDisplay = ContinuousClock.now
+        var lastMap = ContinuousClock.now
+        let mapIntervalMs = 1000.0 / Simulation.mapRenderFPS   // ~33ms @ 30fps
         var accumulatorMs: Double = 0
 
         while !Task.isCancelled {
@@ -5147,6 +5163,17 @@ final class Simulation {
             if displayTick != tick, now - lastDisplay >= .milliseconds(200) {
                 displayTick = tick
                 lastDisplay = now
+            }
+
+            // Throttle the MAP's redraw to ~30fps (see `mapTick`). At 1×/½× the sim
+            // ticks slower than 30fps so the map still draws every tick (motion is
+            // unchanged); the cap only bites at 5×/10×/25×, where it stops the
+            // full-world Canvas from repainting ~125×/sec and heating the phone.
+            let mapDeltaMs = Double((now - lastMap).components.attoseconds) / 1e15
+                           + Double((now - lastMap).components.seconds) * 1000
+            if mapTick != tick, mapDeltaMs >= mapIntervalMs {
+                mapTick = tick
+                lastMap = now
             }
         }
     }
