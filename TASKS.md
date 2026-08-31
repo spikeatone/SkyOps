@@ -96,7 +96,10 @@ thin game). Branch `gameplay-lever-pack`, merged to `main`. Full notes in CLAUDE
 ### Post-1.4 follow-ups (none blocking)
 - [ ] Map: subsidiary aircraft render in competitor purple (no third colour state) — build one
       if the ambiguity bites.
-- [ ] Game Center per-achievement art (all 29 share one badge; replaceable any time).
+- [x] Game Center per-achievement art — DONE (31 Aug, shipped in 1.6.0/build 55). 29 custom icons
+      uploaded via the reworked `aa-1.1.x/gc_upload_images.py` (per-vendor-id file from
+      `Achievements/Finished/aa_<id>.png`, hard-errors on any missing file, replaces the old shared
+      badge). Verified 29/29 uploaded live.
 - [ ] RevenueCat: remove Monthly/Yearly from the offering once the one-time unlock dominates
       (NEVER delete the sub products).
 - [ ] TelemetryDeck for Aerospace + Mars Colony Architect (no telemetry at all yet) — every

@@ -7,19 +7,25 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 31 August 2026._
 
-**► 1.6.0 (build 55) = German localization + city hero artwork + per-achievement GC icons — UPLOADED
-(31 Aug), not yet submitted.** Both feature branches merged to `main` after 1.5 went live: `de-translation`
-(German, `3ed01e9`) + `airport-heroes-achievements` (77 city hero images + crop-toward-top framing + GC
-per-achievement icon script, `396da4e`). Bumped to 1.6.0/build 55 (`d357217`, MARKETING_VERSION 1.5.0→1.6.0
-+ CURRENT_PROJECT_VERSION 54→55 ×6), archived → exported → validated → **uploaded via the CLI chain**
-(Delivery UUID `b155182a-0351-4f4a-b324-0341fb0b16b1`). ASC v1.6 record (id `cae19c1c…`) already has: de-DE
-localization (Promo/Description/What's New/Keywords), en-US What's New + version-agnostic Promo (both
-locales set via `asc.py`). **STILL DESIGNER-SIDE before submit:** (1) attach build 55 to the v1.6 record
-once it finishes processing (~5 min after upload), (2) paste `aa-1.1.x/app-review-notes-1.6.0.txt` (3953
-chars, §1 4.3(a) studio block, already 1.6-updated) into App Review notes, (3) add the 20 de screenshots
-(in `App Store Screenshots/de/`) to the de-DE localization, (4) submit. German shipped AI-drafted (native
-review waived by the designer; 1.6 dodges the 4.3(a) localization-only reflex by ALSO shipping the city
-artwork). Next new build = **56+**.
+**► 1.6.0 (build 55) = German localization + city hero artwork + per-achievement GC icons — SUBMITTED
+FOR REVIEW (31 Aug; ASC state `WAITING_FOR_REVIEW`, verified via `asc.py`).** Both feature branches merged
+to `main` after 1.5 went live: `de-translation` (German, `3ed01e9`) + `airport-heroes-achievements` (77
+city hero images total — 43 added this batch — + crop-toward-top framing fix + GC per-achievement icon
+script, `396da4e`). Bumped to 1.6.0/build 55 (`d357217`, MARKETING_VERSION 1.5.0→1.6.0 + CURRENT_PROJECT_VERSION
+54→55 ×6), archived → exported → validated → **uploaded via the CLI chain** (Delivery UUID
+`b155182a-0351-4f4a-b324-0341fb0b16b1`), then the designer-side steps completed and the version submitted:
+build 55 attached, `aa-1.1.x/app-review-notes-1.6.0.txt` (§1 4.3(a) studio block) pasted into App Review
+notes, the 20 de screenshots (`App Store Screenshots/de/`) added to the de-DE localization. ASC v1.6 record
+(id `cae19c1c…`) carries de-DE (Promo/Description/What's New/Keywords) + en-US What's New + version-agnostic
+Promo. German shipped AI-drafted (native review waived by the designer; 1.6 dodges the 4.3(a) localization-only
+reflex by ALSO shipping the city artwork — a text+visual update, not localization-only). Next new build = **56+**.
+
+⚠️ **AIRPORT HERO FRAMING (1.6):** the hero band now crops toward the TOP (`AirportHero.biasFromTop = 0.38`,
+`maxHeight` 220→300) so skyline heroes keep their sky — `scaledToFill` used to center-crop the 16:9 source
+into the shorter 2.5:1 band and lop the sky off. When adding future heroes, keep the subject center-to-upper.
+Full detail + the working-folder gotcha (`Resources/Airport Photos` with a space is the SOURCE library, NOT
+the bundle `.../AirportPhotos/`) are in `AIRPORT_PHOTOS_SPEC.md` + the "Decided — Airport hero images" section
+of CLAUDE.md.
 
 **► 1.5.0 (build 54) = A350-1000 + 747-8i + map-render throttle — SUBMITTED FOR REVIEW (30 Aug).**
 Merged to `main` (PR #2, branch `aircraft-and-thermal`). Fleet 35 → 37: **Airbus A350-1000** (`A35K`,
