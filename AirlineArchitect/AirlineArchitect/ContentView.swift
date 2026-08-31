@@ -730,7 +730,7 @@ struct AircraftProfileCard: View {
                 Spacer()
                 spec("Practical Range:", "\(type.rangeNM.formatted()) NM")
                 Spacer()
-                spec("Avg Lifespan:", "\(type.expectedLifespanCycles.formatted()) cycles")
+                spec("Avg Lifespan:", String(localized: "\(type.expectedLifespanCycles.formatted()) cycles"))
             }
 
             Rectangle().fill(cardBorder).frame(height: 1)
@@ -740,14 +740,14 @@ struct AircraftProfileCard: View {
                 gated { if let ac = sim.buyAircraft(type) { onBought(ac) } }
             }
             row("Lease new:",
-                "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
+                String(localized: "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo"),
                 lease: true, cost: sim.leaseUpfront(type)) {
                 gated { if let ac = sim.leaseAircraft(type) { onBought(ac) } }
             }
             ForEach(sim.usedInventory[type.id] ?? []) { listing in
                 let pct = 100 * listing.cyclesAccrued / max(1, type.expectedLifespanCycles)
                 row("Buy used:",
-                    "\(money(listing.price)) - \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)",
+                    String(localized: "\(money(listing.price)) - \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)"),
                     lease: false, cost: listing.price) {
                     gated { if let ac = sim.buyUsedAircraft(listing) { onBought(ac) } }
                 }
@@ -782,14 +782,14 @@ struct AircraftProfileCard: View {
         }
     }
 
-    private func spec(_ label: String, _ value: String) -> some View {
+    private func spec(_ label: LocalizedStringKey, _ value: String) -> some View {
         VStack(spacing: 2) {
             Text(label).font(.karla(14, .bold)).foregroundStyle(labelC)
             Text(value).font(.karla(14)).foregroundStyle(bodyC)
         }
     }
 
-    private func row(_ label: String, _ detail: String, lease: Bool, cost: Int,
+    private func row(_ label: LocalizedStringKey, _ detail: String, lease: Bool, cost: Int,
                      action: @escaping () -> Void) -> some View {
         let afford = sim.playerBalance >= cost
         let short = cost - sim.playerBalance
@@ -875,11 +875,11 @@ struct RouteConfirmPanel: View {
             // demand and the load factor the spare that'd be assigned would fly
             // it at — so the player can size the aircraft to the route.
             if sim.useDemandModel {
-                infoRow("Est. demand", "\(sim.routeDailyDemand(origin, dest).formatted()) pax/day", primaryC)
+                infoRow("Est. demand", String(localized: "\(sim.routeDailyDemand(origin, dest).formatted()) pax/day"), primaryC)
                 // Network/hub effect: connecting pax from your other routes here.
                 let hubBonus = sim.hubBonusPercent(originCode: origin.code, destCode: dest.code)
                 if hubBonus > 0 {
-                    infoRow("Hub bonus", "+\(hubBonus)% (connecting traffic)", green)
+                    infoRow("Hub bonus", String(localized: "+\(hubBonus)% (connecting traffic)"), green)
                 }
                 if let spare {
                     let lf = sim.projectedLoadFactor(seats: spare.type.seats, from: origin, to: dest)
@@ -887,7 +887,7 @@ struct RouteConfirmPanel: View {
                     infoRow("Projected load", "\(Int((lf * 100).rounded()))% · \(spare.type.name)", c)
                 }
             }
-            infoRow("Slots", slotsOK ? "Avail both ends" : "Buyout needed",
+            infoRow("Slots", slotsOK ? String(localized: "Avail both ends") : String(localized: "Buyout needed"),
                     slotsOK ? green : red)
             let cap = capability(spare)
             infoRow("Aircraft check", cap.text, cap.ok ? green : red)
@@ -898,8 +898,8 @@ struct RouteConfirmPanel: View {
                let old = sim.playerRoutes.first(where: { $0.id == rid }) {
                 let flying = sim.isEnRoute(ac)
                 infoRow("Leaves",
-                        flying ? "\(old.originCode)–\(old.destCode) · closes after this leg"
-                               : "\(old.originCode)–\(old.destCode) · that route closes", red)
+                        flying ? String(localized: "\(old.originCode)–\(old.destCode) · closes after this leg")
+                               : String(localized: "\(old.originCode)–\(old.destCode) · that route closes"), red)
             }
 
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
@@ -918,7 +918,7 @@ struct RouteConfirmPanel: View {
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 
-    private func infoRow(_ label: String, _ value: String, _ valueColor: Color) -> some View {
+    private func infoRow(_ label: LocalizedStringKey, _ value: String, _ valueColor: Color) -> some View {
         HStack {
             Text(label).font(.karla(14)).foregroundStyle(labelC)
             Spacer()
@@ -952,14 +952,14 @@ struct RouteConfirmPanel: View {
     /// Whether the spare that would be assigned can PHYSICALLY fly this route —
     /// range + runway at both ends. Blocks Open Route when it can't.
     private func capability(_ spare: Aircraft?) -> (text: String, ok: Bool) {
-        guard let spare else { return ("a/c not assigned", false) }
+        guard let spare else { return (String(localized: "a/c not assigned"), false) }
         switch sim.routeBlock(for: spare, from: origin, to: dest) {
         case .range:
-            return ("out of range (\(spare.type.rangeNM.formatted()) nm max)", false)
+            return (String(localized: "out of range (\(spare.type.rangeNM.formatted()) nm max)"), false)
         case .runway(let code):
-            return ("\(code) runway too short for \(spare.type.name)", false)
+            return (String(localized: "\(code) runway too short for \(spare.type.name)"), false)
         case nil:
-            return ("in range · runway OK", true)
+            return (String(localized: "in range · runway OK"), true)
         }
     }
 }
@@ -1188,16 +1188,23 @@ struct RoutesPanel: View {
         let farePct = Int(((f - 1) * 100).rounded())
         let demandPct = Int(((d - 1) * 100).rounded())
         if r.fareLevel == Route.standardFareLevel {
-            return "Market-rate fares. Raise them on a route that's overflowing; cut them to fill seats or defend against rivals."
+            return String(localized: "Market-rate fares. Raise them on a route that's overflowing; cut them to fill seats or defend against rivals.")
         }
-        let fareStr = "\(farePct >= 0 ? "+" : "")\(farePct)% fares · \(demandPct >= 0 ? "+" : "")\(demandPct)% demand"
+        let fareSigned = "\(farePct >= 0 ? "+" : "")\(farePct)"
+        let demandSigned = "\(demandPct >= 0 ? "+" : "")\(demandPct)"
+        let fareStr = String(localized: "\(fareSigned)% fares · \(demandSigned)% demand")
+        let contested = r.competitionLevel > 0
         if r.fareLevel > Route.standardFareLevel {
-            return fareStr + (r.competitionLevel > 0 ? " · concedes some share to rivals. Pays when the aircraft is full anyway." : ". Pays when the aircraft is full anyway.")
+            return contested
+                ? String(localized: "\(fareStr) · concedes some share to rivals. Pays when the aircraft is full anyway.")
+                : String(localized: "\(fareStr). Pays when the aircraft is full anyway.")
         }
-        return fareStr + (r.competitionLevel > 0 ? " · defends share against rivals." : ". Fills seats on a thin route.")
+        return contested
+            ? String(localized: "\(fareStr) · defends share against rivals.")
+            : String(localized: "\(fareStr). Fills seats on a thin route.")
     }
 
-    private func line(_ label: String, _ value: String) -> some View {
+    private func line(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack {
             Text(label).font(.karla(12)).foregroundStyle(labelColor).frame(width: 112, alignment: .leading)
             Text(value).font(.karla(12, .semibold)).foregroundStyle(primaryC)
@@ -1382,7 +1389,7 @@ struct AircraftTooltip: View {
                 row("Airline", mine, valueColor: greenValue)
             }
             routeRow
-            row("Tail", aircraft.isLeased ? "\(aircraft.tail) (leased)" : aircraft.tail)
+            row("Tail", aircraft.isLeased ? String(localized: "\(aircraft.tail) (leased)") : aircraft.tail)
             row("Type", aircraft.type.name)
             row("Status", statusText, valueColor: aircraft.isHeld ? heldColor : valueColor)
 
@@ -1415,9 +1422,9 @@ struct AircraftTooltip: View {
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 
-    private func row(_ label: String, _ value: String, valueColor: Color? = nil) -> some View {
+    private func row(_ label: LocalizedStringKey, _ value: String, valueColor: Color? = nil) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text("\(label):")
+            (Text(label) + Text(":"))
                 .font(.karla(14, .bold))
                 .foregroundStyle(labelColor)
             Text(value)
@@ -1460,9 +1467,9 @@ struct AircraftTooltip: View {
         guard let id = aircraft.assignedRouteId,
               let r = sim.playerRoutes.first(where: { $0.id == id }) else { return nil }
         if r.isProfitable {
-            return ("recouped its \(money(r.openingCost)) opening cost, +\(money(r.netVsOpeningCost))", true)
+            return (String(localized: "recouped its \(money(r.openingCost)) opening cost, +\(money(r.netVsOpeningCost))"), true)
         } else {
-            return ("\(money(-r.netVsOpeningCost)) short of \(money(r.openingCost)) opening cost", false)
+            return (String(localized: "\(money(-r.netVsOpeningCost)) short of \(money(r.openingCost)) opening cost"), false)
         }
     }
 
@@ -1470,11 +1477,11 @@ struct AircraftTooltip: View {
         switch aircraft.holdReason {
         case .weather:
             return aircraft.state == .approach
-                ? "HELD — holding pattern at \(aircraft.dest.code) (weather)"
-                : "HELD — ground stop at \(aircraft.origin.code)"
-        case .rejoin:  return "Rejoining approach at \(aircraft.dest.code)"
-        case .aog:     return "AOG — grounded at \(aircraft.origin.code)"
-        case .crew:    return "HELD — no legal crew at \(aircraft.origin.code)"
+                ? String(localized: "HELD — holding pattern at \(aircraft.dest.code) (weather)")
+                : String(localized: "HELD — ground stop at \(aircraft.origin.code)")
+        case .rejoin:  return String(localized: "Rejoining approach at \(aircraft.dest.code)")
+        case .aog:     return String(localized: "AOG — grounded at \(aircraft.origin.code)")
+        case .crew:    return String(localized: "HELD — no legal crew at \(aircraft.origin.code)")
         case nil:      return phaseLabel(aircraft.state)
         }
     }
@@ -1482,9 +1489,9 @@ struct AircraftTooltip: View {
     /// Crew legal hours (Part 117 duty clock), or the reason there's no crew.
     /// Figma phrasing: "N.N hrs remaining".
     private var crewText: String {
-        if aircraft.holdReason == .crew { return "none — awaiting legal crew" }
+        if aircraft.holdReason == .crew { return String(localized: "none — awaiting legal crew") }
         guard let d = sim.crewDuty(for: aircraft) else { return "—" }
-        return String(format: "%.1f hrs remaining", max(0, d.max - d.used))
+        return String(localized: "\(String(format: "%.1f", max(0, d.max - d.used))) hrs remaining")
     }
 
     private var crewValueColor: Color {
@@ -1498,7 +1505,7 @@ struct AircraftTooltip: View {
 
     private var loadText: String {
         let pct = Int((aircraft.currentLoadFactor * 100).rounded())
-        return "\(aircraft.currentPax) / \(aircraft.type.seats) pax (\(pct)%)"
+        return String(localized: "\(aircraft.currentPax) / \(aircraft.type.seats) pax (\(pct)%)")
     }
 
     private func money(_ v: Int) -> String {
@@ -1511,9 +1518,19 @@ struct AircraftTooltip: View {
     }
 
     private func phaseLabel(_ state: FlightState) -> String {
-        String(describing: state)
-            .replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
-            .uppercased()
+        // Uppercased status shown in the aircraft tooltip. Localized per phase
+        // (the old String(describing:) leaked the English enum names).
+        switch state {
+        case .parked:     return String(localized: "PARKED")
+        case .boarding:   return String(localized: "BOARDING")
+        case .taxiOut:    return String(localized: "TAXI OUT")
+        case .takeoff:    return String(localized: "TAKEOFF")
+        case .cruise:     return String(localized: "CRUISE")
+        case .approach:   return String(localized: "APPROACH")
+        case .landing:    return String(localized: "LANDING")
+        case .taxiIn:     return String(localized: "TAXI IN")
+        case .turnaround: return String(localized: "TURNAROUND")
+        }
     }
 }
 

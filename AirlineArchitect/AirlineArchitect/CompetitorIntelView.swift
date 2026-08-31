@@ -133,7 +133,7 @@ struct CompetitorIntelView: View {
                 HStack(spacing: 14) {
                     stat("Fleet", "\(p.fleetSize)")
                     stat("Routes", "\(p.routeCount)")
-                    stat("Revenue", compactMoney(Int(p.annualRevenue)) + "/yr")
+                    stat("Revenue", String(localized: "\(compactMoney(Int(p.annualRevenue)))/yr"))
                     stat("Margin", marginLabel(p), p.operatingMargin < 0 ? red : Sky.coreGreen)
                 }
             }

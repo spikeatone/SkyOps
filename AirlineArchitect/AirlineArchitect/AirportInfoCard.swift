@@ -148,7 +148,7 @@ struct AirportInfoCard: View {
             Text("Then \(money(sim.hubMonthlyLabor(code)))/mo ground staff. Benefits suspend below \(Simulation.hubMinRoutes) routes.")
                 .font(.karla(11)).foregroundStyle(labelColor)
         } else if sim.routesAt(code) > 0 {
-            row("Hub eligibility", "\(sim.routesAt(code))/\(Simulation.hubMinRoutes) routes")
+            row("Hub eligibility", String(localized: "\(sim.routesAt(code))/\(Simulation.hubMinRoutes) routes"))
         }
     }
 

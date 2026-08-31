@@ -2378,7 +2378,8 @@ final class Simulation {
     static func simDate(fromTick t: Int) -> String {
         let day = t / 1440 + 1
         let mins = t % 1440
-        return String(format: "Day %d · %02d:%02d", day, mins / 60, mins % 60)
+        let time = String(format: "%02d:%02d", mins / 60, mins % 60)
+        return L("Day %@ · %@", day, time)
     }
 
     var ownedCount: Int { aircraft.lazy.filter { $0.purchased }.count }
