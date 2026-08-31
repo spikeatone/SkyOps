@@ -2541,16 +2541,6 @@
         }
       }
     },
-    "Expedite $15,000": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Beschleunigen $15.000"
-          }
-        }
-      }
-    },
     "Expedite %@": {
       "localizations": {
         "de": {
@@ -4847,16 +4837,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reserve"
-          }
-        }
-      }
-    },
-    "Reserve $5k": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reserve $5k"
           }
         }
       }
