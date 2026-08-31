@@ -4166,7 +4166,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einmalkauf · Gründerpreis steigt am %@ auf %@"
+            "value": "Einmalkauf · Gründerpreis steigt am %2$@ auf %1$@"
           }
         }
       }
@@ -6261,6 +6261,16 @@
         }
       }
     },
+    "last month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "letzten Monat"
+          }
+        }
+      }
+    },
     "opening waived (%@)": {
       "localizations": {
         "de": {
@@ -6301,12 +6311,32 @@
         }
       }
     },
+    "since launch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "seit dem Start"
+          }
+        }
+      }
+    },
     "sold to %@ — their fortress now": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "an %@ verkauft — jetzt deren Festung"
+          }
+        }
+      }
+    },
+    "this month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diesen Monat"
           }
         }
       }

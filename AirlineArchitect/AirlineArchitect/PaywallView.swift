@@ -83,7 +83,7 @@ struct PaywallView: View {
                 .frame(width: 84, height: 84)
                 Text("Airline Architect Pro")
                     .font(.karla(24, .bold)).foregroundStyle(primary)
-                Text(reason ?? "You've built the start of something. Unlock the full game to grow it into a real airline.")
+                Text(reason.map { LocalizedStringKey($0) } ?? "You've built the start of something. Unlock the full game to grow it into a real airline.")
                     .font(.karla(14)).foregroundStyle(secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)

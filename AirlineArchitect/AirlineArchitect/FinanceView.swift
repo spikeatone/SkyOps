@@ -469,9 +469,9 @@ struct FinanceView: View {
     }
     private var deltaLabel: String {
         switch period {
-        case .total: return "since launch"
-        case .thisMonth: return "this month"
-        case .lastMonth: return "last month"
+        case .total: return String(localized: "since launch")
+        case .thisMonth: return String(localized: "this month")
+        case .lastMonth: return String(localized: "last month")
         }
     }
 
