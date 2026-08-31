@@ -144,7 +144,7 @@ struct AircraftType: Identifiable {
     /// A short evocative flavor line per type (real nicknames where they exist —
     /// 747 "Queen of the Skies", A380 "Superjumbo", 787 "Dreamliner") — shown in
     /// the Fleet detail. Purely cosmetic delight (1.1.x).
-    var flavor: String? { AircraftType.flavorByID[id] }
+    var flavor: String? { AircraftType.flavorByID[id].map { L($0) } }
     private static let flavorByID: [String: String] = [
         "A319": "The compact single-aisle", "A320": "The single-aisle workhorse",
         "A321": "Stretched for more seats", "A319NEO": "Efficient new-engine compact",

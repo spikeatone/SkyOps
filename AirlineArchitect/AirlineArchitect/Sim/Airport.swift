@@ -129,7 +129,7 @@ final class Airport: Identifiable {
 
     /// A short evocative one-liner for notable/iconic destinations (leisure islands
     /// + marquee world cities) — shown in the airport card. Cosmetic delight (1.1.x).
-    static func destinationFlavor(_ code: String) -> String? { flavorByCode[code] }
+    static func destinationFlavor(_ code: String) -> String? { flavorByCode[code].map { L($0) } }
     private static let flavorByCode: [String: String] = [
         "LIH": "Gateway to Kauai's emerald canyons", "OGG": "Where the road to Hana begins",
         "ITO": "Rainforest doorstep to living volcanoes", "KOA": "Sun-baked lava coast and Kona coffee",
