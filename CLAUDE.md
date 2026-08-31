@@ -170,24 +170,35 @@ one contradicts the design thesis.)
   auto-generated used listings).
 
 
-- **Fleet size**: 35 distinct playable aircraft types (native-app era).
+- **Fleet size**: 37 distinct playable aircraft types (native-app era).
   Running history: 32 (initial big expansion) -> 31 (Sukhoi Superjet 100
   removed) -> 30 (Bombardier CRJ700 removed — aging out of most real fleets,
   nearing retirement, per designer direction) -> 28 (737 MAX 7 and MAX 10
   removed — see the new "not yet certified" principle below) -> 30 (Airbus
   A330-900 and A350-900 added — see the new Airline Identity section for why)
   -> 31 (Boeing 787-10 Dreamliner added, id `B78J`, B787 family — a widely
-  flown Dreamliner stretch; United/British Airways operators) -> **35** (turboprop
+  flown Dreamliner stretch; United/British Airways operators) -> 35 (turboprop
   tier added — Beechcraft 1900D, ATR 42-600, Dornier 328-110, De Havilland Dash
-  8-200 — the first non-jet `BodyType.turboprop`, each its own crew family). ALSO changed,
+  8-200 — the first non-jet `BodyType.turboprop`, each its own crew family) ->
+  **37** (Airbus A350-1000 `A35K` + Boeing 747-8i `B748` added, 30 Aug — a paying
+  player asked for the "legendary" jumbos + newer A350s; both pass the certified-
+  and-in-service bar. A35K: 327 seats/513,700 lb/8,700 NM/$320M/$14,500hr/44k cyc,
+  shares the existing `A350` crew rating, fuelIntensity 0.72. B748: 364 seats/
+  675,000 lb/7,730 NM/$185M/$29,000hr/20k cyc, its OWN `B747-8` crew family,
+  fuelIntensity 1.6. Real Figma side-view art + traced fin masks; specs sourced,
+  in git. ⚠️ **The B748 REVERSES the earlier deliberate "skip it — the passenger
+  -8 was essentially freighter-only" call below** — the designer chose to add it;
+  the -400 stays too, both jumbos coexist. Shipped on branch `aircraft-and-thermal`
+  off `main`, NOT the German branch). ALSO changed,
   not a count change: the `B747` entry was re-modelled from Boeing 747-8 →
-  **Boeing 747-400** (the -8 passenger variant was essentially freighter-only;
-  the -400 is the passenger 747 airlines actually flew) — seats 416, MLW
+  **Boeing 747-400** (the -8 PASSENGER variant was thought essentially freighter-
+  only at the time — a call now reversed by the B748 addition above; the -400 is
+  still the passenger 747 airlines flew most) — seats 416, MLW
   652,700 lb, range 7,260 NM updated; its cost/price/lifespan now carry real -400-profile values (lifespan 20k =
   Boeing DSG; cheaper price, higher op cost for an aging jumbo). The two new
-  widebody families (`A330`, `A350`) and, later, the four turboprop families
-  brought the crew-family count to **18 today** (verified via script — matches
-  the crew-families bullet below). `CRJ_FAMILY` stays real (CRJ900/1000 remain). See the "stale
+  widebody families (`A330`, `A350`), the four turboprop families, and (30 Aug)
+  the new `B747-8` family brought the crew-family count to **19 today** (verified
+  via script — matches the crew-families bullet below). `CRJ_FAMILY` stays real (CRJ900/1000 remain). See the "stale
   comment" note near the end of this section for a real gotcha this kind
   of repeated change has already surfaced once. This is still a major
   expansion from the original locked 6 — the "locked"
@@ -240,13 +251,15 @@ one contradicts the design thesis.)
     carriers, none in the US roster), so `ARJ21_FAMILY` is gone too.
     (Sukhoi Superjet 100 / `SSJ100_FAMILY` was in this standalone category too,
     before its earlier removal — see stale-comment note below.)
-  - **Net result: 18 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
-    `A220_FAMILY`, `B777`, `B787`, `A330`, `A350`, `B747`, `A380`, `A340`,
-    `E170_FAMILY`, `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY`, plus the four
-    turboprop families `B1900_FAMILY`, `ATR42_FAMILY`, `D328_FAMILY`,
-    `DASH8_FAMILY` — `ARJ21_FAMILY` removed with the ARJ21). The `B787` family
-    now covers THREE variants (787-8 `B788`, 787-9 `B789`, 787-10 `B78J`) on one
-    type rating. Covering 35 aircraft types — verified via script, not hand-counted,
+  - **Net result: 19 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
+    `A220_FAMILY`, `B777`, `B787`, `A330`, `A350`, `B747`, **`B747-8`** (new,
+    30 Aug — the 747-8i is its OWN type rating, distinct from the -400 `B747`),
+    `A380`, `A340`, `E170_FAMILY`, `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY`,
+    plus the four turboprop families `B1900_FAMILY`, `ATR42_FAMILY`,
+    `D328_FAMILY`, `DASH8_FAMILY` — `ARJ21_FAMILY` removed with the ARJ21).
+    The `B787` family now covers THREE variants (787-8 `B788`, 787-9 `B789`,
+    787-10 `B78J`) on one type rating; the `A350` family now covers TWO
+    (A350-900 `A359`, A350-1000 `A35K`). Covering 37 aircraft types — verified via script, not hand-counted,
     after this count went stale at least once before (see the
     `TYPE_WEIGHT_TOTAL` note). `CREW_FAMILIES` is auto-derived from
     `AIRCRAFT_TYPES.map(t => t.family)` — adding or removing an aircraft
@@ -257,7 +270,11 @@ one contradicts the design thesis.)
     the A330 and A350 families for Delta's real widebody fleet required
     a manual `FAMILY_LABELS` edit (`A330: 'A330', A350: 'A350'`) — miss
     this step next time a family changes and the crew status strip will
-    show `undefined` for that family instead of a real label.
+    show `undefined` for that family instead of a real label. (Native app:
+    the equivalents are `FAMILY_LABELS` + `CREW_FAMILY_INFO` in `Sim/Crew.swift`
+    — the 30-Aug `B747-8` family required hand-adding BOTH there:
+    `"B747-8": "B747-8"` and `"B747-8": ("Boeing 747-8 family", "Covers 747-8i")`,
+    plus updating A350's coverage string to "Covers A350-900/1000".)
   - `crewsPerTail: 6` was applied to every narrowbody AND every regional
     jet by default. This is a real, UNVERIFIED assumption for the
     regional-jet tier specifically — there's no sourced reason RJs should
@@ -2278,6 +2295,24 @@ where numbers are involved.
     `GameSnapshot` ×6 (3 slots × local+cloud) just to read `savedAtEpoch` — a real
     app-switch stall for late-game saves. Now decodes a tiny `SaveHeader`
     (savedAtEpoch + playerAirlineName only; JSONDecoder ignores the rest).
+- **MAP RENDER THROTTLE — DONE (30 Aug, branch `aircraft-and-thermal`; a paying
+  player's "device gets hot / drains battery" report).** Distinct from the
+  displayTick churn above: that fix was about LIST/HUD views over-rendering; this
+  is the MAP's `Canvas` specifically. `LiveMap` fed `MapView` the RAW `sim.tick`,
+  so the full-world Canvas (wrap-around tiled basemap + every airport + every
+  aircraft) repainted on EVERY sim tick — **~125×/sec at 25×** — which pins the
+  GPU and heats the phone. Fix: a new **throttled `Simulation.mapTick`**, bumped
+  in the `run()` loop at `mapRenderFPS` (**30fps**) alongside the existing
+  `displayTick`; `LiveMap` now reads `mapTick`, so the map redraws ≤30×/sec
+  regardless of speed (a ~4× cut at 25×). Aircraft position is a function of tick,
+  so a throttled tick still animates smoothly — the cap only bites at 5×/10×/25×.
+  The SIM is UNAFFECTED (still ticks at full `speed`); only the map's redraw
+  cadence changes. At 1×/½× the sim already ticks slower than 30fps, so the map
+  draws every tick and motion is identical to before. **RULE going forward: the
+  map Canvas takes `mapTick` (throttled), never raw `tick`** — the same
+  value-input contract as the freeze-bug fix, just capped. `displayTick` (~5fps)
+  is still the right input for the lists/HUD; `mapTick` (~30fps) for the map;
+  raw `tick` only where per-tick precision matters (the live aircraft tooltip).
 - **OPEN — app-switch CRASH (1.1(28), reported on BOTH iPhone + iPad).** Testers
   report AA crashing when toggling between other apps and AA. NO repro/crash log
   on the dev machine (testers' logs live in TestFlight → Xcode Organizer →
