@@ -195,7 +195,11 @@ struct AirportHero: View {
     /// iPad-portrait card grows toward `maxHeight`).
     var aspect: CGFloat = 2.5          // target width : height
     var minHeight: CGFloat = 132
-    var maxHeight: CGFloat = 220
+    // Raised 220 -> 300: on the wide iPad card, width/2.5 was clamping the band
+    // short, which made scaledToFill crop a thin center strip and lop the SKY
+    // off skyline heroes. A taller cap keeps the band nearer 2.5:1 there, so
+    // less of the image is thrown away.
+    var maxHeight: CGFloat = 300
     @State private var measuredWidth: CGFloat = 0
 
     private var height: CGFloat {
@@ -204,21 +208,38 @@ struct AirportHero: View {
     }
 
     var body: some View {
-        ZStack {
-            if let img = AirportPhoto.image(for: airport) {
-                img.resizable().scaledToFill()
-            } else {
-                AirportPhotoPlaceholder(archetype: AirportPhoto.archetype(for: airport))
+        // scaledToFill defaults to CENTER cropping — for a 16:9 source shown in a
+        // shorter band that slices equal strips off top and bottom, so a city
+        // skyline (which sits in the upper-middle of the frame) loses its sky and
+        // tower-tops. Fill by WIDTH (image becomes full 16:9 height, taller than
+        // the band), then clip to the band with the image nudged UP so the visible
+        // window lands on the upper part of the frame — sky + subject kept, the
+        // excess taken from the foreground.
+        GeometryReader { geo in
+            // Fill height = whichever is larger, the image's natural 16:9 height or
+            // the band itself, so the image never ends up shorter than the band
+            // (which would leave a gap). scaledToFill semantics, done by hand.
+            let imageH = max(geo.size.width * 9.0 / 16.0, geo.size.height)
+            let slack  = max(0, imageH - geo.size.height)       // how much taller than the band
+            let biasFromTop: CGFloat = 0.38                     // 0 = show top, 0.5 = center
+            Group {
+                if let img = AirportPhoto.image(for: airport) {
+                    img.resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: imageH)
+                        .offset(y: -slack * biasFromTop)
+                } else {
+                    AirportPhotoPlaceholder(archetype: AirportPhoto.archetype(for: airport))
+                        .frame(width: geo.size.width, height: geo.size.height)
+                }
             }
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+            .clipped()
+            .onAppear { measuredWidth = geo.size.width }
+            .onChange(of: geo.size.width) { _, w in measuredWidth = w }
         }
-        .frame(maxWidth: .infinity)
         .frame(height: height)
         .clipped()
-        .background(GeometryReader { g in
-            Color.clear
-                .onAppear { measuredWidth = g.size.width }
-                .onChange(of: g.size.width) { _, w in measuredWidth = w }
-        })
     }
 }
 
