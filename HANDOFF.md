@@ -5,7 +5,21 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 30 August 2026._
+_Snapshot: 31 August 2026._
+
+**► 1.6.0 (build 55) = German localization + city hero artwork + per-achievement GC icons — UPLOADED
+(31 Aug), not yet submitted.** Both feature branches merged to `main` after 1.5 went live: `de-translation`
+(German, `3ed01e9`) + `airport-heroes-achievements` (77 city hero images + crop-toward-top framing + GC
+per-achievement icon script, `396da4e`). Bumped to 1.6.0/build 55 (`d357217`, MARKETING_VERSION 1.5.0→1.6.0
++ CURRENT_PROJECT_VERSION 54→55 ×6), archived → exported → validated → **uploaded via the CLI chain**
+(Delivery UUID `b155182a-0351-4f4a-b324-0341fb0b16b1`). ASC v1.6 record (id `cae19c1c…`) already has: de-DE
+localization (Promo/Description/What's New/Keywords), en-US What's New + version-agnostic Promo (both
+locales set via `asc.py`). **STILL DESIGNER-SIDE before submit:** (1) attach build 55 to the v1.6 record
+once it finishes processing (~5 min after upload), (2) paste `aa-1.1.x/app-review-notes-1.6.0.txt` (3953
+chars, §1 4.3(a) studio block, already 1.6-updated) into App Review notes, (3) add the 20 de screenshots
+(in `App Store Screenshots/de/`) to the de-DE localization, (4) submit. German shipped AI-drafted (native
+review waived by the designer; 1.6 dodges the 4.3(a) localization-only reflex by ALSO shipping the city
+artwork). Next new build = **56+**.
 
 **► 1.5.0 (build 54) = A350-1000 + 747-8i + map-render throttle — SUBMITTED FOR REVIEW (30 Aug).**
 Merged to `main` (PR #2, branch `aircraft-and-thermal`). Fleet 35 → 37: **Airbus A350-1000** (`A35K`,
