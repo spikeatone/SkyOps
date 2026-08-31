@@ -58,12 +58,17 @@ market-ENTRY/conversion bet, not a demand response. Register **du** throughout.
   Verified live (A320 detail: "Das Single-Aisle-Arbeitstier").
 - **Sim shim: complete** for every user-facing Sim string. **RoundTripVerify 13/13 + soak 6/6 GREEN**
   after the Sim-layer flavor touch (English byte-identical).
-- **VISUAL PASS done** (force-launched `-AppleLanguages '(de)'`, walked every surface) — found + fixed
-  **5 category-2 bugs** a key-count couldn't see: FleetView "Zeigen: All" value, crew "Reserve **$**5k" +
-  AOG "Expedite **$**15,000" (hardcoded `$`), fuel-hedge "premium" (stale `$%@ premium` key never matched
-  `%@%@ premium`), Finance fleet-value footnote (String concatenation bypassed the catalog), and the
-  `Boarding` flight-phase label (only 1 of 9 left English). All fixed, currency-symbol-correct (€), and
-  confirmed compiled into `de.lproj`.
+- **VISUAL PASS done** (iPhone portrait + **iPad landscape**) — found + fixed **~78 category-2 bugs** a
+  key-count can't see (a String reaching `Text` via a param/computed-var/concatenation, not a literal, so
+  it bypasses the catalog). iPhone found 5 (FleetView "All" value, crew "Reserve **$**5k" / AOG
+  "Expedite **$**15,000" hardcoded `$`, fuel-hedge "premium" stale-key mismatch, Finance fleet footnote,
+  `Boarding` phase). Then the **iPad-landscape docked rail** — which opens panels the iPhone floating
+  overlay hides — exposed ~73 MORE across whole panels: the Network ACQUIRE card, RoutesPanel detail, the
+  aircraft tooltip, the paywall pitch, AirportInfoCard hub strings, GameOverView. NONE device-specific
+  (English on iPhone too). All fixed (param → `LocalizedStringKey`, value → `String(localized:)`, Sim →
+  `L()` shim). **⚠️ The definitive check is `aa-1.1.x/de-findgaps.py`** (`DD=<root> python3
+  aa-1.1.x/de-findgaps.py` after a Debug build) — it scans ALL `*.stringsdata`; a `de.lproj` `de==en`
+  diff and a hand-picked file list both MISS category-2 gaps. Final: 641 keys, 0 real gaps.
 - **Euro everywhere** + **20 de App Store screenshots** (in `App Store Screenshots/de/`).
 - **AI-drafted, NO native review yet** (designer accepted the drafting risk).
 
