@@ -21,6 +21,19 @@ cools (see `PostmarkOps/APP_REVIEW_NOTES.md`). This is scoping-ahead, not a ship
 
 ## Current state
 
+> **STATUS (30 Aug): translation is FUNCTIONALLY COMPLETE on branch `de-translation` — this doc's
+> "what's left = the translation pass" below is now HISTORICAL.** Verified on that branch: the view
+> catalog is **646/646 keys translated (0 missing)**, the Sim `de` shim table has **~238 entries** (all
+> functional Ops-log/decision/offer copy), money shows in **Euro** (`Currency.symbol` +
+> `SimLocale.currencySymbol`), and 20 German App Store screenshots are captured. What actually REMAINS
+> to finalize: (1) a **visual pass** through every German screen on the sim (the designer's next ask);
+> (2) **flavor prose is still raw English** — `Airport.flavorByCode` (~50) and `AircraftType.flavorByID`
+> (37) are plain `String` maps NOT routed through the catalog/shim, so they bypass localization (the
+> catalog-bypass gotcha below); route them through `L()`, then translate; (3) **merge `main` in** —
+> `de-translation` is 7 commits behind (missing the 1.5 A350-1000/747-8i + map throttle); (4) native
+> review + device QA (German runs ~30% longer); (5) ASC German listing + Game Center localizations.
+> The infra history below is retained for how the plumbing works.
+
 - **INFRASTRUCTURE BUILT (28 Aug, branch `localization-infra`) — English unchanged, no shippable
   localization diff.** What now exists:
   - **`Resources/Localizable.xcstrings`** — the view-layer String Catalog (empty; source language en).

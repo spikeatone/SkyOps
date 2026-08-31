@@ -40,26 +40,55 @@ paragraph). The canonical playbook + Airline's filled-in unique-systems paragrap
 `PostmarkOps/APP_REVIEW_NOTES.md`. The 1.4.3 notes (3988 chars, under the 4000 limit) are the template
 for the next one — reuse them, just update the version line.
 
-**► 🇩🇪 GERMAN LOCALIZATION — IN PROGRESS on branch `de-translation` (NOT merged, NOT ship-ready).**
-Driven by TelemetryDeck data (German = 16% of preferred language, #2 after English) — framed as a
-DACH market-ENTRY/conversion bet, not a demand response. Two things exist:
-(1) **Infra — MERGED to `main`, English-unchanged, shippable anytime:** a view-layer String Catalog
-    (`Resources/Localizable.xcstrings`), `de` in knownRegions, a framework-free `Sim/Localization.swift`
-    `L()` shim (for the Sim layer's ~124 strings — compiles in the headless harness), `SimLocale.current`
-    wired at launch. Does nothing until a `de` column is filled, so zero 4.3(a) exposure.
-(2) **Translation — on `de-translation`, ~141 of ~370 strings done + 7 category-2 code fixes, verified
-    live in German** (tab bar, control bar, Finance, Fleet/Marketplace, Save/Quit, naming/paywall).
-    Register **du**; AI-drafted, no native review (designer accepted the risk). NOT ship-ready — partial
-    German is worse than none.
-⚠️ **THE KEY GOTCHA (documented in `aa-1.1.x/LOCALIZATION_SCOPING.md`):** SwiftUI only auto-localizes
-string LITERALS in `Text("…")`. A string reaching `Text` as a `String` VARIABLE (data array, model prop,
-or a `String`-typed helper param) silently bypasses the catalog even with a perfect translation. Fix =
-change the display param to `LocalizedStringKey`. Verify by force-launching in German (`-AppleLanguages
-'(de)'`); English text despite a catalog entry = a code gap, not a locale problem.
-**To finish:** `aa-1.1.x/LOCALIZATION_SCOPING.md` has the exact done/remaining map + method + the
-`aa-1.1.x/de-glossary.md` terminology. **SHIP GATE:** never release standalone during the 4.3(a) cascade
-(FC's localization-only 1.3 was rejected) — bundle the `de` turn-on with a content update, or wait for
-the account to cool. Ideally a native-German review pass before it goes live.
+**► 🇩🇪 GERMAN LOCALIZATION — NEXT SESSION'S FOCUS: FINALIZE. Branch `de-translation` (NOT merged, NOT
+ship-ready). The translation is FUNCTIONALLY COMPLETE; what's left is a visual pass, prose polish, a
+native review, device QA, and the ASC listing.** ⚠️ **FIRST STEP: `git checkout de-translation`** — all
+646 translations + the German glossary live THERE, not on `main` (main has only the infra + this note).
+Driven by TelemetryDeck data (German = 16% of preferred language, #2 after English) — a DACH
+market-ENTRY/conversion bet, not a demand response. Register **du** throughout.
+
+**WHAT'S DONE (verified 30 Aug on `de-translation`):**
+- **Infra — MERGED to `main`, English-unchanged, shippable anytime:** view-layer String Catalog
+  (`Resources/Localizable.xcstrings`), `de` in knownRegions, a framework-free `Sim/Localization.swift`
+  `L()` shim (Sim-layer strings; compiles in the headless harness), `SimLocale.current` wired at launch.
+- **View catalog: 646/646 keys translated, 0 missing** (confirmed via a JSON scan of the `.xcstrings` —
+  the earlier handoff's "141 of 370" was STALE; ignore it).
+- **Sim shim: ~238 `de` entries** — all functional Ops-log/decision/offer/closure copy done.
+- **Euro everywhere** (`Currency.symbol` view-side + `SimLocale.currencySymbol` Sim-side — symbol-only,
+  no FX, invariants unchanged) and the **App Store screenshots** (20 shots, iPhone+iPad, dark, in
+  `App Store Screenshots/de/`, network shot framed on Germany).
+- **AI-drafted, NO native review yet** (designer accepted the drafting risk; native pass still owed).
+
+**WHAT'S LEFT TO FINALIZE (next session, in order):**
+1. **VISUAL PASS FIRST (the designer's explicit ask):** force-launch the sim in German and walk EVERY
+   screen, screenshotting each — hunt untranslated English, truncated German (words run ~30% longer),
+   and awkward phrasing. This catches the catalog-bypass gaps (below) a key-count can't see.
+2. **FLAVOR PROSE is still raw ENGLISH** — the marketing-quality translator pass the scoping doc flagged
+   as last. NOT translated (plain `String` maps, not routed through the catalog/shim): airport
+   `destinationFlavor` (`Sim/Airport.swift` `flavorByCode`, ~50 one-liners) and aircraft `flavor`
+   (`Sim/AircraftType.swift` `flavorByID`, 37 lines incl. the new A35K/B748). Route them through `L()`
+   or make them catalog-visible, THEN translate. (Tutorial/briefing prose IS already routed via
+   `LocalizedStringKey` → in the catalog → already counted in the 646.)
+3. **MERGE `main` into `de-translation`** — the branch is **7 commits behind** (missing the 1.5
+   A350-1000/747-8i + map throttle). Pull main in, then translate any NEW English strings they added
+   (the two aircraft flavor lines at least).
+4. **Native-German review + device QA** of string lengths (tab bar, control-bar buttons already at
+   `minimumScaleFactor(0.7)`, stat chips — some may overflow).
+5. **ASC German listing** (name/subtitle/description/keywords/screenshots) + German Game Center
+   achievement localizations (separate from the binary, done in ASC via `asc.py`).
+
+⚠️ **THE KEY GOTCHA (in `aa-1.1.x/LOCALIZATION_SCOPING.md`):** SwiftUI only auto-localizes string
+LITERALS in `Text("…")`. A string reaching `Text` as a `String` VARIABLE (data array, model prop, or a
+`String`-typed helper param) silently bypasses the catalog even with a perfect translation. Fix = change
+the display param to `LocalizedStringKey`, or wrap `Text(LocalizedStringKey(theString))`. This is exactly
+why the flavor maps above stay English despite the catalog reading "100%". Verify by force-launching in
+German (`-AppleLanguages '(de)'`); English on screen despite a catalog entry = a code gap, not a locale
+problem — which is what the visual pass is for.
+**Reference (both on `de-translation`):** `aa-1.1.x/LOCALIZATION_SCOPING.md` (done/remaining map + method)
++ `aa-1.1.x/de-glossary.md` (terminology — keep terms consistent with it). **SHIP GATE:** never release
+standalone during the 4.3(a) cascade (FC's localization-only 1.3 was rejected) — bundle the `de` turn-on
+with a content update, or wait for the account to cool. A native-German review pass before go-live is
+strongly preferred.
 
 **► 1.4.2 (build 52) = ASYNC SAVE fix — APPROVED + LIVE (`READY_FOR_SALE`, 27 Aug).** Merged to
 `main`; fixes the `hang.under3s` TelemetryDeck signal by moving the save encode/write/mirror off the
