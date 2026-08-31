@@ -1,14 +1,60 @@
 # German Localization — Scoping Assessment (2026-08-28)
 
-## ⏳ PROGRESS (branch `de-translation`, NOT merged, NOT ship-ready) — read this first
+## ⏳ PROGRESS (branch `de-translation`, NOT merged) — read this first
 
-**ALL FUNCTIONAL UI IS NOW TRANSLATED — the view layer (620 catalog keys) AND the Sim layer (237 `L()`
-shim keys) are both done.** Register: **du**. AI-drafted (no native review — designer accepted that risk).
-Everything is on the `de-translation` branch, twelve commits, pushed. English is unchanged throughout (the
-catalog only adds a `de` column; the shim returns the English key at the "en" locale — RoundTripVerify
-13/13 + the 6/6-seed soak both GREEN). **The ONLY things still in English are the marketing FLAVOR PROSE
-(deliberately deferred for native review — see below) and the ASC store listing.** NOT ship-ready until
-the flavor prose is natively written AND timing clears the 4.3(a) cascade.
+**UPDATE 30 Aug — the FLAVOR PROSE and a VISUAL PASS are now DONE. Every user-facing string in the app
+is German (view + Sim). What's left is NATIVE REVIEW + the ASC listing + device string-length QA.**
+Register: **du**. AI-drafted (no native review — designer accepted that risk). `main` was merged in (the
+1.5 A350-1000/747-8i + map throttle; their 2 flavor lines came WITH the merge). English is unchanged
+throughout (the catalog adds a `de` column; the shim returns the English key at the "en" locale —
+**RoundTripVerify 13/13 + the 6/6-seed soak both GREEN after the Sim-layer flavor touch**). NOT
+ship-ready until a native pass AND timing clears the 4.3(a) cascade.
+
+**What the 30-Aug session did (5 commits on top of the earlier 12):**
+1. **Merged `main`** (0 behind now). 646/646 view keys still translated post-merge (the 1.5 aircraft are
+   proper nouns, added no view strings; A35K/B748 flavor lines arrived in the merge).
+2. **Flavor prose — ROUTED + TRANSLATED.** `AircraftType.flavor` and `Airport.destinationFlavor` returned
+   raw English `String` from a plain dict — now `.map { L($0) }` through the framework-free shim, and all
+   **37 aircraft nicknames + 49 airport one-liners** added to `simLocalizationTables["de"]` (237→323
+   entries, then flavor pushed the total higher). Proper nouns kept (Kauai, Hana, Maho Beach, Triple
+   Seven, Dreamliner, Superjumbo, Bula, Stone Town, Pitons, Grenadines). Verified live: the A320 detail
+   shows "Das Single-Aisle-Arbeitstier".
+3. **Visual pass (force-launched `-AppleLanguages '(de)'`, walked every surface) found + fixed 4 real
+   bugs** a key-count couldn't see — all category-2 catalog-bypass / currency-symbol leaks:
+   - FleetView "Zeigen: **All**" filter value stayed English → `String(localized:)` (keys already existed).
+   - Alerts/Ops crew card "Reserve **$**5k" + AOG "Expedite **$**15,000" had a HARDCODED `$` (even the
+     German catalog value kept it) → rebuilt as `Reserve %@` / `Expedite %@` fed by `compactMoney()` so the
+     symbol follows the locale (€ in de).
+   - Fuel-hedge "**premium**" row showed English — the real extracted key is `%@%@ premium` (two `%@`), but
+     the catalog only had a stale `$%@ premium` (one `%@`, literal `$`) that never matched. Fixed +
+     removed the stale key.
+   - Finance fleet-value footnote stayed English (built by String concatenation → bypasses the catalog) →
+     `String(localized:)` format strings + German for both variants. Verified live: "Flottenwert =
+     Wiederverkaufswert von 0 Flugzeugen im Volleigentum."
+4. **`Boarding` flight-phase label** — the only 1 of 9 FleetDetailView phases left English (siblings were
+   all German) → "Einstieg". Found via a de.lproj scan for keys where de==en.
+5. **Removed 2 dead `$`-bearing catalog keys** (`Reserve $5k`, `Expedite $15,000`) superseded by the `%@`
+   versions.
+
+**COMPLETENESS PROVEN, not just sampled:** a scan of the SHIPPED `de.lproj` (648 keys) for any key where
+`de == en` returns only loanwords (Crew/Route/Reputation/Marketing), the brand wordmark, `Pro (DEV)`
+(DEBUG-only), and pure format specifiers (`%@ nm · %@`, `· %lld/100`). **Zero real translatable strings
+are left English in the view layer.** Paywall strings (incl. the Pro-state "Vollversion freigeschaltet –
+danke…") are all translated (pure `Text` literals). This is the reliable "did I catch the category-2
+gaps" check — re-run it (`plutil -convert xml1` the built `de.lproj`, diff key vs value) after any string
+touch.
+
+**SURFACES VISUALLY CONFIRMED in German (30 Aug, iPhone 17 Pro Max sim):** naming screen (Willkommen COO /
+region carousel "Nordamerika" / tail-code hint) · all 5 tabs (Netzwerk / Flotte / Crews / Betrieb /
+Finanzen) · Fleet detail (WITH flavor prose rendering) · Marketplace · Ops event feed (weather/structural
++ free-tier teaser) · Finance ledger + fleet footnote. Paywall + Livery screen NOT re-driven this session
+(the Simulator input channel died mid-session — the documented flake; paywall verified via catalog,
+LiveryDesignView was verified live in an earlier session).
+
+**⚠️ SIMULATOR NOTE for the next driver:** the input channel dropped taps CONSTANTLY this session (taps on
+the tab bar / buttons silently did nothing while the app was clearly alive — clock advancing). A fresh
+`simctl launch` resets it briefly. Re-screenshot before concluding a control is broken. Screenshots always
+worked; only input was flaky.
 
 **THE SIM `L()` SHIM IS FILLED (batch 11).** `Sim/Localization.swift`'s `simLocalizationTables["de"]` now
 has 237 entries covering every user-facing Sim string: all 67 `logOps` title+subtitle pairs (the Ops event
@@ -99,16 +145,19 @@ a `String` title/label param is a suspect** — audit each and change the DISPLA
 / `Menu` title built via `.map{}??` or any String-returning expression takes the StringProtocol overload →
 NOT localized; give it a `LocalizedStringKey` computed var instead** (the FleetDetailView park-dialog gotcha).
 
-**REMAINING — only the FLAVOR PROSE and the ASC listing are left:**
-1. **Flavor prose — the ONE thing deliberately NOT machine-translated (native writer, do LAST):**
-   `AircraftType.flavor` (35 lines, e.g. "Dreamliner, stretched for range", shown in Fleet detail) +
-   `Airport.destinationFlavor` (~50 evocative one-liners, shown on the airport card). These read as
-   marketing copy; AI/MT German is worst exactly here, and a first-language market notices. They live in
-   `Sim/` (AircraftType.swift / Airport.swift) so they route through the SAME `L()` shim as everything
-   else — the mechanism is ready, they just need real German written by a person, then added to
-   `simLocalizationTables["de"]`. Leave them English until that pass.
-2. **ASC-side (separate from the binary):** German App Store listing (name/subtitle/description/
-   keywords/screenshots) + German Game Center achievement localizations.
+**REMAINING (30 Aug) — the in-app translation is COMPLETE; what's left is human review + store-side:**
+1. **NATIVE-GERMAN REVIEW pass (the real remaining risk).** Everything (view + Sim + flavor prose) is
+   AI-drafted. The flavor prose especially — `AircraftType.flavor` (37 lines) + `Airport.destinationFlavor`
+   (49 one-liners) — reads as marketing copy where a first-language market notices MT. A native German
+   speaker should read the whole app (start from the glossary + the `de` catalog + `simLocalizationTables`)
+   and polish tone/idiom. This is a cost/time item, not a code item. (The flavor prose is DONE and routed —
+   it's editable in place in `simLocalizationTables["de"]`; a reviewer just refines the strings.)
+2. **DEVICE STRING-LENGTH QA.** German runs ~30% longer. The visual pass on iPhone found NO overflow (tab
+   bar, control-bar buttons at `minimumScaleFactor(0.7)`, and stat chips all fit), but this was one device
+   in portrait — check iPad + landscape + the longest German strings before ship.
+3. **ASC-side (separate from the binary):** German App Store listing (name/subtitle/description/
+   keywords/screenshots — 20 de screenshots already captured, see `App Store Screenshots/de/`) + German
+   Game Center achievement localizations (done in ASC via `asc.py`).
 
 **Deliberately left untranslated in the app (NOT gaps — none ship in Release or differ in German):**
 bare symbols/emoji (`·` `—` `:` `✈️` `9+` `%lld`), the `Airline Architect`/`Architect` wordmark and the
