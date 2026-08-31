@@ -1,19 +1,47 @@
-# AIRPORT PHOTOS — spec (1.2 feature) — **BUILT, 34 images shipped**
+# AIRPORT PHOTOS — spec (1.2 feature) — **BUILT, 54 images shipped**
 
-> **STATUS (2026-08-03): the art is DONE and in the app** — 9 archetypes + 25
-> per-airport overrides = **34 JPGs, ~13 MB**. Every airport in the game now
-> resolves to real art (per-code → shared-city → archetype), so the styled
-> placeholder is now only a safety net, never seen in normal play.
+> **STATUS (2026-08-30): 54 images in the app** — 9 archetypes + **45** per-airport
+> overrides. Every airport in the game resolves to real art (per-code →
+> shared-city → archetype), so the styled placeholder is only a safety net,
+> never seen in normal play.
 >
 > - **Archetypes (9):** metro · tropicalIsland · snowyNorth · desert · **savanna**
 >   · alpine · coastal · tropical · plains.
-> - **Marquee cities (25 codes / 23 files):** LHR CDG SYD SFO SEA LAX DEN +
+> - **Marquee cities — original 25 (2026-08-03):** LHR CDG SYD SFO SEA LAX DEN +
 >   TYO(HND,NRT) CHI(ORD,MDW) PEK DXB SIN HKG IST FCO BCN AMS PVG BKK YYZ LAS DOH
 >   MIA NYC(JFK,LGA,EWR) + **BZN** (Bozeman — designer's hometown).
+> - **Marquee cities — +20 added 2026-08-30 (this batch):** OAK MEX GIG CPT KEF
+>   (first pass — OAK was the "beach town for Oakland" miss), then the 15 busiest
+>   airports that were all sharing the generic `metro` skyline: ATL DFW DEL CAN
+>   MAD FRA MCO ICN CGK CLT BOM SZX PHX KUL IAH. **ATL (world's busiest, 105M
+>   pax) was the biggest miss.** All MJ `--v 8`, 1456×816 JPG. Prompts + the
+>   audit that ranked them are in this session's scratchpad sheets.
 > - **Shared-city aliases** (`AirportPhoto.sharedOverride`): NYC→JFK/LGA/EWR,
->   TYO→HND/NRT, CHI→ORD/MDW.
-> - **Next if extended:** more archetypes (jungle/fjord/steppe) or more marquee
->   cities — both are drop-in (add the JPG; only a new shared alias needs code).
+>   TYO→HND/NRT, CHI→ORD/MDW. None of the +20 are shared — each is a standalone
+>   `airport_<CODE>.jpg`.
+> - **HERO FRAMING FIX (2026-08-30, `AirportHero`):** `scaledToFill` was
+>   CENTER-cropping the 16:9 source into the shorter 2.5:1 band, lopping the SKY
+>   (and tower-tops) off skyline heroes — worst on the wide iPad card, where
+>   `width/2.5` clamped the band even shorter. Fixed by (a) cropping toward the
+>   TOP (`biasFromTop = 0.38`, the visible window lands on the upper ~⅜ so sky +
+>   subject stay, excess taken from the foreground) and (b) raising `maxHeight`
+>   220→300 so the iPad band isn't clamped so short. ONE change, fixes all 54
+>   heroes, no regen. Verified on device across a skyline (ATL) and two landscapes
+>   (MEX volcano, KEF town+mountains) — no regressions. When re-prompting future
+>   heroes, still keep the subject in the center-to-upper band (the crop favors
+>   the top now, not dead center).
+> - **Next if extended:** the audit (`aa-1.1.x/archetype-audit`, or the fresh
+>   pax-ranked variant in scratchpad) lists the remaining high-traffic airports
+>   on generic art, busiest first — the priority list for the next batch. All
+>   drop-in (add the JPG; only a new shared alias needs code).
+> - **⚠️ WORKING FOLDER GOTCHA:** the designer's source library is
+>   `~/Architect Universe/Airline Architect/Resources/Airport Photos` (WITH a
+>   space, human-named `San Francisco.jpg` + both .jpg/.png). That is NOT the
+>   bundle — the app only loads from
+>   `SkyOps/AirlineArchitect/AirlineArchitect/Resources/AirportPhotos/` (no space,
+>   code-named `airport_SFO.jpg`). New heroes must be COPIED into the app folder
+>   (renamed to `airport_<CODE>.jpg`) or they never load. Dropping them only in
+>   the working folder does nothing.
 
 Give each airport card a **hero image** (Vineyard-Architect style) so tapping an
 airport surfaces a sense of place. See VA's site card for the target look: photo

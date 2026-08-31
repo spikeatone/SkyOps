@@ -1248,6 +1248,41 @@ one contradicts the design thesis.)
     was not separately driven (same call; button-in-card taps fine in SwiftUI). Shipped in
     **1.1.5 (build 40)**, submitted for review 2026-08-11.
 
+## Decided — Airport hero images (1.2 feature; full spec in `AIRPORT_PHOTOS_SPEC.md`)
+
+- **Each airport card shows a Midjourney-generated hero band (`AirportPhoto.swift`),
+  Vineyard-Architect style.** Resolution order in `AirportPhoto.image(for:)`:
+  per-code `airport_<CODE>.jpg` → shared-metro alias (`sharedOverride`: NYC→JFK/LGA/EWR,
+  TYO→HND/NRT, CHI→ORD/MDW) → one of 9 terrain ARCHETYPES (`airport_<archetype>.jpg`).
+  380+ airports share a curated set, not unique photos. A styled placeholder renders
+  if no file exists (never seen in normal play).
+- **54 images as of 2026-08-30** (was 34): 9 archetypes + 45 per-code city files.
+  The +20 city heroes added this session: **OAK MEX GIG CPT KEF** (first pass — OAK
+  fixed the "beach town for Oakland" miss) + the 15 busiest airports that all shared
+  the generic `metro` skyline (**ATL** DFW DEL CAN MAD FRA MCO ICN CGK CLT BOM SZX PHX
+  KUL IAH — ATL, the world's busiest at 105M pax, was the biggest miss). All MJ
+  `--v 8`, **1456×816 JPG**. The audit that ranks remaining high-traffic airports on
+  generic art is `aa-1.1.x/archetype-audit` (mirror the current `AirportPhoto` logic
+  incl. `archetypeOverrides`, and add each new hero to its `hasOwnArt` set, or the
+  ranking is wrong).
+- **LANDMARK RULE (per spec):** a specific landmark ONLY where it's globally-iconic
+  and MJ-faithful (Golden Gate, Table Mountain, Petronas, India Gate…); otherwise an
+  evocative skyline/landscape — MJ garbles regional landmarks and players notice.
+  Keep the subject in the center-to-upper band and NO baked-in text (the card overlays
+  the city name).
+- **HERO FRAMING FIX (2026-08-30, `AirportHero`):** `scaledToFill` center-cropped the
+  16:9 source into the shorter 2.5:1 band and lopped the SKY off skylines (worst on the
+  wide iPad card). Fixed by cropping toward the TOP (`biasFromTop = 0.38`) + raising
+  `maxHeight` 220→300. ONE change, fixes all 54 heroes, no regen; verified on device
+  (ATL skyline + MEX/KEF landscapes, no regressions).
+- **⚠️ WORKING-FOLDER GOTCHA:** the designer's source library is
+  `~/Architect Universe/Airline Architect/Resources/Airport Photos` (WITH a space,
+  human-named `San Francisco.jpg`). That is NOT the bundle. The app only loads from
+  `SkyOps/AirlineArchitect/AirlineArchitect/Resources/AirportPhotos/` (no space,
+  code-named `airport_SFO.jpg`). New heroes must be COPIED into the app folder (renamed
+  `airport_<CODE>.jpg`); files left only in the working folder never load. `Resources/`
+  uses synchronized groups, so a copied file auto-bundles on the next build.
+
 ## Decided — Map (real geography, replacing the original abstract scope grid)
 
 - **Airport positions are real**, not hand-placed. Each airport carries
