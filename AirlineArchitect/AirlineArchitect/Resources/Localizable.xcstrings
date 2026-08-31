@@ -1446,7 +1446,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wächst durch pünktliche Flüge; leidet unter Grounds und Crew-Wartezeiten."
+            "value": "Wächst durch pünktliche Flüge; leidet unter Flugausfällen und Crew-Wartezeiten."
           }
         }
       }
@@ -2511,6 +2511,16 @@
         }
       }
     },
+    "Expansion loan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expansionskredit"
+          }
+        }
+      }
+    },
     "Expedite $15,000": {
       "localizations": {
         "de": {
@@ -2697,6 +2707,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flotte"
+          }
+        }
+      }
+    },
+    "Fleet loan": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flottenkredit"
           }
         }
       }
@@ -5121,6 +5141,16 @@
         }
       }
     },
+    "Short-term line": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurzfristige Linie"
+          }
+        }
+      }
+    },
     "Show": {
       "localizations": {
         "de": {
@@ -5766,7 +5796,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Upgrade"
+            "value": "Freischalten"
           }
         }
       }
@@ -5776,7 +5806,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Upgrade für mehr Drehkreuze, ein weltweites Netzwerk und das Endgame."
+            "value": "Freischalten für mehr Drehkreuze, ein weltweites Netzwerk und das Endgame."
           }
         }
       }

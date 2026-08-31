@@ -681,7 +681,7 @@ struct FinanceView: View {
         let ok = sim.canBorrow(offer)
         return HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(offer.name) · \(compactMoney(offer.principal))").font(.karla(14, .bold)).foregroundStyle(primary)
+                (Text(LocalizedStringKey(offer.name)) + Text(" · \(compactMoney(offer.principal))")).font(.karla(14, .bold)).foregroundStyle(primary)
                 Text("\(Int((offer.apr * 100).rounded()))% APR · \(offer.termMonths) mo · \(compactMoney(offer.monthlyPayment))/mo")
                     .font(.karla(12)).foregroundStyle(secondary)
             }
