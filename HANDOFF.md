@@ -5,16 +5,29 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 26 August 2026._
+_Snapshot: 30 August 2026._
+
+**► 1.5.0 (build 54) = A350-1000 + 747-8i + map-render throttle — SUBMITTED FOR REVIEW (30 Aug).**
+Merged to `main` (PR #2, branch `aircraft-and-thermal`). Fleet 35 → 37: **Airbus A350-1000** (`A35K`,
+shares the `A350` crew rating) + **Boeing 747-8i** (`B748`, its OWN `B747-8` crew family) — a paying
+player asked for the legendary jumbos + newer A350s; both pass the certified-and-in-service bar, with
+real Figma side-view art + traced fin masks. The 747-8i REVERSES the earlier "skip the passenger -8"
+call; the -400 (`B747`) stays too. Also a **thermal/battery fix**: `LiveMap` now reads the throttled
+`Simulation.mapTick` (~30fps) instead of raw `tick`, cutting the full-world Canvas repaint from
+~125/sec at 25× to ~30/sec (a paying player's "device gets hot" report). Build 54 uploaded via the CLI
+chain (archive → export → validate → upload), attached to the 1.5 record; **What's New + promotional
+text + App Review notes all set via the ASC API** (`aa-1.1.x/app-review-notes-1.5.0.txt`, 3990 chars,
+carries the §1 studio-context block). Next new build = **55+**. Marketing bump to 1.5 (minor feature),
+not a patch — the two aircraft are user-facing content.
 
 **► 1.4.3 (build 53) = ASYNC SLOT DECODE — APPROVED + LIVE (`READY_FOR_SALE`, 28 Aug).** Merged to
 `main`; the decode-side twin of the 1.4.2 save fix: `GameStore.slotInfos()` did up to 3 full save
 decodes synchronously on the main thread from the load menu — a stall on large saves. Now
 `slotInfosAsync` runs them on the shared serial `saveQueue` and populates on the main actor. **First
 Airline release approved WITH the §1 studio-context block in the App Review notes** — approved same
-day during the account-wide 4.3(a) cascade (see below). Next new build = **54+**. ⚠️ **App Review
-notes carry the §1 studio-context block (4.3(a) armor) — MANDATORY on every Architect submission now;
-reuse `aa-1.1.x/app-review-notes-1.4.3.txt`, just bump the version line.**
+day during the account-wide 4.3(a) cascade (see below). ⚠️ **App Review notes carry the §1
+studio-context block (4.3(a) armor) — MANDATORY on every Architect submission now; reuse the latest
+`aa-1.1.x/app-review-notes-1.5.0.txt`, just bump the version line.**
 
 **► ⚠️ APPLE 4.3(a) IS ACCOUNT-WIDE (as of 27–28 Aug) — read before ANY submission.** Apple's
 Guideline 4.3(a) "spam/repackaged-template" reflex rejected Vineyard 1.0, Foundry 1.0, AND FC
