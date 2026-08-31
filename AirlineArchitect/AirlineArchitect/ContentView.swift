@@ -1042,7 +1042,7 @@ struct RoutesPanel: View {
         }
     }
 
-    private func section(_ title: String, _ routes: [Route]) -> some View {
+    private func section(_ title: LocalizedStringKey, _ routes: [Route]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text(title).font(.karla(14)).foregroundStyle(labelColor)
@@ -1100,13 +1100,13 @@ struct RoutesPanel: View {
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(profitable ? Sky.coreGreen : Sky.lightYellow, lineWidth: 1))
     }
 
-    private func labeled(_ label: String, _ value: String, _ align: HorizontalAlignment) -> some View {
+    private func labeled(_ label: LocalizedStringKey, _ value: String, _ align: HorizontalAlignment) -> some View {
         VStack(alignment: align, spacing: 0) {
             Text(label).font(.karla(14)).foregroundStyle(labelColor)
             Text(value).font(.karla(16, .semibold)).foregroundStyle(primaryC)
         }
     }
-    private func labeledValue(_ label: String, _ value: String, _ color: Color, _ align: HorizontalAlignment) -> some View {
+    private func labeledValue(_ label: LocalizedStringKey, _ value: String, _ color: Color, _ align: HorizontalAlignment) -> some View {
         VStack(alignment: align, spacing: 0) {
             Text(label).font(.karla(14)).foregroundStyle(labelColor)
             Text(value).font(.karla(16, .semibold)).foregroundStyle(color)

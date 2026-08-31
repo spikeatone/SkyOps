@@ -101,8 +101,8 @@ struct PaywallView: View {
                             .foregroundStyle(Sky.coreGreen)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(title).font(.karla(15, .bold)).foregroundStyle(primary)
-                            Text(sub).font(.karla(12)).foregroundStyle(secondary)
+                            Text(LocalizedStringKey(title)).font(.karla(15, .bold)).foregroundStyle(primary)
+                            Text(LocalizedStringKey(sub)).font(.karla(12)).foregroundStyle(secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 0)

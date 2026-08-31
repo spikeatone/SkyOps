@@ -661,6 +661,16 @@
         }
       }
     },
+    "ACTIVE ROUTES": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AKTIVE ROUTEN"
+          }
+        }
+      }
+    },
     "AIRCRAFT": {
       "localizations": {
         "de": {
@@ -917,6 +927,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flugzeuge"
+          }
+        }
+      }
+    },
+    "Aircraft Types Assigned": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugewiesene Flugzeugtypen"
           }
         }
       }
@@ -2821,6 +2841,16 @@
         }
       }
     },
+    "Go public, ride the markets, and buy out your rivals.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geh an die Börse, nutze die Märkte und kaufe deine Konkurrenten auf."
+          }
+        }
+      }
+    },
     "Good": {
       "localizations": {
         "de": {
@@ -2857,6 +2887,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Am Boden"
+          }
+        }
+      }
+    },
+    "Grow from a handful of legs to a global network, widebodies and all.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wachse von wenigen Strecken zu einem weltweiten Netzwerk — mit Großraumjets und allem."
           }
         }
       }
@@ -2992,6 +3032,16 @@
       }
     },
     "Hubs & Clubs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drehkreuze & Lounges"
+          }
+        }
+      }
+    },
+    "Hubs & clubs": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -3637,6 +3687,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nettoergebnis"
+          }
+        }
+      }
+    },
+    "Net Revenue": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nettoumsatz"
           }
         }
       }
@@ -5391,6 +5451,16 @@
         }
       }
     },
+    "Take it all the way": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geh den ganzen Weg"
+          }
+        }
+      }
+    },
     "Take over %@–%@": {
       "localizations": {
         "de": {
@@ -5721,6 +5791,16 @@
         }
       }
     },
+    "Turn more airports into hubs and open lounges that keep flyers loyal.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mache mehr Flughäfen zu Drehkreuzen und eröffne Lounges, die Vielflieger binden."
+          }
+        }
+      }
+    },
     "Turnaround": {
       "localizations": {
         "de": {
@@ -5767,6 +5847,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unterversorgte Märkte, die du noch nicht bedienst — tippe einen an, um ihn auf der Karte zu sehen."
+          }
+        }
+      }
+    },
+    "Unlimited routes & fleet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbegrenzte Routen & Flotte"
           }
         }
       }
@@ -5997,6 +6087,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Du bist auf dem neuesten Stand"
+          }
+        }
+      }
+    },
+    "You've built the start of something. Unlock the full game to grow it into a real airline.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast den Anfang von etwas Großem geschaffen. Schalte das volle Spiel frei und mach eine echte Airline daraus."
           }
         }
       }
