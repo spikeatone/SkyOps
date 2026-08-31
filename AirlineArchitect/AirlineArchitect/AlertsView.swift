@@ -248,12 +248,12 @@ struct NeedsAttentionCard: View {
                 title: "\(ac.tail) grounded at \(ac.origin.code)",
                 subtitle: "Eroding \(money(rate))/min",
                 buttons: [
-                    ("Expedite $15,000", { sim.resolveAOGExpedite(d) }),
+                    ("Expedite \(compactMoney(15_000))", { sim.resolveAOGExpedite(d) }),
                     ("Std Repair", { sim.resolveAOGStandard(d) }),
                 ])
         case .crew:
             var btns: [(LocalizedStringKey, () -> Void)] = []
-            if sim.hasReserve(for: ac) { btns.append(("Reserve $5k", { sim.resolveCrewReserve(d) })) }
+            if sim.hasReserve(for: ac) { btns.append(("Reserve \(compactMoney(5_000))", { sim.resolveCrewReserve(d) })) }
             if sim.canAffordCrewHire(for: ac) {
                 btns.append(("Hire \(compactMoney(sim.crewHireCost(family: ac.type.family)))", { Feedback.crewHired(); sim.resolveCrewHire(d) }))
             }

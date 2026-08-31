@@ -58,7 +58,7 @@ struct FleetView: View {
     @State private var ownership: OwnershipFilter = .all
     enum OwnershipFilter: Hashable {
         case all, owned, leased
-        var label: String { switch self { case .all: return "All"; case .owned: return "Owned"; case .leased: return "Leased" } }
+        var label: String { switch self { case .all: return String(localized: "All"); case .owned: return String(localized: "Owned"); case .leased: return String(localized: "Leased") } }
         func matches(_ ac: Aircraft) -> Bool {
             switch self { case .all: return true; case .owned: return !ac.isLeased; case .leased: return ac.isLeased }
         }

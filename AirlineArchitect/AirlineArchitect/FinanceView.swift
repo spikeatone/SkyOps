@@ -59,9 +59,10 @@ struct FinanceView: View {
     private var netWorth: Int { cash + fleetValue }
     private var fleetFootnote: String {
         let n = sim.ownedOutrightCount
-        let base = "Fleet value = resale value of \(n) aircraft owned outright"
         let leased = sim.leasedCount
-        return leased > 0 ? base + " (\(leased) leased, not counted)." : base + "."
+        return leased > 0
+            ? String(localized: "Fleet value = resale value of \(n) aircraft owned outright (\(leased) leased, not counted).")
+            : String(localized: "Fleet value = resale value of \(n) aircraft owned outright.")
     }
 
     var body: some View {

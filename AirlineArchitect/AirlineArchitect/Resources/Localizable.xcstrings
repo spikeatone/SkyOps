@@ -1,16 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "$%@ premium": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "$%@ Prämie"
-          }
-        }
-      }
-    },
     "%@ %@": {
       "localizations": {
         "de": {
@@ -287,6 +277,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ ↔︎ %@: %@ geboten"
+          }
+        }
+      }
+    },
+    "%@%@ premium": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@%@ Prämie"
           }
         }
       }
@@ -2551,6 +2551,16 @@
         }
       }
     },
+    "Expedite %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beschleunigen %@"
+          }
+        }
+      }
+    },
     "FALLING": {
       "localizations": {
         "de": {
@@ -2757,6 +2767,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flottenwert (Material)"
+          }
+        }
+      }
+    },
+    "Fleet value = resale value of %lld aircraft owned outright (%lld leased, not counted).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flottenwert = Wiederverkaufswert von %lld Flugzeugen im Volleigentum (%lld geleast, nicht berücksichtigt)."
+          }
+        }
+      }
+    },
+    "Fleet value = resale value of %lld aircraft owned outright.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flottenwert = Wiederverkaufswert von %lld Flugzeugen im Volleigentum."
           }
         }
       }
@@ -4827,6 +4857,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reserve $5k"
+          }
+        }
+      }
+    },
+    "Reserve %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reserve %@"
           }
         }
       }
