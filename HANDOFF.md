@@ -7,8 +7,12 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 31 August 2026._
 
-**► 1.6.0 (build 55) = German localization + city hero artwork + per-achievement GC icons — SUBMITTED
-FOR REVIEW (31 Aug; ASC state `WAITING_FOR_REVIEW`, verified via `asc.py`).** Both feature branches merged
+**► 1.6.0 (build 55) = German localization + city hero artwork + per-achievement GC icons — APPROVED +
+LIVE (`READY_FOR_SALE`, 31 Aug; released AFTER_APPROVAL).** German shipped and CLEARED review — the 4.3(a)
+localization-only reflex was dodged exactly as planned: the city artwork made 1.6 a real content update,
+not a pure-localization diff (unlike FC's rejected localization-only 1.3). German is AI-drafted (native
+review waived); watch post-launch DACH feedback and ship a native polish + `de-findgaps.py` re-scan in a
+later version if awkward phrasing surfaces. Both feature branches merged
 to `main` after 1.5 went live: `de-translation` (German, `3ed01e9`) + `airport-heroes-achievements` (77
 city hero images total — 43 added this batch — + crop-toward-top framing fix + GC per-achievement icon
 script, `396da4e`). Bumped to 1.6.0/build 55 (`d357217`, MARKETING_VERSION 1.5.0→1.6.0 + CURRENT_PROJECT_VERSION
