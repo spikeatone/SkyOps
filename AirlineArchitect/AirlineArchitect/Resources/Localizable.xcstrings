@@ -4081,6 +4081,16 @@
         }
       }
     },
+    "Move this aircraft to a different route with ASSIGN TO NEW ROUTE (a small route fee applies), or free it up as a spare with PARK. No need to close the route by hand — a route it leaves closes automatically.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschiebe dieses Flugzeug mit NEUER ROUTE ZUWEISEN auf eine andere Route (es fällt eine kleine Routengebühr an) oder stelle es mit PARKEN als Reserve frei. Du musst die Route nicht von Hand schließen – eine verlassene Route wird automatisch geschlossen."
+          }
+        }
+      }
+    },
     "Moves to %@–%@ after landing at %@": {
       "localizations": {
         "de": {

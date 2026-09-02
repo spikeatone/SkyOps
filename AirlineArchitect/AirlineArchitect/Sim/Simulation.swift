@@ -736,7 +736,7 @@ final class Simulation {
     var isPaused = false
 
     /// Selectable speeds (¼×/½× are the slow-mo tiers; ¼× is rate-limited).
-    static let speedOptions: [Double] = [0.25, 0.5, 1, 5, 10, 25]
+    static let speedOptions: [Double] = [0.25, 0.5, 1, 5, 10, 25, 100]
 
     // ¼× is rate-limited: 3 uses per FIXED sim-calendar-day (resets when the
     // day-of-sim number changes, NOT a rolling 24h window). Exhausting it snaps
@@ -3440,7 +3440,17 @@ final class Simulation {
         let amount: Int
     }
 
-    private(set) var decisionQueue: [Decision] = []
+    private(set) var decisionQueue: [Decision] = [] {
+        didSet {
+            // AUTO-SLOW-ON-ALERT (player feedback T1.4): when a NEW decision card
+            // appears (queue grew) and we're fast-forwarding, snap to 1× so the
+            // player can't blow past a real choice at 100×. Fits the design thesis
+            // (the sim never PAUSES, but it shouldn't fast-forward past a decision).
+            // Only on growth — removals/resolutions must not touch speed. Set speed
+            // directly (not requestSpeed) so it never spends a ¼× use.
+            if decisionQueue.count > oldValue.count && speed > 1 { speed = 1 }
+        }
+    }
     /// Running maintenance spend (expedite/standard repair costs). The full
     /// fee/economy system is Phase 5; this keeps the costs real until then.
     private(set) var maintenanceSpend: Int = 0

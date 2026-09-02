@@ -310,6 +310,15 @@ struct FleetDetailView: View {
                 // idle spare has nothing to close.
                 if onRoute { outlineButton("PARK (CLOSE ROUTE)") { confirmPark = true } }
             }
+            // Discoverability (player feedback T1.1): players didn't realize you
+            // can swap/move a plane without closing the route by hand. Spell out
+            // what the two buttons do, in-context, only when it's relevant.
+            if onRoute {
+                Text("Move this aircraft to a different route with ASSIGN TO NEW ROUTE (a small route fee applies), or free it up as a spare with PARK. No need to close the route by hand — a route it leaves closes automatically.")
+                    .font(.karla(11)).foregroundStyle(secondary.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             transferMenu
             sellButton
         }
