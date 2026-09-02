@@ -5,7 +5,28 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 31 August 2026._
+_Snapshot: 2 September 2026._
+
+**► ⭐ LATEST SESSION (2 Sep) — player-feedback pass + MX maintenance program. START HERE.**
+A detailed App Store review (domain-literate player) was triaged into
+`aa-1.1.x/PLAYER-FEEDBACK-1.6-TRIAGE.md` and a reply drafted. Outcomes:
+- **THREE "cheap tier" fixes are on `main`, MERGED + verified, awaiting the next content build**
+  (never ship standalone during the 4.3(a) cascade): **crew tuning** (labor actions ~0.5/sim-yr
+  not ~1.25; training sidelines ¼ not ½), **100× speed + auto-slow-on-alert** (sim auto-drops to
+  1× when a decision card fires — `AutoSlowVerify.swift` 4/4), and **route-swap discoverability**
+  (Fleet-detail hint for ASSIGN/PARK). ⚠️ The 100× pill + hint are static UI, NOT yet eyeballed
+  (sim host jammed) — glance next drive.
+- **⭐ MX MAINTENANCE PROGRAM — BUILT + VERIFIED on branch `mx-program`, NOT merged.** The real
+  answer to the shelved PM budget: player-driven SCHEDULED A/C/D checks (B obsolete) distinct
+  from AOG, in a new **OPS ▸ MX** section, cycle+calendar-driven (D = lifespan/3 → ~2–3 per
+  airframe). Deferral has teeth (overdue AOG ×6, overdue repair ×4, hard-window force-grounding,
+  **2.5× overdue cost surcharge** — the surcharge is what made service-vs-defer economically
+  matter, after 4 balance rounds). Verified: build clean · RoundTripVerify 13/13 · MX sweep 6/6
+  (`MXProbe.swift`) · soak 6/6 (MX integrated). Full spec: `aa-1.1.x/MX_PROGRAM_SPEC.md`. **To
+  ship:** drive OPS ▸ MX live, then merge + cut a content build (bundle with the three fixes
+  above = a natural 1.7). The next-session brief in `NEXT_SESSION_PROMPT.md` has the details.
+- **SHELVED: the PM BUDGET** (`maint-budget-t22` branch) — two sweeps proved it economically
+  trivial (AOG too rare); MX supersedes it. Don't re-attempt unless AOG frequency is raised.
 
 **► 1.6.0 (build 55) = German localization + city hero artwork + per-achievement GC icons — APPROVED +
 LIVE (`READY_FOR_SALE`, 31 Aug; released AFTER_APPROVAL).** German shipped and CLEARED review — the 4.3(a)

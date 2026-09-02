@@ -119,6 +119,39 @@ one contradicts the design thesis.)
   triples AOG risk for the SAME aircraft family only (real-world analog:
   type-wide issues like an AD or bad parts batch — see the actual 737 MAX
   grounding). Families never cross-contaminate each other's risk.
+- **SCHEDULED MAINTENANCE (MX program) — BUILT on branch `mx-program` (2 Sep),
+  NOT yet merged. Full spec: `aa-1.1.x/MX_PROGRAM_SPEC.md`.** Player-driven
+  Line/A/C/D checks (B is obsolete — merged into A in modern MSG-3 practice),
+  DISTINCT from AOG: PM is SCHEDULED (the player plans it), AOG is the emergency.
+  Both cycle-driven. Each owned aircraft is due for A/C/D on the tighter of a
+  CYCLE or CALENDAR limit; **D is pegged to `expectedLifespanCycles/3`** so it
+  lands ~2–3× per airframe (matches the real "2–3 D checks then retire") and
+  auto-scales per type with ZERO blast radius on the sell/lifespan economy. Cost
+  = % of purchase price (A 0.05% / C 1.2% / D 4% — reproduces the real
+  737≈$1M / 747≈$6M D-cost spread); downtime blocks at the PARKED gate (airborne
+  finishes its leg first, mirroring the repaint shop). New OPS ▸ MX section +
+  `.mxCheck` decision card. **CRITICAL BALANCE FINDING (took 4 rounds — do not
+  undo lightly):** the service-vs-defer choice is economically flat unless
+  DEFERRING is made strictly worse, because AOG is rare (the real 2/100/month
+  anchor) AND shop downtime is tiny at the sim's ~2 legs/day. Neither raising AOG
+  onset on overdue aircraft NOR force-grounding alone flipped it (a forced check
+  costs the same as a proactive one — deferring just delays the identical bill).
+  What worked: an **OVERDUE check costs a 2.5× SURCHARGE** vs on-time
+  (`mxOverdueCostSurcharge`) — so servicing early is genuinely cheaper. Also in
+  the model: overdue AOG risk ×6, overdue breakdown repair ×4, and a HARD legal
+  window (1.5× interval) that force-grounds an un-airworthy aircraft into a
+  mandatory check. Verified: RoundTripVerify 13/13, MX sweep 6/6 (`MXProbe.swift`,
+  SERVICED beats DEFERRED), soak 6/6. The "sell before the D check" strategic
+  dynamic emerges naturally (D cost ≈¼ of residual near EOL).
+- **PREVENTIVE-MAINTENANCE BUDGET — SHELVED (branch `maint-budget-t22`), superseded
+  by the MX program above.** A passive 3-tier PM budget (Minimal/Standard/Premium)
+  that only nudged AOG frequency and/or repair cost. Two balance sweeps proved it
+  economically TRIVIAL — AOG is too rare at the real anchor for any per-incident or
+  frequency lever to aggregate into a decision at late-game scale (Premium cost
+  dwarfed the ~$3k repairs it offset; deferring/Minimal won). The lesson that drove
+  the MX redesign: a maintenance mechanic only matters if it's a CONTINUOUS,
+  SCHEDULED obligation with a real deferral penalty, not a passive AOG modifier.
+  Don't revive the budget idea unless the AOG base rate is ever raised.
 - **CoreML**: NOT currently justified. This genre runs on deterministic/
   lightly-randomized rule systems, which is what's built. The one place it
   could earn its place is a competitor-airline AI that learns rather than
@@ -5384,7 +5417,15 @@ fleet growth) · 1.4.1 (51, Game Center wake fix + Tech Ops modernization) · 1.
 fix for the `hang.under3s` TelemetryDeck signal) · 1.4.3 (53, ASYNC SLOT DECODE — the decode-side
 twin, load-menu off main) · 1.5.0 (54, A350-1000 + 747-8i + map-render throttle) are ALL LIVE
 (`READY_FOR_SALE`). 1.6.0 (55, German localization + 43 new city hero images/framing fix + GC
-per-achievement icons) is SUBMITTED, `WAITING_FOR_REVIEW` (31 Aug). Next new build = 56+.** ⚠️ **App Review
+per-achievement icons) is now ALSO LIVE (`READY_FOR_SALE`, approved 31 Aug — cleared 4.3(a); the
+city artwork made it a content update, not localization-only). Next new build = 56+.**
+⚠️ **UNSHIPPED work sits on `main` + branches as of 2 Sep (see HANDOFF + NEXT_SESSION_PROMPT):**
+(a) THREE player-feedback fixes MERGED to `main` awaiting the next content build — crew tuning
+(labor ~0.5/sim-yr not ~1.25; training sidelines ¼ not ½), 100× speed + auto-slow-on-alert, and
+a route-swap discoverability hint; (b) the **MX maintenance program** (Line/A/C/D scheduled
+checks, OPS ▸ MX section) BUILT + verified on branch `mx-program`, not merged — the real answer
+to the shelved PM budget; and (c) the SHELVED PM budget on `maint-budget-t22` (don't re-attempt
+unless AOG frequency is raised). A natural **1.7** bundles the three `main` fixes + MX. ⚠️ **App Review
 4.3(a) went ACCOUNT-WIDE this week (Vineyard/Foundry/FC-1.3 rejected, appeal filed) — every Airline
 submission now leads its App Review notes with the studio-context block; 1.4.3 was the first, approved
 same day. Reuse `aa-1.1.x/app-review-notes-1.4.3.txt`; playbook in `PostmarkOps/APP_REVIEW_NOTES.md`.** The 1.4.1 story below is kept for its GC detail. After 1.4 went live the designer checked the App-Store build on-device: the Apple
