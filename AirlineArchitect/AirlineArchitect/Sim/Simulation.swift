@@ -3240,7 +3240,11 @@ final class Simulation {
     private static let crewTrainingDeferDays = 30
     private static let crewTrainingDowntimeDays = 4
     private static let crewTrainingDeferCostMultiplier = 1.6
-    private static let crewTrainingSidelineFraction = 0.5
+    // Retuned post-1.6 (player feedback T1.3): 0.5→0.25 — half a family out at
+    // once read as unrealistic ("half the crews suddenly out on training"). A
+    // quarter degrades the family without gutting it. (A rolling/staggered
+    // schedule was the fancier option; the fraction drop covers most of it.)
+    private static let crewTrainingSidelineFraction = 0.25
 
     /// Next tick each owned family is due for recurrent training.
     private(set) var crewTrainingDueByFamily: [String: Int] = [:]
@@ -3586,7 +3590,14 @@ final class Simulation {
     private static let securityDailyProbability = 0.03
     private static let expansionDailyProbability = 0.025
     private static let slotOfferDailyProbability = 0.06
-    private static let laborActionDailyProbability = 0.02
+    // Labor action pacing (retuned post-1.6, player feedback T1.2): 0.02→0.003/day
+    // per eligible family (~1 per 330 sim-days per family — was ~1/50, which stacked
+    // into "very frequent" across several owned families; even 0.008 left it ~1/year
+    // fleet-wide, still too routine for what should be a rare, notable event) and the
+    // sidelined fraction 0.40→0.25 (a family degrades but isn't gutted). Named the
+    // fraction (was an inline 0.4) so it's tunable + testable.
+    private static let laborActionDailyProbability = 0.003
+    private static let laborActionSidelineFraction = 0.25
     private static let recallDailyProbability = 0.015
 
     /// Tick a family's labor action ends (its sidelined crew return). Days
@@ -3648,13 +3659,13 @@ final class Simulation {
             logOps(.disruption, L("Labor action resolved"), CREW_FAMILY_INFO[fam]?.name ?? fam)
         }
 
-        // #9 Labor Action — sideline a real fraction (~40%) of ONE crew family's
+        // #9 Labor Action — sideline a real fraction (~25%) of ONE crew family's
         // pool (from the ready/resting crew, not mid-flight), for 3–8 sim-days.
         if Double.random(in: 0..<1) < Simulation.laborActionDailyProbability,
            let fam = ownedFamilies.filter({ (laborActionExpiryByFamily[$0] ?? 0) <= tick }).randomElement() {
             let pool = crewPoolsByFamily[fam] ?? []
             let candidates = pool.filter { $0.status == .available || $0.status == .resting }
-            let n = min(candidates.count, max(1, Int((Double(pool.count) * 0.4).rounded())))
+            let n = min(candidates.count, max(1, Int((Double(pool.count) * Simulation.laborActionSidelineFraction).rounded())))
             let sidelined = Array(candidates.shuffled().prefix(n))
             for c in sidelined { c.status = .sidelined }
             if !sidelined.isEmpty {
