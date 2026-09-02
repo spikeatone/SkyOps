@@ -55,19 +55,22 @@ struct OpsView: View {
                 header
                 ScrollView {
                     VStack(spacing: 16) {
-                        // The two actionable boxes sit at the TOP (designer
-                        // request): with a large fleet, Needs Attention + the
-                        // status/event groups below push these far down, and a
-                        // player reaches for them often. Urgent decisions are also
-                        // surfaced by the bell/Alerts modal, so Needs Attention
-                        // moving down doesn't hide anything.
+                        // Reputation sits at the very TOP (designer request) — it's
+                        // the health signal the player wants at a glance whenever they
+                        // open Ops.
+                        reputationGroup
+                        // The two actionable boxes come next (designer request): with a
+                        // large fleet, Needs Attention + the status/event groups below
+                        // push these far down, and a player reaches for them often.
+                        // Urgent decisions are also surfaced by the bell/Alerts modal,
+                        // so Needs Attention moving down doesn't hide anything.
                         opportunitiesGroup
                         // Fuel Hedge lives on Ops now (moved off the Network tab).
                         FuelHedgePanel(sim: sim)
                         if !sim.decisionQueue.isEmpty { needsAttentionGroup }
+                        if sim.ownedCount > 0 { maintenanceGroup }
                         if !sim.incentedRoutes.isEmpty { incentivesGroup }
                         if !sim.hubs.isEmpty || !sim.rivalHubs.isEmpty { hubsGroup }
-                        reputationGroup
                         competitionGroup
                         eventsGroup
                         if sim.decisionQueue.isEmpty && sim.opsEventLog.isEmpty {
@@ -242,6 +245,69 @@ struct OpsView: View {
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    // MARK: Maintenance (MX program — scheduled A/C/D checks; AOG stays in Needs Attention)
+    private var maintenanceGroup: some View {
+        let _ = sim.displayTick   // keep ETAs/shop countdowns live
+        let fleet = sim.mxFleet
+        let due = sim.mxDueAircraft.count
+        let inShop = sim.mxInShopCount
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Maintenance").font(.karla(20, .heavy)).foregroundStyle(primary)
+                Spacer()
+                Text("\(due) due · \(inShop) in shop").font(.karla(13, .semibold))
+                    .foregroundStyle(due > 0 ? Sky.red : secondary)
+            }
+            Text("Scheduled A/C/D checks. Service due aircraft to stay airworthy — flying past a check raises breakdown risk. Emergencies (AOG) appear in Needs Attention.")
+                .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+            ForEach(Array(fleet.enumerated()), id: \.element.id) { idx, ac in
+                if idx > 0 { Divider().overlay(cardBorder.opacity(0.4)) }
+                mxRow(ac)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    @ViewBuilder private func mxRow(_ ac: Aircraft) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(ac.tail).font(.karla(14, .bold)).foregroundStyle(primary)
+                Text(ac.type.name).font(.karla(11)).foregroundStyle(secondary).lineLimit(1)
+            }
+            Spacer(minLength: 6)
+            if let daysLeft = sim.mxShopDaysLeft(ac), let kind = ac.mxCheckKind {
+                // In the shop.
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(LocalizedStringKey(kind.label)).font(.karla(12, .bold)).foregroundStyle(Sky.brightBlue)
+                    Text("in shop · ~\(daysLeft)d").font(.karla(11)).foregroundStyle(secondary)
+                }
+            } else if let eta = sim.mxNextCheckETA(ac) {
+                let overdue = sim.mxIsOverdue(ac)
+                let dueNow = sim.mxIsDue(ac)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(LocalizedStringKey(eta.kind.label)).font(.karla(12, .bold))
+                        .foregroundStyle(overdue ? Sky.red : (dueNow ? Color(skyHex: 0xFFAB44) : primary))
+                    Text(eta.text).font(.karla(11)).foregroundStyle(overdue ? Sky.red : secondary)
+                }
+                if dueNow {
+                    let cost = sim.mxCheckCost(eta.kind, ac)
+                    Button {
+                        Feedback.impact(.light); sim.sendToMX(ac)
+                    } label: {
+                        Text("Service").font(.karla(12, .bold)).foregroundStyle(.white)
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(sim.playerBalance >= cost ? Sky.coreGreen : Color.gray.opacity(0.4))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }.buttonStyle(.plain).disabled(sim.playerBalance < cost)
+                }
+            }
+        }
     }
 
     // MARK: Competition (rival carriers on the player's routes)

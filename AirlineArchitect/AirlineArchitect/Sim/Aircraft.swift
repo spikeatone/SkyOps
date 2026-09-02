@@ -32,6 +32,7 @@ enum AdvanceEvent {
     case crewHoldResolved   // crew became available, hold cleared
     case legScheduled       // entered PARKED — roll this leg's revenue
     case legCompleted       // arrived (TURNAROUND) — settle this leg's economics
+    case mxCheckCompleted   // a scheduled A/C/D maintenance check finished
 }
 
 final class Aircraft: Identifiable {
@@ -116,6 +117,12 @@ final class Aircraft: Identifiable {
     var maint: Bool = false
     var aogAutoClearTick: Int?
     var holdLogged: Bool = false
+    /// True if this aircraft was OVERDUE for a scheduled MX check when its current
+    /// AOG began — a neglected-maintenance breakdown, which costs more to repair
+    /// (see Simulation.mxOverdueRepairCostMultiplier). Set at onset, read at repair.
+    /// Not persisted: AOG state resets on load anyway (maint round-trips, this is a
+    /// transient cost tag that only matters between onset and the same-session repair).
+    var aogWasOverdue: Bool = false
 
     /// FLEET REPAINT. Tick this airframe comes OUT of the paint shop, or nil if
     /// it isn't in the shop. Like `maint` it blocks at the PARKED gate, so an
@@ -131,6 +138,28 @@ final class Aircraft: Identifiable {
     /// keeps flying and earning until it's called in.
     var repaintQueued: Bool = false
     var inPaintShop: Bool { repaintUntilTick != nil }
+
+    // SCHEDULED MAINTENANCE (MX program — Line/A/C/D checks). Each heavy-ish check
+    // (A/C/D) is due on the tighter of a CYCLE or CALENDAR limit since it was last
+    // serviced. We track when each was last done (cycles + tick). On a NEW aircraft
+    // these are 0/0 (serviced at delivery); on a USED-market buy or a save load,
+    // they're seeded to the aircraft's CURRENT cycles/tick so nothing is instantly
+    // overdue (a used jet's real "due soon" pressure comes from its high cycles vs
+    // the interval, which is the buyer-beware layer). See Simulation MX section.
+    struct MXCheck { var lastCycle = 0; var lastTick = 0 }
+    var mxA = MXCheck()
+    var mxC = MXCheck()
+    var mxD = MXCheck()
+    /// The active scheduled check, if the aircraft is IN THE MX SHOP. Mirrors the
+    /// repaint-shop pattern (blocks at the PARKED gate; an airborne jet finishes its
+    /// leg first). nil = not in MX. Holds which check + when it's back.
+    var mxCheckKind: MXKind? = nil
+    var mxUntilTick: Int? = nil
+    var mxStartTick: Int? = nil
+    var inMXShop: Bool { mxUntilTick != nil }
+    enum MXKind: Int, Codable { case a, c, d
+        var label: String { switch self { case .a: return "A check"; case .c: return "C check"; case .d: return "D check" } }
+    }
 
     /// The four real stages of a strip-and-paint, as fractions of total occupancy:
     /// strip 1–3d · prep + prime 1–3d · paint + livery 1–7d · clear coat + cure 1–3d.
@@ -213,6 +242,17 @@ final class Aircraft: Identifiable {
             aogAutoClearTick = nil
             event = .aogRepairCompleted
         }
+        // A scheduled MX check completes on its timer: record it as serviced (resets
+        // that check's cycle+calendar clock) and release the aircraft from the shop.
+        if let until = mxUntilTick, tick >= until, let kind = mxCheckKind {
+            switch kind {
+            case .a: mxA = MXCheck(lastCycle: cyclesAccrued, lastTick: tick)
+            case .c: mxC = MXCheck(lastCycle: cyclesAccrued, lastTick: tick)
+            case .d: mxD = MXCheck(lastCycle: cyclesAccrued, lastTick: tick)
+            }
+            mxUntilTick = nil; mxStartTick = nil; mxCheckKind = nil
+            event = .mxCheckCompleted
+        }
 
         let duration = state.durationTicks
 
@@ -222,6 +262,10 @@ final class Aircraft: Identifiable {
                 // in the paint shop — nothing moves until it comes out. Checked
                 // BEFORE maint so a repaint can't be masked by an AOG card.
                 if inPaintShop { return event }
+                // in the MX shop for a scheduled A/C/D check — same rule as repaint:
+                // an airborne jet already finished its leg to get here (PARKED), then
+                // sits out the check. Nothing moves until it's back.
+                if inMXShop { return event }
                 // grounded for maintenance — nothing moves until resolved
                 if maint {
                     holdReason = .aog

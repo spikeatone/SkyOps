@@ -305,6 +305,26 @@ struct NeedsAttentionCard: View {
             return AlertModel(accent: accentRed, icon: "megaphone.fill",
                               category: "Activist investor", title: "Activist demand", subtitle: "",
                               buttons: [("Refuse", { sim.resolveActivistRefuse(d) })])
+        case .mxCheck:
+            // Scheduled maintenance is a PLAN, not an emergency (amber, deferrable).
+            // Show the due check, its cost + downtime; Service now, or keep flying
+            // (deferring past the mandated band raises AOG risk).
+            let kind = sim.mxMostUrgent(ac)?.kind ?? .a
+            let cost = sim.mxCheckCost(kind, ac)
+            let days = sim.mxDowntimeDays(kind)
+            let overdue = sim.mxIsOverdue(ac)
+            var btns: [(LocalizedStringKey, () -> Void)] = []
+            if sim.playerBalance >= cost {
+                btns.append(("Service · \(compactMoney(cost))", { Feedback.impact(.light); sim.resolveMXServiceNow(d) }))
+            }
+            btns.append(("Keep flying", { sim.resolveMXDefer(d) }))
+            return AlertModel(
+                accent: overdue ? accentRed : accentAmber, icon: "wrench.and.screwdriver.fill",
+                category: "Maintenance",
+                title: "\(ac.tail) — \(kind.label) due",
+                subtitle: overdue ? "OVERDUE — grounding risk rising · ~\(days)d in shop"
+                                  : "Scheduled check · ~\(days)d in shop",
+                buttons: btns.map { (label: $0.0, action: $0.1) })
         }
     }
 

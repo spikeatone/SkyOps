@@ -78,6 +78,8 @@ struct GameSnapshot: Codable {
     var totalMarketingSpend: Int? = nil
     var totalRepaintSpend: Int? = nil
     var repaintProgramTotal: Int? = nil
+    // MX scheduled-maintenance spend (nil in pre-MX saves → 0).
+    var totalMaintenanceCheckSpend: Int? = nil
     // Player route promotions (routeId → expiry tick). Empty for pre-1.1 saves.
     var playerFareWarUntil: [Int: Int] = [:]
     var adCampaignUntil: [Int: Int] = [:]
@@ -134,6 +136,14 @@ struct AircraftSave: Codable {
     var repaintUntilTick: Int? = nil
     var repaintStartTick: Int? = nil
     var repaintQueued: Bool = false
+    // MX check clocks (last-serviced cycle/tick per A/C/D) + in-shop state. Optional/
+    // defaulted — pre-MX saves get seeded on restore (see Simulation.restore).
+    var mxALastCycle: Int? = nil, mxALastTick: Int? = nil
+    var mxCLastCycle: Int? = nil, mxCLastTick: Int? = nil
+    var mxDLastCycle: Int? = nil, mxDLastTick: Int? = nil
+    var mxCheckKind: Int? = nil
+    var mxUntilTick: Int? = nil
+    var mxStartTick: Int? = nil
     var sellOfferDismissed: Bool
     var isLeased: Bool
     var leaseAccrued: Double
@@ -316,6 +326,7 @@ extension GameSnapshot {
         totalMarketingSpend = c.decodeSafeOpt(Int.self, .totalMarketingSpend)
         totalRepaintSpend = c.decodeSafeOpt(Int.self, .totalRepaintSpend)
         repaintProgramTotal = c.decodeSafeOpt(Int.self, .repaintProgramTotal)
+        totalMaintenanceCheckSpend = c.decodeSafeOpt(Int.self, .totalMaintenanceCheckSpend)
         playerFareWarUntil = c.decodeSafe(.playerFareWarUntil, default: [:])
         adCampaignUntil = c.decodeSafe(.adCampaignUntil, default: [:])
         loyaltyPushUntil = c.decodeSafe(.loyaltyPushUntil, default: [:])

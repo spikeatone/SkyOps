@@ -1492,7 +1492,7 @@ final class Simulation {
             - (totalIntegrationSpend + totalSenioritySpend + totalDiligenceSpend)
             - totalAcquisitionSpend - totalRouteSpend - totalHedgeSpend - totalHubSpend
             - totalAcquisitionPrice - totalDividendsPaid - totalBuybackSpend - totalMarketingSpend
-            - totalRepaintSpend
+            - totalRepaintSpend - totalMaintenanceCheckSpend
             + totalSaleProceeds + totalOfferIncome + totalLoanProceeds + totalEquityRaised
         return expected - playerBalance
     }
@@ -2470,8 +2470,23 @@ final class Simulation {
                           stateIndex: FlightState.parked.rawValue,
                           cyclesAccrued: startingCycles, purchased: true)
         if let sub { ac.subsidiaryCode = sub.code; ac.airlineName = sub.name }
+        seedMXState(ac)
         rollRevenue(for: ac)
         return ac
+    }
+
+    /// Seed an aircraft's MX check clocks. A/C reset to "just serviced" (a new jet
+    /// leaves the factory current; a used jet's prior operator kept it in check) —
+    /// so it isn't instantly overdue on the short checks. D is the LIFECYCLE clock:
+    /// seed it to the nearest prior D boundary from the aircraft's accrued cycles, so
+    /// a high-cycle USED jet correctly may owe a D check soon after purchase (the
+    /// buyer-beware layer), while a new (0-cycle) jet starts its D clock at 0.
+    private func seedMXState(_ ac: Aircraft) {
+        ac.mxA = Aircraft.MXCheck(lastCycle: ac.cyclesAccrued, lastTick: tick)
+        ac.mxC = Aircraft.MXCheck(lastCycle: ac.cyclesAccrued, lastTick: tick)
+        let dInterval = mxCycleInterval(.d, ac)
+        let priorDBoundary = (ac.cyclesAccrued / dInterval) * dInterval
+        ac.mxD = Aircraft.MXCheck(lastCycle: priorDBoundary, lastTick: tick)
     }
 
     /// Move an owned aircraft between the mainline and a subsidiary — the
@@ -3158,12 +3173,248 @@ final class Simulation {
             let pressure = Double(familyPressureTicksLeft[ac.type.family] ?? 0)
                          / Double(Simulation.aogClusterDecayTicks)
             let multiplier = 1 + (Simulation.aogClusterMultiplier - 1) * pressure
-            if Double.random(in: 0..<1) < Simulation.aogProbPerTick * multiplier * ac.aogAgeMultiplier {
+            // MX deferral coupling: flying an aircraft PAST a mandated check band
+            // sharply raises its AOG risk (skipping mandated maintenance → emergencies).
+            let deferral = mxOverdueAOGMultiplier(ac)
+            if Double.random(in: 0..<1) < Simulation.aogProbPerTick * multiplier * ac.aogAgeMultiplier * deferral {
                 ac.maint = true
+                ac.aogWasOverdue = mxIsOverdue(ac)   // tag a neglected-MX breakdown (costlier repair)
                 // this incident (re)opens the elevated window for the family
                 familyPressureTicksLeft[ac.type.family] = Simulation.aogClusterDecayTicks
             }
         }
+    }
+
+    // MARK: - Scheduled Maintenance (MX program: Line / A / C / D checks)
+    // The real answer to "PM should matter" (see MX_PROGRAM_SPEC.md). Distinct from
+    // AOG: PM is SCHEDULED — the player sees a check coming and picks WHEN to take
+    // the aircraft offline (tail-coverage planning). Each A/C/D is due on the tighter
+    // of a CYCLE or CALENDAR limit since last serviced; D is pegged to a fraction of
+    // the airframe's lifespan (~2-3 per life, matching reality). Line maintenance is
+    // continuous background (no scheduling). Deferring past the mandated band raises
+    // AOG risk (mxOverdueAOGMultiplier, wired into tickAOGOnset).
+    //
+    // Game-scale intervals (real ratios preserved, compressed — the sim accrues only
+    // ~2 cycles/sim-day; calendar co-trigger surfaces checks on idle aircraft too):
+    static let mxACycles = 150,  mxACalendarTicks = 3  * ticksPerMonth   // A: 150 cyc or 3 mo
+    static let mxCCycles = 1200, mxCCalendarTicks = 18 * ticksPerMonth   // C: 1200 cyc or 18 mo
+    /// D interval = lifespanCycles / this (cycles only; the fraction IS the lifecycle clock).
+    static let mxDLifespanDivisor = 3
+    // Downtime (sim-days) and cost (fraction of purchase price) per check — rising
+    // steeply A→D (real: A overnight/cheap → C 1-2wk/~1% → D 1-2mo/heavy).
+    static let mxADowntimeDays = 1,  mxCDowntimeDays = 7,  mxDDowntimeDays = 21
+    static let mxACostRate = 0.0005, mxCCostRate = 0.012, mxDCostRate = 0.040
+    /// An OVERDUE check costs more than an on-time one: worse-condition components,
+    /// expedited unscheduled shop slots, regulatory penalties. This is what makes
+    /// servicing EARLY economically right — deferring until due/overdue/forced no
+    /// longer just delays the same bill, it inflates it. (The sweep showed a same-
+    /// cost forced check let deferring win on time-value; this is the crossover fix.)
+    static let mxOverdueCostSurcharge = 2.5
+    /// Overdue AOG multiplier: flying past the mandated band ramps AOG risk up to this.
+    /// Strengthened (6×, was 3×) so skipping mandated MX is a real losing gamble — at
+    /// 3× the deferral penalty was too weak vs cheap/rare AOG (sweep: deferring beat
+    /// servicing). Paired with a repair-COST penalty on overdue breakdowns below.
+    static let mxOverdueMaxAOGMultiplier = 6.0
+    /// How far past due (as a fraction of the interval) counts as the full "mandated
+    /// band exceeded" — risk ramps from due (1.0×) to here (max×). Tightened to 0.25
+    /// so the penalty bites SOON after due, not only deep into overdue.
+    static let mxOverdueBand = 0.25
+    /// An AOG on an OVERDUE airframe is a bigger, costlier failure (neglected
+    /// maintenance → worse breakdowns). Repair cost ×this when the aircraft was
+    /// overdue at onset — makes each deferral-caused AOG actually hurt.
+    static let mxOverdueRepairCostMultiplier = 4.0
+    /// HARD LEGAL WINDOW: an aircraft flown this far past a mandated check (as a
+    /// multiple of the interval) is legally un-airworthy and is GROUNDED — it stops
+    /// flying (losing revenue) until the check is done, and the check is FORCED
+    /// (auto-scheduled into the shop). You cannot skip mandated MX forever. This is
+    /// the real teeth: deferral costs lost revenue + the forced check, not just AOG
+    /// odds. Set above the overdue band (1.25) so there's a warning window first.
+    static let mxHardGroundingMultiple = 1.5
+
+    /// Running MX-check spend (Finance invariant term).
+    private(set) var totalMaintenanceCheckSpend = 0
+
+    /// The cycle interval for a check on this aircraft (D scales with lifespan).
+    func mxCycleInterval(_ kind: Aircraft.MXKind, _ ac: Aircraft) -> Int {
+        switch kind {
+        case .a: return Simulation.mxACycles
+        case .c: return Simulation.mxCCycles
+        case .d: return max(1000, ac.type.expectedLifespanCycles / Simulation.mxDLifespanDivisor)
+        }
+    }
+    /// The calendar interval (ticks) for a check; D has none (cycle-only lifecycle clock).
+    func mxCalendarInterval(_ kind: Aircraft.MXKind) -> Int? {
+        switch kind {
+        case .a: return Simulation.mxACalendarTicks
+        case .c: return Simulation.mxCCalendarTicks
+        case .d: return nil
+        }
+    }
+    private func mxState(_ kind: Aircraft.MXKind, _ ac: Aircraft) -> Aircraft.MXCheck {
+        switch kind { case .a: return ac.mxA; case .c: return ac.mxC; case .d: return ac.mxD }
+    }
+    /// Progress toward a check's DUE point, 0…1+ (≥1 = due; >1 = overdue). Uses the
+    /// tighter of the cycle and calendar axes (whichever is further along).
+    func mxProgress(_ kind: Aircraft.MXKind, _ ac: Aircraft) -> Double {
+        let s = mxState(kind, ac)
+        let cyc = Double(ac.cyclesAccrued - s.lastCycle) / Double(mxCycleInterval(kind, ac))
+        if let cal = mxCalendarInterval(kind) {
+            let calP = Double(tick - s.lastTick) / Double(cal)
+            return max(cyc, calP)
+        }
+        return cyc
+    }
+    /// Cycles until this check is due (for the OPS readout; may be ≤0 = due/overdue).
+    func mxCyclesUntilDue(_ kind: Aircraft.MXKind, _ ac: Aircraft) -> Int {
+        mxCycleInterval(kind, ac) - (ac.cyclesAccrued - mxState(kind, ac).lastCycle)
+    }
+    /// The MOST-URGENT due-or-approaching check for an aircraft (highest progress),
+    /// with its progress. nil if it's in the MX shop already.
+    func mxMostUrgent(_ ac: Aircraft) -> (kind: Aircraft.MXKind, progress: Double)? {
+        guard !ac.inMXShop else { return nil }
+        let all: [Aircraft.MXKind] = [.a, .c, .d]
+        return all.map { ($0, mxProgress($0, ac)) }.max { $0.1 < $1.1 }
+    }
+    func mxIsDue(_ ac: Aircraft) -> Bool { (mxMostUrgent(ac)?.progress ?? 0) >= 1.0 }
+    func mxIsOverdue(_ ac: Aircraft) -> Bool { (mxMostUrgent(ac)?.progress ?? 0) >= 1.0 + Simulation.mxOverdueBand }
+    /// Past the HARD legal window — must be grounded + forced into the shop.
+    func mxPastHardWindow(_ ac: Aircraft) -> Bool { (mxMostUrgent(ac)?.progress ?? 0) >= Simulation.mxHardGroundingMultiple }
+    /// AOG risk multiplier from deferred MX: 1.0 until due, ramping to the max as the
+    /// worst check goes from due (progress 1.0) to the mandated band (1.0+band).
+    func mxOverdueAOGMultiplier(_ ac: Aircraft) -> Double {
+        let p = mxMostUrgent(ac)?.progress ?? 0
+        guard p > 1.0 else { return 1.0 }
+        let over = min((p - 1.0) / Simulation.mxOverdueBand, 1.0)
+        return 1.0 + (Simulation.mxOverdueMaxAOGMultiplier - 1.0) * over
+    }
+    func mxCheckCost(_ kind: Aircraft.MXKind, _ ac: Aircraft) -> Int {
+        let rate: Double = { switch kind { case .a: return Simulation.mxACostRate
+                                           case .c: return Simulation.mxCCostRate
+                                           case .d: return Simulation.mxDCostRate } }()
+        // Overdue → surcharge: servicing on time is cheaper than letting it lapse.
+        let surcharge = mxIsOverdue(ac) ? Simulation.mxOverdueCostSurcharge : 1.0
+        return Int((Double(ac.type.purchasePrice) * rate * surcharge).rounded())
+    }
+    /// The on-time (non-surcharged) base cost, for showing the player what they'd
+    /// pay by servicing NOW before it lapses (the "service early to save" signal).
+    func mxCheckBaseCost(_ kind: Aircraft.MXKind, _ ac: Aircraft) -> Int {
+        let rate: Double = { switch kind { case .a: return Simulation.mxACostRate
+                                           case .c: return Simulation.mxCCostRate
+                                           case .d: return Simulation.mxDCostRate } }()
+        return Int((Double(ac.type.purchasePrice) * rate).rounded())
+    }
+    func mxDowntimeDays(_ kind: Aircraft.MXKind) -> Int {
+        switch kind { case .a: return Simulation.mxADowntimeDays
+                      case .c: return Simulation.mxCDowntimeDays
+                      case .d: return Simulation.mxDDowntimeDays }
+    }
+
+    /// Owned aircraft with a due (or overdue) check, not already in the shop.
+    var mxDueAircraft: [Aircraft] { aircraft.filter { $0.purchased && !$0.inMXShop && mxIsDue($0) } }
+    var mxInShopCount: Int { aircraft.lazy.filter { $0.purchased && $0.inMXShop }.count }
+    /// All owned aircraft, most-maintenance-urgent first (for the OPS ▸ MX list).
+    var mxFleet: [Aircraft] {
+        aircraft.filter { $0.purchased }.sorted {
+            ($0.inMXShop ? 2.0 : (mxMostUrgent($0)?.progress ?? 0)) >
+            ($1.inMXShop ? 2.0 : (mxMostUrgent($1)?.progress ?? 0))
+        }
+    }
+    /// Sim-days until an aircraft's active MX check is back (or nil if not in shop).
+    func mxShopDaysLeft(_ ac: Aircraft) -> Int? {
+        guard let until = ac.mxUntilTick else { return nil }
+        return max(0, (until - tick + 1439) / 1440)
+    }
+    /// Human ETA for an aircraft's next check: the most-urgent kind + how soon, on
+    /// whichever axis (cycles or calendar) is tighter. Returns (kind, short text).
+    func mxNextCheckETA(_ ac: Aircraft) -> (kind: Aircraft.MXKind, text: String)? {
+        guard let u = mxMostUrgent(ac) else { return nil }
+        if u.progress >= 1.0 { return (u.kind, u.progress >= 1.0 + Simulation.mxOverdueBand ? String(localized: "OVERDUE") : String(localized: "due now")) }
+        let cyc = mxCyclesUntilDue(u.kind, ac)
+        // calendar days until due on the calendar axis (if any)
+        var calDays: Int? = nil
+        if let cal = mxCalendarInterval(u.kind) {
+            let elapsed = tick - mxState(u.kind, ac).lastTick
+            calDays = max(0, (cal - elapsed) / 1440)
+        }
+        // show the tighter axis in its own units
+        let cycText = String(localized: "in ~\(cyc) cyc")
+        if let cd = calDays {
+            let cycAsDays = cyc / 2   // ~2 cycles/sim-day
+            return (u.kind, cd <= cycAsDays ? String(localized: "in ~\(cd)d") : cycText)
+        }
+        return (u.kind, cycText)
+    }
+
+    /// PLAYER ACTION: send an aircraft in for its due check now. Charges the cost and
+    /// puts it in the MX shop for the downtime (airborne → finishes its leg first,
+    /// via the same PARKED-gate rule as repaint). Returns false if not affordable or
+    /// nothing is due. The check that gets serviced is the most-urgent one.
+    @discardableResult
+    func sendToMX(_ ac: Aircraft) -> Bool {
+        guard ac.purchased, !ac.inMXShop, let urgent = mxMostUrgent(ac), urgent.progress >= 1.0 else { return false }
+        let kind = urgent.kind
+        let cost = mxCheckCost(kind, ac)
+        guard playerBalance >= cost else { return false }
+        playerBalance -= cost
+        totalMaintenanceCheckSpend += cost
+        ac.mxCheckKind = kind
+        ac.mxStartTick = tick
+        ac.mxUntilTick = tick + mxDowntimeDays(kind) * 1440
+        // clear any pending sell nudge etc. is unnecessary; the shop gate handles flight.
+        logOps(.disruption, L("%@ scheduled", kind.label),
+               L("%@ in the shop ~%@ days · %@", ac.tail, mxDowntimeDays(kind), dollars(cost)),
+               airportCode: nil)
+        return true
+    }
+
+    /// Forced grounding past the hard legal window — the check is MANDATORY, so it's
+    /// charged regardless of balance (like other forced costs; balance may go red) and
+    /// the aircraft goes straight into the shop. Clears any pending MX card for it.
+    private func forceGroundForMX(_ ac: Aircraft) {
+        guard let urgent = mxMostUrgent(ac) else { return }
+        let kind = urgent.kind
+        let cost = mxCheckCost(kind, ac)
+        playerBalance -= cost
+        totalMaintenanceCheckSpend += cost
+        ac.mxCheckKind = kind
+        ac.mxStartTick = tick
+        ac.mxUntilTick = tick + mxDowntimeDays(kind) * 1440
+        decisionQueue.removeAll { $0.kind == .mxCheck && $0.aircraft === ac }
+        logOps(.disruption, L("%@ grounded — %@ overdue", ac.tail, kind.label),
+               L("Mandatory check · ~%@ days · %@", mxDowntimeDays(kind), dollars(cost)),
+               airportCode: nil)
+    }
+
+    /// Daily: push a decision card for each newly-due aircraft (dupe-guarded), so the
+    /// player is prompted to plan the check. It's a PLAN, not a forced grounding —
+    /// they can schedule now or keep flying (deferral raises AOG risk).
+    private func tickMXDue() {
+        guard tick % 1440 == 0 else { return }   // once per sim-day
+        // HARD LEGAL WINDOW: force any wildly-overdue aircraft into the shop NOW. It's
+        // un-airworthy — grounded until serviced, and the check is mandatory (charged
+        // even into the red, like other forced costs; you can't fly it to raise cash).
+        for ac in aircraft where ac.purchased && !ac.inMXShop && mxPastHardWindow(ac) {
+            forceGroundForMX(ac)
+        }
+        for ac in aircraft where ac.purchased && !ac.inMXShop && mxIsDue(ac) {
+            guard !decisionQueue.contains(where: { $0.kind == .mxCheck && $0.aircraft === ac }) else { continue }
+            decisionQueue.append(Decision(id: "mx_\(ac.tail)_\(tick)", kind: .mxCheck, aircraft: ac))
+        }
+        // clear stale cards for aircraft no longer due (serviced via the OPS section,
+        // or sold) — same pattern as clearDecisionForAircraft.
+        decisionQueue.removeAll { $0.kind == .mxCheck && ($0.aircraft.map { !mxIsDue($0) || $0.inMXShop } ?? true) }
+    }
+
+    /// Resolve the MX decision card: SERVICE NOW (send to shop) or KEEP FLYING (defer).
+    func resolveMXServiceNow(_ decision: Decision) {
+        if let ac = decision.aircraft { sendToMX(ac) }
+        decisionQueue.removeAll { $0.id == decision.id }
+    }
+    func resolveMXDefer(_ decision: Decision) {
+        // Just dismiss the card; the aircraft keeps flying. It'll re-prompt on the
+        // next daily tick if still due (a persistent nudge — MX is mandatory), and
+        // its AOG risk climbs while overdue.
+        decisionQueue.removeAll { $0.id == decision.id }
     }
 
     // MARK: - Crew (per-family pools, FAA Part 117 duty/rest)
@@ -3386,7 +3637,7 @@ final class Simulation {
     // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
 
     struct Decision: Identifiable {
-        enum Kind { case aog, crew, sell, offer, training, airportOffer, hubOffer, activist }
+        enum Kind { case aog, crew, sell, offer, training, airportOffer, hubOffer, activist, mxCheck }
         let id: String
         let kind: Kind
         /// The subject aircraft (aog / crew / sell). nil for the others.
@@ -3480,8 +3731,10 @@ final class Simulation {
     func resolveAOGExpedite(_ decision: Decision) {
         let age = decision.aircraft?.maintenanceAgeMultiplier ?? 1
         let atHubX = decision.aircraft.map { routeTouchesOperatingHub($0.origin.code, $0.dest.code) } ?? false
-        chargeDecisionCost(Int((15_000 * maintCostMultiplier * age * (atHubX ? Simulation.hubRepairCostFactor : 1)).rounded()))
+        let overdueX = (decision.aircraft?.aogWasOverdue ?? false) ? Simulation.mxOverdueRepairCostMultiplier : 1
+        chargeDecisionCost(Int((15_000 * maintCostMultiplier * age * (atHubX ? Simulation.hubRepairCostFactor : 1) * overdueX).rounded()))
         decision.aircraft?.maint = false
+        decision.aircraft?.aogWasOverdue = false
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
@@ -3492,10 +3745,12 @@ final class Simulation {
         // MX base: repairs at/near the player's operating hub run 25% faster
         // and 20% cheaper (the hub hosts your maintenance facilities).
         let atHub = decision.aircraft.map { routeTouchesOperatingHub($0.origin.code, $0.dest.code) } ?? false
-        let costFactor = atHub ? Simulation.hubRepairCostFactor : 1
+        let overdueX = (decision.aircraft?.aogWasOverdue ?? false) ? Simulation.mxOverdueRepairCostMultiplier : 1
+        let costFactor = (atHub ? Simulation.hubRepairCostFactor : 1) * overdueX
         let timer = atHub ? Int((180 * Simulation.hubRepairTimeFactor).rounded()) : 180
         chargeDecisionCost(Int((3_000 * maintCostMultiplier * age * costFactor).rounded()))
         decision.aircraft?.aogAutoClearTick = tick + timer
+        decision.aircraft?.aogWasOverdue = false
         decisionQueue.removeAll { $0.id == decision.id }
     }
 
@@ -4801,6 +5056,7 @@ final class Simulation {
         s.totalBuybackSpend = totalBuybackSpend
         s.totalMarketingSpend = totalMarketingSpend
         s.totalRepaintSpend = totalRepaintSpend
+        s.totalMaintenanceCheckSpend = totalMaintenanceCheckSpend
         s.repaintProgramTotal = repaintProgramTotal
         s.playerFareWarUntil = playerFareWarUntil
         s.adCampaignUntil = adCampaignUntil
@@ -4826,6 +5082,11 @@ final class Simulation {
                          repaintUntilTick: ac.repaintUntilTick,
                          repaintStartTick: ac.repaintStartTick,
                          repaintQueued: ac.repaintQueued,
+                         mxALastCycle: ac.mxA.lastCycle, mxALastTick: ac.mxA.lastTick,
+                         mxCLastCycle: ac.mxC.lastCycle, mxCLastTick: ac.mxC.lastTick,
+                         mxDLastCycle: ac.mxD.lastCycle, mxDLastTick: ac.mxD.lastTick,
+                         mxCheckKind: ac.mxCheckKind?.rawValue,
+                         mxUntilTick: ac.mxUntilTick, mxStartTick: ac.mxStartTick,
                          sellOfferDismissed: ac.sellOfferDismissed,
                          isLeased: ac.isLeased, leaseAccrued: ac.leaseAccrued, maint: ac.maint,
                          aogAutoClearTick: ac.aogAutoClearTick, crewId: ac.crewId,
@@ -4935,6 +5196,7 @@ final class Simulation {
         totalBuybackSpend = s.totalBuybackSpend ?? 0
         totalMarketingSpend = s.totalMarketingSpend ?? 0
         totalRepaintSpend = s.totalRepaintSpend ?? 0
+        totalMaintenanceCheckSpend = s.totalMaintenanceCheckSpend ?? 0
         repaintProgramTotal = s.repaintProgramTotal ?? 0
         playerFareWarUntil = s.playerFareWarUntil
         adCampaignUntil = s.adCampaignUntil
@@ -4995,6 +5257,17 @@ final class Simulation {
             ac.maint = a.maint; ac.aogAutoClearTick = a.aogAutoClearTick; ac.crewId = a.crewId
             ac.subsidiaryCode = a.subsidiaryCode
             if let code = a.subsidiaryCode { ac.airlineName = subsidiaries.first { $0.code == code }?.name }
+            // MX check state: restore if present; a PRE-MX save (nil) gets seeded so
+            // nothing is instantly overdue on load (A/C = serviced now; D from cycles).
+            if let ac2c = a.mxALastCycle {
+                ac.mxA = Aircraft.MXCheck(lastCycle: ac2c, lastTick: a.mxALastTick ?? tick)
+                ac.mxC = Aircraft.MXCheck(lastCycle: a.mxCLastCycle ?? ac.cyclesAccrued, lastTick: a.mxCLastTick ?? tick)
+                ac.mxD = Aircraft.MXCheck(lastCycle: a.mxDLastCycle ?? 0, lastTick: a.mxDLastTick ?? tick)
+                ac.mxCheckKind = a.mxCheckKind.flatMap { Aircraft.MXKind(rawValue: $0) }
+                ac.mxUntilTick = a.mxUntilTick; ac.mxStartTick = a.mxStartTick
+            } else {
+                seedMXState(ac)
+            }
             rollRevenue(for: ac)
             aircraft.append(ac)
         }
@@ -5047,6 +5320,7 @@ final class Simulation {
         tickCurfews()
         tickCrewPool()
         tickAOGOnset()
+        tickMXDue()
         tickEconomicEvents()
         tickWorldEvents()
         tickSlotAvailability()
@@ -5081,6 +5355,7 @@ final class Simulation {
                 // so they're normally mutually exclusive).
                 if ac.pendingPark { ac.pendingPark = false; detachFromRoute(ac, note: L("parked as spare")) }
                 else if ac.pendingRouteId != nil { completePendingReassignment(ac) }
+            case .mxCheckCompleted:    clearDecision(.mxCheck, for: ac)  // check done; drop any lingering card
             case nil:                  break
             }
             // A booked aircraft still burns money while stuck at the gate
