@@ -535,6 +535,7 @@ struct NetworkView: View {
                 Button { sim.requestSpeed(s) } label: {
                     Text(speedLabel(s))
                         .font(.karla(15, .semibold))
+                        .lineLimit(1).minimumScaleFactor(0.7)   // 7 pills now (100× added) — keep "100×" from truncating in a narrow column
                         .foregroundStyle(active ? .white : (quarterBlocked ? barText.opacity(0.35) : barText))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
