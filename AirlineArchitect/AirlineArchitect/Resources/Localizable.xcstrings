@@ -821,6 +821,16 @@
         }
       }
     },
+    "/mo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "/Mon."
+          }
+        }
+      }
+    },
     "A full month of history appears here after your first sim-month of operations.": {
       "localizations": {
         "de": {
@@ -1601,6 +1611,16 @@
         }
       }
     },
+    "Baseline repairs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard-Reparaturen"
+          }
+        }
+      }
+    },
     "Below majority — the board can act": {
       "localizations": {
         "de": {
@@ -1987,6 +2007,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mittelamerika & Karibik"
+          }
+        }
+      }
+    },
+    "Cheaper, faster repairs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Günstigere, schnellere Reparaturen"
           }
         }
       }
@@ -4051,6 +4081,16 @@
         }
       }
     },
+    "Minimal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minimal"
+          }
+        }
+      }
+    },
     "Minority — little protection": {
       "localizations": {
         "de": {
@@ -4377,6 +4417,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch kein abgeschlossener Sim-Monat."
+          }
+        }
+      }
+    },
+    "No cost": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Kosten"
           }
         }
       }
@@ -4931,6 +4981,16 @@
         }
       }
     },
+    "PREVENTIVE MAINTENANCE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VORBEUGENDE WARTUNG"
+          }
+        }
+      }
+    },
     "PROFITABILITY": {
       "localizations": {
         "de": {
@@ -5081,12 +5141,32 @@
         }
       }
     },
+    "Premium": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premium"
+          }
+        }
+      }
+    },
     "Price": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Preis"
+          }
+        }
+      }
+    },
+    "Pricier, longer repairs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teurere, längere Reparaturen"
           }
         }
       }
@@ -5781,6 +5861,16 @@
         }
       }
     },
+    "Set your monthly maintenance spend. More upkeep makes breakdowns cheaper and quicker to fix; less saves cash but incidents cost more and ground aircraft longer.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lege deine monatlichen Wartungsausgaben fest. Mehr Wartung macht Ausfälle günstiger und schneller behebbar; weniger spart Geld, doch Vorfälle kosten mehr und legen Flugzeuge länger lahm."
+          }
+        }
+      }
+    },
     "Share buybacks": {
       "localizations": {
         "de": {
@@ -5907,6 +5997,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Besetze deine Crews"
+          }
+        }
+      }
+    },
+    "Standard": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
           }
         }
       }

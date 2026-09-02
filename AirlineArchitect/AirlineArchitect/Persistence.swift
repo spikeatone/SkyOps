@@ -78,6 +78,10 @@ struct GameSnapshot: Codable {
     var totalMarketingSpend: Int? = nil
     var totalRepaintSpend: Int? = nil
     var repaintProgramTotal: Int? = nil
+    // Preventive-maintenance budget (T2.2). Optional → pre-T2.2 saves default to
+    // Standard (rawValue 1) + 0 spend, i.e. today's behavior.
+    var maintenanceBudget: Int? = nil
+    var totalPreventiveMaintSpend: Int? = nil
     // Player route promotions (routeId → expiry tick). Empty for pre-1.1 saves.
     var playerFareWarUntil: [Int: Int] = [:]
     var adCampaignUntil: [Int: Int] = [:]
@@ -316,6 +320,8 @@ extension GameSnapshot {
         totalMarketingSpend = c.decodeSafeOpt(Int.self, .totalMarketingSpend)
         totalRepaintSpend = c.decodeSafeOpt(Int.self, .totalRepaintSpend)
         repaintProgramTotal = c.decodeSafeOpt(Int.self, .repaintProgramTotal)
+        maintenanceBudget = c.decodeSafeOpt(Int.self, .maintenanceBudget)
+        totalPreventiveMaintSpend = c.decodeSafeOpt(Int.self, .totalPreventiveMaintSpend)
         playerFareWarUntil = c.decodeSafe(.playerFareWarUntil, default: [:])
         adCampaignUntil = c.decodeSafe(.adCampaignUntil, default: [:])
         loyaltyPushUntil = c.decodeSafe(.loyaltyPushUntil, default: [:])

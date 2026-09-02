@@ -116,6 +116,7 @@ struct FinanceView: View {
         if let f = figures {
             flightOpsCard(f)
             breakdownCard(f)
+            maintenanceBudgetCard
             cashFlowCard(f)
         } else {
             unavailableCard
@@ -507,7 +508,7 @@ struct FinanceView: View {
         case .total:
             return PeriodFigures(
                 revenue: sim.totalRevenue, fees: sim.totalFees, operatingCost: sim.totalOperatingCost,
-                leaseCost: sim.totalLeaseCost, insurance: sim.totalInsuranceSpent, maintenance: sim.maintenanceSpend,
+                leaseCost: sim.totalLeaseCost, insurance: sim.totalInsuranceSpent, maintenance: sim.maintenanceSpend + sim.totalPreventiveMaintSpend,
                 acquisition: sim.totalAcquisitionSpend, routeSpend: sim.totalRouteSpend, hedgeSpend: sim.totalHedgeSpend,
                 saleProceeds: sim.totalSaleProceeds, offerIncome: sim.totalOfferIncome, flights: sim.totalFlightsFlown,
                 loanProceeds: sim.totalLoanProceeds, debtService: sim.totalDebtService,
@@ -537,7 +538,7 @@ struct FinanceView: View {
             operatingCost: d(sim.totalOperatingCost, \.operatingCost),
             leaseCost: d(sim.totalLeaseCost, \.leaseCost),
             insurance: d(sim.totalInsuranceSpent, \.insurance),
-            maintenance: d(sim.maintenanceSpend, \.maintenance),
+            maintenance: d(sim.maintenanceSpend + sim.totalPreventiveMaintSpend, \.maintenance),
             acquisition: d(sim.totalAcquisitionSpend, \.acquisition),
             routeSpend: d(sim.totalRouteSpend, \.routeSpend),
             hedgeSpend: d(sim.totalHedgeSpend, \.hedgeSpend),
@@ -609,6 +610,56 @@ struct FinanceView: View {
                 }
             }
         }
+    }
+
+    // MARK: Preventive-maintenance budget (T2.2) — trade cash for readiness.
+    // Higher tiers cost more each month but ground fewer aircraft (lower AOG
+    // onset). Standard is the baseline; Minimal saves the cash at higher risk.
+    private var maintenanceBudgetCard: some View {
+        let _ = sim.displayTick   // keep the projected cost live as fleet value moves
+        return card {
+            VStack(alignment: .leading, spacing: 10) {
+                sectionTitle("PREVENTIVE MAINTENANCE")
+                Text("Set your monthly maintenance spend. More upkeep makes breakdowns cheaper and quicker to fix; less saves cash but incidents cost more and ground aircraft longer.")
+                    .font(.karla(12)).foregroundStyle(secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                ForEach(Simulation.MaintenanceBudget.allCases, id: \.self) { tier in
+                    maintenanceTierRow(tier)
+                }
+            }
+        }
+    }
+
+    private func maintenanceTierRow(_ tier: Simulation.MaintenanceBudget) -> some View {
+        let active = sim.maintenanceBudget == tier
+        // Projected monthly cost = flat per-aircraft × owned aircraft.
+        let monthly = tier.monthlyPerAircraft * sim.ownedCount
+        // Readiness effect vs the Standard baseline, in plain language — the tier
+        // mainly changes what an AOG costs + how long it grounds the aircraft.
+        let effect: String
+        switch tier {
+        case .minimal:  effect = String(localized: "Pricier, longer repairs")
+        case .standard: effect = String(localized: "Baseline repairs")
+        case .premium:  effect = String(localized: "Cheaper, faster repairs")
+        }
+        let costText = monthly > 0 ? money(monthly) + String(localized: "/mo") : String(localized: "No cost")
+        return Button {
+            Feedback.impact(.light); sim.setMaintenanceBudget(tier)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: active ? "largecircle.fill.circle" : "circle")
+                    .font(.system(size: 16)).foregroundStyle(active ? Sky.brightBlue : secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(tier.label).font(.karla(14, .semibold)).foregroundStyle(primary)
+                    Text(effect).font(.karla(11)).foregroundStyle(secondary)
+                }
+                Spacer(minLength: 6)
+                Text(costText).font(.karla(13, .semibold)).foregroundStyle(active ? primary : secondary)
+            }
+            .padding(.vertical, 6).padding(.horizontal, 8)
+            .background(active ? Sky.brightBlue.opacity(0.12) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+        }.buttonStyle(.plain)
     }
 
     // MARK: Cash-flow reconciliation (ties to cash)

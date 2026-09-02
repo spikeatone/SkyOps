@@ -1492,7 +1492,7 @@ final class Simulation {
             - (totalIntegrationSpend + totalSenioritySpend + totalDiligenceSpend)
             - totalAcquisitionSpend - totalRouteSpend - totalHedgeSpend - totalHubSpend
             - totalAcquisitionPrice - totalDividendsPaid - totalBuybackSpend - totalMarketingSpend
-            - totalRepaintSpend
+            - totalRepaintSpend - totalPreventiveMaintSpend
             + totalSaleProceeds + totalOfferIncome + totalLoanProceeds + totalEquityRaised
         return expected - playerBalance
     }
@@ -3145,6 +3145,67 @@ final class Simulation {
 
     private var familyPressureTicksLeft: [String: Int] = [:]
 
+    // PREVENTIVE MAINTENANCE budget (player feedback T2.2): a standing monthly
+    // spend the player sets, trading cash for aircraft readiness. AOG is rare
+    // (calibrated to a real 2/100/month anchor), so an onset-only lever was lost
+    // in the noise (verified: MaintBudgetProbe showed near-identical groundings).
+    // REFRAMED (designer's call): the tier mainly changes what an AOG COSTS when
+    // it happens — repair price AND downtime — so PM visibly pays off on incidents,
+    // plus a mild onset effect. Minimal skimps (incidents hurt more), Premium keeps
+    // the fleet ready (incidents are cheap + quick). Monthly cost is a SMALL flat
+    // per-owned-aircraft figure (NOT fleet-value-scaled — that exploded late-game
+    // to dwarf the ~$3k repairs it was meant to offset). Balance-swept for a real
+    // trade-off (Premium's cheaper/faster incidents vs its modest monthly cost).
+    enum MaintenanceBudget: Int, CaseIterable, Codable {
+        case minimal, standard, premium
+        /// Monthly PM cost PER OWNED AIRCRAFT (flat; 0 = free). Small on purpose —
+        /// comparable to the AOG repair+downtime it offsets, not orders above it.
+        var monthlyPerAircraft: Int {
+            switch self {
+            case .minimal:  return 0          // no program — save the cash
+            case .standard: return 4_000      // baseline upkeep
+            case .premium:  return 12_000     // keep the fleet ready
+            }
+        }
+        /// Multiplier on AOG REPAIR COST (the main lever). 1.0 = baseline.
+        var repairCostFactor: Double {
+            switch self {
+            case .minimal:  return 1.6        // skimped upkeep → pricier repairs
+            case .standard: return 1.0
+            case .premium:  return 0.5        // well-maintained → cheap repairs
+            }
+        }
+        /// Multiplier on AOG standard-repair DOWNTIME (lost-revenue hold). 1.0 = base.
+        var repairTimeFactor: Double {
+            switch self {
+            case .minimal:  return 1.5        // longer groundings
+            case .standard: return 1.0
+            case .premium:  return 0.6        // back in service faster
+            }
+        }
+        /// Mild multiplier on AOG onset probability (secondary; AOG is rare).
+        var aogRiskFactor: Double {
+            switch self {
+            case .minimal:  return 1.15
+            case .standard: return 1.00
+            case .premium:  return 0.85
+            }
+        }
+        var label: String {
+            switch self {
+            case .minimal:  return String(localized: "Minimal")
+            case .standard: return String(localized: "Standard")
+            case .premium:  return String(localized: "Premium")
+            }
+        }
+    }
+    /// Default = Standard (baseline). Persisted; legacy saves default to Standard.
+    private(set) var maintenanceBudget: MaintenanceBudget = .standard
+    func setMaintenanceBudget(_ b: MaintenanceBudget) { maintenanceBudget = b }
+    /// Running PM spend (Finance invariant term).
+    private(set) var totalPreventiveMaintSpend = 0
+    private var nextPreventiveMaintBillTick = Simulation.ticksPerMonth
+
     /// NOTE (ownership scoping): the prototype gates AOG on `ac.purchased` —
     /// background traffic never experiences it. Ownership doesn't exist until
     /// Phase 5, so for now the whole stress-test fleet is eligible. Re-scope
@@ -3158,7 +3219,9 @@ final class Simulation {
             let pressure = Double(familyPressureTicksLeft[ac.type.family] ?? 0)
                          / Double(Simulation.aogClusterDecayTicks)
             let multiplier = 1 + (Simulation.aogClusterMultiplier - 1) * pressure
-            if Double.random(in: 0..<1) < Simulation.aogProbPerTick * multiplier * ac.aogAgeMultiplier {
+            // Preventive-maintenance budget scales onset (T2.2): Premium buys down
+            // groundings, Minimal raises them. Standard = 1.0 (unchanged baseline).
+            if Double.random(in: 0..<1) < Simulation.aogProbPerTick * multiplier * ac.aogAgeMultiplier * maintenanceBudget.aogRiskFactor {
                 ac.maint = true
                 // this incident (re)opens the elevated window for the family
                 familyPressureTicksLeft[ac.type.family] = Simulation.aogClusterDecayTicks
@@ -3480,7 +3543,7 @@ final class Simulation {
     func resolveAOGExpedite(_ decision: Decision) {
         let age = decision.aircraft?.maintenanceAgeMultiplier ?? 1
         let atHubX = decision.aircraft.map { routeTouchesOperatingHub($0.origin.code, $0.dest.code) } ?? false
-        chargeDecisionCost(Int((15_000 * maintCostMultiplier * age * (atHubX ? Simulation.hubRepairCostFactor : 1)).rounded()))
+        chargeDecisionCost(Int((15_000 * maintCostMultiplier * age * (atHubX ? Simulation.hubRepairCostFactor : 1) * maintenanceBudget.repairCostFactor).rounded()))
         decision.aircraft?.maint = false
         decisionQueue.removeAll { $0.id == decision.id }
     }
@@ -3492,8 +3555,8 @@ final class Simulation {
         // MX base: repairs at/near the player's operating hub run 25% faster
         // and 20% cheaper (the hub hosts your maintenance facilities).
         let atHub = decision.aircraft.map { routeTouchesOperatingHub($0.origin.code, $0.dest.code) } ?? false
-        let costFactor = atHub ? Simulation.hubRepairCostFactor : 1
-        let timer = atHub ? Int((180 * Simulation.hubRepairTimeFactor).rounded()) : 180
+        let costFactor = (atHub ? Simulation.hubRepairCostFactor : 1) * maintenanceBudget.repairCostFactor
+        let timer = Int((Double(atHub ? Int((180 * Simulation.hubRepairTimeFactor).rounded()) : 180) * maintenanceBudget.repairTimeFactor).rounded())
         chargeDecisionCost(Int((3_000 * maintCostMultiplier * age * costFactor).rounded()))
         decision.aircraft?.aogAutoClearTick = tick + timer
         decisionQueue.removeAll { $0.id == decision.id }
@@ -3773,6 +3836,22 @@ final class Simulation {
         let bill = Int((Double(fleetValue) * Simulation.insuranceRateMonthly * mult).rounded())
         playerBalance -= bill
         totalInsuranceSpent += bill
+    }
+
+    /// PREVENTIVE MAINTENANCE monthly bill (T2.2). Fleet value × the selected
+    /// tier's monthly rate; billed once per sim-month like insurance. Minimal is
+    /// free (rate 0), so this is a no-op there. Tracked in totalPreventiveMaintSpend
+    /// for the Finance tab + the cash invariant.
+    private func tickPreventiveMaintBilling() {
+        guard tick >= nextPreventiveMaintBillTick else { return }
+        nextPreventiveMaintBillTick += Simulation.ticksPerMonth
+        let perAircraft = maintenanceBudget.monthlyPerAircraft
+        guard perAircraft > 0 else { return }
+        let ownedCount = aircraft.lazy.filter { $0.purchased }.count
+        guard ownedCount > 0 else { return }
+        let bill = perAircraft * ownedCount
+        playerBalance -= bill
+        totalPreventiveMaintSpend += bill
     }
 
     /// OFFER card: accept the slot buyback — credit the cash and close the route
@@ -4249,7 +4328,7 @@ final class Simulation {
     private func financeSnapshotNow() -> FinanceSnapshot {
         FinanceSnapshot(tick: tick, revenue: totalRevenue, fees: totalFees,
                         operatingCost: totalOperatingCost, leaseCost: totalLeaseCost,
-                        insurance: totalInsuranceSpent, maintenance: maintenanceSpend,
+                        insurance: totalInsuranceSpent, maintenance: maintenanceSpend + totalPreventiveMaintSpend,
                         acquisition: totalAcquisitionSpend, routeSpend: totalRouteSpend,
                         hedgeSpend: totalHedgeSpend, saleProceeds: totalSaleProceeds,
                         offerIncome: totalOfferIncome, flights: totalFlightsFlown,
@@ -4801,6 +4880,8 @@ final class Simulation {
         s.totalBuybackSpend = totalBuybackSpend
         s.totalMarketingSpend = totalMarketingSpend
         s.totalRepaintSpend = totalRepaintSpend
+        s.maintenanceBudget = maintenanceBudget.rawValue
+        s.totalPreventiveMaintSpend = totalPreventiveMaintSpend
         s.repaintProgramTotal = repaintProgramTotal
         s.playerFareWarUntil = playerFareWarUntil
         s.adCampaignUntil = adCampaignUntil
@@ -4935,6 +5016,8 @@ final class Simulation {
         totalBuybackSpend = s.totalBuybackSpend ?? 0
         totalMarketingSpend = s.totalMarketingSpend ?? 0
         totalRepaintSpend = s.totalRepaintSpend ?? 0
+        maintenanceBudget = MaintenanceBudget(rawValue: s.maintenanceBudget ?? MaintenanceBudget.standard.rawValue) ?? .standard
+        totalPreventiveMaintSpend = s.totalPreventiveMaintSpend ?? 0
         repaintProgramTotal = s.repaintProgramTotal ?? 0
         playerFareWarUntil = s.playerFareWarUntil
         adCampaignUntil = s.adCampaignUntil
@@ -5052,6 +5135,7 @@ final class Simulation {
         tickSlotAvailability()
         tickLeaseBilling()
         tickInsuranceBilling()
+        tickPreventiveMaintBilling()
         tickIntegration()
         tickLoanBilling()
         tickStockPrice()
