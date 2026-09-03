@@ -7,11 +7,19 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 3 September 2026._
 
-**► ⭐ 1.7 IS BUILT + MERGED TO `main` — the NEXT SESSION SHIPS IT. START HERE.**
-Everything for 1.7 is committed on `main` (clean tree, all pushed). The next session's job is
-narrow and mechanical: **bump the version → 1.7.0 / build 56, archive + upload via the CLI chain,
-create the ASC version record, submit for review** (with the §1 4.3(a) studio block). Full
-step-by-step in `NEXT_SESSION_PROMPT.md`. What's IN 1.7 (all verified, driven live):
+**► ⭐ 1.7.0 (build 56) IS UPLOADED TO ASC + IN THE SUBMISSION PIPELINE (3 Sep). START HERE.**
+Version bumped to 1.7.0 / build 56 (6 configs), archived → exported → `altool --validate-app`
+(VERIFY SUCCEEDED) → `--upload-app` (UPLOAD SUCCEEDED, **Delivery UUID
+`40110d3c-3dfa-4587-991f-c6628f26ad98`**, 78.5 MB). Committed + pushed to `main` (`901bb53`). The
+**40 new city hero images landed and were BUNDLED** in this build (108 city + 9 archetype heroes;
+IPA grew ~67.7→78.5 MB, as predicted). ASC v1.7 record CREATED (id
+`e3ec8afb-6d8d-42fe-ad41-efbf301f2679`, PREPARE_FOR_SUBMISSION), en-US + de-DE What's New set, App
+Review notes set (`aa-1.1.x/app-review-notes-1.7.0.txt`, §1 4.3(a) studio block, 3980 chars), Game
+Center per-version checkbox already enabled (carried from 1.6). **REMAINING when build 56 finishes
+ASC processing (~5-15 min): attach build 56 to the v1.7 record, then SUBMIT FOR REVIEW.** (Attach =
+`PATCH /v1/appStoreVersions/e3ec8afb-.../relationships/build` with the build's id; submit =
+`POST /v1/reviewSubmissions` + `reviewSubmissionItems`, or the designer clicks Submit in ASC.)
+What's IN 1.7 (all verified, driven live):
 - **MX MAINTENANCE PROGRAM** (was on `mx-program`, now merged) — player-driven SCHEDULED A/C/D
   checks (B obsolete) distinct from AOG, in a new **OPS ▸ MX** section, cycle+calendar-driven
   (D = lifespan/3). Deferral has teeth (overdue AOG ×6, repair ×4, hard-window force-grounding,

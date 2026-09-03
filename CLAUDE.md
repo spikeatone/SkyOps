@@ -5438,8 +5438,14 @@ twin, load-menu off main) · 1.5.0 (54, A350-1000 + 747-8i + map-render throttle
 (`READY_FOR_SALE`). 1.6.0 (55, German localization + 43 new city hero images/framing fix + GC
 per-achievement icons) is now ALSO LIVE (`READY_FOR_SALE`, approved 31 Aug — cleared 4.3(a); the
 city artwork made it a content update, not localization-only). Next new build = 56+.**
-⚠️ **1.7 IS BUILT + MERGED TO `main` (3 Sep), AWAITING THE VERSION BUMP + UPLOAD (next session ships
-it — see HANDOFF + NEXT_SESSION_PROMPT).** 1.7 = the **MX maintenance program** (Line/A/C/D scheduled
+⚠️ **1.7.0 (build 56) IS UPLOADED TO ASC + IN THE SUBMISSION PIPELINE (3 Sep) — see HANDOFF for the
+exact state.** Version bumped 1.6.0→1.7.0 / 55→56 (6 configs), archived→exported→validated (VERIFY
+SUCCEEDED)→uploaded (UPLOAD SUCCEEDED, Delivery UUID `40110d3c-3dfa-4587-991f-c6628f26ad98`, 78.5 MB),
+committed+pushed (`901bb53`). **The designer's 40 new city hero images LANDED and were BUNDLED**
+(108 city + 9 archetype; `archetype-audit` bundled-set updated to 108, all 40 excluded from the
+priority list). ASC v1.7 record created, en-US+de-DE What's New set, App Review notes set (§1 4.3(a)
+block, `aa-1.1.x/app-review-notes-1.7.0.txt`), GC per-version checkbox already enabled. REMAINING:
+attach build 56 once it finishes ASC processing, then submit. 1.7 = the **MX maintenance program** (Line/A/C/D scheduled
 checks, OPS ▸ MX; `MX_PROGRAM_SPEC.md`) + the **MX expanded-Details view & like-size route-coverage
 flow** (Details with cost/downtime/surcharge/grounding; C/D covered by a comparable spare that
 reclaims on shop-return, or acquire one → Fleet Marketplace auto-covers, or suspend the route; C/D
