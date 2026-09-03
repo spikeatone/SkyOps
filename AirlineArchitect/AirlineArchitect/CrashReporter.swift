@@ -14,10 +14,18 @@ import MetricKit
 // kind", not a live alert — which is exactly the visibility we want, and it stays privacy-first.
 //
 // PRIVACY (the same rule as Telemetry): we report the crash's TYPE only — a stable slug from the
-// exception/signal/termination codes — and NEVER the call stack, binary images, addresses, or any
-// symbol. Those can carry paths and are exactly what we don't collect. Every report routes through
-// `Telemetry.errorOccurred`, so a driven session (which never configures Telemetry) reports
-// nothing, and a real crash lands in the Errors dashboard bucketed by kind next to handled errors.
+// exception/signal/termination codes — plus a triage `detail` of the app BUILD version + OS version
+// the event happened on (a build number and an OS string — nothing personal). We NEVER report the
+// call stack, binary images, addresses, or any symbol; those can carry paths and are exactly what we
+// don't collect. Every report routes through `Telemetry.errorOccurred`, so a driven session (which
+// never configures Telemetry) reports nothing, and a real crash lands in the Errors dashboard
+// bucketed by kind next to handled errors.
+//
+// VERSION-AT-OCCURRENCE (why the detail carries a build number): MetricKit delivers a diagnostic on a
+// LATER launch, so TelemetryDeck's own auto-attached app version is the version RECEIVING the report,
+// not the one that crashed/hung — which makes a raw count unreadable (a pre-fix hang draining in on a
+// new build looks like a new hang). `metaData.applicationBuildVersion` is the build the event actually
+// occurred on, so grouping the Errors dashboard by message finally separates stale from live.
 //
 // View layer only (the Sim/ seam): MetricKit is a framework; `Sim/` stays framework-free. Subscribe
 // once from the App's `init()`, after `Telemetry.configure()`.
@@ -73,10 +81,7 @@ enum CrashReporter {
                 parts.append(slug(reason))
             }
             let id = "crash." + (parts.isEmpty ? "unknown" : parts.joined(separator: "."))
-            // The OS version this crash happened on is useful triage and carries nothing personal —
-            // MetricKit already scopes it to the app.
-            let os = crash.metaData.osVersion
-            Telemetry.errorOccurred(id, category: .thrown, detail: os)
+            Telemetry.errorOccurred(id, category: .thrown, detail: triage(crash.metaData))
         }
 
         @available(iOS 14.0, *)
@@ -91,7 +96,30 @@ enum CrashReporter {
             default:       bucket = "over10s"
             }
             Telemetry.errorOccurred("hang.\(bucket)", category: .appState,
-                                    detail: hang.metaData.osVersion)
+                                    detail: triage(hang.metaData))
+        }
+
+        // MARK: Triage detail — build version AT OCCURRENCE + OS version
+
+        /// The `detail` string that rides into `TelemetryDeck.Error.message`, groupable in the
+        /// dashboard. Carries the app BUILD version the event actually happened ON, then the OS
+        /// version. This is the key fix for MetricKit's version blind spot: MetricKit delivers a
+        /// diagnostic on a LATER launch, so TelemetryDeck's own auto-attached app version is the
+        /// version RECEIVING the report, not the one that crashed/hung. `metaData.applicationBuildVersion`
+        /// is the build the event occurred on — so a stale pre-fix hang draining in on a new build is
+        /// finally distinguishable from a fresh one. Shape: "b52 · 18.5" (both terse + stable for
+        /// grouping; nothing personal — a build number and an OS string). Falls back gracefully if
+        /// either field is empty.
+        @available(iOS 14.0, *)
+        private func triage(_ meta: MXMetaData) -> String {
+            let build = meta.applicationBuildVersion
+            let os = meta.osVersion
+            switch (build.isEmpty, os.isEmpty) {
+            case (false, false): return "b\(build) · \(os)"
+            case (false, true):  return "b\(build)"
+            case (true, false):  return os
+            case (true, true):   return "unknown"
+            }
         }
 
         /// A short, safe slug of an OS-authored reason string: lowercase, alnum-and-dots, first few

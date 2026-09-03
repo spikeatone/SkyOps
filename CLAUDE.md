@@ -5389,6 +5389,25 @@ a real leak (Vineyard shipped that once) — AA has none.
   framework-free). `MXMetricManagerSubscriber` confirmed present in the Release binary. NOTE:
   MetricKit is NOT real-time — the OS delivers diagnostics on a LATER launch (often the next,
   sometimes batched ~24h), so this is "how often / what kind", not a live alert.
+  - **VERSION-AT-OCCURRENCE tagging — ADDED (3 Sep 2026, in the 1.7 batch; prompted by a real
+    reading of the TD Errors dashboard).** The `detail` field (→ `TelemetryDeck.Error.message`,
+    groupable) used to carry OS version only; it now carries **build-at-occurrence + OS** via a
+    shared `Subscriber.triage(_ meta:)` — e.g. `"b52 · 18.5"`, from `metaData.applicationBuildVersion`
+    (both crash + hang paths). WHY: MetricKit delivers a diagnostic on a LATER launch, so
+    TelemetryDeck's own auto-attached app version is the version RECEIVING the report, not the one
+    that crashed/hung — which is EXACTLY why the `hang.under3s` count was unreadable (a pre-1.4.2
+    hang draining in on 1.6 looks like a fresh 1.6 hang; the doc's own "attribution stays fuzzy"
+    caveat). `applicationBuildVersion` is the build the event OCCURRED on, so grouping the Errors
+    dashboard by message finally separates STALE (b39/b41) from LIVE (b55+). Privacy unchanged (a
+    build number + OS string, still no stack/symbols). Does NOT fix the current counts (those events
+    already shipped OS-only detail) — it makes FUTURE counts readable, first arriving once 1.7 is
+    live and an affected device relaunches. Debug xcodebuild clean. The observed errors that
+    triggered this: `hang.under3s` ×39 (95%) + `crash.sig9.exc10.code0.rbsterminatecontext-domain-10`
+    ×2 (5%) — the crash decodes as a **RunningBoard domain-10/FRONTBOARD watchdog SIGKILL** (launch/
+    resume took too long), the crash-side sibling of the hangs; low volume (2), no symbolicated stack
+    available (ASC `diagnosticSignatures` are empty for every AA build — install base below Apple's
+    aggregation threshold, so ASC crash logs are a dead end for this app; TD's TYPE-only slug is all
+    there is).
 - **NOT done, deliberately:** (item 4, optional) `Sim/AircraftIcon.swift` + `Sim/SVGPath.swift`
   import SwiftUI, technically breaking "`Sim/` is framework-free" — but the headless harnesses
   already EXCLUDE those two files (`grep -vE 'AircraftIcon|SVGPath'`), so they still compile
