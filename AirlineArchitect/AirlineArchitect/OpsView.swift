@@ -125,12 +125,12 @@ struct OpsView: View {
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
-                            Image(systemName: "building.2.fill")
-                                .font(.system(size: 12))
-                                .foregroundStyle(operating ? Color(skyHex: 0xFFC73B) : Color(skyHex: 0xFFB700).opacity(0.6))
+                            MilestoneIconArtView(name: "building.2.crop.circle",
+                                                 color: operating ? Color(skyHex: 0xFFC73B) : Color(skyHex: 0xFFB700).opacity(0.6))
+                                .frame(width: 15, height: 15)
                             Text(code).font(.karla(16, .heavy)).foregroundStyle(primary)
                             if hasClub {
-                                Image(systemName: "cup.and.saucer.fill").font(.system(size: 11))
+                                MilestoneIconArtView(name: "cup.and.saucer.fill", color: Color(skyHex: 0x6E43A6)).frame(width: 14, height: 14)
                                     .foregroundStyle(Color(skyHex: 0x6E43A6))
                             }
                         }
@@ -150,7 +150,7 @@ struct OpsView: View {
             }
             ForEach(sim.rivalHubs.keys.sorted(), id: \.self) { code in
                 HStack(spacing: 6) {
-                    Image(systemName: "building.2.fill").font(.system(size: 12)).foregroundStyle(Color(skyHex: 0xD767FF))
+                    MilestoneIconArtView(name: "building.2.crop.circle", color: Color(skyHex: 0xD767FF)).frame(width: 15, height: 15)
                     Text(code).font(.karla(16, .heavy)).foregroundStyle(primary)
                     Text("sold to \(sim.rivalHubs[code] ?? "a rival") — their fortress now")
                         .font(.karla(12)).foregroundStyle(Color(skyHex: 0xD767FF))
@@ -506,7 +506,8 @@ struct OpsView: View {
     /// assigned to a new route." Shown at the top of Ops after an auto-cover.
     @ViewBuilder private func coverConfirmBanner(_ c: (sub: String, covered: String, route: String, days: Int)) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "checkmark.circle.fill").font(.system(size: 18)).foregroundStyle(Sky.coreGreen)
+            MilestoneIconArtView(name: "checkmark.circle.fill", color: Sky.coreGreen)
+                .frame(width: 20, height: 20)
             VStack(alignment: .leading, spacing: 3) {
                 Text("\(c.sub) is now covering \(c.route)")
                     .font(.karla(14, .bold)).foregroundStyle(primary)
@@ -700,7 +701,7 @@ struct OpsView: View {
                 if open { expandedOppHubs.remove(code) } else { expandedOppHubs.insert(code) }
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "building.2.fill").font(.system(size: 12)).foregroundStyle(Color(skyHex: 0xE9B949))
+                    MilestoneIconArtView(name: "building.2.crop.circle", color: Color(skyHex: 0xE9B949)).frame(width: 15, height: 15)
                     Text("From \(code)").font(.karla(14, .bold)).foregroundStyle(primary)
                     Text(city).font(.karla(11)).foregroundStyle(secondary).lineLimit(1)
                     Spacer(minLength: 6)

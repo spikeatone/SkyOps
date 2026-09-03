@@ -262,6 +262,22 @@ struct ContentView: View {
             }
         }
         .animation(Motion.toast, value: sim.celebrations.first?.id)
+        // AUTO-SLOW alert — a banner when a new event snapped the sim from a high speed
+        // down to 1×, so the player knows WHY it slowed. STAYS until TAPPED (a timed
+        // dismissal could vanish before they look up, and we WANT to enforce that the
+        // player engages the alert): tapping opens Alerts to resolve the event and clears
+        // the banner. No separate dismiss — tap-to-resolve is the only way out. Glides
+        // down from the top like the milestone toast.
+        .overlay(alignment: .top) {
+            if let a = sim.autoSlowAlert {
+                AutoSlowAlertBanner(kind: a.kind, tail: a.tail, fromSpeed: a.fromSpeed,
+                                    onTap: { sim.autoSlowAlert = nil; showAlerts = true })
+                    .id(a.kind.alertLabel + (a.tail ?? ""))
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(Motion.toast, value: sim.autoSlowAlert?.kind.alertLabel)
         // Game over — bankruptcy. Modal recap + fresh start (new sim instance).
         .overlay {
             if sim.isBankrupt {

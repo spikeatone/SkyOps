@@ -70,7 +70,7 @@ struct HubsPanel: View {
                 if expanded.contains(code) { expanded.remove(code) } else { expanded.insert(code) }
             } label: {
                 HStack(spacing: 8) {
-                    Image(systemName: "building.2.fill").font(.system(size: 13)).foregroundStyle(gold)
+                    MilestoneIconArtView(name: "building.2.crop.circle", color: gold).frame(width: 16, height: 16)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(code).font(.karla(17, .heavy)).foregroundStyle(primaryC)
                         Text(city).font(.karla(11)).foregroundStyle(labelColor).lineLimit(1)

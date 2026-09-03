@@ -111,7 +111,7 @@ struct AirportInfoCard: View {
         Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
         if let rival = sim.rivalHubs[code] {
             HStack(spacing: 6) {
-                Image(systemName: "building.2.fill").font(.system(size: 12))
+                MilestoneIconArtView(name: "building.2.crop.circle", color: Color(skyHex: 0xD767FF)).frame(width: 15, height: 15)
                 Text("\(rival) hub — they hold the gates here")
                     .font(.karla(13, .bold)).lineLimit(2).minimumScaleFactor(0.7)
             }
@@ -119,7 +119,7 @@ struct AirportInfoCard: View {
         } else if sim.hubs[code] != nil {
             let operating = sim.hubOperating(code)
             HStack(spacing: 6) {
-                Image(systemName: "building.2.fill").font(.system(size: 12)).foregroundStyle(gold)
+                MilestoneIconArtView(name: "building.2.crop.circle", color: gold).frame(width: 15, height: 15)
                 Text(operating ? "Your hub — operating" : "Your hub — UNDERSTAFFED (\(sim.routesAt(code))/\(Simulation.hubMinRoutes) routes)")
                     .font(.karla(13, .bold))
                     .foregroundStyle(operating ? gold : Color(skyHex: 0xFF9292))

@@ -415,8 +415,7 @@ struct FinanceView: View {
         let harmful = ev.fareMultiplier < 1 || ev.costMultiplier > 1
         let accent = harmful ? Color(skyHex: 0xFFAB44) : green
         return HStack(alignment: .center, spacing: 10) {
-            Image(systemName: "chart.line.uptrend.xyaxis")
-                .font(.system(size: 15)).foregroundStyle(accent)
+            MilestoneIconArtView(name: "chart.line.uptrend.xyaxis", color: accent).frame(width: 18, height: 18)
             VStack(alignment: .leading, spacing: 3) {
                 (Text("Market: ") + Text(LocalizedStringKey(ev.label))).font(.karla(14, .bold)).foregroundStyle(primary)
                 Text("Fares \(pct(ev.fareMultiplier)) · Fuel \(pct(ev.costMultiplier)) · Demand \(pct(ev.loadMultiplier))")

@@ -3959,7 +3959,22 @@ final class Simulation {
     // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
 
     struct Decision: Identifiable {
-        enum Kind { case aog, crew, sell, offer, training, airportOffer, hubOffer, activist, mxCheck }
+        enum Kind { case aog, crew, sell, offer, training, airportOffer, hubOffer, activist, mxCheck
+            /// Short human label for the auto-slow alert banner ("… needs attention").
+            var alertLabel: String {
+                switch self {
+                case .aog:          return String(localized: "an aircraft is grounded (AOG)")
+                case .crew:         return String(localized: "an aircraft has no legal crew")
+                case .sell:         return String(localized: "an aircraft is nearing end of service")
+                case .offer:        return String(localized: "an airport offered to buy a slot back")
+                case .training:     return String(localized: "crew recurrent training is due")
+                case .airportOffer: return String(localized: "an airport is offering you a route")
+                case .hubOffer:     return String(localized: "a rival offered to buy a hub")
+                case .activist:     return String(localized: "an activist investor is demanding change")
+                case .mxCheck:      return String(localized: "a scheduled maintenance check is due")
+                }
+            }
+        }
         let id: String
         let kind: Kind
         /// The subject aircraft (aog / crew / sell). nil for the others.
@@ -4021,9 +4036,29 @@ final class Simulation {
             // (the sim never PAUSES, but it shouldn't fast-forward past a decision).
             // Only on growth — removals/resolutions must not touch speed. Set speed
             // directly (not requestSpeed) so it never spends a ¼× use.
-            if decisionQueue.count > oldValue.count && speed > 1 { speed = 1 }
+            if decisionQueue.count > oldValue.count {
+                if speed > 1 {
+                    // Also raise an alert so the player knows WHY the sim slowed — at ≥5×
+                    // a new card is easy to miss. Carries the new decision so the banner
+                    // can name it; shown by ContentView, stays until tapped. Only fires
+                    // when speed was actually high (at 1×/½× the player is already watching).
+                    if let newDec = decisionQueue.first(where: { d in !oldValue.contains(where: { $0.id == d.id }) }) {
+                        autoSlowAlert = (kind: newDec.kind, tail: newDec.aircraft?.tail, fromSpeed: speed)
+                    }
+                    speed = 1
+                }
+            } else if decisionQueue.count < oldValue.count, let a = autoSlowAlert,
+                      !decisionQueue.contains(where: { $0.kind == a.kind && $0.aircraft?.tail == a.tail }) {
+                // The alerted decision was resolved (possibly via a path OTHER than the
+                // banner tap) — drop the stale banner so it doesn't linger.
+                autoSlowAlert = nil
+            }
         }
     }
+    /// TRANSIENT (not persisted): a new decision that just AUTO-SLOWED the sim from a
+    /// high speed. ContentView shows it as a brief (~4s) banner ("Slowed to 1× — …")
+    /// so the player knows what happened, then clears it.
+    var autoSlowAlert: (kind: Decision.Kind, tail: String?, fromSpeed: Double)?
     /// Running maintenance spend (expedite/standard repair costs). The full
     /// fee/economy system is Phase 5; this keeps the costs real until then.
     private(set) var maintenanceSpend: Int = 0

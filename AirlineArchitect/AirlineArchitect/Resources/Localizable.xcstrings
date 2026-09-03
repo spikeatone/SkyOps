@@ -891,12 +891,32 @@
         }
       }
     },
+    "a rival offered to buy a hub": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Rivale bietet an, ein Drehkreuz zu kaufen"
+          }
+        }
+      }
+    },
     "a route": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "einer Route"
+          }
+        }
+      }
+    },
+    "a scheduled maintenance check is due": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein geplanter Wartungs-Check ist fällig"
           }
         }
       }
@@ -1341,12 +1361,72 @@
         }
       }
     },
+    "an activist investor is demanding change": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein aktivistischer Investor fordert Veränderung"
+          }
+        }
+      }
+    },
+    "an aircraft has no legal crew": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flugzeug hat keine legale Crew"
+          }
+        }
+      }
+    },
+    "an aircraft is grounded (AOG)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flugzeug ist stillgelegt (AOG)"
+          }
+        }
+      }
+    },
+    "an aircraft is nearing end of service": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flugzeug nähert sich dem Dienstende"
+          }
+        }
+      }
+    },
     "An airport is already courting you — tap the bell (top right) to see their offer: opening fees waived plus a signing bonus. Accept it, then buy an aircraft that can fly the route. Match the plane to the market — a small turboprop or regional jet fills up; a big jet flies half-empty. Or skip it and open any route you like with Open Route.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Ein Flughafen umwirbt dich bereits — tippe oben rechts auf die Glocke, um das Angebot zu sehen: erlassene Eröffnungsgebühren plus einen Willkommensbonus. Nimm es an und kaufe dann ein Flugzeug, das die Route fliegen kann. Passe das Flugzeug zum Markt — ein kleiner Turboprop oder Regionaljet wird voll; ein großer Jet fliegt halb leer. Oder überspringe es und eröffne über „Route eröffnen“ eine beliebige Route."
+          }
+        }
+      }
+    },
+    "an airport is offering you a route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flughafen bietet dir eine Route an"
+          }
+        }
+      }
+    },
+    "an airport offered to buy a slot back": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flughafen bietet an, einen Slot zurückzukaufen"
           }
         }
       }
@@ -2487,6 +2567,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Legale Crew-Stunden"
+          }
+        }
+      }
+    },
+    "crew recurrent training is due": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eine Crew-Auffrischungsschulung ist fällig"
           }
         }
       }
@@ -6387,6 +6477,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Slots"
+          }
+        }
+      }
+    },
+    "Slowed %@ → 1×": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlangsamt %@ → 1×"
           }
         }
       }
