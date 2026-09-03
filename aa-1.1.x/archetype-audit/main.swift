@@ -27,11 +27,12 @@ func archetype(_ ap: Airport) -> Arch {
 // Per-code art that already exists — synced to the ACTUAL bundled city heroes
 // (Resources/AirportPhotos/airport_<CODE>.jpg), plus the shared-metro aliases those
 // stand in for (CHI→ORD/MDW, NYC→JFK/LGA/EWR, TYO→HND/NRT). These never use an archetype.
-let bundled: Set<String> = ["AMS","ARN","ATH","ATL","BCN","BKK","BOG","BOM","BOS","BZN",
-    "CAN","CDG","CGK","CHI","CLT","CPH","CPT","DEL","DEN","DFW","DOH","DUB","DXB","EDI",
-    "FCO","FLL","FRA","GIG","GRU","GVA","HEL","HKG","HNL","IAH","ICN","IST","KEF","KUL",
-    "LAS","LAX","LHR","LIS","MAD","MCO","MEL","MEX","MIA","MSP","MUC","NCE","NYC","OAK",
-    "OSL","PEK","PHX","PMI","PRG","PVG","SEA","SFO","SIN","SYD","SZX","TYO","VCE","VIE","YYZ","ZRH"]
+let bundled: Set<String> = ["AKL","ALC","AMS","ARN","ATH","ATL","AUH","AUS","BCN","BER",
+    "BGY","BKK","BNA","BNE","BOG","BOM","BOS","BRU","BZN","CAI","CAN","CDG","CGH","CGK","CHI",
+    "CLT","CPH","CPT","CTS","CUN","DEL","DEN","DFW","DOH","DTW","DUB","DUS","DXB","EDI",
+    "FCO","FLL","FRA","GIG","GRU","GVA","HAM","HAN","HEL","HKG","HNL","HYD","IAD","IAH","ICN","IST","ITM","JED","JNB","KEF","KUL",
+    "LAS","LAX","LHR","LIS","MAA","MAD","MCO","MEL","MEX","MIA","MNL","MSP","MUC","MXP","NCE","NYC","OAK","OPO",
+    "OSL","PDX","PEK","PHL","PHX","PMI","PRG","PTY","PVG","RDU","RUH","SAN","SAW","SCL","SEA","SFO","SIN","SLC","STL","SYD","SZX","TLV","TPA","TYO","VCE","VIE","YUL","YVR","YYZ","ZRH"]
 // Aliases covered by a shared metro hero (AirportPhoto.sharedOverride).
 let aliases: Set<String> = ["ORD","MDW","JFK","LGA","EWR","HND","NRT"]
 let hasOwnArt = bundled.union(aliases)

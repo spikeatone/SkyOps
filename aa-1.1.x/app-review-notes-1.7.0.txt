@@ -1,0 +1,25 @@
+Studio context (please read before evaluating under Guideline 4.3):
+
+Airline Architect has been LIVE on the App Store and approved on this account through versions 1.0 to 1.6.0. This submission (1.7.0) is a content update: a player-driven scheduled aircraft-maintenance program (A/C/D checks) with its own Ops screen, new city artwork for 40 more airports, and quality-of-life additions. No new purchase; the app's identity is unchanged.
+
+This app is part of the Architect series by Postmark Digital, a catalog of individually designed simulation games, each modeling a different real-world domain. The series shares a deliberate studio design language (our house UI style and typography), as any established studio's titles share a visual identity. Each title is an independent game with its own simulation, mechanics, content, and data; none is a reskin or template. Our titles Airline Architect (App ID 6790569697, this app) and FC Architect (App ID 6798026159) are both live and approved as the distinct apps they are.
+
+What is unique to THIS app: an original airline-operations simulation with no counterpart among our other titles — a gravity-based passenger-demand model across ~385 real-world airports, 37 real aircraft types with individual range/capacity/economics, distance-based fares and fuel-intensity costs, a hub-and-spoke network effect, real FAA Part 117 crew duty/rest limits, cycle-based airframe aging, a scheduled maintenance program (A/C/D checks with real deferral penalties), seasonal disruptions with real airport night curfews, region-aware competitors, and a late-game layer of loans, going public (a live share price with activist investors and a board that can remove you), and acquiring rivals. None appears in any sibling title; every simulation system is our own original work, not a third-party template.
+
+- - -
+
+Single-player airline-management simulation. No account or login — the app opens directly into the game, so no demo credentials are needed.
+
+IN-APP PURCHASE (ONE-TIME UNLOCK)
+
+Free to play with the full feature set; the free tier limits network SIZE (max 6 aircraft, max 5 open routes), not features. A single NON-CONSUMABLE purchase ("Full Game Unlock", $9.99 founding price, regular $19.99) removes both limits permanently — one-time, not a subscription. The purchase screen shows the price, "Restore Purchase", and functional Terms of Use and Privacy Policy links. (Two legacy auto-renewable subscriptions remain active for existing subscribers only, not offered for sale here.)
+
+To reach the purchase screen: fastest is the Finance tab (rightmost) — the "FREE PLAN" card's "Upgrade" button opens it. It also appears when the free limit is hit (a 7th aircraft, or a 6th route).
+
+GAME CENTER: 29 achievements + 2 leaderboards (configured in App Store Connect). Sign-in is optional; the app works fully without it. Achievements report as milestones are earned and are viewable in Apple's Games app. There is deliberately no in-app Game Center browser UI (intentional, not incomplete).
+
+TESTING NOTES: The sim runs continuously — use the speed control at the bottom of the Network tab (up to 100x) to advance time. Aircraft need crew: if one sits idle at the gate, open the Crews tab and hire crew (crews follow real duty/rest limits, so one crew cannot fly continuously — intended). New in 1.7: the Ops tab's "MX" section lists aircraft due for scheduled checks; Details lets you service, cover the route with a spare, or suspend it — a strategic choice, not required. Real airports, aircraft types, and airline names appear as text-only reference data (no logos, liveries, or branding; no affiliation implied).
+
+PRIVACY: no personal data, no ad SDKs, no tracking. Anonymous aggregate analytics via TelemetryDeck (no user identifiers); RevenueCat verifies purchase status only. Saves sync across the user's own devices via iCloud; no game data reaches us and there is no server.
+
+Thank you for reviewing. postmarkdigitalco@gmail.com
