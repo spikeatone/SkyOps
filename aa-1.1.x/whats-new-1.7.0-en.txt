@@ -1,0 +1,16 @@
+YOUR FLEET NOW AGES — AND NEEDS LOOKING AFTER.
+
+1.7 adds a full aircraft-maintenance program. Every jet you own comes due for scheduled A, C and D checks as it flies. Plan them ahead and they're cheap and routine. Let one slip past its deadline and the bill climbs, breakdown risk spikes, and the airworthiness clock starts ticking toward a grounding you didn't choose. It turns your fleet from a set-and-forget asset into something you actually run.
+
+The new MX section in the Ops tab lists every aircraft coming due, with the cost, the downtime, and how long you've got. And when a jet on a live route heads into the shop for a heavy check, you decide how to keep the money flowing:
+• Cover the route with a comparable spare from your fleet — it flies the line and hands it back when the check's done
+• Acquire a replacement on the spot
+• Or suspend the route until your aircraft is back
+
+Also in 1.7:
+• 40 more real airports get their own hand-painted hero artwork — from Salt Lake City to São Paulo, Johannesburg to Tel Aviv
+• A new 100x time speed for the long game — and the sim now automatically eases off the throttle the moment a major event hits, so a fuel shock or a grounding never blows past you at speed
+• Every new airline now launches on today's real-world date and season
+• Smoother maintenance, crew, and route-reassignment flows, straight from your feedback
+
+Thanks for flying with us. Keep building.

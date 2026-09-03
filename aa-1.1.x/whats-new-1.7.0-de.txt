@@ -1,0 +1,16 @@
+DEINE FLOTTE ALTERT JETZT — UND WILL GEPFLEGT WERDEN.
+
+1.7 bringt ein komplettes Flugzeugwartungs-Programm. Jeder Jet, der dir gehört, wird im Laufe seiner Flüge für planmäßige A-, C- und D-Checks fällig. Rechtzeitig eingeplant sind sie günstig und Routine. Lässt du einen über die Frist rutschen, steigen die Kosten, das Ausfallrisiko schnellt hoch, und die Lufttüchtigkeitsuhr läuft auf eine Stilllegung zu, die du dir nicht ausgesucht hast. Aus einer Flotte, die du einfach vergessen konntest, wird etwas, das du wirklich führst.
+
+Der neue Bereich „MX" im Ops-Tab listet jedes fällige Flugzeug — mit Kosten, Ausfallzeit und der verbleibenden Frist. Und geht ein Jet auf einer aktiven Strecke für einen großen Check in die Werft, entscheidest du, wie das Geld weiterfließt:
+• Deck die Strecke mit einem vergleichbaren Ersatzflugzeug aus deiner Flotte ab — es fliegt die Linie und gibt sie zurück, sobald der Check fertig ist
+• Kauf sofort Ersatz
+• Oder pausiere die Strecke, bis dein Flugzeug zurück ist
+
+Außerdem in 1.7:
+• 40 weitere echte Flughäfen erhalten eigene, handgemalte Titelbilder — von Salt Lake City bis São Paulo, von Johannesburg bis Tel Aviv
+• Eine neue 100-fache Zeitgeschwindigkeit fürs lange Spiel — und die Simulation bremst jetzt automatisch ab, sobald ein großes Ereignis eintritt, damit dir ein Ölpreisschock oder eine Stilllegung bei Tempo nicht durchrutscht
+• Jede neue Airline startet jetzt am heutigen echten Datum samt Jahreszeit
+• Flüssigere Abläufe für Wartung, Crew und Streckenwechsel — direkt aus eurem Feedback
+
+Danke, dass ihr mit uns fliegt. Bau weiter.
