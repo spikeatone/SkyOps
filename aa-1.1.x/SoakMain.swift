@@ -206,6 +206,7 @@ final class SoakRunner {
             case .airportOffer: coin ? sim.resolveAirportOfferAccept(dec) : sim.resolveAirportOfferDecline(dec)
             case .hubOffer:    sim.resolveHubSale(dec, accept: coin)
             case .activist:    coin ? sim.resolveActivistComply(dec) : sim.resolveActivistRefuse(dec)
+            case .mxCheck:     coin ? sim.resolveMXServiceNow(dec) : sim.resolveMXDefer(dec)
             }
         }
     }

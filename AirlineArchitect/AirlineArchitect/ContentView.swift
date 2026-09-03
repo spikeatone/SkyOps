@@ -81,8 +81,16 @@ struct ContentView: View {
     /// on purpose, so a seeded session can never autosave over a real save.
     private static let devScenario: Simulation.DevScenario? = {
         let a = ProcessInfo.processInfo.arguments
-        guard let i = a.firstIndex(of: "-devScenario"), i + 1 < a.count else { return nil }
-        return Simulation.DevScenario(rawValue: a[i + 1])
+        if let i = a.firstIndex(of: "-devScenario"), i + 1 < a.count,
+           let s = Simulation.DevScenario(rawValue: a[i + 1]) { return s }
+        // Env fallback (same channel as `-shot`/SIMCTL_CHILD_SHOT): `simctl launch`
+        // does not reliably forward plain child ARGS to ProcessInfo.arguments, but a
+        // SIMCTL_CHILD_<NAME> env var IS delivered as <NAME>. So a session can drive a
+        // scenario with `SIMCTL_CHILD_DEVSCENARIO=<name> xcrun simctl launch …`.
+        if let e = ProcessInfo.processInfo.environment["DEVSCENARIO"] {
+            return Simulation.DevScenario(rawValue: e)
+        }
+        return nil
     }()
 
     /// `-shot <name>` or the `SIMCTL_CHILD_SHOT` env var — App Store screenshot seed
@@ -335,6 +343,7 @@ struct ContentView: View {
             }
             if let scenario = Self.devScenario {
                 sim.devSeed(scenario)
+                store.isPro = true   // dev scenarios inject billions + exercise gated features — don't let the free cap/paywall block them
                 showSplash = false
                 tab = (scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer) ? 1 : 4   // FLEET for livery, else FINANCE
                 // legacyPlayer stands in for "continued a pre-livery save", so it
@@ -440,7 +449,8 @@ struct ContentView: View {
         case 3:  OpsView(sim: sim, onBell: { showAlerts = true }, onSave: saveCurrent, onQuit: quitToMenu,
                          onShowAirport: { code in sim.focusCamera(on: code); tab = 0 },
                          onPreviewRoute: { opp in sim.suggestRoute(from: opp.originCode, to: opp.destCode); tab = 0 },
-                         isPro: store.isPro, onUpgrade: { upgrade(nil) })
+                         isPro: store.isPro, onUpgrade: { upgrade(nil) },
+                         onAcquire: { sim.pendingMarketplace = true; tab = 1 })   // → Fleet ▸ Marketplace to buy/lease a cover
         default: FinanceView(sim: sim, store: store, onBell: { showAlerts = true },
                              onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: { upgrade(nil) })
         }

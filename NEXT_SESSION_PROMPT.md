@@ -92,10 +92,12 @@ merged._
 >
 > **Simulator warnings:** tap coordinates are in POINTS (402×874 iPhone 17 Pro / 440×956 Pro Max),
 > not screenshot pixels; the input channel degrades mid-session — re-screenshot before concluding
-> a control is broken, and a fresh `simctl launch` (or killing CoreSimulator + rebooting one
-> device) clears a wedge; LANDSCAPE captures come out rotated (`sips -r 90`/`-r 270`). The
-> `-devScenario` harness (`publicGate|listed|activist|ouster|fleet|bigfleet|legacyPlayer|subfleet`)
-> seeds otherwise-unreachable states.
+> a control is broken, a fresh `simctl launch` (or killing CoreSimulator + rebooting one device)
+> clears a wedge, and terminate sibling Architect apps that steal focus; LANDSCAPE captures come
+> out rotated (`sips -r 90`/`-r 270`). The `-devScenario` harness
+> (`publicGate|listed|activist|ouster|fleet|bigfleet|legacyPlayer|subfleet|mx`) seeds otherwise-
+> unreachable states (`mx` = a routed fleet staged at distinct MX due-states — A due, A overdue,
+> C due, D due — with idle spares + a widebody D-check to exercise the C/D coverage flow).
 
 ---
 

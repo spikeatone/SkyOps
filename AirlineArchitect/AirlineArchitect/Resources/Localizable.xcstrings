@@ -361,6 +361,16 @@
         }
       }
     },
+    "%@ — %@ due": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ — %@ fällig"
+          }
+        }
+      }
+    },
     "%@ — no legal crew at %@": {
       "localizations": {
         "de": {
@@ -577,6 +587,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld umkämpfen derzeit eine deiner Routen."
+          }
+        }
+      }
+    },
+    "%lld due · %lld in shop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fällig · %lld in Werkstatt"
           }
         }
       }
@@ -817,6 +837,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "+%lld%% Kosten · %@× Ausfallrisiko"
+          }
+        }
+      }
+    },
+    "A check": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A-Check"
           }
         }
       }
@@ -1801,6 +1831,16 @@
         }
       }
     },
+    "C check": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C-Check"
+          }
+        }
+      }
+    },
     "CARRIER PROFILE": {
       "localizations": {
         "de": {
@@ -2427,6 +2467,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zyklen"
+          }
+        }
+      }
+    },
+    "D check": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D-Check"
           }
         }
       }
@@ -3901,6 +3951,16 @@
         }
       }
     },
+    "Maintenance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wartung"
+          }
+        }
+      }
+    },
     "Maintenance & Value": {
       "localizations": {
         "de": {
@@ -4617,6 +4677,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "BETRIEBS-ZENTRALE"
+          }
+        }
+      }
+    },
+    "OVERDUE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ÜBERFÄLLIG"
+          }
+        }
+      }
+    },
+    "OVERDUE — grounding risk rising · ~%lldd in shop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ÜBERFÄLLIG — steigendes Ausfallrisiko · ~%lld T in Werkstatt"
           }
         }
       }
@@ -5671,6 +5751,26 @@
         }
       }
     },
+    "Scheduled A/C/D checks. Service due aircraft to stay airworthy — flying past a check raises breakdown risk. Emergencies (AOG) appear in Needs Attention.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplante A-/C-/D-Checks. Warte fällige Flugzeuge, um sie flugtauglich zu halten — einen Check zu überfliegen erhöht das Ausfallrisiko. Notfälle (AOG) erscheinen unter „Erfordert Aufmerksamkeit“."
+          }
+        }
+      }
+    },
+    "Scheduled check · ~%lldd in shop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplanter Check · ~%lld T in Werkstatt"
+          }
+        }
+      }
+    },
     "Scheduled for repaint": {
       "localizations": {
         "de": {
@@ -5771,12 +5871,32 @@
         }
       }
     },
+    "Service": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warten"
+          }
+        }
+      }
+    },
     "Service score": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Service-Wert"
+          }
+        }
+      }
+    },
+    "Service · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warten · %@"
           }
         }
       }
@@ -6921,6 +7041,16 @@
         }
       }
     },
+    "due now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jetzt fällig"
+          }
+        }
+      }
+    },
     "e.g. ASTR": {
       "localizations": {
         "de": {
@@ -6977,6 +7107,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "in Reichweite · Startbahn OK"
+          }
+        }
+      }
+    },
+    "in shop · ~%lldd": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in Werkstatt · ~%lld T"
+          }
+        }
+      }
+    },
+    "in ~%lld cyc": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in ~%lld Zyklen"
+          }
+        }
+      }
+    },
+    "in ~%lldd": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in ~%lld T"
           }
         }
       }
