@@ -403,7 +403,7 @@ struct ContentView: View {
             // Step 2: design the livery, then start the game.
             LiveryDesignView(airlineName: liveryName, backdropOpacity: coldLaunchBackdrop) { fontI, palI, tailI, text in
                 sim.setLivery(fontIndex: fontI, paletteIndex: palI, tailArtIndex: tailI, text: text)
-                sim.randomizeCalendarStart()   // new game starts on a random date + season
+                sim.startOnRealDate()   // new game opens on the player's real launch date + season + year
                 sim.seedFirstQuest()           // guaranteed first customer (directed first arc)
                 Telemetry.gameStarted(region: sim.homeRegion.rawValue)   // funnel denominator
                 if let s = currentSlot { GameStore.saveInBackground(sim.snapshot(), slot: s) }
@@ -527,7 +527,7 @@ struct ContentView: View {
     /// body blows the type-checker's expression budget).
     @ViewBuilder private var briefingOverlay: some View {
         if let items = briefing, let name = sim.playerAirlineName {
-            let date = Simulation.gameDateString(at: sim.tick, startDay: sim.calendarStartDay)
+            let date = Simulation.gameDateString(at: sim.tick, startDay: sim.calendarStartDay, startYear: sim.calendarStartYear)
             SessionBriefingView(
                 airlineName: name,
                 dateLine: "Day \(Simulation.gameDay(at: sim.tick)) · \(date)",

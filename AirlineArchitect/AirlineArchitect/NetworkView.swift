@@ -1040,7 +1040,7 @@ private struct GameClockLine: View {
         HStack(spacing: 5) {
             Text("Day \(Simulation.gameDay(at: t))")
             Text("·").opacity(0.45)
-            Text(Simulation.gameDateString(at: t, startDay: sim.calendarStartDay))
+            Text(Simulation.gameDateString(at: t, startDay: sim.calendarStartDay, startYear: sim.calendarStartYear))
             Text("·").opacity(0.45)
             Text(Simulation.gameTimeString(at: t)).monospacedDigit()
         }

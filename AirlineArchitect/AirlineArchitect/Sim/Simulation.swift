@@ -27,6 +27,11 @@ final class Simulation {
     /// AND season vary. Drives `monthOfYear` and the Game Date display; does NOT
     /// affect `tick`, Game Day (operational days), or time-of-day. Persisted.
     private(set) var calendarStartDay: Int = 0
+    /// The calendar YEAR the game opens in. Defaults to `gameStartYear` (2026) so
+    /// headless harnesses stay deterministic; a NEW game set via `startOnRealDate()`
+    /// uses the player's real current year. Persisted (legacy saves default to 2026,
+    /// unchanged). Advances +1 every 360 sim-days like the date always did.
+    private(set) var calendarStartYear: Int = Simulation.gameStartYear
     /// Throttled UI heartbeat: mirrors `tick` but only advances a few times a
     /// second regardless of sim speed. List/HUD views (Ops/Fleet/Finance/Crews)
     /// observe THIS instead of `tick`, so scrolling a long list doesn't fight a
@@ -5340,6 +5345,7 @@ final class Simulation {
         s.playerBalance = playerBalance
         s.tick = tick
         s.calendarStartDay = calendarStartDay
+        s.calendarStartYear = calendarStartYear
         s.nextTailNum = nextTailNum
         s.nextRouteId = nextRouteId
         s.totalRevenue = totalRevenue; s.totalFees = totalFees
@@ -5477,6 +5483,7 @@ final class Simulation {
         playerBalance = s.playerBalance
         tick = s.tick
         calendarStartDay = s.calendarStartDay
+        calendarStartYear = s.calendarStartYear ?? Simulation.gameStartYear
         nextTailNum = s.nextTailNum
         nextRouteId = s.nextRouteId
         totalRevenue = s.totalRevenue; totalFees = s.totalFees
@@ -5712,6 +5719,21 @@ final class Simulation {
     /// their persisted `calendarStartDay`; only a brand-new airline rolls a new one.
     func randomizeCalendarStart() { calendarStartDay = Int.random(in: 0..<360) }
 
+    /// Start the game on the player's REAL launch date + season + year. Maps today's
+    /// real month/day onto the game's 30-day-month / 360-day-year calendar: offset =
+    /// month×30 + (day-1, capped at 29). Near month-ends the shown date can be a day or
+    /// two off (a 360-day year can't be pixel-perfect), but the MONTH and SEASON are
+    /// exact — so a December launch opens in winter, which is the point. Called from the
+    /// NEW-GAME flow (ContentView), NOT nameAirline, so harnesses stay at the Jan/2026
+    /// default. `now`/`calendar` injectable for testing.
+    func startOnRealDate(now: Date = Date(), calendar: Calendar = .current) {
+        let c = calendar.dateComponents([.year, .month, .day], from: now)
+        let month = (c.month ?? 1) - 1                 // 0-indexed
+        let day = min((c.day ?? 1) - 1, 29)            // 0-indexed, capped at the 30-day month
+        calendarStartDay = month * 30 + day
+        calendarStartYear = c.year ?? Simulation.gameStartYear
+    }
+
     // MARK: - Game clock readouts (Day / Date / Time)
     //
     // Pure functions of a tick so the UI can compute them off the THROTTLED
@@ -5736,11 +5758,11 @@ final class Simulation {
     /// a new game can begin in any month/season; pass `sim.calendarStartDay`. Day-of-
     /// month is 1…30; the month index == `monthOfYear` (which reads the SAME offset),
     /// so the date can't drift from the weather. The year advances every 360 sim-days.
-    static func gameDateString(at tick: Int, startDay: Int = 0) -> String {
+    static func gameDateString(at tick: Int, startDay: Int = 0, startYear: Int = gameStartYear) -> String {
         let totalDays = tick / 1440 + startDay
         let month = (totalDays / 30) % 12
         let dom = (totalDays % 30) + 1
-        let year = gameStartYear + totalDays / 360
+        let year = startYear + totalDays / 360
         return "\(monthAbbrev[month]) \(dom), \(year)"
     }
 

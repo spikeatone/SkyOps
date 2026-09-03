@@ -33,7 +33,8 @@ struct GameSnapshot: Codable {
     var liveryChosen: Bool = false
     var playerBalance = 0
     var tick = 0
-    var calendarStartDay = 0   // randomized calendar start-of-year offset (0–359)
+    var calendarStartDay = 0   // calendar start-of-year offset (0–359) — real launch date
+    var calendarStartYear: Int? = nil   // opening year (nil in pre-1.7 saves → 2026, unchanged)
     var nextTailNum = 1
     var nextRouteId = 1
 
@@ -288,6 +289,7 @@ extension GameSnapshot {
         playerBalance = c.decodeSafe(.playerBalance, default: 0)
         tick = c.decodeSafe(.tick, default: 0)
         calendarStartDay = c.decodeSafe(.calendarStartDay, default: 0)
+        calendarStartYear = c.decodeSafeOpt(Int.self, .calendarStartYear)
         nextTailNum = c.decodeSafe(.nextTailNum, default: 1)
         nextRouteId = c.decodeSafe(.nextRouteId, default: 1)
         totalRevenue = c.decodeSafe(.totalRevenue, default: 0)
