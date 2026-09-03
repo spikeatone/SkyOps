@@ -7,18 +7,18 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 3 September 2026._
 
-**► ⭐ 1.7.0 (build 56) IS UPLOADED TO ASC + IN THE SUBMISSION PIPELINE (3 Sep). START HERE.**
-Version bumped to 1.7.0 / build 56 (6 configs), archived → exported → `altool --validate-app`
-(VERIFY SUCCEEDED) → `--upload-app` (UPLOAD SUCCEEDED, **Delivery UUID
-`40110d3c-3dfa-4587-991f-c6628f26ad98`**, 78.5 MB). Committed + pushed to `main` (`901bb53`). The
-**40 new city hero images landed and were BUNDLED** in this build (108 city + 9 archetype heroes;
-IPA grew ~67.7→78.5 MB, as predicted). ASC v1.7 record CREATED (id
-`e3ec8afb-6d8d-42fe-ad41-efbf301f2679`, PREPARE_FOR_SUBMISSION), en-US + de-DE What's New set, App
-Review notes set (`aa-1.1.x/app-review-notes-1.7.0.txt`, §1 4.3(a) studio block, 3980 chars), Game
-Center per-version checkbox already enabled (carried from 1.6). **REMAINING when build 56 finishes
-ASC processing (~5-15 min): attach build 56 to the v1.7 record, then SUBMIT FOR REVIEW.** (Attach =
-`PATCH /v1/appStoreVersions/e3ec8afb-.../relationships/build` with the build's id; submit =
-`POST /v1/reviewSubmissions` + `reviewSubmissionItems`, or the designer clicks Submit in ASC.)
+**► ⭐ 1.7.0 (build 56) IS SUBMITTED FOR REVIEW — `WAITING_FOR_REVIEW` (3 Sep). Auto-releases on
+approval.** The whole release chain ran end-to-end from the CLI: version bumped 1.6.0→1.7.0 / 55→56
+(6 configs), archived → exported → validated (VERIFY SUCCEEDED) → uploaded (UPLOAD SUCCEEDED,
+**Delivery UUID `40110d3c-3dfa-4587-991f-c6628f26ad98`**, 78.5 MB), build 56 attached to the v1.7
+record, review submission created + submitted. **The 40 new city hero images landed and were
+BUNDLED** (108 city + 9 archetype heroes; IPA grew ~67.7→78.5 MB, as predicted; `archetype-audit`
+bundled-set updated to 108). ASC v1.7 record (id `e3ec8afb-6d8d-42fe-ad41-efbf301f2679`): en-US +
+de-DE What's New set, App Review notes set (`aa-1.1.x/app-review-notes-1.7.0.txt`, §1 4.3(a) studio
+block, 3980 chars), Game Center per-version checkbox enabled. Review submission id
+`92dd48c8-b6a5-49fa-8f89-f375d5a29ef3`, submitted 2026-09-03T22:41Z. Commits `901bb53` (build) +
+`2a5e5d3` (docs) pushed to `main`. **Next new build = 57+.** Watch review state:
+`cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`.
 What's IN 1.7 (all verified, driven live):
 - **MX MAINTENANCE PROGRAM** (was on `mx-program`, now merged) — player-driven SCHEDULED A/C/D
   checks (B obsolete) distinct from AOG, in a new **OPS ▸ MX** section, cycle+calendar-driven
