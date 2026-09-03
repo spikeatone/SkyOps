@@ -24,13 +24,33 @@ func archetype(_ ap: Airport) -> Arch {
     }
 }
 
-// Per-code art that already exists (marquee overrides) — these never use an archetype.
-let hasOwnArt: Set<String> = ["LHR","CDG","SYD","SFO","SEA","LAX","DEN","BZN",
-                              "JFK","LGA","EWR","HND","NRT","ORD","MDW",
-                              "PEK","DXB","SIN","HKG","IST","FCO","BCN","AMS","PVG","BKK","YYZ","LAS","DOH","MIA"]
+// Per-code art that already exists — synced to the ACTUAL bundled city heroes
+// (Resources/AirportPhotos/airport_<CODE>.jpg), plus the shared-metro aliases those
+// stand in for (CHI→ORD/MDW, NYC→JFK/LGA/EWR, TYO→HND/NRT). These never use an archetype.
+let bundled: Set<String> = ["AMS","ARN","ATH","ATL","BCN","BKK","BOG","BOM","BOS","BZN",
+    "CAN","CDG","CGK","CHI","CLT","CPH","CPT","DEL","DEN","DFW","DOH","DUB","DXB","EDI",
+    "FCO","FLL","FRA","GIG","GRU","GVA","HEL","HKG","HNL","IAH","ICN","IST","KEF","KUL",
+    "LAS","LAX","LHR","LIS","MAD","MCO","MEL","MEX","MIA","MSP","MUC","NCE","NYC","OAK",
+    "OSL","PEK","PHX","PMI","PRG","PVG","SEA","SFO","SIN","SYD","SZX","TYO","VCE","VIE","YYZ","ZRH"]
+// Aliases covered by a shared metro hero (AirportPhoto.sharedOverride).
+let aliases: Set<String> = ["ORD","MDW","JFK","LGA","EWR","HND","NRT"]
+let hasOwnArt = bundled.union(aliases)
 
 let all = Airport.all.sorted { $0.code < $1.code }
 print("TOTAL AIRPORTS: \(all.count)  (with own art: \(all.filter { hasOwnArt.contains($0.code) }.count))")
+print("")
+
+// ⭐ PRIORITY LIST: the highest-traffic airports that DON'T yet have their own hero
+// (still fall back to a generic archetype) — the next heroes to make, ranked by pax.
+let candidates = all.filter { !hasOwnArt.contains($0.code) && ($0.info?.annualPassengers ?? 0) > 0 }
+    .sorted { ($0.info?.annualPassengers ?? 0) > ($1.info?.annualPassengers ?? 0) }
+print("=== NEXT 50 HEROES TO MAKE (highest-traffic airports still on a generic archetype) ===")
+for (i, ap) in candidates.prefix(50).enumerated() {
+    let city = ap.info?.city ?? "?"
+    let pax = (ap.info?.annualPassengers ?? 0) / 1_000_000
+    print(String(format: "  %2d. %@  %-30@ %3dM/yr  %@  (now: %@)",
+                 i+1, ap.code, city as NSString, pax, "\(Airline.region(ap.code))", archetype(ap).rawValue))
+}
 print("")
 // Group by archetype so wrong buckets are easy to spot.
 var byArch: [Arch: [Airport]] = [:]
