@@ -5438,13 +5438,21 @@ twin, load-menu off main) · 1.5.0 (54, A350-1000 + 747-8i + map-render throttle
 (`READY_FOR_SALE`). 1.6.0 (55, German localization + 43 new city hero images/framing fix + GC
 per-achievement icons) is now ALSO LIVE (`READY_FOR_SALE`, approved 31 Aug — cleared 4.3(a); the
 city artwork made it a content update, not localization-only). Next new build = 56+.**
-⚠️ **UNSHIPPED work sits on `main` + branches as of 2 Sep (see HANDOFF + NEXT_SESSION_PROMPT):**
-(a) THREE player-feedback fixes MERGED to `main` awaiting the next content build — crew tuning
-(labor ~0.5/sim-yr not ~1.25; training sidelines ¼ not ½), 100× speed + auto-slow-on-alert, and
-a route-swap discoverability hint; (b) the **MX maintenance program** (Line/A/C/D scheduled
-checks, OPS ▸ MX section) BUILT + verified on branch `mx-program`, not merged — the real answer
-to the shelved PM budget; and (c) the SHELVED PM budget on `maint-budget-t22` (don't re-attempt
-unless AOG frequency is raised). A natural **1.7** bundles the three `main` fixes + MX. ⚠️ **App Review
+⚠️ **1.7 IS BUILT + MERGED TO `main` (3 Sep), AWAITING THE VERSION BUMP + UPLOAD (next session ships
+it — see HANDOFF + NEXT_SESSION_PROMPT).** 1.7 = the **MX maintenance program** (Line/A/C/D scheduled
+checks, OPS ▸ MX; `MX_PROGRAM_SPEC.md`) + the **MX expanded-Details view & like-size route-coverage
+flow** (Details with cost/downtime/surcharge/grounding; C/D covered by a comparable spare that
+reclaims on shop-return, or acquire one → Fleet Marketplace auto-covers, or suspend the route; C/D
+forced-grounding fixed to a calendar grace; `MXCoverageVerify.swift` 81/81) + the **3 player-feedback
+fixes** (crew tuning, 100× speed pill + auto-slow-on-event, route-swap hint) + the **auto-slow alert
+banner** (persists until tapped, custom Figma gauge) + **on-brand Figma milestone/banner icons**
+(`MilestoneIconArt.swift`, node 150:998, keyed by SF-Symbol name; hub badges use the hub-building art
+since `building.2.fill`→a tag=acquisition; Finance Pro seal stays SF) + **real launch-date game start**
+(`startOnRealDate`, real date+season+year on the 30-day calendar; `calendarStartYear` persisted) +
+**German** for every new string. The SHELVED PM budget stays on `maint-budget-t22` (don't re-attempt
+unless AOG frequency is raised). `aa-1.1.x/HERO-PROMPTS-75.md` (next-75 hero list) is on `main` for the
+designer to produce/stage 50 — bundle them before the build if they land, else a fast follow-up.
+Bump to **1.7.0 / build 56** (6 pbxproj configs each). ⚠️ **App Review
 4.3(a) went ACCOUNT-WIDE this week (Vineyard/Foundry/FC-1.3 rejected, appeal filed) — every Airline
 submission now leads its App Review notes with the studio-context block; 1.4.3 was the first, approved
 same day. Reuse `aa-1.1.x/app-review-notes-1.4.3.txt`; playbook in `PostmarkOps/APP_REVIEW_NOTES.md`.** The 1.4.1 story below is kept for its GC detail. After 1.4 went live the designer checked the App-Store build on-device: the Apple

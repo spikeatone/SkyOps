@@ -5,28 +5,49 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 2 September 2026._
+_Snapshot: 3 September 2026._
 
-**► ⭐ LATEST SESSION (2 Sep) — player-feedback pass + MX maintenance program. START HERE.**
-A detailed App Store review (domain-literate player) was triaged into
-`aa-1.1.x/PLAYER-FEEDBACK-1.6-TRIAGE.md` and a reply drafted. Outcomes:
-- **THREE "cheap tier" fixes are on `main`, MERGED + verified, awaiting the next content build**
-  (never ship standalone during the 4.3(a) cascade): **crew tuning** (labor actions ~0.5/sim-yr
-  not ~1.25; training sidelines ¼ not ½), **100× speed + auto-slow-on-alert** (sim auto-drops to
-  1× when a decision card fires — `AutoSlowVerify.swift` 4/4), and **route-swap discoverability**
-  (Fleet-detail hint for ASSIGN/PARK). ⚠️ The 100× pill + hint are static UI, NOT yet eyeballed
-  (sim host jammed) — glance next drive.
-- **⭐ MX MAINTENANCE PROGRAM — BUILT + VERIFIED on branch `mx-program`, NOT merged.** The real
-  answer to the shelved PM budget: player-driven SCHEDULED A/C/D checks (B obsolete) distinct
-  from AOG, in a new **OPS ▸ MX** section, cycle+calendar-driven (D = lifespan/3 → ~2–3 per
-  airframe). Deferral has teeth (overdue AOG ×6, overdue repair ×4, hard-window force-grounding,
-  **2.5× overdue cost surcharge** — the surcharge is what made service-vs-defer economically
-  matter, after 4 balance rounds). Verified: build clean · RoundTripVerify 13/13 · MX sweep 6/6
-  (`MXProbe.swift`) · soak 6/6 (MX integrated). Full spec: `aa-1.1.x/MX_PROGRAM_SPEC.md`. **To
-  ship:** drive OPS ▸ MX live, then merge + cut a content build (bundle with the three fixes
-  above = a natural 1.7). The next-session brief in `NEXT_SESSION_PROMPT.md` has the details.
-- **SHELVED: the PM BUDGET** (`maint-budget-t22` branch) — two sweeps proved it economically
-  trivial (AOG too rare); MX supersedes it. Don't re-attempt unless AOG frequency is raised.
+**► ⭐ 1.7 IS BUILT + MERGED TO `main` — the NEXT SESSION SHIPS IT. START HERE.**
+Everything for 1.7 is committed on `main` (clean tree, all pushed). The next session's job is
+narrow and mechanical: **bump the version → 1.7.0 / build 56, archive + upload via the CLI chain,
+create the ASC version record, submit for review** (with the §1 4.3(a) studio block). Full
+step-by-step in `NEXT_SESSION_PROMPT.md`. What's IN 1.7 (all verified, driven live):
+- **MX MAINTENANCE PROGRAM** (was on `mx-program`, now merged) — player-driven SCHEDULED A/C/D
+  checks (B obsolete) distinct from AOG, in a new **OPS ▸ MX** section, cycle+calendar-driven
+  (D = lifespan/3). Deferral has teeth (overdue AOG ×6, repair ×4, hard-window force-grounding,
+  2.5× overdue cost surcharge — the surcharge is what makes servicing early matter). Full spec:
+  `aa-1.1.x/MX_PROGRAM_SPEC.md`.
+- **MX EXPANDED DETAILS + LIKE-SIZE ROUTE COVERAGE** (this session, driven live with the designer)
+  — tap a due row → Details (downtime, cost with overdue surcharge broken out, days-to-forced-
+  grounding, route); C/D checks get **temporary substitution** coverage (a like-size idle spare
+  covers the route, the original reclaims on shop-return); a **787 can't be covered by an A320**
+  (seats ≥75% / range ≥85%); no suitable spare → **Acquire a replacement** (→ Fleet Marketplace,
+  auto-covers on buy + returns to Ops) or **Suspend route** (pauses, then resumes). C/D forced-
+  grounding uses a fixed CALENDAR grace (fixed the absurd "D due now, grounding in 3,660 days").
+  Verified `aa-1.1.x/MXCoverageVerify.swift` **81/81** + soak 6/6 + RoundTrip 13/13.
+- **THREE player-feedback fixes** (from the 1.6 review triage, `aa-1.1.x/PLAYER-FEEDBACK-1.6-TRIAGE.md`):
+  crew tuning (labor ~0.5/sim-yr not ~1.25; training sidelines ¼), **100× speed pill +
+  auto-slow-on-event**, route-swap discoverability hint. The 100× pill is eyeballed (renders
+  fine); auto-drop confirmed live.
+- **AUTO-SLOW ALERT BANNER** (this session) — when an event snaps the sim high-speed→1×, a banner
+  drops naming what happened; **persists until tapped** (tap → Alerts to resolve). Custom Figma
+  gauge icon.
+- **ON-BRAND FIGMA ICONS** (designer-supplied, node 150:998) in all milestone toasts + cover-
+  confirm banner + (contextual) hub badges/club/market/network. `MilestoneIconArt.swift` renders
+  them via SVGPath keyed by the SF-Symbol name. The Finance Pro/verified seal stays SF.
+- **REAL LAUNCH-DATE START** (this session) — a new game opens on the player's real date + season
+  + year (was random), mapped onto the 30-day-month calendar. GameClockVerify 23/23.
+- **GERMAN** folded for every new user-facing string (MX/coverage/auto-slow/naming). `de-findgaps.py`
+  clean except 2 DEBUG-only livery-gallery strings. AI-drafted (native review still waived).
+- **CrashReporter build-at-occurrence tagging** (earlier this week) — reads the TD `hang.under3s`
+  signal correctly.
+- **NOT app code, also on `main`:** `aa-1.1.x/HERO-PROMPTS-75.md` — the next-75 airport-hero list
+  (city · MJ prompt · filename); the designer is producing/staging 50 of them. If those images
+  land before the build, they're a bonus content add (bundle them, re-run `archetype-audit`); if
+  not, 1.7 ships without them and they become a fast 1.7.1/1.8 content update. **Heroes are ~45%
+  of the store download** (67.7 MB now; +50 heroes ≈ +20 MB → ~88 MB, still fine; JPGs don't thin).
+- **SHELVED: the PM BUDGET** (`maint-budget-t22` branch) — two sweeps proved it trivial; MX
+  supersedes it. Don't revive unless the AOG base rate is raised.
 
 **► 1.6.0 (build 55) = German localization + city hero artwork + per-achievement GC icons — APPROVED +
 LIVE (`READY_FOR_SALE`, 31 Aug; released AFTER_APPROVAL).** German shipped and CLEARED review — the 4.3(a)

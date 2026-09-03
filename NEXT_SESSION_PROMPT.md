@@ -7,13 +7,14 @@ cold, with no memory of this conversation.
 **Read first:** `HANDOFF.md` (one-read orientation) → `CLAUDE.md` (the persistent
 design/technical record; it wins on any disagreement).
 
-_Written 2 September 2026, at the end of the session that: triaged a detailed App Store
-review (`aa-1.1.x/PLAYER-FEEDBACK-1.6-TRIAGE.md`) and drafted the reply; shipped three
-"cheap tier" player-feedback fixes to `main` (crew tuning, 100× speed + auto-slow-on-alert,
-route-swap discoverability); SHELVED the preventive-maintenance budget after two balance
-sweeps proved it economically trivial; then designed + built the real answer — a full
-MX maintenance program (Line/A/C/D checks) — on the `mx-program` branch, verified but NOT
-merged._
+_Written 3 September 2026, at the end of the session that built the rest of 1.7 and MERGED
+everything to `main`: the MX expanded-Details view + like-size route-coverage flow (Details →
+cover with a comparable spare / acquire one / suspend the route; C/D forced-grounding fixed to a
+sane calendar grace), the auto-slow alert banner (persists until tapped), the on-brand Figma
+milestone/banner icons, real-launch-date game start, German for all the new strings, and the
+next-75 airport-hero prompt table. The MX program itself + the 3 player-feedback fixes were
+already on `main`. **1.7 is fully built + merged; the next session SHIPS it (version bump →
+archive → upload → submit).**_
 
 ---
 
@@ -31,50 +32,50 @@ merged._
 >   the §1 studio-context block. Reuse `aa-1.1.x/app-review-notes-1.5.0.txt` (or `-1.4.3`), bump
 >   the version line. Playbook: `PostmarkOps/APP_REVIEW_NOTES.md`.
 >
-> **WHAT THIS SESSION LEFT — three things, in priority order:**
+> **YOUR JOB: SHIP 1.7. Everything is built + merged to `main`, tree clean, all pushed.** The
+> task is the release chain — no new features unless the designer asks. Order:
 >
-> 1. **`main` carries THREE unshipped player-feedback fixes** (merged, verified, waiting for the
->    next content build — never ship them standalone during the 4.3(a) cascade):
->    - **Crew tuning** — labor actions now rare (~0.5/sim-yr, was ~1.25) + training sidelines ¼
->      of a family (was ½). Balance-swept.
->    - **100× speed + auto-slow-on-alert** — a 7th speed pill; the sim auto-drops to 1× when a
->      decision card appears (a `didSet` on `decisionQueue`). `aa-1.1.x/AutoSlowVerify.swift` 4/4.
->    - **Route-swap discoverability** — an in-context Fleet-detail hint explaining ASSIGN TO NEW
->      ROUTE / PARK (the reviewer's #1 was already built, just unfindable).
->    These are the answer to a real App Store review; the drafted reply is in this session's log
->    (and the triage doc). ⚠️ The 100× pill layout + hint rendering are static UI, NOT yet
->    eyeballed on device (the sim host jammed) — glance at them when you next drive the app.
+> 1. **(optional, ~10 min) A quick confidence drive** — the 1.7 feature set was driven live piece
+>    by piece with the designer, but not as one final pass on the merged `main` build. If you want
+>    one: `xcodebuild` Debug, launch `-devScenario mx`, and glance at OPS ▸ MX (Details → cover /
+>    acquire / suspend), set 100× and let an event fire (auto-slow banner + gauge icon), and open a
+>    couple of milestone toasts if you can trigger them (on-brand icons). All harness-verified, so
+>    this is a look-not-verify pass. Skip if you're confident.
 >
-> 2. **⭐ MX MAINTENANCE PROGRAM — BUILT + VERIFIED on branch `mx-program`, NOT merged.** The
->    real replacement for the shelved PM budget. Full spec: `aa-1.1.x/MX_PROGRAM_SPEC.md`.
->    Player-driven SCHEDULED maintenance (Line/A/C/D checks; B is obsolete) distinct from AOG
->    emergencies, in a new **OPS ▸ MX** section. Each owned aircraft accrues toward A/C/D on the
->    tighter of a cycle OR calendar limit (D pegged to `expectedLifespanCycles/3` → ~2–3 per
->    airframe, matches reality, zero blast radius on the sell economy). Due → a `.mxCheck`
->    decision card (Service / Keep flying) + the OPS ▸ MX list; cost = % of purchase price
->    (reproduces the real 737≈$1M / 747≈$6M D-cost spread); downtime blocks at the gate
->    (airborne finishes first, mirrors the repaint shop). **Deferral has real teeth**: overdue →
->    AOG risk ×6 + overdue breakdowns cost ×4; past a HARD legal window (1.5× interval) the
->    aircraft is force-grounded into a MANDATORY check; and an OVERDUE check costs a **2.5×
->    surcharge** vs on-time — which is what makes servicing early economically right (the
->    "sell before the D check" dynamic emerges naturally). Verified: full build clean ·
->    RoundTripVerify 13/13 · MX sweep 6/6 (`aa-1.1.x/MXProbe.swift` — SERVICED beats DEFERRED,
->    invariant holds, D economics real) · soak 6/6 (~6.3M ticks, MX integrated, in `SoakMain.swift`)
->    · de gap scan clean. **To ship it:** `git checkout mx-program`, drive OPS ▸ MX + the
->    decision card live in the Simulator (the one thing not yet eyeballed), then merge to `main`
->    and cut a content build (bundling it with the three fixes from #1 = a natural 1.7 release).
->    ⚠️ Balance took 4 rounds — the honest finding (in the commit + spec) is that AOG is so rare
->    and shop-downtime so cheap at ~2 legs/day that only the overdue COST surcharge made the
->    service-vs-defer choice matter; keep that if you retune.
+> 2. **⭐ CUT THE BUILD — bump to 1.7.0 / build 56 and upload.** Real content release (MX +
+>    coverage + new-game date + icons = user-facing), so it's a MINOR bump (1.6.0 → **1.7.0**), not
+>    a patch. Steps (the release chain is scriptable end-to-end — see CLAUDE.md "upload is
+>    SCRIPTABLE" + `PostmarkOps/ARCHITECT_FAMILY.md` §4):
+>    - Bump `MARKETING_VERSION` 1.6.0 → **1.7.0** AND `CURRENT_PROJECT_VERSION` 55 → **56** in the
+>      pbxproj (**6 configs each** — grep to confirm you got all).
+>    - `xcodebuild archive` → `-exportArchive` (method=app-store-connect, teamID=D2PVU8X5Q7,
+>      signingStyle=automatic, `-allowProvisioningUpdates`, ASC key `25FXKWL48U` /issuer
+>      `55d522ad-1376-4704-a13d-3961750a4327`, key staged at
+>      `~/.appstoreconnect/private_keys/AuthKey_25FXKWL48U.p8`) → `altool --validate-app` →
+>      `altool --upload-app`. A build takes ~5 min to appear in `asc.py builds 6790569697`.
+>    - Then the ASC record (designer-side steps, but you can do the API parts): create the **1.7**
+>      version record, attach build 56, set What's New (lead with MX maintenance + the coverage
+>      flow), and paste the **§1 4.3(a) studio-context block** into App Review notes — reuse
+>      `aa-1.1.x/app-review-notes-1.5.0.txt` (or `-1.6.0`), just bump the version line. Submit.
+>    - ⚠️ **Game Center per-version checkbox:** ASC refuses to submit a GC-entitlement build until
+>      the version's Game Center checkbox is enabled — `POST /v1/gameCenterAppVersions` (relationship
+>      appStoreVersion). Do it for 1.7 like every prior GC build.
 >
-> 3. **Monetization signals** (give ~2 weeks from each release): RevenueCat trial→paid
->    conversion + TelemetryDeck `Paywall.shown ÷ Game.started` (production view = Test Mode OFF)
->    + the `hang.under3s` count trend (the 1.4.2/1.4.3 async fixes should have dropped it).
+> 3. **IF the designer's 50 new hero images landed** (`aa-1.1.x/HERO-PROMPTS-75.md` is the list;
+>    they stage them in `Resources/Airport Photos/<City>.jpg`) — **bundle them BEFORE cutting the
+>    build**: copy each to `AirlineArchitect/AirlineArchitect/Resources/AirportPhotos/airport_<CODE>.jpg`
+>    (synchronized group auto-bundles on next build), then re-run `aa-1.1.x/archetype-audit` (add each
+>    new CODE to `bundled`) to confirm. +50 heroes ≈ +20 MB → ~88 MB download, still fine (JPGs are
+>    ~45% of the download and don't thin further). If they DIDN'T land, ship 1.7 without them; they
+>    become a fast follow-up content update.
 >
-> **SHELVED (don't re-attempt blind):** the preventive-maintenance BUDGET (`maint-budget-t22`
-> branch) — a passive PM cost/AOG-frequency lever. Two balance sweeps proved it economically
-> trivial (AOG too rare at the real 2/100/month anchor). The MX program (#2) is the real answer.
-> Only revisit the budget idea if the AOG base rate is ever raised.
+> **DON'T:** ship anything standalone-trivial during the account-wide 4.3(a) cascade — 1.7 is a real
+> content release so it's safe, but the §1 studio block is still mandatory. Don't revive the SHELVED
+> PM budget (`maint-budget-t22`) — MX supersedes it.
+>
+> **After 1.7 is live — monetization signals** (give ~2 weeks): RevenueCat trial→paid conversion +
+> TelemetryDeck `Paywall.shown ÷ Game.started` (production view = Test Mode OFF) + the `hang.under3s`
+> count trend (the 1.4.2/1.4.3 + build-at-occurrence-tag fixes should show in it now).
 >
 > **THE STANDING CONCERN:** the UI/"does it feel right" half no harness reaches. It found the
 > ASSIGN-TO-NEW-ROUTE no-op + the SLC-artwork bug in past sessions; it keeps paying. Drive the
