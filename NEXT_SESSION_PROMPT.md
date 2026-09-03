@@ -73,8 +73,9 @@ with rewritten App Review notes._
 > **Simulator warnings:** tap coordinates are in POINTS (402×874 on iPhone 17 Pro), not
 > screenshot pixels; the input channel degrades — re-screenshot before concluding a control
 > is broken; terminate sibling Architect apps that steal focus. The `-devScenario` harness
-> (`publicGate|listed|activist|ouster|fleet|bigfleet|legacyPlayer|subfleet`) seeds otherwise
-> unreachable states.
+> (`publicGate|listed|activist|ouster|fleet|bigfleet|legacyPlayer|subfleet|mx`) seeds otherwise
+> unreachable states (`mx` = a routed fleet staged at distinct MX due-states — A due, A overdue,
+> C due, D due — plus 2 idle A320 spares to exercise the C/D coverage picker).
 
 ---
 

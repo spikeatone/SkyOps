@@ -32,6 +32,39 @@ struct FleetView: View {
     private func gatedAcquire(_ perform: () -> Void) {
         if store.canAcquireAircraft(sim) { perform() } else { onUpgrade(store.capMessage(.fleet)) }
     }
+
+    /// A pending unsuitable-cover confirmation: the player is buying to cover
+    /// `coveredTail` but `type` isn't a like-size replacement. `perform` runs the
+    /// actual acquire if they choose "Acquire anyway". Held in state to drive the dialog.
+    @State private var unsuitableCover: (type: AircraftType, coveredTail: String, perform: () -> Void)? = nil
+
+    /// Acquire a jet (buy new / lease / buy used — `make` returns the new Aircraft),
+    /// then — if the player came here from an MX "Acquire a replacement" and this jet
+    /// is a suitable cover — AUTO-ASSIGN it as the cover and return to the Ops ▸ MX
+    /// screen so they see the new tail covering the route. Otherwise it's a normal
+    /// idle-spare acquire. If they're covering but THIS type is NOT a suitable cover,
+    /// warn first (they may still want it as a plain spare).
+    private func acquireForCover(_ type: AircraftType, _ make: @escaping () -> Aircraft?) {
+        // Warn if this purchase is meant to cover a specific aircraft but can't.
+        if let ac = sim.pendingCoverAircraft, !sim.mxTypeIsSuitableCover(type, for: ac.type) {
+            unsuitableCover = (type: type, coveredTail: ac.tail, perform: { performAcquire(make) })
+            return
+        }
+        performAcquire(make)
+    }
+
+    private func performAcquire(_ make: () -> Aircraft?) {
+        gatedAcquire {
+            let wasFirst = sim.ownedCount == 0
+            guard let newAC = make() else { return }
+            Feedback.aircraftAcquired(isFirst: wasFirst && sim.ownedCount == 1)
+            if sim.tryAutoCoverAfterPurchase(newAC) != nil {
+                // sim.mxCoverConfirm is set inside serviceMXWithCoverage/tryAutoCover;
+                // OpsView shows it as a banner. Return to Ops to see the cover.
+                tab = 3
+            }
+        }
+    }
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     @Environment(\.horizontalSizeClass) private var hSize
@@ -192,7 +225,23 @@ struct FleetView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: showLivery)
-        .onAppear { adoptOpenLiveryIfAny(); applyShotDefaults() }
+        .onAppear { adoptOpenLiveryIfAny(); applyShotDefaults(); adoptMarketplaceIfAny() }
+        // Leaving Fleet without buying a cover → drop the pending-cover intent so a
+        // later unrelated purchase isn't auto-assigned as a cover. (A completed
+        // auto-cover already cleared it in tryAutoCoverAfterPurchase.)
+        .onDisappear { sim.clearPendingCover() }
+        // Warn when buying to cover a specific aircraft with an unsuitable (wrong
+        // capacity/range) type — they may still want it as a plain spare. AA-styled
+        // modal (Karla + Sky tokens), matching the sell replace-or-close card.
+        .overlay {
+            if let u = unsuitableCover {
+                UnsuitableCoverModal(
+                    typeName: u.type.name, coveredTail: u.coveredTail,
+                    onAcquireAnyway: { let p = u.perform; unsuitableCover = nil; p() },
+                    onCancel: { unsuitableCover = nil })
+            }
+        }
+        .animation(Motion.glide, value: unsuitableCover != nil)
         .onChange(of: openLivery?.wrappedValue ?? false) { _, _ in adoptOpenLiveryIfAny() }
         .animation(.easeInOut(duration: 0.2), value: pendingLivery != nil)
     }
@@ -202,6 +251,16 @@ struct FleetView: View {
         guard openLivery?.wrappedValue == true else { return }
         showLivery = true
         openLivery?.wrappedValue = false
+    }
+
+    /// The MX Details "Acquire a replacement" button set sim.pendingMarketplace to send
+    /// the player here to shop for a like-size cover — open the Marketplace segment. Must
+    /// be adopted in .onAppear (the tab bar recreates this view on the tab switch, so an
+    /// .onChange wouldn't fire — the standing rule for a pre-switch intent).
+    private func adoptMarketplaceIfAny() {
+        guard sim.pendingMarketplace else { return }
+        sim.pendingMarketplace = false
+        segment = .marketplace
     }
 
     #if DEBUG
@@ -760,13 +819,13 @@ struct FleetView: View {
             // Buy new
             offerRow("Buy new:", money(type.purchasePrice),
                      kind: .buy, cost: type.purchasePrice) {
-                gatedAcquire { if sim.buyAircraft(type) != nil { Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1) } }
+                acquireForCover(type) { sim.buyAircraft(type) }
             }
             // Lease new
             offerRow("Lease new:",
                      "\(money(sim.leaseUpfront(type))) upfront + \(money(type.monthlyLeaseCost)) / mo",
                      kind: .lease, cost: sim.leaseUpfront(type)) {
-                gatedAcquire { if sim.leaseAircraft(type) != nil { Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1) } }
+                acquireForCover(type) { sim.leaseAircraft(type) }
             }
             // Buy used (one row per listing, cheapest first)
             ForEach(used.sorted { $0.price < $1.price }) { listing in
@@ -774,7 +833,7 @@ struct FleetView: View {
                 offerRow("Buy used:",
                          String(localized: "\(money(listing.price)) · \(listing.cyclesAccrued.formatted()) cycles (~\(pct)%)"),
                          kind: .buy, cost: listing.price) {
-                    gatedAcquire { if sim.buyUsedAircraft(listing) != nil { Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1) } }
+                    acquireForCover(type) { sim.buyUsedAircraft(listing) }
                 }
             }
         }
@@ -822,4 +881,65 @@ struct FleetView: View {
     }
 
     private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
+}
+
+/// Warns, in AA's own card/button language, when the player is acquiring an aircraft
+/// to COVER a specific tail's route but the chosen type isn't a like-size replacement
+/// (wrong seats/range). They can acquire it anyway (as a plain spare) or cancel.
+/// Mirrors ReplaceOrCloseModal's chrome (dimmed backdrop + centered Karla/Sky card).
+private struct UnsuitableCoverModal: View {
+    let typeName: String
+    let coveredTail: String
+    var onAcquireAnyway: () -> Void
+    var onCancel: () -> Void
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke.opacity(0.6) : Color(skyHex: 0xC9C9C9) }
+    private var primary: Color    { isDark ? .white : .black }
+    private var secondary: Color  { isDark ? Sky.lightBlue.opacity(0.8) : Color(skyHex: 0x64748B) }
+    private var stroke: Color     { isDark ? Sky.onDarkStroke : Color(skyHex: 0xC9C9C9) }
+    private var amber: Color      { Color(skyHex: 0xFFAB44) }
+    private let blue = Color(skyHex: 0x497AA5)
+
+    private enum Style { case filled, outlined, plain }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.5).ignoresSafeArea().onTapGesture(perform: onCancel)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 18)).foregroundStyle(amber)
+                    Text("Not a suitable cover").font(.karla(22, .heavy)).foregroundStyle(primary)
+                }
+                Text("You're acquiring this to cover \(coveredTail)'s route. The \(typeName) isn't a suitable route-coverage replacement — a substitute needs similar seats and range, so it won't cover the route. Acquire it anyway as a spare?")
+                    .font(.karla(14)).foregroundStyle(secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                VStack(spacing: 10) {
+                    button("Acquire anyway", .outlined, onAcquireAnyway)
+                    button("Cancel", .plain, onCancel)
+                }
+                .padding(.top, 4)
+            }
+            .padding(20)
+            .frame(maxWidth: 360)
+            .background(cardBG)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(cardBorder, lineWidth: 1))
+            .shadow(color: .black.opacity(isDark ? 0.45 : 0.18), radius: 22, y: 8)
+            .padding(.horizontal, 24)
+        }
+    }
+
+    private func button(_ title: LocalizedStringKey, _ style: Style, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.karla(15, .bold))
+                .foregroundStyle(style == .filled ? .white : style == .plain ? secondary : primary)
+                .frame(maxWidth: .infinity).frame(height: 48)
+                .background(style == .filled ? blue : .clear)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(style == .outlined ? stroke : .clear, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
 }

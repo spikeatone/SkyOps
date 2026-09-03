@@ -144,6 +144,9 @@ struct AircraftSave: Codable {
     var mxCheckKind: Int? = nil
     var mxUntilTick: Int? = nil
     var mxStartTick: Int? = nil
+    // MX temporary-substitution coverage (a covered C/D check). Optional/back-compat.
+    var mxReclaimRouteId: Int? = nil
+    var coveringForTail: String? = nil
     var sellOfferDismissed: Bool
     var isLeased: Bool
     var leaseAccrued: Double
@@ -371,6 +374,22 @@ extension AircraftSave {
         repaintUntilTick = c.decodeSafeOpt(Int.self, .repaintUntilTick)
         repaintStartTick = c.decodeSafeOpt(Int.self, .repaintStartTick)
         repaintQueued = c.decodeSafe(.repaintQueued, default: false)
+        // MX check clocks + in-shop state — these MUST be decoded here (a hand-written
+        // init doesn't auto-decode; an omitted field silently keeps its `nil` default,
+        // which would drop MX progress every save/load). Pre-MX saves lack the keys →
+        // decodeSafeOpt returns nil → restore re-seeds. My addition: the two coverage
+        // links for a covered C/D check in progress.
+        mxALastCycle = c.decodeSafeOpt(Int.self, .mxALastCycle)
+        mxALastTick = c.decodeSafeOpt(Int.self, .mxALastTick)
+        mxCLastCycle = c.decodeSafeOpt(Int.self, .mxCLastCycle)
+        mxCLastTick = c.decodeSafeOpt(Int.self, .mxCLastTick)
+        mxDLastCycle = c.decodeSafeOpt(Int.self, .mxDLastCycle)
+        mxDLastTick = c.decodeSafeOpt(Int.self, .mxDLastTick)
+        mxCheckKind = c.decodeSafeOpt(Int.self, .mxCheckKind)
+        mxUntilTick = c.decodeSafeOpt(Int.self, .mxUntilTick)
+        mxStartTick = c.decodeSafeOpt(Int.self, .mxStartTick)
+        mxReclaimRouteId = c.decodeSafeOpt(Int.self, .mxReclaimRouteId)
+        coveringForTail = c.decodeSafeOpt(String.self, .coveringForTail)
         sellOfferDismissed = c.decodeSafe(.sellOfferDismissed, default: false)
         isLeased = c.decodeSafe(.isLeased, default: false)
         leaseAccrued = c.decodeSafe(.leaseAccrued, default: 0)

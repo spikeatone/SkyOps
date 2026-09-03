@@ -160,6 +160,17 @@ final class Aircraft: Identifiable {
     enum MXKind: Int, Codable { case a, c, d
         var label: String { switch self { case .a: return "A check"; case .c: return "C check"; case .d: return "D check" } }
     }
+    /// TEMPORARY SUBSTITUTION for a long (C/D) shop visit. When the player covers a
+    /// routed aircraft's C/D check, an idle spare takes over its route for the
+    /// downtime; the original RECLAIMS the route when it returns from the shop, and
+    /// the sub goes back to the bench. Two symmetric fields:
+    ///  • On the aircraft IN THE SHOP: `mxReclaimRouteId` = the route it will reclaim
+    ///    on return (nil = no coverage; its route just paused).
+    ///  • On the SUB now flying that route: `coveringForTail` = the tail it's covering
+    ///    (so shop-return can find + bench it). nil = a normal assignment.
+    /// Both persisted so a save mid-cover restores the swap-back correctly.
+    var mxReclaimRouteId: Int? = nil
+    var coveringForTail: String? = nil
 
     /// The four real stages of a strip-and-paint, as fractions of total occupancy:
     /// strip 1–3d · prep + prime 1–3d · paint + livery 1–7d · clear coat + cure 1–3d.
@@ -231,8 +242,12 @@ final class Aircraft: Identifiable {
     func advance(tick: Int,
                  assignCrew: (Aircraft) -> Bool = { _ in true },
                  releaseCrew: (Aircraft) -> Void = { _ in }) -> AdvanceEvent? {
-        // A purchased spare (no route) is fully idle — no state machine.
-        if isIdleSpare { return nil }
+        // A purchased spare (no route) is fully idle — no state machine. BUT an
+        // aircraft IN THE MX SHOP still needs its shop-exit processed even with no
+        // route: a COVERED C/D check releases the original's route to a sub, leaving
+        // the original routeless-but-in-shop; it must reclaim its route when the
+        // timer expires (below). So only bail for a spare that isn't in the shop.
+        if isIdleSpare && !inMXShop { return nil }
 
         // A scheduled "standard repair" (player-chosen) completes on its own
         // timer — the hold then clears through the normal gate below.
@@ -252,6 +267,11 @@ final class Aircraft: Identifiable {
             }
             mxUntilTick = nil; mxStartTick = nil; mxCheckKind = nil
             event = .mxCheckCompleted
+            // A covered aircraft is routeless while in the shop; once the check
+            // clears it's a plain idle spare until the Simulation reclaims its
+            // route (in the .mxCheckCompleted hook). Don't run the state machine
+            // for a routeless aircraft — return the event so the reclaim fires.
+            if assignedRouteId == nil { return event }
         }
 
         let duration = state.durationTicks

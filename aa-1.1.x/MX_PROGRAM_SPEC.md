@@ -92,6 +92,131 @@ Competition), listing per owned aircraft:
 - A fleet summary line (how many due / in shop / overdue)
 Scheduled checks in progress also surface; AOG emergencies remain in Needs Attention.
 
+## EXPANDED DETAILS VIEW + COVERAGE (designer request, added post-v1)
+The row's due-aircraft action is now **Details ▼** (blue, chevron), not an inline Service —
+tapping expands an in-row card (`OpsView.mxDetails`) so the player sees the full picture
+BEFORE committing:
+- **Downtime** — "~N days in the shop".
+- **Cost**, with the **overdue surcharge BROKEN OUT** when overdue ("Base cost $X" +
+  "Overdue surcharge ×2.5 → $Y", red) so the "service early is cheaper" signal is visible,
+  not just the final number. On-time checks show a single "Cost" row.
+- **Forced grounding** — "in ~N days if deferred" (from `mxDaysUntilForcedGrounding`, the
+  days until the 1.5× hard legal window on whichever axis is tighter; red at ≤3 days or
+  overdue). The deferral clock, made explicit.
+- **Current route** (informational, if routed).
+- The action: **Service now · $X** (green) for an A check or an idle spare.
+
+**COVERAGE — temporary substitution for the LONG (C/D) checks only** (the designer's call:
+A checks are ~1 day and service freely; C/D are 7–21 days, where a real airline subs an
+aircraft rather than pause the route — "real world, airlines don't just cancel a route when
+a plane is down, they have coverage"):
+- `mxCoverageRequired(ac)` = the due check is C or D **and** the aircraft is routed. When
+  true, the Details view **requires** the player to pick an in-range idle spare before the
+  check can start (one tappable "Cover with · <tail>" row per candidate from
+  `spareCandidates(for:)`). **A checks never require coverage** and show no revenue-impact
+  line at all — a ~1-day pause is negligible; it's a quick in-and-out (an earlier draft
+  showed a "Revenue impact" line for A checks — dropped as noise per the designer).
+- **`serviceMXWithCoverage(ac, coverWith: sub)`**: hands the route to the sub NOW (the sub
+  starts flying it), records `ac.mxReclaimRouteId` + `sub.coveringForTail = ac.tail`, then
+  shops the original. **Swap-back on shop-return** (`completeMXReclaim`, in the
+  `.mxCheckCompleted` hook): the original RECLAIMS its route and the sub returns to the
+  bench as an idle spare. So it's genuinely TEMPORARY — the juggle self-resolves (designer's
+  fun-vs-realism call: temp substitution over "permanently give the route away").
+- **NO in-range spare on a C/D check → Service is BLOCKED** (designer's call): the Details
+  view says why and to free/acquire a spare. The safety valve is the existing hard-window
+  auto-grounding — an un-airworthy aircraft is force-grounded regardless, so a cash-poor
+  player can't be permanently trapped flying it (the Details view says "will be
+  force-grounded if left too long").
+- **Two new persisted Aircraft fields** (`mxReclaimRouteId`, `coveringForTail`, both nil-safe
+  in AircraftSave) so a save mid-cover restores the swap-back links. An in-shop aircraft's
+  MX row shows a "<sub> covering · ~Nd" tag instead of the plain "in shop · ~Nd".
+- **Advance-guard fix**: `Aircraft.advance` bailed early for any routeless idle spare
+  (`if isIdleSpare { return nil }`), which would have skipped the shop-exit for a COVERED
+  aircraft (routeless-while-in-shop) → the swap-back never firing. Now it only bails for a
+  spare that ISN'T in the shop, and returns the `.mxCheckCompleted` event so the reclaim runs.
+- **LATENT DECODE BUG fixed in passing**: the hand-written `AircraftSave.init(from:)` didn't
+  decode ANY `mx*` field, so MX progress + in-shop state were silently dropped every
+  save/load (the restore always re-seeded). Now all the mx clocks decode via `decodeSafeOpt`.
+  Caught before MX shipped. (The exact "never trust a bare `var x = nil` in a hand-written
+  decode" trap the codebase documents.)
+## D-CHECK FORCED-GROUNDING = A FIXED CALENDAR GRACE (bug fix, designer-caught)
+The Details view showed **"D check due now" but "forced grounding in ~3,660 days"** (real
+bug). Cause: the hard window was `mxHardGroundingMultiple` (1.5) × the CYCLE INTERVAL —
+right for the short A/C intervals, but D's interval is `lifespanCycles/3` (~15k cyc for a
+787), so 1.5× of THAT is ~7k cycles ≈ a decade at ~2 cyc/day. A due D check is a real,
+near-term legal obligation, not a decade away.
+- **Fix**: D checks now use a FIXED calendar grace PAST DUE (`mxDaysPastDue` = cycles-past-
+  due ÷ 2): `mxDOverdueGraceDays` = 20 (→ "OVERDUE" + the 2.5× surcharge + AOG-risk ramp
+  begins), `mxDHardGroundingGraceDays` = 45 (→ force-grounded). **A/C keep the 1.5×-interval
+  rule** (their intervals are short, so the multiple is the right model).
+- All four consumers are D-aware: `mxIsOverdue`, `mxPastHardWindow`, `mxOverdueAOGMultiplier`
+  (ramps over the calendar grace for D, over the cycle band for A/C), `mxDaysUntilForced-
+  Grounding` (D returns `graceDays − daysPastDue`), and the `mxNextCheckETA` OVERDUE label.
+- Numeric proof: a just-due 787 D-check now reports **~40 days** to forced grounding (45d
+  grace − 5d already past due), not 3,666.
+- **NOTE for a future balance pass**: the 2-year MXProbe sweep spawns aircraft at 0 cycles,
+  so a D check (~15k cyc) NEVER fires in it — D-grace is untested by that harness by
+  construction. The `mx` devScenario is how D-grounding is exercised (it stages a due D
+  check). MXProbe is also genuinely SLOW (~2–3 min/run: `tickWeather`'s system-RNG entropy
+  draws dominate — confirmed by a stack sample, NOT any MX code) and its SERVICED-vs-DEFERRED
+  check is flaky by construction (non-seeded RNG + random spawn cycles → the ~0.6% margin
+  flips run to run). Don't read a single sweep run as a balance verdict.
+- Verified: **`aa-1.1.x/MXCoverageVerify.swift` 45/45** (covered service, swap-back,
+  A-check no-coverage, no-spare block, save/load mid-cover, the mx-clock decode fix, AND the
+  D-grace fix: sane near-term deadline, calendar-grace overdue+surcharge, force-grounding) +
+  **soak 6/6 GREEN** (full multi-system, MX integrated) + RoundTripVerify 13/13 + clean build.
+  The Details buttons + gating were confirmed rendering live in the Simulator; the expanded-
+  card internals were blocked from a live tap by the documented sim input-channel failure
+  (screenshots worked, taps silently no-op'd), so the card CONTENT rests on the harness.
+
+## COVERAGE FLOW — the full loop (designer-driven, live-verified this session)
+Iterated live with the designer; all of the below is DRIVEN + verified (MXCoverageVerify 81/81):
+- **C-check grace too** (not just D): C's 1,200-cyc interval made the 1.5× hard window ~265
+  days — same class of bug as D, milder. C now uses a fixed calendar grace like D
+  (`mxCOverdueGraceDays` 25 / `mxCHardGroundingGraceDays` 60; D is 20 / 45). A keeps the
+  interval-multiple (its 150-cyc interval already gives a tight ~18d window). All four
+  consumers (`mxIsOverdue` / `mxPastHardWindow` / `mxOverdueAOGMultiplier` /
+  `mxDaysUntilForcedGrounding`) branch on `mxCalendarOverdueGraceDays`/`…HardGrounding…`
+  (nil for A). Shared helper `mxDaysPastDue` = (accrued − due)/2 (~2 cyc/day).
+- **LIKE-SIZE coverage only** (a 787 D-check can't be covered by an A320 — designer caught
+  the exact case): `mxIsSuitableCover(sub, ac)` / `mxTypeIsSuitableCover(type, coveredType)`
+  = sub seats ≥ 75% of covered (`mxCoverSeatFloorFraction`) AND range ≥ 85%
+  (`mxCoverRangeFloorFraction`). `mxCoverageCandidates(for:)` = route-capable idle spares
+  that ALSO pass it. `serviceMXWithCoverage` enforces it server-side.
+- **A-check: NO coverage, NO revenue-impact line** (a ~1-day pause is negligible — quick
+  in-and-out). Coverage/suspend UI is C/D only.
+- **The Details Suspend section** shows the cost UNAMBIGUOUSLY (the designer flagged a lone
+  "$9M" as ambiguous): a **"Check cost (either way)"** row (paid whether you cover OR suspend)
+  + a **"Lost revenue (~Nd paused)"** row (red — the EXTRA cost of suspending vs covering).
+  `mxForegoneRevenue` = ONGOING per-leg net (`legEconomics.net`, no opening cost) × legs in
+  the downtime (`1440/legCycleTicks` legs/sim-day) — NOT `dailyNet` (which amortizes the
+  route's one-time opening cost, so a not-yet-recouped route read ~$0 — a bug the designer
+  caught). NB: at the sim's fixed ~3.5 legs/sim-day, a 21-day D-suspend on a profitable
+  long-haul route forgoes several $M — large but internally consistent; the lever if it ever
+  feels punishing is the sim's leg-cycle rate, not this formula.
+- **No suitable cover → Acquire or Suspend.** The Details view offers **"Acquire a
+  replacement"** (→ Fleet ▸ Marketplace via `pendingMarketplace`, the full buy/lease/used
+  catalog with size filters — NOT the cramped Network Acquire panel) + a **"Suspend route"**
+  button (plain `sendToMX` — the route KEEPS `assignedRouteId`, pauses during downtime, and
+  the aircraft RESUMES it on return; distinct from coverage, which hands the route to a sub).
+- **ACQUIRE → AUTO-COVER → RETURN loop.** "Acquire a replacement" sets `pendingCoverFor`
+  (the covered tail). On the Marketplace, buying/leasing a SUITABLE like-size jet
+  auto-assigns it as the cover (`tryAutoCoverAfterPurchase`) and returns the player to Ops
+  with a green confirmation banner ("N9ZQ now covering DFW↔ATL … when the check finishes it
+  idles and is assignable"). Buying an UNSUITABLE type shows an **AA-styled modal**
+  (`UnsuitableCoverModal`, mirroring ReplaceOrCloseModal's chrome) — "Not a suitable cover …
+  Acquire anyway as a spare? / Cancel". `pendingCoverFor`/`pendingMarketplace` are transient
+  (not persisted); cleared on leaving Fleet without buying. **Dev note:** `-devScenario mx`
+  grants `store.isPro` (all dev scenarios inject billions + exercise gated features, so the
+  free cap/paywall mustn't block them) and routes widebodies on LONG-HAUL (JFK↔LHR etc., where
+  they're profitable — a widebody on a short domestic hop loses money, so its suspend "lost
+  revenue" reads $0). The seed leaves only NARROWBODY spares so the D-check demonstrates the
+  no-suitable-cover → Acquire path; buy a widebody on the Marketplace to cover it.
+- **LATENT DECODE BUG fixed in passing** (before MX ships): the hand-written
+  `AircraftSave.init(from:)` decoded NO `mx*` field, so MX progress + in-shop state were
+  silently dropped every save/load. Now all mx clocks + the two coverage links
+  (`mxReclaimRouteId`/`coveringForTail`) decode via `decodeSafeOpt`.
+
 ## Plumbing (the real-build checklist)
 - **Aircraft state**: per-check "last serviced at (cycle, tick)" ×3 (A/C/D); an in-shop
   state (return tick) reusing/parallel to the AOG hold path so it doesn't fly while in MX.
