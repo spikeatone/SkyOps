@@ -142,11 +142,26 @@ built today (grep `↔\u{FE0E}` — ~8 sites).
    not required for the core feature.
 
 ## Phasing (each shippable, verified before the next)
-- **Phase 1 — data + sim**: `Route.stops`, `Aircraft.legIndex`, per-leg progression replacing the
-  swap, per-leg range check in a loop, persistence (tolerant decode + round-trip). Verify with a
-  headless harness: a 3-stop rotation flies ORD→BOI→SEA→ORD in order, each leg settles its own
-  economics, cash invariant holds, save/load round-trips `stops`+`legIndex`. N=2 reproduces today
-  exactly (regression guard).
+- **Phase 1 — data + sim: BUILT (branch `multi-city-routing`, 4 Sep 2026).** `Route.stops: [String]`
+  (2…5, defaults to `[originCode, destCode]` so every existing route is a 2-stop rotation with zero
+  behaviour change) + a stops-aware `Route` init + `Route.label`/`uniqueStops`. `Aircraft.legIndex`
+  walks the loop; the old `swap(&origin,&dest)` is now driven by a `nextLeg` closure (default = the
+  swap, so background traffic + the N=2 case are unchanged). New `Simulation` API:
+  `openRotation(stops:using:)`, `rotationBlock(for:stops:)` (range/runway on EVERY leg incl. the
+  closing one), `rotationOpeningCost(_:)` (base + gate fee + slot per DISTINCT stop + leisure
+  surcharge — hub-visited-twice counts once), `rotationNextLeg` (the closure), `rotationLegs`.
+  Persistence: `RouteSave.stops` + `AircraftSave.legIndex`, both tolerant-decode (nil → legacy
+  default), wired through snapshot/restore. **`openRoute`/`reassign`/`openRouteCore` and the whole
+  UI are UNTOUCHED** — the 2-airport paths still produce a [origin,dest] rotation, so nothing in
+  Phase 2's list has to change before Phase 1 ships.
+  - **Verified: `aa-1.1.x/RotationVerify.swift` 25/25** (loop flies in order, 2-stop == the classic
+    reverse-shuttle, openRoute still yields a 2-stop rotation, each leg settles its own economics +
+    cash invariant, range blocks the offending leg, stop-count bounds + adjacent-dup trim,
+    distinct-stop cost, save/load of stops+legIndex resumes on the right leg + stays reconciled).
+    Both critical guards BITE-TESTED (sabotaging `rotationNextLeg`→swap fails the loop-order check;
+    sabotaging `rotationBlock`→nil fails the range check). No regression: RoundTripVerify 13/13,
+    MXCoverageVerify 81/81, soak green, full Debug app build SUCCEEDED (view layer compiles against
+    the model change — the new `advance` param defaults to nil, `Route.stops` defaults in init).
 - **Phase 2 — UI**: aircraft-first flow, multi-tap picker, per-leg confirm panel with range/load,
   rotation-aware labels everywhere. Drive it live in the Simulator (the standing "gesture bugs are
   invisible to the harness" rule — the multi-tap picker is exactly the kind of gesture flow that

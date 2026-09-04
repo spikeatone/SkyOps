@@ -129,6 +129,9 @@ struct AircraftSave: Codable {
     var stateTick: Int
     var cyclesAccrued: Int
     var assignedRouteId: Int?
+    /// Position in the assigned route's rotation loop (nil in pre-rotation saves
+    /// → 0, the first leg). Restores a save made mid-rotation onto the right leg.
+    var legIndex: Int? = nil
     /// Optional for back-compat with saves written before reassignment existed.
     var pendingRouteId: Int?
     /// A deferred park (airborne aircraft parks on arrival). Defaults false in
@@ -177,6 +180,9 @@ struct RouteSave: Codable {
     var subsidiaryCode: String? = nil
     /// Fare positioning level (nil in pre-fare-lever saves → Standard).
     var fareLevel: Int? = nil
+    /// Ordered rotation stops (nil in pre-rotation saves → [originCode, destCode],
+    /// the 2-stop shuttle those routes actually were).
+    var stops: [String]? = nil
     var history: [FlightRecordSave]
     var assignmentHistory: [RouteAssignmentSave]
     // Lifetime running totals (nil in pre-1.1 saves → recomputed from the
@@ -371,6 +377,7 @@ extension AircraftSave {
         stateTick = c.decodeSafe(.stateTick, default: 0)
         cyclesAccrued = c.decodeSafe(.cyclesAccrued, default: 0)
         assignedRouteId = c.decodeSafeOpt(Int.self, .assignedRouteId)
+        legIndex = c.decodeSafeOpt(Int.self, .legIndex)
         pendingRouteId = c.decodeSafeOpt(Int.self, .pendingRouteId)
         pendingPark = c.decodeSafe(.pendingPark, default: false)
         repaintUntilTick = c.decodeSafeOpt(Int.self, .repaintUntilTick)
@@ -421,6 +428,7 @@ extension RouteSave {
         fulfillByTick = c.decodeSafeOpt(Int.self, .fulfillByTick)
         subsidiaryCode = c.decodeSafeOpt(String.self, .subsidiaryCode)
         fareLevel = c.decodeSafeOpt(Int.self, .fareLevel)
+        stops = c.decodeSafeOpt([String].self, .stops)
         history = c.decodeSafe(.history, default: [])
         assignmentHistory = c.decodeSafe(.assignmentHistory, default: [])
         revenueTotal = c.decodeSafeOpt(Int.self, .revenueTotal)
