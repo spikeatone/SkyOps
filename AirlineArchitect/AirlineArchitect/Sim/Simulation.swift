@@ -5359,7 +5359,7 @@ final class Simulation {
         let routeCount = playerRoutes.count
         if routeCount >= 1, let r = playerRoutes.first {
             celebrate("first_route", "point.3.connected.trianglepath.dotted", L("First route opened!"),
-                      L("Your first city pair is live."), originCode: r.originCode, destCode: r.destCode)
+                      L("Your first route is live."), originCode: r.originCode, destCode: r.destCode)
         }
         for (n, sub) in [(5, L("A real network.")), (10, L("The map is filling in.")),
                          (25, L("A serious network."))] where routeCount >= n {

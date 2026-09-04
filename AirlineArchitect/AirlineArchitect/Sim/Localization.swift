@@ -368,7 +368,7 @@ private let simLocalizationTables: [String: [String: String]] = [
         "You're crossing borders now.": "Du überquerst jetzt Grenzen.",
         "You're publicly traded!": "Du bist börsennotiert!",
         "Your empire grows by merger.": "Dein Imperium wächst durch Fusion.",
-        "Your first city pair is live.": "Dein erstes Städtepaar ist aktiv.",
+        "Your first route is live.": "Deine erste Route ist aktiv.",
         "Your first customer": "Dein erster Kunde",
         "Your fleet has its first aircraft.": "Deine Flotte hat ihr erstes Flugzeug.",
         "Your fortress takes shape.": "Deine Festung nimmt Gestalt an.",
