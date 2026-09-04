@@ -1040,6 +1040,14 @@ final class Simulation {
     }
     func clearSuggestion() { pendingSuggestion = nil }
 
+    /// The multi-city rotation the player is currently tapping out (ordered stop
+    /// codes), so the map can draw the in-progress loop. Transient (view state
+    /// mirror, not persisted); the view sets/clears it as stops change and when
+    /// the route flow ends. Read directly by MapView.drawRotationPreview.
+    private(set) var rotationPreview: [String] = []
+    func setRotationPreview(_ codes: [String]) { rotationPreview = codes }
+    func clearRotationPreview() { rotationPreview = [] }
+
     /// Center on the two airports' midpoint and zoom so both fit with generous
     /// padding (so the dashed line reads as a route across open map, not edge
     /// to edge). Same fit math as applyHomeFraming.
@@ -2849,9 +2857,10 @@ final class Simulation {
         r.closedTick = tick
         closedPlayerRoutes.append(r)
         decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == id }
-        airports.first { $0.code == r.originCode }?.slotsAvailable += 1
-        airports.first { $0.code == r.destCode }?.slotsAvailable += 1
-        logOps(.structural, L("Route closed"), L("%@ ↔︎ %@ — %@ %@", r.originCode, r.destCode, ac.tail, note))
+        // Free a slot at EVERY distinct stop the route consumed (a rotation can
+        // touch up to 5 airports; a 2-stop route frees exactly its two ends).
+        for code in r.uniqueStops { airports.first { $0.code == code }?.slotsAvailable += 1 }
+        logOps(.structural, L("Route closed"), L("%@ — %@ %@", r.label, ac.tail, note))
     }
 
     /// Close the aircraft's current route and leave it as an IDLE SPARE — the plane
@@ -2979,8 +2988,13 @@ final class Simulation {
     /// count (2…maxStops), forbids a stop immediately repeating itself, range/
     /// runway-checks every leg, and charges the per-stop opening cost. A 2-stop
     /// rotation is equivalent to openRoute. Consumes a slot at each distinct stop.
+    /// `replacingCurrentRoute`: if `ac` is already flying a route (a Fleet ASSIGN
+    /// target), archive that route first so the aircraft trades one for the other
+    /// rather than accumulating an orphan. Validation runs BEFORE any detach, so a
+    /// rejected open leaves the existing route untouched.
     @discardableResult
-    func openRotation(stops rawStops: [String], using ac: Aircraft) -> RotationResult {
+    func openRotation(stops rawStops: [String], using ac: Aircraft,
+                      replacingCurrentRoute: Bool = false) -> RotationResult {
         guard ac.purchased else { return .notOwned }
         // Trim any accidental adjacent duplicate the picker might produce (A,A,B).
         var stops: [String] = []
@@ -2994,6 +3008,8 @@ final class Simulation {
         let cost = rotationOpeningCost(stops)
         guard playerBalance >= cost else { return .insufficientFunds(cost) }
 
+        // All checks passed — now it's safe to tear down the aircraft's old route.
+        if replacingCurrentRoute, ac.assignedRouteId != nil { detachFromRoute(ac) }
         playerBalance -= cost
         totalRouteSpend += cost
         var _seen = Set<String>(); let unique = stops.filter { _seen.insert($0).inserted }

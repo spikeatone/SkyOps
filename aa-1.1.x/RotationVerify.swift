@@ -174,6 +174,40 @@ func main() {
         check(r2?.stops == ["DEN", "ORD"], "8: 2-stop route round-trips as [DEN,ORD]")
     }
 
+    // ---- 9. replacingCurrentRoute: reassign a routed aircraft onto a new
+    //         rotation — the OLD route is archived, its slots freed. (Phase 2 /
+    //         Fleet ASSIGN path.) ----
+    do {
+        let sim = newSim()
+        guard let ac = buySpare(sim, "A320") else { check(false, "setup 9"); printResult(); return }
+        _ = sim.openRotation(stops: ["DEN", "ORD"], using: ac)   // start on a 2-stop route
+        let oldRouteId = ac.assignedRouteId
+        let openBefore = sim.playerRoutes.count
+        // Reassign onto a 3-stop rotation.
+        let res = sim.openRotation(stops: ["SFO", "LAX", "SEA"], using: ac, replacingCurrentRoute: true)
+        check(res == Simulation.RotationResult.success, "9: replacing open succeeds")
+        check(ac.assignedRouteId != oldRouteId, "9: aircraft is on the NEW route")
+        check(sim.playerRoutes.first(where: { $0.id == ac.assignedRouteId })?.stops == ["SFO", "LAX", "SEA"], "9: new rotation stored")
+        check(sim.closedPlayerRoutes.contains { $0.id == oldRouteId }, "9: old route archived (not orphaned)")
+        check(sim.playerRoutes.count == openBefore, "9: open-route count unchanged (one traded for one)")
+        check(ac.legIndex == 0, "9: leg index reset for the new rotation")
+    }
+
+    // ---- 10. A FAILED replacing open leaves the existing route intact
+    //          (validation runs BEFORE any detach). ----
+    do {
+        let sim = newSim()
+        guard let ac = buySpare(sim, "ERJ135") else { check(false, "setup 10"); printResult(); return }
+        _ = sim.openRotation(stops: ["DEN", "ORD"], using: ac)   // a route the RJ can fly
+        let keptRouteId = ac.assignedRouteId
+        // Try to reassign onto a rotation with an over-range leg (JFK-LAX > 1750).
+        let res = sim.openRotation(stops: ["JFK", "LAX", "DEN"], using: ac, replacingCurrentRoute: true)
+        if case .legOutOfRange = res { check(true, "10: over-range replacing open is rejected") }
+        else { check(false, "10: expected legOutOfRange, got \(res)") }
+        check(ac.assignedRouteId == keptRouteId, "10: aircraft still on its original route (no detach on failure)")
+        check(sim.playerRoutes.contains { $0.id == keptRouteId }, "10: original route still open")
+    }
+
     printResult()
     func printResult() { print("\nRotationVerify: \(pass)/\(pass + fail) passed" + (fail == 0 ? "  ✅" : "  ❌ \(fail) FAILED")) }
 }

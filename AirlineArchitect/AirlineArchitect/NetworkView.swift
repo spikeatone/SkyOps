@@ -89,9 +89,10 @@ struct NetworkView: View {
 
     private var routeHighlights: Set<String> {
         switch routeMode {
-        case .off, .pickOrigin: return []
+        case .off, .pickOrigin, .pickAircraft: return []
         case .pickDest(let o):  return [o]
         case .confirm(let o, let d): return [o, d]
+        case .rotate(_, let codes), .confirmRotation(_, let codes): return Set(codes)
         }
     }
 
@@ -167,6 +168,16 @@ struct NetworkView: View {
         .onChange(of: panel) { _, new in
             if new != .acquire, sim.pendingReplacement != nil { sim.clearReplacement() }
         }
+        // Keep the map's in-progress rotation preview in sync with the flow.
+        .onChange(of: routeMode) { _, mode in syncRotationPreview(mode) }
+    }
+
+    /// Mirror the tapped-out rotation onto the sim so MapView can draw the loop.
+    private func syncRotationPreview(_ mode: RouteMode) {
+        switch mode {
+        case .rotate(_, let codes), .confirmRotation(_, let codes): sim.setRotationPreview(codes)
+        default: sim.clearRotationPreview()
+        }
     }
 
     /// True when the iPad side rail actually has something to show — used to
@@ -180,12 +191,33 @@ struct NetworkView: View {
     /// Adopt a Fleet "assign this aircraft" intent: jump straight into the
     /// origin-pick step. Without this the tab switch looked like a no-op.
     private func adoptAssignmentIfAny() {
-        guard sim.pendingAssignment != nil else { return }
+        guard let ac = sim.pendingAssignment else { return }
         panel = .none
         selectedID = nil
         selectedAirportCode = nil
-        routeMode = .pickOrigin
+        // A Fleet "ASSIGN TO NEW ROUTE" already picked the aircraft — go straight
+        // to tapping the rotation for it (skip the spare picker).
+        routeMode = .rotate(ac.id, [])
     }
+
+    /// Start the manual Open Route flow. Aircraft-first: pick the spare, unless
+    /// there's exactly one idle spare (nothing to choose) — then jump straight to
+    /// tapping the rotation.
+    private func startRouteFlow() {
+        let spares = sim.idleSpares
+        if spares.count == 1 {
+            routeMode = .rotate(spares[0].id, [])
+        } else {
+            routeMode = .pickAircraft
+        }
+    }
+
+    /// The aircraft currently driving the route flow (picked spare or the Fleet
+    /// assignment target), for the confirm panel's per-leg checks and the hint.
+    private func routeAircraft(_ id: UUID) -> Aircraft? { sim.aircraft.first { $0.id == id } }
+
+    /// True when any stage of the route flow is active (button highlight, rail).
+    private var routeFlowActive: Bool { routeMode != .off }
 
     private func adoptSuggestionIfAny() {
         guard let sug = sim.pendingSuggestion else { return }
@@ -193,12 +225,15 @@ struct NetworkView: View {
         routeMode = .confirm(sug.origin, sug.dest)
     }
 
-    /// The route flow's confirm step (step 3) — the one that docks into the rail.
-    /// The pick-origin / pick-dest HINTS overlay the map instead (see mapCard),
-    /// so picking airports doesn't cost the whole rail.
+    /// The route-flow steps that dock into the iPad rail: the confirm step(s)
+    /// and the aircraft picker. The pick-origin / pick-dest / rotate-tapping
+    /// HINTS overlay the map instead (see mapCard), so tapping airports doesn't
+    /// cost the whole rail.
     private var isRouteConfirm: Bool {
-        if case .confirm = routeMode { return true }
-        return false
+        switch routeMode {
+        case .confirm, .confirmRotation, .pickAircraft: return true
+        default: return false
+        }
     }
 
     /// The pick-step instruction that floats over the map (nil outside pick steps).
@@ -214,6 +249,15 @@ struct NetworkView: View {
                 return "Assigning \(ac.tail): now tap the other airport"
             }
             return "Step Two: Now tap the other airport pair"
+        case .rotate(let acId, let codes):
+            let tail = routeAircraft(acId)?.tail ?? ""
+            if codes.isEmpty {
+                return "Tap the cities \(tail) will fly, in order"
+            } else if codes.count == 1 {
+                return "\(codes[0]) → … · tap the next city (it loops back to \(codes[0]))"
+            } else {
+                return "\(codes.joined(separator: " → ")) → ↺ · tap another, or Done"
+            }
         default:          return nil
         }
     }
@@ -479,12 +523,13 @@ struct NetworkView: View {
             Spacer(minLength: 5)
             barButton("Open Route", font: font, active: routeMode != .off) {
                 panel = .none
-                if routeMode != .off { sim.clearAssignment() }
-                if routeMode == .off {
+                if routeMode != .off { routeMode = .off; sim.clearAssignment() }
+                else {
                     // Free tier: block a new route at the cap, show the paywall.
                     guard store.canOpenRoute(sim) else { onUpgrade(store.capMessage(.route)); return }
-                    routeMode = .pickOrigin; selectedID = nil; selectedAirportCode = nil
-                } else { routeMode = .off }
+                    selectedID = nil; selectedAirportCode = nil
+                    startRouteFlow()
+                }
             }
             Spacer(minLength: 5)
             barButton("Routes", font: font, active: panel == .routes) { toggle(.routes) }
@@ -694,7 +739,68 @@ struct NetworkView: View {
                     cancelTitle: fromSuggestion ? "Don't Open" : "Abandon",
                     subtitle: fromSuggestion ? "Suggested market · ~\(sim.routeDailyDemand(origin, dest).formatted()) pax/day" : nil)
             }
+        case .pickAircraft:
+            RouteAircraftPicker(
+                sim: sim,
+                onPick: { ac in routeMode = .rotate(ac.id, []) },
+                onCancel: { routeMode = .off; sim.clearAssignment() },
+                onAcquire: { panel = .acquire })
+        case .rotate(let acId, let codes):
+            // Tapping cities on the map builds the loop; this bar shows progress
+            // + Done (needs ≥2 stops) / Abandon. The hint itself is drawn over the
+            // map (see the map overlay) so the map stays fully tappable.
+            rotateControlBar(acId: acId, codes: codes)
+        case .confirmRotation(let acId, let codes):
+            if let ac = routeAircraft(acId) {
+                RotationConfirmPanel(
+                    sim: sim, aircraft: ac, codes: codes,
+                    onOpen: { openConfirmedRotation(acId, codes) },
+                    onBack: { routeMode = .rotate(acId, codes) },   // back to editing stops
+                    onCancel: { routeMode = .off; sim.clearAssignment() })
+            }
         }
+    }
+
+    /// The bar shown while tapping a rotation: the live loop + Done/Abandon.
+    /// (Distinct from `routeHint`, which is a plain instruction line.)
+    private func rotateControlBar(acId: UUID, codes: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let t = routePickHintText {
+                Text(t).font(.karla(14, .bold)).foregroundStyle(titleColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 8) {
+                rotateButton("Done", disabled: codes.count < 2) {
+                    routeMode = .confirmRotation(acId, codes)
+                }
+                if codes.count >= 1 {
+                    rotateButton("Undo stop", disabled: false) {
+                        routeMode = .rotate(acId, Array(codes.dropLast()))
+                    }
+                }
+                rotateButton("Abandon", disabled: false) {
+                    routeMode = .off; sim.clearAssignment()
+                }
+            }
+            .frame(height: 30)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(barBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
+        .shadow(color: barShadow, radius: 3, y: 1)
+    }
+
+    private func rotateButton(_ title: LocalizedStringKey, disabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.karla(15, .medium))
+                .foregroundStyle(disabled ? titleColor.opacity(0.35) : titleColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 6)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(barBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain).disabled(disabled)
     }
 
     /// Figma "Alert box" (5:8040 / 19:6705): a solid dark bar with a single
@@ -746,6 +852,16 @@ struct NetworkView: View {
             if let ap = sim.airport(atScreenPoint: p), ap.code != o { routeMode = .confirm(o, ap.code) }
         case .confirm:
             break
+        case .rotate(let acId, var codes):
+            // Append the tapped airport as the next stop, unless it repeats the
+            // immediately-preceding stop or the loop is already at the max.
+            guard let ap = sim.airport(atScreenPoint: p) else { break }
+            if codes.last == ap.code { break }               // ignore a double-tap on the same stop
+            guard codes.count < Route.maxStops else { showFlash("A rotation can have at most \(Route.maxStops) stops"); break }
+            codes.append(ap.code)
+            routeMode = .rotate(acId, codes)
+        case .pickAircraft, .confirmRotation:
+            break   // handled by panels/buttons, not map taps
         }
     }
 
@@ -786,6 +902,30 @@ struct NetworkView: View {
         }
     }
 
+    /// Open a multi-city rotation for the aircraft the player already picked.
+    /// If that aircraft is currently flying a route (a Fleet ASSIGN target), the
+    /// old route is archived first (same as reassign). No "no spare" case — the
+    /// aircraft was chosen up front.
+    private func openConfirmedRotation(_ acId: UUID, _ codes: [String]) {
+        guard let ac = routeAircraft(acId) else { routeMode = .off; return }
+        let result = sim.openRotation(stops: codes, using: ac, replacingCurrentRoute: true)
+        switch result {
+        case .success:
+            Feedback.routeOpened(airline: sim.playerAirlineName, announce: true)
+            Telemetry.routeOpened(count: sim.playerRoutes.count, simDay: Simulation.gameDay(at: sim.tick))
+            let label = codes.joined(separator: " → ")
+            showFlash("Route opened: \(label) — \(ac.tail) assigned")
+            routeMode = .off; sim.clearAssignment()
+        case .insufficientFunds(let c): showFlash("Need \(Currency.symbol)\(c.formatted()) to open this rotation")
+        case .legOutOfRange(let f, let t, let nm): showFlash("\(ac.type.name) can't fly \(f)→\(t) (\(nm.formatted()) nm)")
+        case .legRunwayTooShort(let code): showFlash("\(code)'s runway is too short for the \(ac.type.name)")
+        case .tooFewStops: showFlash("Pick at least 2 cities")
+        case .tooManyStops: showFlash("At most \(Route.maxStops) stops")
+        case .repeatedAdjacentStop: showFlash("Pick two different cities")
+        case .notOwned: showFlash("That aircraft isn't available")
+        }
+    }
+
     private func handleBought(_ ac: Aircraft) {
         Feedback.aircraftAcquired(isFirst: sim.ownedCount == 1)
         // Replacement flow (Fleet SELL → "Acquire a replacement"): put the new jet
@@ -802,11 +942,20 @@ struct NetworkView: View {
             return
         }
         let verb = ac.isLeased ? "Leased" : "Bought"
-        showFlash("\(verb) \(ac.type.name) — now a spare")
+        showFlash("\(verb) \(ac.type.name) — now tap its route")
+        // Ops-suggestion path (2-airport confirm): auto-open the suggested route.
         if case .confirm(let o, let d) = routeMode,
            let origin = sim.airports.first(where: { $0.code == o }),
            let dest = sim.airports.first(where: { $0.code == d }) {
             openConfirmedRoute(origin, dest, announce: false)   // jet whoosh already played
+            return
+        }
+        // Manual rotation flow: the player hit Acquire from the aircraft-picker
+        // (no idle spares). Put them straight into tapping the rotation for the
+        // jet they just bought.
+        if case .pickAircraft = routeMode {
+            panel = .none
+            routeMode = .rotate(ac.id, [])
         }
     }
 

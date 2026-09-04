@@ -92,6 +92,7 @@ struct MapView: View {
                 drawAircraft(w)
                 drawRoutePulse(w)
                 drawSuggestion(w)
+                drawRotationPreview(w)
             }
         }
         .background(mapBackground)
@@ -438,6 +439,48 @@ struct MapView: View {
             let rr = 3.2 * es + 5
             ctx.stroke(Path(ellipseIn: CGRect(x: ap.screen.x - rr, y: ap.screen.y - rr, width: rr * 2, height: rr * 2)),
                        with: .color(accent), lineWidth: 2.5)
+        }
+    }
+
+    /// The multi-city rotation the player is tapping out: dashed marching arcs
+    /// between consecutive stops PLUS the closing leg back to the first stop, so
+    /// the loop reads as a loop. Endpoints get a solid ring; the first stop (the
+    /// base the loop returns to) is emphasized. Reads sim.rotationPreview directly
+    /// (same pattern as drawSuggestion).
+    private func drawRotationPreview(_ ctx: GraphicsContext) {
+        let codes = sim.rotationPreview
+        guard codes.count >= 1 else { return }
+        let pts: [CGPoint] = codes.compactMap { code in sim.airports.first { $0.code == code }?.screen }
+        guard pts.count == codes.count else { return }
+        let accent = groundColor          // amber — the route-picker's accent
+        let es = sim.elementScale
+        let phase = CGFloat(sim.tick % 12)
+
+        // Legs between consecutive stops, and (once ≥2 stops) the closing leg.
+        if pts.count >= 2 {
+            var legs: [(CGPoint, CGPoint)] = []
+            for i in 0..<(pts.count - 1) { legs.append((pts[i], pts[i + 1])) }
+            legs.append((pts[pts.count - 1], pts[0]))   // loop back to the base
+            for (i, leg) in legs.enumerated() {
+                let pp = FlightPath.pathPoints(origin: leg.0, dest: leg.1)
+                var arc = Path()
+                arc.move(to: pp.start); arc.addQuadCurve(to: pp.end, control: pp.mid)
+                // The closing leg is drawn fainter so it reads as "returns to base".
+                let isClosing = i == legs.count - 1 && pts.count > 2
+                ctx.stroke(arc, with: .color(accent.opacity(isClosing ? 0.45 : 1)),
+                           style: StrokeStyle(lineWidth: 2.2, lineCap: .round, dash: [7, 5], dashPhase: phase))
+            }
+        }
+        // Endpoint rings; the first stop gets a double ring (the loop's base).
+        for (i, p) in pts.enumerated() {
+            let rr = 3.2 * es + 5
+            ctx.stroke(Path(ellipseIn: CGRect(x: p.x - rr, y: p.y - rr, width: rr * 2, height: rr * 2)),
+                       with: .color(accent), lineWidth: 2.5)
+            if i == 0 {
+                let r2 = rr + 4
+                ctx.stroke(Path(ellipseIn: CGRect(x: p.x - r2, y: p.y - r2, width: r2 * 2, height: r2 * 2)),
+                           with: .color(accent.opacity(0.7)), lineWidth: 1.5)
+            }
         }
     }
 
