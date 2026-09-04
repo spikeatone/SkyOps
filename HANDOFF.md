@@ -7,6 +7,20 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 3 September 2026._
 
+**► ⭐ MULTI-CITY ROTATIONS — MERGED to `main` (Phases 1–2), NOT yet in a build (4 Sep).** A route is
+now an ordered rotation loop of 2–5 stops flown by an aircraft you pick FIRST (Open Route → WHICH
+AIRCRAFT? → tap the sequence → confirm); each leg is range-checked; the loop auto-repeats; the classic
+2-airport shuttle is the 2-stop case (nothing regressed). Full design + status in
+`aa-1.1.x/MULTI_CITY_ROUTING_SCOPE.md`; CLAUDE.md "Decided — Route Network" has the summary. Verified
+RotationVerify 34/34 + RoundTrip 13/13 + soak 6/6 + Debug build; designer confirmed it works on device.
+⚠️ **BEFORE it ships to players (3 open items in the scope doc):** (1) a MULTI-SEED balance pass (a
+rotation must not be strictly better/worse than N separate 2-stop routes — the per-stop cost/slot is
+un-swept); (2) a rotation-aware LABEL audit of the remaining `↔` display sites (RoutesPanel detail,
+competition/incentive boxes, milestone strings still say "ORIG ↔ DEST"); (3) finish the live
+pick→sequence→confirm→open drive (the Simulator input channel wedged mid-session — no bug seen). These
+don't block the NEXT release unless you choose to include rotations in it; they block calling the
+feature done.
+
 **► ⭐ 1.7.0 (build 56) IS SUBMITTED FOR REVIEW — `WAITING_FOR_REVIEW` (3 Sep). Auto-releases on
 approval.** The whole release chain ran end-to-end from the CLI: version bumped 1.6.0→1.7.0 / 55→56
 (6 configs), archived → exported → validated (VERIFY SUCCEEDED) → uploaded (UPLOAD SUCCEEDED,

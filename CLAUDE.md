@@ -1032,6 +1032,49 @@ one contradicts the design thesis.)
 
 ## Decided — Route Network & Player Operations
 
+- **MULTI-CITY ROTATIONS — BUILT + MERGED to `main` (Phases 1–2, native app; designer
+  request "not every plane should fly point-to-point and loop").** A route is no longer a
+  fixed 2-airport pair — it's an ordered ROTATION LOOP of 2–5 stops (`Route.stops`) flown
+  by one aircraft, that AUTO-REPEATS. The classic reverse-shuttle A↔B is exactly the 2-stop
+  case (`[A,B]`), so nothing regressed for existing routes/background traffic — every legacy
+  route restores as a 2-stop rotation. **Design answers that shaped it** (see
+  `aa-1.1.x/MULTI_CITY_ROUTING_SCOPE.md`): rotations, NOT daily scheduling (auto-repeat keeps
+  it non-chore-like; the sim is time-decoupled at 100×, a timetable would be misery); each leg
+  earns its OWN point-to-point demand (no connecting-passenger/itinerary model — deliberately
+  out); overnighting is deferred to a Phase 3 (would emerge from the existing night curfews, no
+  player planning). **Locked designer decisions**: per-leg P2P demand · no hub double-count (a
+  rotation visiting a hub twice counts it once) · max 5 stops · per-DISTINCT-stop cost+slot ·
+  overnighting deferred.
+  - **Sim/data (Phase 1)**: `Aircraft.legIndex` walks the loop; the old `swap(&origin,&dest)`
+    is now a `nextLeg` closure (default = swap, so background traffic + 2-stop are unchanged).
+    `openRotation(stops:using:replacingCurrentRoute:)`, `rotationBlock` (range+runway on EVERY
+    leg incl. the closing one), `rotationOpeningCost` (base + gate fee + slot per distinct
+    stop), `rotationLegs`. `detachFromRoute` frees a slot at every distinct stop now (was
+    origin/dest only) — correct for any multi-stop route torn down by sell/park too.
+    Persistence: `RouteSave.stops` + `AircraftSave.legIndex`, tolerant-decode (nil → legacy
+    default), so a save mid-rotation resumes on the right leg.
+  - **UI (Phase 2)**: AIRCRAFT-FIRST flow (designer's explicit ask). "Open Route" →
+    `RouteAircraftPicker` (WHICH AIRCRAFT? — idle spares w/ tail/type/seats/range; skipped if
+    one spare or a Fleet ASSIGN target) → tap cities in order (each map tap appends a stop; a
+    live loop + Done/Undo/Abandon bar) → `RotationConfirmPanel` (per-leg distance + range/load,
+    total loop, cost). `RouteMode` gained `.pickAircraft`/`.rotate(UUID,[String])`/
+    `.confirmRotation(UUID,[String])`; the OLD `.pickOrigin/.pickDest/.confirm` cases STAY —
+    the Ops route-SUGGESTION path still uses them (a suggestion is inherently a 2-airport pair).
+    `MapView.drawRotationPreview` draws the in-progress loop (marching arcs + fainter closing
+    leg + base ring) from the transient `sim.rotationPreview`.
+  - **Verified**: `aa-1.1.x/RotationVerify.swift` 34/34 (loop order, 2-stop == classic shuttle,
+    per-leg economics + cash invariant, range blocks the offending leg, distinct-stop cost,
+    save/load of stops+legIndex, `replacingCurrentRoute` archives-old + validation-before-detach;
+    two guards bite-tested) + RoundTrip 13/13 + soak 6/6 GREEN + full Debug build. Designer
+    confirmed the flow works on device; the aircraft-first picker was driven in-session.
+  - **⚠️ STILL OWED before players get this** (in the scope doc): (1) a MULTI-SEED BALANCE pass
+    — a rotation must not be strictly better/worse than N separate 2-stop routes (the per-stop
+    cost/slot is a designed knob, un-swept); (2) a ROTATION-AWARE LABEL audit — the confirm
+    panel + Ops "Route opened" log + `detachFromRoute` read as a loop, but the other `↔`-string
+    sites (RoutesPanel detail, competition/incentive boxes, milestone strings) still say
+    "ORIG ↔ DEST"; (3) finish the live pick→sequence→confirm→open drive (the Simulator input
+    channel wedged mid-session — no bug seen, but the gesture chain wasn't driven end-to-end).
+
 - **The foundational shift this session: aircraft you own no longer fly
   randomly.** Before this work, EVERY aircraft (purchased or background)
   picked a destination via `randomRoutePair()` on every PARKED cycle —
