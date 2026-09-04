@@ -1067,13 +1067,22 @@ one contradicts the design thesis.)
     save/load of stops+legIndex, `replacingCurrentRoute` archives-old + validation-before-detach;
     two guards bite-tested) + RoundTrip 13/13 + soak 6/6 GREEN + full Debug build. Designer
     confirmed the flow works on device; the aircraft-first picker was driven in-session.
-  - **⚠️ STILL OWED before players get this** (in the scope doc): (1) a MULTI-SEED BALANCE pass
-    — a rotation must not be strictly better/worse than N separate 2-stop routes (the per-stop
-    cost/slot is a designed knob, un-swept); (2) a ROTATION-AWARE LABEL audit — the confirm
-    panel + Ops "Route opened" log + `detachFromRoute` read as a loop, but the other `↔`-string
-    sites (RoutesPanel detail, competition/incentive boxes, milestone strings) still say
-    "ORIG ↔ DEST"; (3) finish the live pick→sequence→confirm→open drive (the Simulator input
-    channel wedged mid-session — no bug seen, but the gesture chain wasn't driven end-to-end).
+  - **BALANCE PASS — DONE (4 Sep, `aa-1.1.x/RotationBalanceProbe.swift`, 6/6).** A rotation is a
+    genuine TRADEOFF, not strictly better/worse than N separate 2-stop routes — no retune. Opening
+    cost 0.41× the 3-route sum (sunk cost, minor); per-leg net-per-flight 0.93–0.99× a standalone
+    leg (per-leg code is identical — neutral); one rotation aircraft flies 0.33× the total legs of
+    3 dedicated aircraft (⅓ frequency, ⅓ revenue, but ⅓ the capital). The small per-leg shortfall
+    is the hub bonus overlapping SEPARATE routes get at shared airports (a lone rotation gets no
+    self-bonus) — healthy, keeps rotations from dominating. Methodology lesson in the probe: run
+    both arms in ONE sim on disjoint demand-matched triples (events cancel) + DRAIN the decision
+    queue each tick (a headless run never answers a CREW card → blocked aircraft stall → flight
+    counts become noise).
+  - **⚠️ STILL OWED before the feature is "done"** (in the scope doc): a ROTATION-AWARE LABEL
+    audit — the confirm panel + Ops "Route opened" log + `detachFromRoute` read as a loop, but the
+    other `↔`-string sites (RoutesPanel detail, competition/incentive boxes, milestone strings)
+    still say "ORIG ↔ DEST" for a multi-stop route. (The live pick→sequence→confirm→open drive was
+    blocked by a wedged Simulator input channel in-session, but the DESIGNER confirmed the full
+    flow works on device — so that's a nice-to-have re-drive, not a blocker.)
 
 - **The foundational shift this session: aircraft you own no longer fly
   randomly.** Before this work, EVERY aircraft (purchased or background)

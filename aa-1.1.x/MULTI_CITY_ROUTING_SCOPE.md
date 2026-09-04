@@ -134,9 +134,31 @@ built today (grep `↔\u{FE0E}` — ~8 sites).
    per hub it touches (probably yes) or per leg (no).
 3. **Max stops**: cap it (e.g. 5–6) so the UI and the opening-cost/slot math stay sane, and so a
    player can't build one absurd 30-stop mega-loop.
-4. **Cost/slot model** for N stops (above) — needs a balance pass (the harness + a multi-seed
-   check, per the standing rule) so a rotation isn't strictly better or worse than N separate
-   2-stop routes.
+4. **Cost/slot model** for N stops — **BALANCE PASS DONE (4 Sep, `aa-1.1.x/RotationBalanceProbe.swift`,
+   6/6).** VERDICT: a rotation is a **genuine tradeoff, NOT strictly better or worse** than N
+   separate 2-stop routes — no retune needed. The measured picture (A320, DEN-ORD-MSP rotation
+   vs a demand-matched SEA-SFO-LAX 3-route arm run in ONE sim so events cancel):
+   - **Opening cost**: rotation covers 3 legs for **0.41×** the 3-separate-route cost (base paid
+     once + gate fee/slot per DISTINCT stop) — cheaper than 3 routes, dearer than 1. Fine: opening
+     cost is a one-time SUNK cost, dwarfed by ongoing per-flight revenue, so this discount can't
+     tip the balance.
+   - **Per-leg economics NEUTRAL**: rotation net-per-completed-flight is **0.93–0.99×** the
+     standalone-route arm — the per-leg code path is identical, so a rotation adds no hidden edge
+     or penalty. (The tiny shortfall is the hub-network bonus that OVERLAPPING separate routes earn
+     at their shared airports; a lone rotation touches each of its stops with only itself → no
+     self-bonus. That's HEALTHY — it stops a rotation from ever dominating.)
+   - **Frequency tradeoff**: one rotation aircraft flies **0.33×** the total legs of the 3 separate
+     aircraft (⅓ frequency → ⅓ total revenue) but ties up ⅓ the aircraft capital. This is the real
+     hub-rotation-vs-point-to-point decision, and it's what self-balances the whole mechanic.
+   - **METHODOLOGY (kept in the probe):** two-separate-sims A/B is INVALID — the arms roll
+     different economic events and the net/flight ratio swings 0.6–1.0. Run both arms in ONE sim on
+     DISJOINT, demand-matched triples so events cancel (the FareVerify lesson). And DRAIN the
+     decision queue each tick (resolve crew→hire / AOG→expedite) — a headless run never "answers" a
+     CREW card, so a blocked aircraft stalls for sim-days and flight counts become noise (a first
+     cut hit exactly this: a single 2-stop "flew 10 legs" purely from an unresolved hold).
+   - **NOT swept**: only the 3-stop A320 case at medium-haul US demand was measured. The verdict is
+     structural (per-leg parity + the 1/N frequency law hold for any N and type), but a 4–5-stop or
+     mixed-haul spot-check would harden it if the feature's scope grows.
 5. **Overnight/RON**: Phase 1 can ignore it (legs fly back-to-back regardless of clock). Phase 3
    could gate a departure on the origin's curfew window so overnighting emerges — nice realism,
    not required for the core feature.
@@ -190,9 +212,12 @@ built today (grep `↔\u{FE0E}` — ~8 sites).
     82/1550) — the brand-new entry step. The pick→tap-sequence→confirm steps were NOT driven
     end-to-end because the Simulator's input channel wedged this session (the documented glitch:
     tab/control-bar taps landed, but the picker's ScrollView button cards stopped receiving taps;
-    NO bug observed — a fresh CoreSimulator reboot didn't clear it). ⚠️ NEXT SESSION: drive the
-    remaining picker→sequence→confirm→open flow live before merging (the logic is harness-covered,
-    but the gesture composition isn't — exactly what the standing rule says needs eyes). Also
+    NO bug observed — a fresh CoreSimulator reboot didn't clear it). **UPDATE: the DESIGNER
+    confirmed the full flow works on device ("works great"), and the balance pass is now DONE
+    (item #4 above, 6/6 — a rotation is a genuine tradeoff, not dominant/dominated).** MERGED to
+    `main` (4 Sep). Remaining before the feature is truly "done": the rotation-aware LABEL audit
+    (below), and a nice-to-have live re-drive of the exact gesture chain in a session where the
+    Simulator input isn't wedged. Also
     still TODO for Phase 2 completeness: rotation-aware labels are done in the confirm panel + Ops
     "Route opened" log + `detachFromRoute`, but audit the OTHER `↔`-string display sites (RoutesPanel
     detail, competition/incentive boxes, milestone city-pair strings) so a 3-stop route reads as a
