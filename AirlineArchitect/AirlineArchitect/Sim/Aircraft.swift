@@ -81,6 +81,12 @@ final class Aircraft: Identifiable {
     // with no `assignedRouteId` is a SPARE — it sits idle until routed.
     var purchased: Bool = false
     var assignedRouteId: Int?
+    /// Position in the assigned route's rotation loop: this aircraft is currently
+    /// flying `stops[legIndex] → stops[legIndex+1]` (wrapping to stops[0] on the
+    /// closing leg). Advanced at each PARKED transition. For a 2-stop rotation
+    /// this just alternates 0/1, reproducing the old origin/dest swap exactly.
+    /// Persisted so a save mid-rotation resumes on the correct leg.
+    var legIndex: Int = 0
     /// A reassignment the player has committed to but which hasn't taken effect
     /// yet: the aircraft is airborne, so it finishes the leg it's flying and
     /// moves to this route on arrival (real-world behaviour — an aircraft in the
@@ -241,7 +247,8 @@ final class Aircraft: Identifiable {
     @discardableResult
     func advance(tick: Int,
                  assignCrew: (Aircraft) -> Bool = { _ in true },
-                 releaseCrew: (Aircraft) -> Void = { _ in }) -> AdvanceEvent? {
+                 releaseCrew: (Aircraft) -> Void = { _ in },
+                 nextLeg: ((Aircraft) -> (origin: Airport, dest: Airport))? = nil) -> AdvanceEvent? {
         // A purchased spare (no route) is fully idle — no state machine. BUT an
         // aircraft IN THE MX SHOP still needs its shop-exit processed even with no
         // route: a COVERED C/D check releases the original's route to a sub, leaving
@@ -361,7 +368,17 @@ final class Aircraft: Identifiable {
             return .legCompleted   // arrived — settle this leg's economics
         }
         if newState == .parked {
-            swap(&origin, &dest)   // fly the return leg
+            // Fly the next leg of the rotation. `nextLeg` (supplied by Simulation
+            // for owned aircraft on a route) walks the rotation's `stops`; the
+            // default is the classic reverse-shuttle swap, which is also exactly
+            // what a 2-stop rotation produces.
+            if let nextLeg {
+                let leg = nextLeg(self)
+                origin = leg.origin
+                dest = leg.dest
+            } else {
+                swap(&origin, &dest)   // fly the return leg (no rotation context)
+            }
             return .legScheduled   // roll the next leg's revenue
         }
         return event

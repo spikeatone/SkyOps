@@ -142,15 +142,61 @@ built today (grep `↔\u{FE0E}` — ~8 sites).
    not required for the core feature.
 
 ## Phasing (each shippable, verified before the next)
-- **Phase 1 — data + sim**: `Route.stops`, `Aircraft.legIndex`, per-leg progression replacing the
-  swap, per-leg range check in a loop, persistence (tolerant decode + round-trip). Verify with a
-  headless harness: a 3-stop rotation flies ORD→BOI→SEA→ORD in order, each leg settles its own
-  economics, cash invariant holds, save/load round-trips `stops`+`legIndex`. N=2 reproduces today
-  exactly (regression guard).
-- **Phase 2 — UI**: aircraft-first flow, multi-tap picker, per-leg confirm panel with range/load,
-  rotation-aware labels everywhere. Drive it live in the Simulator (the standing "gesture bugs are
-  invisible to the harness" rule — the multi-tap picker is exactly the kind of gesture flow that
-  needs driving).
+- **Phase 1 — data + sim: BUILT (branch `multi-city-routing`, 4 Sep 2026).** `Route.stops: [String]`
+  (2…5, defaults to `[originCode, destCode]` so every existing route is a 2-stop rotation with zero
+  behaviour change) + a stops-aware `Route` init + `Route.label`/`uniqueStops`. `Aircraft.legIndex`
+  walks the loop; the old `swap(&origin,&dest)` is now driven by a `nextLeg` closure (default = the
+  swap, so background traffic + the N=2 case are unchanged). New `Simulation` API:
+  `openRotation(stops:using:)`, `rotationBlock(for:stops:)` (range/runway on EVERY leg incl. the
+  closing one), `rotationOpeningCost(_:)` (base + gate fee + slot per DISTINCT stop + leisure
+  surcharge — hub-visited-twice counts once), `rotationNextLeg` (the closure), `rotationLegs`.
+  Persistence: `RouteSave.stops` + `AircraftSave.legIndex`, both tolerant-decode (nil → legacy
+  default), wired through snapshot/restore. **`openRoute`/`reassign`/`openRouteCore` and the whole
+  UI are UNTOUCHED** — the 2-airport paths still produce a [origin,dest] rotation, so nothing in
+  Phase 2's list has to change before Phase 1 ships.
+  - **Verified: `aa-1.1.x/RotationVerify.swift` 25/25** (loop flies in order, 2-stop == the classic
+    reverse-shuttle, openRoute still yields a 2-stop rotation, each leg settles its own economics +
+    cash invariant, range blocks the offending leg, stop-count bounds + adjacent-dup trim,
+    distinct-stop cost, save/load of stops+legIndex resumes on the right leg + stays reconciled).
+    Both critical guards BITE-TESTED (sabotaging `rotationNextLeg`→swap fails the loop-order check;
+    sabotaging `rotationBlock`→nil fails the range check). No regression: RoundTripVerify 13/13,
+    MXCoverageVerify 81/81, soak green, full Debug app build SUCCEEDED (view layer compiles against
+    the model change — the new `advance` param defaults to nil, `Route.stops` defaults in init).
+- **Phase 2 — UI: BUILT (branch `multi-city-routing`, 4 Sep 2026).** Aircraft-first flow:
+  `RouteMode` gained `.pickAircraft` / `.rotate(UUID,[String])` / `.confirmRotation(UUID,[String])`
+  (the old `.pickOrigin`/`.pickDest`/`.confirm` cases stay — the Ops route-SUGGESTION path still
+  uses them, since a suggestion is inherently a 2-airport pair). "Open Route" → `startRouteFlow()`:
+  goes to `.pickAircraft` (a new `RouteAircraftPicker` listing idle spares with tail/type/seats/
+  range) unless there's exactly one spare (skip straight to `.rotate`) or a Fleet ASSIGN target
+  (`pendingAssignment` → `.rotate` for THAT aircraft). In `.rotate`, each map tap appends a stop
+  (dupe-adjacent ignored, capped at `Route.maxStops`); a `rotateControlBar` shows the live loop +
+  Done (≥2 stops) / Undo stop / Abandon. `.confirmRotation` shows `RotationConfirmPanel`: every leg
+  with distance + a range/runway/projected-load read, total loop nm, opening cost, Open/Edit/Abandon
+  (Open disabled if any leg is un-flyable or unaffordable). `openConfirmedRotation` calls the sim's
+  `openRotation(…, replacingCurrentRoute: true)` so a Fleet-assigned aircraft trades its old route.
+  Map preview: `sim.rotationPreview` (transient, view-synced via `.onChange(routeMode)`) drives
+  `MapView.drawRotationPreview` — marching dashed arcs between consecutive stops PLUS a fainter
+  closing leg back to the base, with a double ring on the first stop. `detachFromRoute` now frees a
+  slot at EVERY distinct stop (was just origin/dest) + uses `route.label` — correct for any
+  multi-stop route being torn down (sell/park too). iPad: the picker + confirm dock in the rail
+  (`isRouteConfirm` covers them); the `.rotate` tap-hint floats over the map.
+  - **Verified**: full Debug app build SUCCEEDED (twice — with and after stripping the throwaway
+    `-devScenario rotate`). `RotationVerify` **34/34** (added tests 9–10 for the new
+    `replacingCurrentRoute` path: reassign archives the old route + frees its slots + resets
+    legIndex; a FAILED replacing-open leaves the existing route intact — validation-before-detach).
+    No regression: RoundTrip 13/13, soak green. **Live-drive PARTIAL**: on the iPhone 17 sim the
+    tab nav + "Open Route" button + the aircraft-first "WHICH AIRCRAFT?" picker were confirmed
+    rendering with the correct spare data (N1ZQ A320 165/3300, N2ZQ A321 200/3200, N3ZQ CRJ900
+    82/1550) — the brand-new entry step. The pick→tap-sequence→confirm steps were NOT driven
+    end-to-end because the Simulator's input channel wedged this session (the documented glitch:
+    tab/control-bar taps landed, but the picker's ScrollView button cards stopped receiving taps;
+    NO bug observed — a fresh CoreSimulator reboot didn't clear it). ⚠️ NEXT SESSION: drive the
+    remaining picker→sequence→confirm→open flow live before merging (the logic is harness-covered,
+    but the gesture composition isn't — exactly what the standing rule says needs eyes). Also
+    still TODO for Phase 2 completeness: rotation-aware labels are done in the confirm panel + Ops
+    "Route opened" log + `detachFromRoute`, but audit the OTHER `↔`-string display sites (RoutesPanel
+    detail, competition/incentive boxes, milestone city-pair strings) so a 3-stop route reads as a
+    loop there too, not just "ORIG ↔ DEST".
 - **Phase 3 — polish (optional)**: emergent overnighting via curfews, reorder-stops UX, connecting
   demand only if it ever proves worth the complexity (probably never — flag it as deliberately
   out).

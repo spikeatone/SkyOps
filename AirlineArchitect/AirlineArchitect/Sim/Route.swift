@@ -50,6 +50,19 @@ final class Route: Identifiable {
     let openedTick: Int
     let openingCost: Int
 
+    /// Ordered airport codes the aircraft flies as a REPEATING LOOP:
+    /// stops[0]→stops[1]→…→stops[n-1]→stops[0]→(repeat). Length is 2…5.
+    /// A plain 2-stop rotation [A, B] is A→B→A — the same reverse-shuttle the
+    /// game had before rotations existed, so nothing regresses for that case.
+    /// `originCode`/`destCode` are kept as the loop's first/last stop for the
+    /// ~30 display/competition/incentive sites that read them; per-leg economics
+    /// key off the AIRCRAFT's current origin/dest (its position in this loop),
+    /// not these. Set in init; length ≥ 2 is an invariant (see initializers).
+    var stops: [String]
+
+    /// Max stops in one rotation (designer decision, 4 Sep 2026).
+    static let maxStops = 5
+
     /// Sum of every completed leg's net on this route, minus lease bills.
     var cumulativeNet: Int = 0
     /// Legs flown on this route (== history.count).
@@ -124,7 +137,36 @@ final class Route: Identifiable {
         self.destCode = destCode
         self.openedTick = openedTick
         self.openingCost = openingCost
+        self.stops = [originCode, destCode]   // 2-stop rotation = the classic shuttle
     }
+
+    /// Rotation initializer: `stops` is the ordered loop (length 2…5). originCode/
+    /// destCode become the first/last stop (display shim). A 2-element `stops`
+    /// is identical to the 2-arg init above.
+    init(id: Int, stops: [String], openedTick: Int, openingCost: Int) {
+        precondition(stops.count >= 2, "a rotation needs at least 2 stops")
+        self.id = id
+        self.stops = stops
+        self.originCode = stops.first!
+        self.destCode = stops.last!
+        self.openedTick = openedTick
+        self.openingCost = openingCost
+    }
+
+    /// Human label for any display surface: "ORD ↔ SEA" for a 2-stop loop,
+    /// "ORD → BOI → SEA → ↺" for a longer rotation.
+    var label: String {
+        stops.count <= 2
+            ? "\(stops.first ?? originCode) ↔\u{FE0E} \(stops.last ?? destCode)"
+            : stops.joined(separator: " → ") + " → ↺"
+    }
+    /// Distinct airports the loop touches, in first-seen order (for slot/hub
+    /// accounting — a rotation that visits a hub twice counts it ONCE, per the
+    /// designer decision).
+    var uniqueStops: [String] {
+        var seen = Set<String>(); return stops.filter { seen.insert($0).inserted }
+    }
+    var isMultiStop: Bool { stops.count > 2 }
 
     var isOpen: Bool { closedTick == nil }
     /// True once the route has earned back its opening cost.

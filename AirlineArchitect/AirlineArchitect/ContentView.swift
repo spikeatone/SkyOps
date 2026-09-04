@@ -643,6 +643,11 @@ enum RouteMode: Equatable {
     case pickOrigin
     case pickDest(String)
     case confirm(String, String)
+    // Multi-city rotation flow (Phase 2). Aircraft-first: pick the spare, then
+    // tap cities in order (each appends a stop), then confirm the loop.
+    case pickAircraft                       // choosing which idle spare will fly it
+    case rotate(UUID, [String])             // aircraftId + stops tapped so far (in order)
+    case confirmRotation(UUID, [String])    // review the full loop before opening
 }
 
 /// ACQUIRE — per-aircraft profile cards (Figma 4:1993 / 3:2052): name, an
@@ -987,6 +992,195 @@ struct RouteConfirmPanel: View {
         case nil:
             return (String(localized: "in range · runway OK"), true)
         }
+    }
+}
+
+/// Aircraft-first step of the multi-city route flow: pick which idle spare will
+/// fly the rotation. Skipped when the player owns exactly one spare (nothing to
+/// choose) or arrived via Fleet ASSIGN (aircraft already chosen). Docks in the
+/// iPad rail; floats over the map on iPhone.
+struct RouteAircraftPicker: View {
+    let sim: Simulation
+    let onPick: (Aircraft) -> Void
+    let onCancel: () -> Void
+    let onAcquire: () -> Void
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xE6E6E6) }
+    private var primaryC: Color   { isDark ? .white : .black }
+    private var labelC: Color     { isDark ? Sky.lightBlue.opacity(0.8) : Color(skyHex: 0x64748B) }
+    private var titleColor: Color { isDark ? Sky.lightBlue : Color(skyHex: 0x4E67A0) }
+
+    var body: some View {
+        let spares = sim.idleSpares
+        VStack(alignment: .leading, spacing: 8) {
+            Text("WHICH AIRCRAFT?").font(.karla(12, .bold)).foregroundStyle(titleColor).tracking(0.5)
+            if spares.isEmpty {
+                Text("No idle aircraft — acquire one to fly a new route.")
+                    .font(.karla(13)).foregroundStyle(labelC)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    pickerButton("Acquire A/C", filled: true, action: onAcquire)
+                    pickerButton("Cancel", filled: false, action: onCancel)
+                }.frame(height: 32)
+            } else {
+                Text("Pick the aircraft, then tap the cities it will fly in order.")
+                    .font(.karla(13)).foregroundStyle(labelC)
+                    .fixedSize(horizontal: false, vertical: true)
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(spares, id: \.id) { ac in
+                            Button { onPick(ac) } label: { row(ac) }.buttonStyle(.plain)
+                        }
+                    }
+                }
+                .frame(maxHeight: 220)
+                pickerButton("Cancel", filled: false, action: onCancel).frame(height: 30)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
+    }
+
+    private func row(_ ac: Aircraft) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(ac.tail).font(.karla(15, .bold)).foregroundStyle(primaryC)
+                Text(ac.type.name).font(.karla(12)).foregroundStyle(labelC)
+            }
+            Spacer(minLength: 0)
+            VStack(alignment: .trailing, spacing: 1) {
+                Text("\(ac.type.seats) seats").font(.karla(12, .semibold)).foregroundStyle(primaryC)
+                Text("\(ac.type.rangeNM.formatted()) nm").font(.karla(11)).foregroundStyle(labelC)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity)
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    private func pickerButton(_ title: LocalizedStringKey, filled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.karla(15, .medium))
+                .foregroundStyle(primaryC)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        }.buttonStyle(.plain)
+    }
+}
+
+/// Confirm step of the multi-city route flow: the full loop reviewed leg by leg
+/// (distance + range/runway + projected load per leg), the total opening cost,
+/// then Open / Edit / Abandon. Every leg is checked against the aircraft the
+/// player already chose, so a rotation with any un-flyable leg can't be opened.
+struct RotationConfirmPanel: View {
+    let sim: Simulation
+    let aircraft: Aircraft
+    let codes: [String]
+    let onOpen: () -> Void
+    let onBack: () -> Void
+    let onCancel: () -> Void
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xE6E6E6) }
+    private var primaryC: Color   { isDark ? .white : .black }
+    private var labelC: Color     { isDark ? Sky.lightBlue.opacity(0.8) : Color(skyHex: 0x64748B) }
+    private var green: Color      { isDark ? Color(skyHex: 0x87ED7A) : Color(skyHex: 0x10B981) }
+    private var red: Color        { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
+    private var amber: Color      { Color(skyHex: 0xFFB300) }
+
+    var body: some View {
+        let cost = sim.rotationOpeningCost(codes)
+        let affordable = sim.playerBalance >= cost
+        let legs = Simulation.rotationLegs(codes)
+        let anyBlocked = sim.rotationBlock(for: aircraft, stops: codes) != nil
+        VStack(alignment: .leading, spacing: 8) {
+            // Loop header: DEN → ORD → MSP → ↺
+            (Text(codes.joined(separator: "  →  ")) + Text("  →  ↺"))
+                .font(.karla(18, .heavy)).foregroundStyle(primaryC)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("\(aircraft.tail) · \(aircraft.type.name)").font(.karla(12, .semibold)).foregroundStyle(labelC)
+
+            Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 1)
+
+            // Per-leg rows: distance + a range/runway/load read.
+            ForEach(Array(legs.enumerated()), id: \.offset) { _, leg in
+                legRow(leg.0, leg.1)
+            }
+
+            Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 1)
+            infoRow("Total loop", "\(totalNM.formatted()) nm", primaryC)
+            infoRow("Opening cost", "\(Currency.symbol)\(cost.formatted())", affordable ? green : red)
+
+            HStack(spacing: 8) {
+                confirmButton("Open route", disabled: !affordable || anyBlocked, action: onOpen)
+                confirmButton("Edit", disabled: false, action: onBack)
+                confirmButton("Abandon", disabled: false, action: onCancel)
+            }.frame(height: 32)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
+    }
+
+    private var totalNM: Int {
+        Simulation.rotationLegs(codes).reduce(0) { sum, leg in
+            guard let a = sim.airport(leg.0), let b = sim.airport(leg.1) else { return sum }
+            return sum + Int(a.greatCircleNM(to: b).rounded())
+        }
+    }
+
+    @ViewBuilder private func legRow(_ from: String, _ to: String) -> some View {
+        if let a = sim.airport(from), let b = sim.airport(to) {
+            let nm = Int(a.greatCircleNM(to: b).rounded())
+            let block = sim.routeBlock(for: aircraft, from: a, to: b)
+            let lf = sim.useDemandModel ? sim.projectedLoadFactor(seats: aircraft.type.seats, from: a, to: b) : nil
+            HStack(spacing: 6) {
+                Text("\(from) → \(to)").font(.karla(13, .semibold)).foregroundStyle(primaryC)
+                Spacer(minLength: 0)
+                Text("\(nm.formatted()) nm").font(.karla(12)).foregroundStyle(labelC)
+                switch block {
+                case .range:
+                    Text("· too far").font(.karla(12, .bold)).foregroundStyle(red)
+                case .runway(let code):
+                    Text("· \(code) rwy").font(.karla(12, .bold)).foregroundStyle(red)
+                case nil:
+                    if let lf {
+                        let c = lf >= 0.7 ? green : (lf >= 0.45 ? amber : red)
+                        Text("· \(Int((lf * 100).rounded()))%").font(.karla(12, .bold)).foregroundStyle(c)
+                    } else {
+                        Text("· OK").font(.karla(12, .bold)).foregroundStyle(green)
+                    }
+                }
+            }
+        }
+    }
+
+    private func infoRow(_ label: LocalizedStringKey, _ value: String, _ valueColor: Color) -> some View {
+        HStack {
+            Text(label).font(.karla(14)).foregroundStyle(labelC)
+            Spacer()
+            Text(value).font(.karla(14, .bold)).foregroundStyle(valueColor)
+        }
+    }
+
+    private func confirmButton(_ label: LocalizedStringKey, disabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label).font(.karla(16, .medium))
+                .foregroundStyle(disabled ? primaryC.opacity(0.35) : primaryC)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 6)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        }.buttonStyle(.plain).disabled(disabled)
     }
 }
 

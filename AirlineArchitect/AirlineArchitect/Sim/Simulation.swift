@@ -1040,6 +1040,14 @@ final class Simulation {
     }
     func clearSuggestion() { pendingSuggestion = nil }
 
+    /// The multi-city rotation the player is currently tapping out (ordered stop
+    /// codes), so the map can draw the in-progress loop. Transient (view state
+    /// mirror, not persisted); the view sets/clears it as stops change and when
+    /// the route flow ends. Read directly by MapView.drawRotationPreview.
+    private(set) var rotationPreview: [String] = []
+    func setRotationPreview(_ codes: [String]) { rotationPreview = codes }
+    func clearRotationPreview() { rotationPreview = [] }
+
     /// Center on the two airports' midpoint and zoom so both fit with generous
     /// padding (so the dashed line reads as a route across open map, not edge
     /// to edge). Same fit math as applyHomeFraming.
@@ -2736,6 +2744,27 @@ final class Simulation {
     /// (staffed now) and the airport-offer accept path (may open PENDING — no
     /// aircraft yet). Does NOT assign an aircraft.
     @discardableResult
+    /// The next leg an owned aircraft should fly, walking its route's rotation
+    /// loop (`stops`) and advancing the aircraft's `legIndex`. For a 2-stop
+    /// rotation this alternates 0↔1, i.e. the classic origin/dest swap. Falls
+    /// back to the plain swap for anything without a resolvable multi-stop route
+    /// (spares that somehow reach here, or a corrupt/short stops list), so it can
+    /// never strand an aircraft. Passed as `advance`'s `nextLeg` closure.
+    private func rotationNextLeg(_ ac: Aircraft) -> (origin: Airport, dest: Airport) {
+        func swapped() -> (Airport, Airport) { (ac.dest, ac.origin) }   // matches the old swap
+        guard let id = ac.assignedRouteId,
+              let r = playerRoutes.first(where: { $0.id == id }),
+              r.stops.count >= 2 else {
+            return swapped()
+        }
+        let n = r.stops.count
+        ac.legIndex = (ac.legIndex + 1) % n
+        let fromCode = r.stops[ac.legIndex]
+        let toCode = r.stops[(ac.legIndex + 1) % n]
+        guard let from = airport(fromCode), let to = airport(toCode) else { return swapped() }
+        return (from, to)
+    }
+
     private func createRoute(from origin: Airport, to dest: Airport, cost: Int,
                              incentiveBonus: Int = 0, waived: Int = 0) -> Route {
         playerBalance -= cost
@@ -2758,6 +2787,7 @@ final class Simulation {
         r.assignmentHistory.append(RouteAssignment(id: r.assignmentHistory.count, tail: ac.tail,
                                                    typeName: ac.type.name, assignedTick: tick))
         ac.assignedRouteId = r.id
+        ac.legIndex = 0            // start at the first leg of the rotation
         ac.origin = origin
         ac.dest = dest
         ac.stateIndex = FlightState.parked.rawValue
@@ -2827,9 +2857,10 @@ final class Simulation {
         r.closedTick = tick
         closedPlayerRoutes.append(r)
         decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == id }
-        airports.first { $0.code == r.originCode }?.slotsAvailable += 1
-        airports.first { $0.code == r.destCode }?.slotsAvailable += 1
-        logOps(.structural, L("Route closed"), L("%@ ↔︎ %@ — %@ %@", r.originCode, r.destCode, ac.tail, note))
+        // Free a slot at EVERY distinct stop the route consumed (a rotation can
+        // touch up to 5 airports; a 2-stop route frees exactly its two ends).
+        for code in r.uniqueStops { airports.first { $0.code == code }?.slotsAvailable += 1 }
+        logOps(.structural, L("Route closed"), L("%@ — %@ %@", r.label, ac.tail, note))
     }
 
     /// Close the aircraft's current route and leave it as an IDLE SPARE — the plane
@@ -2896,6 +2927,109 @@ final class Simulation {
                    L("%@ moves to %@ ↔\u{FE0E} %@ after it lands at %@", ac.tail, origin.code, dest.code, ac.dest.code))
         } else {
             assign(ac, to: r, origin: origin, dest: dest)
+        }
+        return .success
+    }
+
+    // MARK: Multi-city rotations
+
+    /// Why a rotation can't be opened. `.legOutOfRange`/`.legRunwayTooShort` name
+    /// the specific offending leg so the UI can point at it.
+    enum RotationResult: Equatable {
+        case success
+        case tooFewStops, tooManyStops, repeatedAdjacentStop
+        case legOutOfRange(from: String, to: String, nm: Int)
+        case legRunwayTooShort(String)
+        case insufficientFunds(Int)
+        case notOwned
+    }
+
+    /// The loop legs of a stops list: [s0→s1, s1→s2, …, s(n-1)→s0].
+    static func rotationLegs(_ stops: [String]) -> [(String, String)] {
+        guard stops.count >= 2 else { return [] }
+        return (0..<stops.count).map { (stops[$0], stops[($0 + 1) % stops.count]) }
+    }
+
+    /// First leg `ac` physically can't fly (range or runway), checking EVERY leg
+    /// of the loop including the closing leg back to stops[0]. nil = all legs OK.
+    func rotationBlock(for ac: Aircraft, stops: [String]) -> RotationResult? {
+        for (a, b) in Simulation.rotationLegs(stops) {
+            guard let from = airport(a), let to = airport(b) else { continue }
+            switch routeBlock(for: ac, from: from, to: to) {
+            case .range(let nm): return .legOutOfRange(from: a, to: b, nm: nm)
+            case .runway(let code): return .legRunwayTooShort(code)
+            case nil: break
+            }
+        }
+        return nil
+    }
+
+    /// Opening cost for a rotation: base + gate fee at each DISTINCT stop + a slot
+    /// premium per distinct stop that needs one (waived at an operating hub) +
+    /// the leisure surcharge if any stop is a leisure field. A rotation that
+    /// visits a hub twice pays that hub once (distinct-stop rule).
+    func rotationOpeningCost(_ stops: [String]) -> Int {
+        var _seen = Set<String>(); let unique = stops.filter { _seen.insert($0).inserted }
+        var cost = Double(Simulation.routeBaseCost)
+        for code in unique {
+            guard let ap = airport(code) else { continue }
+            cost += Double(ap.gateFeeNarrowbody) * Double(Simulation.routeCostPerGateFeeUnit)
+            if ap.slotsAvailable <= 0, !hubOperating(code) {
+                cost += Double(Simulation.routeSlotPurchasePremium)
+            }
+        }
+        if unique.contains(where: { Airport.isLeisure($0) }) {
+            cost += Double(Simulation.leisureOpeningSurcharge)
+        }
+        return Int(cost.rounded())
+    }
+
+    /// Open a multi-city rotation and assign `ac` to fly it. Validates the stop
+    /// count (2…maxStops), forbids a stop immediately repeating itself, range/
+    /// runway-checks every leg, and charges the per-stop opening cost. A 2-stop
+    /// rotation is equivalent to openRoute. Consumes a slot at each distinct stop.
+    /// `replacingCurrentRoute`: if `ac` is already flying a route (a Fleet ASSIGN
+    /// target), archive that route first so the aircraft trades one for the other
+    /// rather than accumulating an orphan. Validation runs BEFORE any detach, so a
+    /// rejected open leaves the existing route untouched.
+    @discardableResult
+    func openRotation(stops rawStops: [String], using ac: Aircraft,
+                      replacingCurrentRoute: Bool = false) -> RotationResult {
+        guard ac.purchased else { return .notOwned }
+        // Trim any accidental adjacent duplicate the picker might produce (A,A,B).
+        var stops: [String] = []
+        for code in rawStops where stops.last != code { stops.append(code) }
+        // A closing leg back to stops[0] that repeats the last stop (…,B,A where
+        // A==stops[0]) is fine; a stop equal to its predecessor is not.
+        guard stops.count >= 2 else { return .tooFewStops }
+        guard stops.count <= Route.maxStops else { return .tooManyStops }
+        if stops.first == stops.last && stops.count == 2 { return .repeatedAdjacentStop }
+        if let block = rotationBlock(for: ac, stops: stops) { return block }
+        let cost = rotationOpeningCost(stops)
+        guard playerBalance >= cost else { return .insufficientFunds(cost) }
+
+        // All checks passed — now it's safe to tear down the aircraft's old route.
+        if replacingCurrentRoute, ac.assignedRouteId != nil { detachFromRoute(ac) }
+        playerBalance -= cost
+        totalRouteSpend += cost
+        var _seen = Set<String>(); let unique = stops.filter { _seen.insert($0).inserted }
+        for code in unique {
+            if let ap = airport(code), ap.slotsAvailable > 0 { ap.slotsAvailable -= 1 }
+        }
+        let r = Route(id: nextRouteId, stops: stops, openedTick: tick, openingCost: cost)
+        nextRouteId += 1
+        playerRoutes.append(r)
+        if let o = airport(stops[0]), let d = airport(stops[1]) {
+            routeOpenPulse = RoutePulse(a: o.code, b: d.code, tick: tick)
+            assign(ac, to: r, origin: o, dest: d)
+        }
+        logOps(.structural, L("Route opened"), r.label)
+        // Hub-eligibility surfacing for every distinct stop the rotation touches.
+        for code in unique
+        where routesAt(code) == Simulation.hubMinRoutes && hubs[code] == nil && rivalHubs[code] == nil {
+            logOps(.structural, L("%@ reached hub eligibility", code),
+                   L("%@ routes now use %@ — you can establish a hub (tap the airport)", Simulation.hubMinRoutes, code),
+                   airportCode: code)
         }
         return .success
     }
@@ -5225,7 +5359,7 @@ final class Simulation {
         let routeCount = playerRoutes.count
         if routeCount >= 1, let r = playerRoutes.first {
             celebrate("first_route", "point.3.connected.trianglepath.dotted", L("First route opened!"),
-                      L("Your first city pair is live."), originCode: r.originCode, destCode: r.destCode)
+                      L("Your first route is live."), originCode: r.originCode, destCode: r.destCode)
         }
         for (n, sub) in [(5, L("A real network.")), (10, L("The map is filling in.")),
                          (25, L("A serious network."))] where routeCount >= n {
@@ -5435,7 +5569,7 @@ final class Simulation {
         s.aircraft = aircraft.filter { $0.purchased }.map { ac in
             AircraftSave(tail: ac.tail, typeId: ac.type.id, originCode: ac.origin.code, destCode: ac.dest.code,
                          stateIndex: ac.stateIndex, stateTick: ac.stateTick, cyclesAccrued: ac.cyclesAccrued,
-                         assignedRouteId: ac.assignedRouteId, pendingRouteId: ac.pendingRouteId,
+                         assignedRouteId: ac.assignedRouteId, legIndex: ac.legIndex, pendingRouteId: ac.pendingRouteId,
                          pendingPark: ac.pendingPark,
                          repaintUntilTick: ac.repaintUntilTick,
                          repaintStartTick: ac.repaintStartTick,
@@ -5480,7 +5614,7 @@ final class Simulation {
                   totalLeaseCost: r.totalLeaseCost, closedTick: r.closedTick,
                   competitionLevel: r.competitionLevel, competitors: r.competitors,
                   incentiveBonus: r.incentiveBonus, incentiveWaived: r.incentiveWaived, fulfillByTick: r.fulfillByTick,
-                  subsidiaryCode: r.subsidiaryCode, fareLevel: r.fareLevel,
+                  subsidiaryCode: r.subsidiaryCode, fareLevel: r.fareLevel, stops: r.stops,
                   history: r.history.map { FlightRecordSave(id: $0.id, tick: $0.tick, tail: $0.tail, revenue: $0.revenue, fees: $0.fees, operatingCost: $0.operatingCost, leaseCostEstimate: $0.leaseCostEstimate, net: $0.net, pax: $0.pax, seats: $0.seats, loadFactor: $0.loadFactor, cumulativeNet: $0.cumulativeNet) },
                   assignmentHistory: r.assignmentHistory.map { RouteAssignmentSave(id: $0.id, tail: $0.tail, typeName: $0.typeName, assignedTick: $0.assignedTick) },
                   revenueTotal: r.revenueTotal, feesTotal: r.feesTotal,
@@ -5488,6 +5622,9 @@ final class Simulation {
     }
     private func restoreRoute(_ s: RouteSave) -> Route {
         let r = Route(id: s.id, originCode: s.originCode, destCode: s.destCode, openedTick: s.openedTick, openingCost: s.openingCost)
+        // Restore the rotation loop (pre-rotation saves have no `stops` → the
+        // 2-arg init already set [originCode, destCode], the shuttle they were).
+        if let stops = s.stops, stops.count >= 2 { r.stops = stops }
         r.cumulativeNet = s.cumulativeNet; r.flights = s.flights; r.totalLeaseCost = s.totalLeaseCost; r.closedTick = s.closedTick
         r.subsidiaryCode = s.subsidiaryCode
         r.competitionLevel = s.competitionLevel; r.competitors = s.competitors
@@ -5610,6 +5747,7 @@ final class Simulation {
             let ac = Aircraft(tail: a.tail, type: type, origin: o, dest: d, stateIndex: a.stateIndex,
                               cyclesAccrued: a.cyclesAccrued, purchased: true)
             ac.stateTick = a.stateTick; ac.assignedRouteId = a.assignedRouteId
+            ac.legIndex = a.legIndex ?? 0   // rotation leg position (pre-rotation saves → 0)
             ac.pendingRouteId = a.pendingRouteId; ac.pendingPark = a.pendingPark
             ac.repaintUntilTick = a.repaintUntilTick
             ac.repaintStartTick = a.repaintStartTick; ac.repaintQueued = a.repaintQueued
@@ -5698,7 +5836,8 @@ final class Simulation {
         assignSpareToPendingRoutes()   // staff any offer-opened routes with an in-range spare
         checkMilestones()
         for ac in aircraft {
-            switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew) {
+            switch ac.advance(tick: tick, assignCrew: assignCrew, releaseCrew: releaseCrew,
+                              nextLeg: rotationNextLeg) {
             case .aogHoldStarted:      pushDecision(.aog, for: ac); dingReputation(Simulation.repHitAOG)
             case .aogRepairCompleted:  clearDecision(.aog, for: ac)   // defensive — card normally already resolved
             case .crewHoldStarted:     pushDecision(.crew, for: ac); dingReputation(Simulation.repHitCrew)
