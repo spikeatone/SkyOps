@@ -906,7 +906,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "einer Route"
+            "value": "eine Route"
           }
         }
       }
@@ -7737,6 +7737,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "⚠︎ Außerhalb deiner Regionen. Ihre Drehkreuze und Routen sind nicht mit deinem Netzwerk verbunden — keine Überschneidung zum Optimieren, kein Umsteigeverkehr. Das zahlt sich selten aus."
+          }
+        }
+      }
+    },
+    "This is a long check. Cover %@ with a comparable idle aircraft (it flies the route until %@ returns, then goes back to your spares), or suspend the route while %@ is in the shop.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist ein langer Check. Decke %@ mit einem vergleichbaren freien Flugzeug ab (es fliegt die Route, bis %@ zurückkehrt, und geht dann zurück zu deinen Reserven), oder pausiere die Route, während %@ in der Werkstatt ist."
+          }
+        }
+      }
+    },
+    "Suspending pauses %@ for ~%lld days (no flights, no revenue), then %@ resumes it. Covering keeps the route earning.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausieren stoppt %@ für ~%lld Tage (keine Flüge, keine Einnahmen), dann nimmt %@ sie wieder auf. Abdecken hält die Route am Verdienen."
+          }
+        }
+      }
+    },
+    "%@ · closes after this leg": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · schließt nach diesem Flug"
+          }
+        }
+      }
+    },
+    "%@ · that route closes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · diese Route wird geschlossen"
+          }
+        }
+      }
+    },
+    "Close %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ schließen?"
+          }
+        }
+      }
+    },
+    "Moves to %@ after landing at %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wechselt nach der Landung in %@ auf %@"
+          }
+        }
+      }
+    },
+    "Take over %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ übernehmen"
           }
         }
       }

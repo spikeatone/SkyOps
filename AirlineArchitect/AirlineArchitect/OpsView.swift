@@ -175,11 +175,7 @@ struct OpsView: View {
                 let pending = !sim.routeStaffed(r)
                 HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            Text(r.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
-                            Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold)).foregroundStyle(secondary)
-                            Text(r.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
-                        }
+                        routeTitle(r)
                         Text(pendingStatus(r, pending: pending))
                             .font(.karla(12)).foregroundStyle(pending ? Color(skyHex: 0xFFB700) : Sky.coreGreen)
                         // Explain WHY a pending route hasn't been staffed (e.g.
@@ -203,6 +199,21 @@ struct OpsView: View {
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+    /// A route's title: a 2-stop route shows ORIG ⇄ DEST with the route icon; a
+    /// multi-city rotation shows the whole loop (DEN → ORD → MSP → ↺).
+    @ViewBuilder private func routeTitle(_ r: Route) -> some View {
+        if r.isMultiStop {
+            Text(r.stops.joined(separator: " → ") + " → ↺")
+                .font(.karla(15, .heavy)).foregroundStyle(primary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            HStack(spacing: 6) {
+                Text(r.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+                Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold)).foregroundStyle(secondary)
+                Text(r.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
+            }
+        }
     }
     /// Pending routes show the fulfillment countdown; staffed ones "In service".
     private func pendingStatus(_ r: Route, pending: Bool) -> LocalizedStringKey {
@@ -391,7 +402,7 @@ struct OpsView: View {
             // route impact matters (and is covered) only for the long C/D checks below.
             if onRoute, let r = route {
                 mxDetailRow(label: String(localized: "Current route"),
-                            value: "\(r.originCode) ↔\u{FE0E} \(r.destCode)", tint: primary)
+                            value: r.label, tint: primary)
             }
 
             Divider().overlay(cardBorder.opacity(0.4)).padding(.vertical, 2)
@@ -399,7 +410,7 @@ struct OpsView: View {
             if coverReq {
                 // C/D on a routed aircraft — a LONG check. Either cover the route with a
                 // like-size aircraft, or suspend the route while it's in the shop.
-                Text(String(localized: "This is a long check. Cover \(route?.originCode ?? "") ↔\u{FE0E} \(route?.destCode ?? "") with a comparable idle aircraft (it flies the route until \(ac.tail) returns, then goes back to your spares), or suspend the route while \(ac.tail) is in the shop."))
+                Text(String(localized: "This is a long check. Cover \(route?.label ?? "") with a comparable idle aircraft (it flies the route until \(ac.tail) returns, then goes back to your spares), or suspend the route while \(ac.tail) is in the shop."))
                     .font(.karla(11)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
                 if !covers.isEmpty {
                     // A tappable row per SUITABLE (like-capacity/range) idle spare.
@@ -465,7 +476,7 @@ struct OpsView: View {
                 }.buttonStyle(.plain).disabled(sim.playerBalance < cost)
                 mxDetailRow(label: String(localized: "Check cost (either way)"), value: compactMoney(cost), tint: secondary)
                 mxDetailRow(label: String(localized: "Lost revenue (~\(days)d paused)"), value: "~\(compactMoney(foregone))", tint: Sky.red)
-                Text(String(localized: "Suspending pauses \(route?.originCode ?? "the route") ↔\u{FE0E} \(route?.destCode ?? "") for ~\(days) days (no flights, no revenue), then \(ac.tail) resumes it. Covering keeps the route earning."))
+                Text(String(localized: "Suspending pauses \(route?.label ?? String(localized: "the route")) for ~\(days) days (no flights, no revenue), then \(ac.tail) resumes it. Covering keeps the route earning."))
                     .font(.karla(10)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
             } else {
                 // A check (or a spare): service directly.
@@ -555,11 +566,7 @@ struct OpsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .center) {
                             VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    Text(r.originCode).font(.karla(16, .heavy)).foregroundStyle(primary)
-                                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 10, weight: .bold)).foregroundStyle(secondary)
-                                    Text(r.destCode).font(.karla(16, .heavy)).foregroundStyle(primary)
-                                }
+                                routeTitle(r)
                                 Text("vs \(r.competitors.joined(separator: ", "))")
                                     .font(.karla(12)).foregroundStyle(secondary).lineLimit(2)
                             }

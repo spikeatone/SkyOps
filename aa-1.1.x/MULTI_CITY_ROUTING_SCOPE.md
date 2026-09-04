@@ -215,13 +215,22 @@ built today (grep `↔\u{FE0E}` — ~8 sites).
     NO bug observed — a fresh CoreSimulator reboot didn't clear it). **UPDATE: the DESIGNER
     confirmed the full flow works on device ("works great"), and the balance pass is now DONE
     (item #4 above, 6/6 — a rotation is a genuine tradeoff, not dominant/dominated).** MERGED to
-    `main` (4 Sep). Remaining before the feature is truly "done": the rotation-aware LABEL audit
-    (below), and a nice-to-have live re-drive of the exact gesture chain in a session where the
-    Simulator input isn't wedged. Also
-    still TODO for Phase 2 completeness: rotation-aware labels are done in the confirm panel + Ops
-    "Route opened" log + `detachFromRoute`, but audit the OTHER `↔`-string display sites (RoutesPanel
-    detail, competition/incentive boxes, milestone city-pair strings) so a 3-stop route reads as a
-    loop there too, not just "ORIG ↔ DEST".
+    `main` (4 Sep). **FEATURE COMPLETE**: the balance pass (item #4) AND the rotation-aware LABEL
+    audit are both DONE. The only residual is a nice-to-have live re-drive of the exact gesture
+    chain in a session where the Simulator input isn't wedged.
+  - **ROTATION-AWARE LABEL audit — DONE (4 Sep).** Every whole-route display reads as a loop for a
+    multi-stop rotation (2-stop keeps the classic `ORIG ↔ DEST` / ⇄ pair). Primitives: `Route.label`
+    (`"A ↔ B"` 2-stop / `"A → B → C → ↺"` rotation), `Route.uniqueStops`, `route(byId:)`, and
+    `Celebration.stops`. Sites wired: RoutesPanel card header, the Ops incentive + competition route
+    lists (new `routeTitle` helper), MX cover/suspend copy, the slot-buyback alert subtitle
+    (route-by-id → falls back to the pair), the reassignment "Leaves" row, the close-route confirm,
+    Fleet's pending-reassignment + current-route + ReplacementPicker labels, and the route MILESTONE
+    toast. German added for the 8 new `.xcstrings` keys (`de-findgaps.py` clean but for the 2 known
+    DEBUG-only livery strings). Verified RotationVerify **40/40** (added a label test: 2-stop →
+    `DEN ↔ ORD`, 3-stop → `SEA → SFO → LAX → ↺`) + full Debug build. Deliberately LEFT: `HubsPanel`'s
+    `spoke = origin==hub ? dest : origin` (picks the non-hub endpoint of a hub route — ambiguous for
+    a rotation but a hub-drawer concept, low value) and the AlertsView 2-code FALLBACK (only reached
+    when the route lookup fails).
 - **Phase 3 — polish (optional)**: emergent overnighting via curfews, reorder-stops UX, connecting
   demand only if it ever proves worth the complexity (probably never — flag it as deliberately
   out).

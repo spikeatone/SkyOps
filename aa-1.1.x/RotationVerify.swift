@@ -208,6 +208,25 @@ func main() {
         check(sim.playerRoutes.contains { $0.id == keptRouteId }, "10: original route still open")
     }
 
+    // ---- 11. Display label / uniqueStops are loop-aware (the label audit). ----
+    do {
+        let sim = newSim()
+        // 2-stop route → the classic ⇄ pair.
+        guard let a = buySpare(sim, "A320") else { check(false, "setup 11"); printResult(); return }
+        _ = sim.openRotation(stops: ["DEN", "ORD"], using: a)
+        let r2 = sim.playerRoutes.first { $0.id == a.assignedRouteId }
+        check(r2?.isMultiStop == false, "11: 2-stop route is not multi-stop")
+        check(r2?.label == "DEN ↔\u{FE0E} ORD", "11: 2-stop label is the ⇄ pair (got \(r2?.label ?? "nil"))")
+        check(r2?.uniqueStops == ["DEN", "ORD"], "11: 2-stop uniqueStops")
+        // Multi-stop rotation → the loop label, and uniqueStops dedupes a repeat.
+        guard let b = buySpare(sim, "A320") else { check(false, "setup 11b"); printResult(); return }
+        _ = sim.openRotation(stops: ["SEA", "SFO", "LAX"], using: b)
+        let r3 = sim.playerRoutes.first { $0.id == b.assignedRouteId }
+        check(r3?.isMultiStop == true, "11: 3-stop route IS multi-stop")
+        check(r3?.label == "SEA → SFO → LAX → ↺", "11: 3-stop label is the loop (got \(r3?.label ?? "nil"))")
+        check(r3?.uniqueStops == ["SEA", "SFO", "LAX"], "11: 3-stop uniqueStops")
+    }
+
     printResult()
     func printResult() { print("\nRotationVerify: \(pass)/\(pass + fail) passed" + (fail == 0 ? "  ✅" : "  ❌ \(fail) FAILED")) }
 }

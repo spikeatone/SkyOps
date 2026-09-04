@@ -929,8 +929,8 @@ struct RouteConfirmPanel: View {
                let old = sim.playerRoutes.first(where: { $0.id == rid }) {
                 let flying = sim.isEnRoute(ac)
                 infoRow("Leaves",
-                        flying ? String(localized: "\(old.originCode)–\(old.destCode) · closes after this leg")
-                               : String(localized: "\(old.originCode)–\(old.destCode) · that route closes"), red)
+                        flying ? String(localized: "\(old.label) · closes after this leg")
+                               : String(localized: "\(old.label) · that route closes"), red)
             }
 
             Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
@@ -1245,7 +1245,7 @@ struct RoutesPanel: View {
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
-        .confirmationDialog(closeTarget.map { "Close \($0.originCode)–\($0.destCode)?" } ?? "Close route?",
+        .confirmationDialog(closeTarget.map { String(localized: "Close \($0.label)?") } ?? String(localized: "Close route?"),
                             isPresented: Binding(get: { closeTarget != nil },
                                                  set: { if !$0 { closeTarget = nil } }),
                             titleVisibility: .visible) {
@@ -1276,10 +1276,17 @@ struct RoutesPanel: View {
         let expanded = expandedId == r.id
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
-                HStack(spacing: 12) {
-                    Text(r.originCode).font(.karla(20, .heavy)).foregroundStyle(primaryC)
-                    Image(systemName: "arrow.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(primaryC)
-                    Text(r.destCode).font(.karla(20, .heavy)).foregroundStyle(primaryC)
+                if r.isMultiStop {
+                    // Multi-city rotation: show the whole loop (e.g. DEN → ORD → MSP → ↺).
+                    Text(r.stops.joined(separator: " → ") + " → ↺")
+                        .font(.karla(18, .heavy)).foregroundStyle(primaryC)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    HStack(spacing: 12) {
+                        Text(r.originCode).font(.karla(20, .heavy)).foregroundStyle(primaryC)
+                        Image(systemName: "arrow.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(primaryC)
+                        Text(r.destCode).font(.karla(20, .heavy)).foregroundStyle(primaryC)
+                    }
                 }
                 Spacer()
                 if r.isOpen { statusChip(profitable: r.isProfitable) }

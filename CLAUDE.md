@@ -1077,12 +1077,18 @@ one contradicts the design thesis.)
     both arms in ONE sim on disjoint demand-matched triples (events cancel) + DRAIN the decision
     queue each tick (a headless run never answers a CREW card → blocked aircraft stall → flight
     counts become noise).
-  - **⚠️ STILL OWED before the feature is "done"** (in the scope doc): a ROTATION-AWARE LABEL
-    audit — the confirm panel + Ops "Route opened" log + `detachFromRoute` read as a loop, but the
-    other `↔`-string sites (RoutesPanel detail, competition/incentive boxes, milestone strings)
-    still say "ORIG ↔ DEST" for a multi-stop route. (The live pick→sequence→confirm→open drive was
-    blocked by a wedged Simulator input channel in-session, but the DESIGNER confirmed the full
-    flow works on device — so that's a nice-to-have re-drive, not a blocker.)
+  - **ROTATION-AWARE LABEL audit — DONE (4 Sep).** Every whole-route display now reads as a loop
+    for a multi-stop rotation (2-stop still shows the classic `ORIG ↔ DEST` / ⇄ pair). `Route.label`
+    (`"A ↔ B"` for 2-stop, `"A → B → C → ↺"` for a rotation) + `route(byId:)` are the primitives;
+    wired into RoutesPanel card header, the Ops incentive + competition route lists (`routeTitle`
+    helper), the MX cover/suspend copy, the slot-buyback alert, the reassignment "Leaves" row, the
+    close-route confirm, the pending-reassignment + current-route + ReplacementPicker labels
+    (Fleet), and the route MILESTONE toast (`Celebration.stops` — a route recoup / first-route on a
+    rotation shows the loop, not just the ⇄ pair). German added for the 8 new catalog keys
+    (`de-findgaps.py` clean but for the 2 known DEBUG-only livery strings). Verified: RotationVerify
+    40/40 (+ a label test) + full Debug build. **The feature is now complete** (balance + labels
+    done, designer-confirmed on device). The only residual is a nice-to-have live re-drive of the
+    exact pick→sequence→confirm gesture chain in a session where the Simulator input isn't wedged.
 
 - **The foundational shift this session: aircraft you own no longer fly
   randomly.** Before this work, EVERY aircraft (purchased or background)

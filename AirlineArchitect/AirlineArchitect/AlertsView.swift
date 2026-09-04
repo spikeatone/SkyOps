@@ -159,7 +159,7 @@ struct NeedsAttentionCard: View {
             return AlertModel(
                 accent: accentBlue, icon: "dollarsign.circle.fill", category: "Offer",
                 title: "\(o.destCode) wants to buy your slot back",
-                subtitle: "\(o.originCode) ↔\u{FE0E} \(o.destCode): \(money(o.amount)) offered",
+                subtitle: "\(sim.route(byId: o.routeId)?.label ?? "\(o.originCode) ↔\u{FE0E} \(o.destCode)"): \(money(o.amount)) offered",
                 buttons: [
                     ("Accept", { sim.resolveOfferAccept(d) }),
                     ("Decline", { sim.resolveOfferDecline(d) }),

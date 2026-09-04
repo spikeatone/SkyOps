@@ -198,7 +198,7 @@ struct FleetDetailView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
                         .font(.system(size: 12)).foregroundStyle(amber)
-                    Text("Moves to \(next.originCode)–\(next.destCode) after landing at \(aircraft.dest.code)")
+                    Text("Moves to \(next.label) after landing at \(aircraft.dest.code)")
                         .font(.karla(13, .medium)).foregroundStyle(amber)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -351,9 +351,9 @@ struct FleetDetailView: View {
         }
     }
 
-    /// "ORIG–DEST" of the aircraft's current route, for the park confirm title.
+    /// The aircraft's current route label (loop-aware), for the park confirm title.
     private var parkRouteLabel: String? {
-        sim.currentRoute(of: aircraft).map { "\($0.originCode)–\($0.destCode)" }
+        sim.currentRoute(of: aircraft).map { $0.label }
     }
 
     /// Park confirm title as a LocalizedStringKey (the `.map{}??` String form would
@@ -555,7 +555,7 @@ private struct ReplaceOrCloseModal: View {
 
     var body: some View {
         let route = sim.currentRoute(of: aircraft)
-        let code = route.map { "\($0.originCode)–\($0.destCode)" } ?? String(localized: "a route")
+        let code = route.map { $0.label } ?? String(localized: "a route")
         let hasSpares = route.map { !sim.spareCandidates(for: $0).isEmpty } ?? false
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea().onTapGesture(perform: onCancel)
@@ -624,7 +624,7 @@ private struct ReplacementPicker: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("ASSIGN FROM FLEET").font(.karla(12, .bold)).foregroundStyle(titleColor).tracking(0.5)
                     if let r = route {
-                        Text("Take over \(r.originCode)–\(r.destCode)").font(.karla(20, .heavy)).foregroundStyle(primary)
+                        Text("Take over \(r.label)").font(.karla(20, .heavy)).foregroundStyle(primary)
                     }
                 }
                 Spacer()

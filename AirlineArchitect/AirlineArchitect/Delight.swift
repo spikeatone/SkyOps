@@ -86,9 +86,14 @@ struct MilestoneToast: View {
             .rotationEffect(.degrees(wiggle ? 6 : -6))
             .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: wiggle)
             VStack(alignment: .leading, spacing: 2) {
-                // Route milestone: show the city pair with the ⇄ route icon between
-                // the codes (matches the Ops boxes / Figma "RT Route Arrows").
-                if let o = celebration.originCode, let d = celebration.destCode {
+                // Route milestone: a 2-stop route shows the city pair with the ⇄
+                // route icon (matches the Ops boxes / Figma "RT Route Arrows"); a
+                // multi-city rotation shows the whole loop instead.
+                if let s = celebration.stops, s.count > 2 {
+                    Text(s.joined(separator: " → ") + " → ↺")
+                        .font(.karla(14, .bold)).foregroundStyle(primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if let o = celebration.originCode, let d = celebration.destCode {
                     HStack(spacing: 6) {
                         Text(o).font(.karla(15, .bold)).foregroundStyle(primary)
                         Image(systemName: "arrow.left.arrow.right")

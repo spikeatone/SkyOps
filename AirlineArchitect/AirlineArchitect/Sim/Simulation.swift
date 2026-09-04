@@ -2830,6 +2830,10 @@ final class Simulation {
         return playerRoutes.first { $0.id == id }
     }
 
+    /// An OPEN route by id (for UI that has a routeId and wants its full label —
+    /// e.g. a slot-buyback offer naming a multi-stop rotation).
+    func route(byId id: Int) -> Route? { playerRoutes.first { $0.id == id } }
+
     /// Complete a deferred reassignment: called when the aircraft reaches a gate.
     /// Archives the route it just left and puts it on the one the player chose.
     private func completePendingReassignment(_ ac: Aircraft) {
@@ -5307,6 +5311,9 @@ final class Simulation {
         /// Route milestone: the toast renders the pair with a ⇄ icon between them.
         var originCode: String? = nil
         var destCode: String? = nil
+        /// A multi-city rotation's full ordered stops (nil / ≤2 = the plain pair
+        /// above). When present with >2 stops, the toast shows the whole loop.
+        var stops: [String]? = nil
     }
     private(set) var celebrations: [Celebration] = []
     private var celebrationSeq = 0
@@ -5316,18 +5323,18 @@ final class Simulation {
 
     /// Queue a one-time celebration for `key` (deduped — fires once, ever).
     private func celebrate(_ key: String, _ symbol: String, _ title: String, _ subtitle: String,
-                           originCode: String? = nil, destCode: String? = nil) {
+                           originCode: String? = nil, destCode: String? = nil, stops: [String]? = nil) {
         guard playerAirlineName != nil, !isBankrupt, firedMilestones.insert(key).inserted else { return }
         celebrationSeq += 1
         celebrations.append(Celebration(id: celebrationSeq, key: key, symbol: symbol, title: title, subtitle: subtitle,
-                                        originCode: originCode, destCode: destCode))
+                                        originCode: originCode, destCode: destCode, stops: stops))
         if celebrations.count > 3 { celebrations.removeFirst() }   // never back up too far
     }
     func dismissCelebration(_ id: Int) { celebrations.removeAll { $0.id == id } }
     /// Route recoup is celebrated from settleLeg; expose the trigger.
     fileprivate func celebrateRecoup(_ r: Route) {
         celebrate("recoup_\(r.id)", "chart.line.uptrend.xyaxis", L("Route is profitable!"),
-                  L("Recouped its opening cost."), originCode: r.originCode, destCode: r.destCode)
+                  L("Recouped its opening cost."), originCode: r.originCode, destCode: r.destCode, stops: r.stops)
     }
 
     /// Checked once per tick — net-worth thresholds, fleet size, flight counts.
@@ -5359,7 +5366,7 @@ final class Simulation {
         let routeCount = playerRoutes.count
         if routeCount >= 1, let r = playerRoutes.first {
             celebrate("first_route", "point.3.connected.trianglepath.dotted", L("First route opened!"),
-                      L("Your first route is live."), originCode: r.originCode, destCode: r.destCode)
+                      L("Your first route is live."), originCode: r.originCode, destCode: r.destCode, stops: r.stops)
         }
         for (n, sub) in [(5, L("A real network.")), (10, L("The map is filling in.")),
                          (25, L("A serious network."))] where routeCount >= n {
