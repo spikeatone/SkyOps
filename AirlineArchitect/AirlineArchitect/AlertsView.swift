@@ -165,19 +165,23 @@ struct NeedsAttentionCard: View {
                     ("Decline", { sim.resolveOfferDecline(d) }),
                 ])
         }
-        // Recurrent crew training (family-based, no aircraft) — train now or
-        // defer 30 days at a higher cost.
+        // LAPSED crew currency (family-based, no aircraft) — the exception card of
+        // the training pipeline: these crews can't fly until requalified. Lives on
+        // the bell + the Crews card, deliberately NOT on Ops.
         if d.kind == .training, let fam = d.trainingFamily {
             let famName = CREW_FAMILY_INFO[fam]?.name ?? fam
-            let now = sim.crewTrainingCost(family: fam)
-            let later = sim.crewTrainingCost(family: fam, deferred: true)
+            let n = sim.crewLapsedCount(family: fam)
+            let cost = sim.crewRetrainCost(family: fam)
+            let title: LocalizedStringKey = n == 1
+                ? "1 \(famName) crew can't fly — currency lapsed"
+                : "\(n) \(famName) crews can't fly — currency lapsed"
             return AlertModel(
-                accent: accentBlue, icon: "graduationcap.fill", category: "Crew training",
-                title: "\(famName) crews due for recurrent training",
-                subtitle: "Train now (some crews off-line ~4 days) or defer 30 days for more",
+                accent: accentRed, icon: "graduationcap.fill", category: "Crew currency lapsed",
+                title: title,
+                subtitle: "Requalify with \(Simulation.crewProviderName) (~\(Simulation.recurrentDays) days, at the expedited rate). Auto-scheduled recurrent training on the Crews tab avoids this.",
                 buttons: [
-                    ("Train now · \(compactMoney(now))", { Feedback.impact(.light); sim.resolveTrainingNow(d) }),
-                    ("Defer 30 days · \(compactMoney(later))", { sim.resolveTrainingDefer(d) }),
+                    ("Requalify · \(compactMoney(cost))", { Feedback.impact(.light); sim.resolveTrainingNow(d) }),
+                    ("Later", { sim.resolveTrainingDefer(d) }),
                 ])
         }
         // Airport recruitment offer — an airport pitches the player to open a

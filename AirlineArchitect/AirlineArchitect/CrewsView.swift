@@ -1,13 +1,17 @@
 //
 //  CrewsView.swift
-//  Airline Architect — the CREWS tab
+//  Airline Architect — the CREWS tab (v2, the training pipeline)
 //
 //  Built to the Figma (crews home 5:2439 light / 5:2218 dark; hire success
-//  12:4509 / 12:4713). One card per crew family the player owns aircraft in:
-//  a 2×2 grid (Available / On duty / Resting / Reserve), a "Running thin" chip
-//  when there's no crew ready, and a "New crew · $X · HIRE" action. Hiring is
-//  immediate (sim.hireCrew) with a green success banner. Theme-aware via the
-//  Sky tokens + light Figma colours.
+//  12:4509 / 12:4713), extended 8 Sep 2026 for the crew-training pipeline
+//  (aa-1.1.x/CREW_TRAINING_SCOPE.md). One card per crew family the player owns
+//  aircraft in, three bands: DEPLOYMENT (the 2×2 grid + a coverage readout —
+//  line-ready crews per aircraft with a verdict from the sim's own duty/rest
+//  math), the TRAINING PIPELINE (who's in a course and when they're back, lapsed
+//  crews with a requalify action, the auto-recurrent policy), and HIRE (two
+//  doors: a rated hire that's line-ready in ~10 days, or a new hire through the
+//  type-rating course). Hiring is no longer instant — the banner says when the
+//  crew will be line-ready. Theme-aware via the Sky tokens + light Figma colours.
 //
 
 import SwiftUI
@@ -29,6 +33,9 @@ struct CrewsView: View {
     private var titleColor: Color  { isDark ? Sky.lightBlue : Color(skyHex: 0x4E67A0) }
     private var primary: Color     { isDark ? .white : .black }
     private var secondary: Color   { isDark ? Sky.lightBlue.opacity(0.75) : Color(skyHex: 0x64748B) }
+    private var subBG: Color       { isDark ? Sky.darkBG : Color(skyHex: 0xF9F9F9) }
+    private var red: Color         { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
+    private let amber = Color(skyHex: 0xFFAB44)
 
     // Sub-box palette (accent boxes identical both themes; Resting differs).
     private let available = Color(skyHex: 0x10B981)
@@ -57,6 +64,7 @@ struct CrewsView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
+                            providerCard
                             ForEach(fams, id: \.self) { crewCard($0) }
                         }
                         .padding(.bottom, 8)
@@ -103,6 +111,26 @@ struct CrewsView: View {
         .transition(.opacity)
     }
 
+    // MARK: Provider card (the contract trainer; Phase 2 puts the Training Center here)
+    private var providerCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("TRAINING").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
+            HStack(spacing: 8) {
+                Image(systemName: "graduationcap.fill").font(.system(size: 16)).foregroundStyle(hireBlue)
+                Text(Simulation.crewProviderName).font(.karla(16, .heavy)).foregroundStyle(primary)
+                Text("· contract provider").font(.karla(13)).foregroundStyle(secondary)
+                Spacer(minLength: 0)
+            }
+            Text("Rated hire line-ready in \(Simulation.ratedHireDays) days · type-rating course \(Simulation.newHireCourseDays) days · recurrent \(Simulation.recurrentDays) days, every \(Crew.currencyDays) days (auto-scheduled a few crews at a time)")
+                .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
     // MARK: Crew card
     private func crewCard(_ fam: String) -> some View {
         let pool = sim.crewPoolsByFamily[fam] ?? []
@@ -112,8 +140,9 @@ struct CrewsView: View {
         let reserveN = sim.reserveCrewsByFamily[fam] ?? 0
         let info = CREW_FAMILY_INFO[fam] ?? (name: FAMILY_LABELS[fam] ?? fam, coverage: "")
         let thin = avail == 0 && sim.ownedCount(family: fam) > 0
-        let cost = sim.crewHireCost(family: fam)
-        let afford = sim.playerBalance >= cost
+        let coverage = sim.crewCoverage(family: fam)
+        let training = pool.filter { $0.status == .training }.sorted { ($0.readyTick ?? 0) < ($1.readyTick ?? 0) }
+        let lapsed = pool.filter { $0.status == .lapsed }.count
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
@@ -124,7 +153,7 @@ struct CrewsView: View {
                 Spacer()
                 if thin { runningThinChip }
             }
-            // 2×2 grid
+            // DEPLOYMENT — the 2×2 grid + the coverage readout
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
                     dataBox("Available", avail, available, .white)
@@ -135,26 +164,24 @@ struct CrewsView: View {
                     dataBox("Reserve", reserveN, reserve, .white)
                 }
             }
+            coverageLine(coverage)
+            // TRAINING PIPELINE — only when there's something in it, or the policy is off
+            if !training.isEmpty || lapsed > 0 || !sim.crewAutoRecurrentOn(fam) {
+                pipelineBand(fam, pool: pool, training: training, lapsed: lapsed)
+            } else {
+                recurrentLine(fam, pool: pool)
+            }
             // Labor-action alert (a #9 event has sidelined crew in this family)
             if let expiry = sim.laborActionExpiryByFamily[fam], expiry > sim.displayTick {
                 laborAlertBox(pool.filter { $0.status == .sidelined }.count, expiry)
             }
-            // Action box
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("New crew").font(.karla(14)).foregroundStyle(secondary)
-                    Text(money(cost)).font(.karla(14, .bold)).foregroundStyle(primary)
-                }
-                Spacer()
-                Button { hire(fam, name: info.name) } label: {
-                    Text("HIRE").font(.karla(12, .bold)).foregroundStyle(.white)
-                        .frame(height: 24).padding(.horizontal, 8)
-                        .background(hireBlue).clipShape(RoundedRectangle(cornerRadius: 4))
-                        .opacity(afford ? 1 : 0.4)
-                }.buttonStyle(.plain).disabled(!afford)
-            }
-            .padding(8)
-            .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+            // HIRE — the two doors
+            hireRow(title: "Rated hire",
+                    detail: "Already type-rated · line-ready in \(Simulation.ratedHireDays) days",
+                    cost: sim.crewHireCost(family: fam, mode: .rated)) { hire(fam, name: info.name, mode: .rated) }
+            hireRow(title: "New hire + type rating",
+                    detail: "\(Simulation.newHireCourseDays)-day course with \(Simulation.crewProviderName)",
+                    cost: sim.crewHireCost(family: fam, mode: .newHire)) { hire(fam, name: info.name, mode: .newHire) }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -163,10 +190,110 @@ struct CrewsView: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
+    // MARK: Coverage readout (designer decision 4 — ratio + verdict)
+    private func coverageLine(_ c: Simulation.CrewCoverage) -> some View {
+        let ratio = String(format: "%.1f", c.ratio)
+        return HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("\(c.lineReady) line-ready for \(c.aircraft) aircraft · \(ratio) per aircraft")
+                .font(.karla(13)).foregroundStyle(secondary)
+            Spacer(minLength: 6)
+            Text(verdictLabel(c.verdict)).font(.karla(12, .bold)).foregroundStyle(verdictColor(c.verdict))
+                .multilineTextAlignment(.trailing)
+        }
+    }
+    private func verdictLabel(_ v: Simulation.CrewCoverageVerdict) -> LocalizedStringKey {
+        switch v {
+        case .continuous: return "Continuous coverage"
+        case .thin:       return "Thin — expect occasional crew holds"
+        case .under:      return "Under-crewed — holds likely"
+        case .none:       return "No aircraft"
+        }
+    }
+    private func verdictColor(_ v: Simulation.CrewCoverageVerdict) -> Color {
+        switch v {
+        case .continuous: return available
+        case .thin:       return amber
+        case .under:      return red
+        case .none:       return secondary
+        }
+    }
+
+    // MARK: Training pipeline band
+    private func pipelineBand(_ fam: String, pool: [Crew], training: [Crew], lapsed: Int) -> some View {
+        let now = sim.displayTick
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("TRAINING PIPELINE").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
+            ForEach(training, id: \.id) { c in
+                let days = max(1, ((c.readyTick ?? now) - now + 1439) / 1440)
+                HStack(spacing: 6) {
+                    Image(systemName: "graduationcap.fill").font(.system(size: 11)).foregroundStyle(hireBlue)
+                    Text(pipelineLabel(c.trainingKind, days: days)).font(.karla(13)).foregroundStyle(primary)
+                    Spacer(minLength: 0)
+                }
+            }
+            if lapsed > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 13)).foregroundStyle(red)
+                    Text(lapsed == 1 ? "1 crew lapsed — can't fly until requalified"
+                                     : "\(lapsed) crews lapsed — can't fly until requalified")
+                        .font(.karla(13, .bold)).foregroundStyle(red)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 6)
+                    let cost = sim.crewRetrainCost(family: fam)
+                    Button {
+                        if sim.retrainLapsed(family: fam) { Feedback.impact(.medium) }
+                    } label: {
+                        Text("REQUALIFY \(compact(cost))").font(.karla(12, .bold)).foregroundStyle(.white)
+                            .frame(height: 24).padding(.horizontal, 8)
+                            .background(red).clipShape(RoundedRectangle(cornerRadius: 4))
+                            .opacity(sim.playerBalance >= cost ? 1 : 0.4)
+                    }.buttonStyle(.plain).disabled(sim.playerBalance < cost)
+                }
+            }
+            recurrentLine(fam, pool: pool)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(subBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+    }
+
+    /// The recurrent schedule line + the per-family AUTO toggle.
+    private func recurrentLine(_ fam: String, pool: [Crew]) -> some View {
+        let auto = sim.crewAutoRecurrentOn(fam)
+        let now = sim.displayTick
+        let dueSoon = pool.filter { $0.isLineReady && $0.currencyExpiresTick - now <= Simulation.recurrentWindowDays * 1440 }.count
+        return HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Recurrent training").font(.karla(13, .bold)).foregroundStyle(primary)
+                Text(auto ? recurrentAutoText(dueSoon) : "OFF — crews lapse when their currency runs out")
+                    .font(.karla(12)).foregroundStyle(auto ? secondary : red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 6)
+            Toggle("", isOn: Binding(get: { sim.crewAutoRecurrentOn(fam) },
+                                     set: { sim.setCrewAutoRecurrent($0, family: fam) }))
+                .labelsHidden().tint(available)
+        }
+    }
+    private func recurrentAutoText(_ dueSoon: Int) -> LocalizedStringKey {
+        switch dueSoon {
+        case 0:  return "Auto-scheduled · none due within \(Simulation.recurrentWindowDays) days"
+        case 1:  return "Auto-scheduled · 1 crew due within \(Simulation.recurrentWindowDays) days"
+        default: return "Auto-scheduled · \(dueSoon) crews due within \(Simulation.recurrentWindowDays) days"
+        }
+    }
+    private func pipelineLabel(_ k: Crew.TrainingKind?, days: Int) -> LocalizedStringKey {
+        switch k {
+        case .initial:       return days == 1 ? "New crew in training · line-ready tomorrow" : "New crew in training · line-ready in \(days) days"
+        case .recurrent:     return days == 1 ? "Recurrent training · back tomorrow" : "Recurrent training · back in \(days) days"
+        case .requal, .none: return days == 1 ? "Requalifying · back tomorrow" : "Requalifying · back in \(days) days"
+        }
+    }
+
     /// Red "N sidelined; labor action — D days left" box (Figma crew alert box).
     private func laborAlertBox(_ sidelined: Int, _ expiry: Int) -> some View {
         let daysLeft = max(1, (expiry - sim.displayTick + 1439) / 1440)
-        let red = isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000)
         return HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 14)).foregroundStyle(red)
             Text(daysLeft == 1
@@ -177,7 +304,7 @@ struct CrewsView: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(isDark ? Sky.darkBG : Color(skyHex: 0xF9F9F9))
+        .background(subBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(red, lineWidth: 1))
     }
@@ -196,16 +323,41 @@ struct CrewsView: View {
     private var runningThinChip: some View {
         Text("RUNNING THIN").font(.karla(10, .bold)).foregroundStyle(.white)
             .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(Color(skyHex: 0xFFAB44))
+            .background(amber)
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(skyHex: 0xFFB75F), lineWidth: 1))
     }
 
-    // MARK: Hire
-    private func hire(_ fam: String, name: String) {
-        guard sim.hireCrew(family: fam) != nil else { return }
+    // MARK: Hire (two doors)
+    private func hireRow(title: LocalizedStringKey, detail: LocalizedStringKey, cost: Int,
+                         action: @escaping () -> Void) -> some View {
+        let afford = sim.playerBalance >= cost
+        return HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.karla(14, .bold)).foregroundStyle(primary)
+                Text(detail).font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+                Text(money(cost)).font(.karla(14, .bold)).foregroundStyle(primary)
+            }
+            Spacer()
+            Button(action: action) {
+                Text("HIRE").font(.karla(12, .bold)).foregroundStyle(.white)
+                    .frame(height: 24).padding(.horizontal, 8)
+                    .background(hireBlue).clipShape(RoundedRectangle(cornerRadius: 4))
+                    .opacity(afford ? 1 : 0.4)
+            }.buttonStyle(.plain).disabled(!afford)
+        }
+        .padding(8)
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    private func hire(_ fam: String, name: String, mode: Simulation.CrewHireMode) {
+        guard sim.hireCrew(family: fam, mode: mode) != nil else { return }
         Feedback.crewHired()
-        withAnimation { successMessage = "New \(name) crew successfully hired!" as LocalizedStringKey }
+        let days = sim.crewHireDays(mode: mode)
+        let msg: LocalizedStringKey = mode == .rated
+            ? "New \(name) crew hired — line-ready in \(days) days"
+            : "New \(name) crew hired — in the type-rating course, line-ready in \(days) days"
+        withAnimation { successMessage = msg }
         Task {
             try? await Task.sleep(for: .seconds(3))
             withAnimation { if successMessage != nil { successMessage = nil } }
@@ -215,4 +367,7 @@ struct CrewsView: View {
     private var cashString: String { cashLabel(sim.playerBalance) }
 
     private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
+    private func compact(_ v: Int) -> String {
+        v >= 1_000_000 ? (Currency.symbol + String(format: "%.1fM", Double(v) / 1_000_000)) : "\(Currency.symbol)\(v / 1000)k"
+    }
 }

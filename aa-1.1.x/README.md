@@ -135,6 +135,15 @@ group never compiles them into the build.
   set on the sim, persisted, legacy → open, alert auto-opens its box), and the MX
   list's nearest-date-first order (the row's shown check == the sort's check).
 
+- **`CrewPipelineVerify.swift`** — the crew-training pipeline, Phase 1 (8 Sep 2026;
+  `CREW_TRAINING_SCOPE.md`), 63/63: line-ready bundled crew, the rated / new-hire doors
+  (cost + timeline, not assignable while training), rolling auto-recurrent (window, ≤10%
+  cap, urgency override, cost), policy OFF → lapse → card → requalify at 1.6×, mid-trip
+  finish-then-lapse, the coverage verdicts, persistence round-trip + the legacy currency
+  stagger, the cash invariant, and a $20M starter surviving its first 45 days. NOTE the
+  starter test answers AOG cards (Standard repair) as well as CREW cards — an unanswered
+  AOG grounds the aircraft for good and reads as a crew failure.
+
 ## How to run
 The entry file must be named `main.swift` (top-level `MainActor.assumeIsolated {…}`).
 From the repo root:

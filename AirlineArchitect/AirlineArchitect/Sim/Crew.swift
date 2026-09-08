@@ -17,7 +17,9 @@ enum CrewStatus {
     case available   // in the pool, ready to be assigned
     case onDuty      // assigned to an aircraft, accruing duty time
     case resting     // completing a mandatory rest period
-    case sidelined   // pulled out by a labor action (unavailable until it ends)
+    case sidelined   // pulled out by a labor action / seniority dispute (unavailable until it ends)
+    case training    // in a course (type rating, recurrent, requal) — line-ready at Crew.readyTick
+    case lapsed      // recurrent currency expired — cannot fly until requalified
 }
 
 final class Crew {
@@ -26,11 +28,28 @@ final class Crew {
     /// minimum-sleep component, not the full rest period).
     static let maxDutyTicks = 600   // 10 sim-hours
     static let restTicks = 600      // 10 sim-hours
+    /// Recurrent currency: the 6-month PIC proficiency check (14 CFR 121.441) —
+    /// a crew must complete recurrent training before this runs out, or it's
+    /// grounded until requalified. See Simulation's crew-training pipeline.
+    static let currencyDays = 180
+
+    /// Which course a `.training` crew is in — shown in the Crews pipeline.
+    enum TrainingKind: Int { case initial = 0, recurrent = 1, requal = 2 }
 
     let id: Int
     var status: CrewStatus = .available
     var dutyTicks: Int = 0
     var restTicksLeft: Int = 0
+    /// Tick the current course ends (status == .training); nil when line-ready.
+    var readyTick: Int? = nil
+    var trainingKind: TrainingKind? = nil
+    /// Tick this crew's recurrent currency lapses. `.max` = not yet set (never
+    /// lapses) — Simulation sets it when a crew goes line-ready, so a creation
+    /// site that forgets fails SAFE (no phantom groundings).
+    var currencyExpiresTick: Int = .max
+    /// Available / on duty / resting — counts toward coverage. Training, lapsed and
+    /// sidelined crews can't fly today.
+    var isLineReady: Bool { status == .available || status == .onDuty || status == .resting }
 
     init(id: Int) { self.id = id }
 }

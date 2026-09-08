@@ -118,8 +118,9 @@ struct GameSnapshot: Codable {
     var closedRoutes: [RouteSave] = []
     var crewPools: [String: [CrewSave]] = [:]
     var reserveCrews: [String: Int] = [:]
-    var crewTrainingDue: [String: Int] = [:]
-    var crewTrainingDeferred: [String: Int] = [:]
+    /// Per-family auto-recurrent policy; nil/absent = all ON. (The pre-pipeline
+    /// `crewTrainingDue`/`crewTrainingDeferred` keys are ignored on decode.)
+    var crewAutoRecurrent: [String: Bool]? = nil
     var financeSnapshots: [FinanceSave] = []
 }
 
@@ -207,9 +208,12 @@ struct RouteAssignmentSave: Codable {
 
 struct CrewSave: Codable {
     var id: Int
-    var status: Int   // 0 available · 1 onDuty · 2 resting · (sidelined → available on load)
+    var status: Int   // 0 available · 1 onDuty · 2 resting · 3 training · 4 lapsed · (sidelined → available on load)
     var dutyTicks: Int
     var restTicksLeft: Int
+    var readyTick: Int? = nil        // training: tick the course ends
+    var currencyExpires: Int? = nil  // recurrent currency; nil = pre-pipeline save (staggered on load)
+    var trainingKind: Int? = nil     // Crew.TrainingKind rawValue
 }
 
 struct FinanceSave: Codable {
@@ -240,12 +244,17 @@ extension CrewStatus {
     var saveCode: Int {
         switch self {
         case .available, .sidelined: return 0
-        case .onDuty:  return 1
-        case .resting: return 2
+        case .onDuty:   return 1
+        case .resting:  return 2
+        case .training: return 3
+        case .lapsed:   return 4
         }
     }
     init(saveCode: Int) {
-        switch saveCode { case 1: self = .onDuty; case 2: self = .resting; default: self = .available }
+        switch saveCode {
+        case 1: self = .onDuty; case 2: self = .resting; case 3: self = .training; case 4: self = .lapsed
+        default: self = .available
+        }
     }
 }
 
@@ -364,8 +373,7 @@ extension GameSnapshot {
         closedRoutes = c.decodeSafe(.closedRoutes, default: [])
         crewPools = c.decodeSafe(.crewPools, default: [:])
         reserveCrews = c.decodeSafe(.reserveCrews, default: [:])
-        crewTrainingDue = c.decodeSafe(.crewTrainingDue, default: [:])
-        crewTrainingDeferred = c.decodeSafe(.crewTrainingDeferred, default: [:])
+        crewAutoRecurrent = c.decodeSafeOpt([String: Bool].self, .crewAutoRecurrent)
         financeSnapshots = c.decodeSafe(.financeSnapshots, default: [])
     }
 }
@@ -477,6 +485,9 @@ extension CrewSave {
         status = c.decodeSafe(.status, default: 0)
         dutyTicks = c.decodeSafe(.dutyTicks, default: 0)
         restTicksLeft = c.decodeSafe(.restTicksLeft, default: 0)
+        readyTick = c.decodeSafeOpt(Int.self, .readyTick)
+        currencyExpires = c.decodeSafeOpt(Int.self, .currencyExpires)
+        trainingKind = c.decodeSafeOpt(Int.self, .trainingKind)
     }
 }
 
