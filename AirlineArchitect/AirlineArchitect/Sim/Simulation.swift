@@ -4182,10 +4182,17 @@ final class Simulation {
             //    has no capacity limit; the cap is about availability, not slots).
             if crewAutoRecurrentOn(fam) {
                 let inRecurrent = pool.filter { $0.status == .training && $0.trainingKind == .recurrent }.count
-                // A family with its own sim bay can roll twice as many at once (2 days
-                // out instead of 4, and no class-slot scramble).
-                let fraction = hasSimBay(family: fam) ? Simulation.centerRecurrentConcurrencyFraction : Simulation.recurrentConcurrencyFraction
-                let cap = max(1, Int(Double(pool.count) * fraction))
+                // With a sim bay the cap IS the bay's capacity: scheduling more than
+                // the bay holds would push the surplus to the CONTRACTOR at full price
+                // for no benefit — and because the fraction-based cap grows with the
+                // pool, that made a BIGGER family overflow more and saved LESS (the
+                // A/B probe caught 16 aircraft paying back worse than 12). Courses are
+                // 2 days inside a 30-day window, so 4 seats churn far faster than the
+                // fleet comes due; nobody lapses waiting. Urgent crews still bypass the
+                // cap below (going contract if the bay is full — the safety valve).
+                let cap = hasSimBay(family: fam)
+                    ? Simulation.simBayCapacity
+                    : max(1, Int(Double(pool.count) * Simulation.recurrentConcurrencyFraction))
                 var slots = cap - inRecurrent
                 let due = pool.filter { $0.status == .available && $0.currencyExpiresTick - tick <= Simulation.recurrentWindowDays * 1440 }
                               .sorted { $0.currencyExpiresTick < $1.currencyExpiresTick }
@@ -4321,16 +4328,15 @@ final class Simulation {
     // ~$1.4M/yr); `TrainingCenterABProbe` sized these so a narrowbody bay is a
     // value-sink at 6 aircraft (the gate) and pays back in ~4 years at 16, a
     // widebody bay in ~3 at 8. The in-house course discount is the real lever.
-    static let trainingCenterFacilityCost = 1_000_000
-    static let trainingCenterFacilityOpexPerMonth = 5_000
-    static let simBayOpexPerMonth = 10_000
+    static let trainingCenterFacilityCost = 750_000
+    static let trainingCenterFacilityOpexPerMonth = 4_000
+    static let simBayOpexPerMonth = 8_000
     static let simBayCapacity = 4                  // crews in a bay's courses at once
     static let simBayMinAircraft = 6               // owned aircraft in the family, to equip a bay
     static let centerCourseCostFactor = 0.4        // in-house course/recurrent price vs contract
     static let centerNewHireCourseDays = 30        // vs 45 contracted (−33%)
     static let centerRecurrentDays = 2             // vs 4 contracted
     static let contractLeadDaysMax = 10            // 0–10 day wait for a contract class slot (new hires)
-    static let centerRecurrentConcurrencyFraction = 0.20   // 2× the contract cap
 
     private(set) var trainingCenter: TrainingCenter?
     /// Facility + bays (capital-out; a cash-invariant term).
@@ -4341,9 +4347,25 @@ final class Simulation {
     func simBayCost(family: String) -> Int {
         switch AircraftType.all.first(where: { $0.family == family })?.bodyType {
         case .widebody2Engine, .widebody4Engine: return 2_500_000
-        case .narrowbody:                        return 1_500_000
-        default:                                 return 1_000_000   // turboprop / regional jet
+        case .narrowbody:                        return 1_250_000
+        default:                                 return 800_000   // turboprop / regional jet
         }
+    }
+    /// Roughly the family size at which a bay's course savings repay it (the bay
+    /// plus ~3 years of its opex). DERIVED, not a magic number: a crew sits 2
+    /// recurrents a year, each saving `1 − centerCourseCostFactor` of the
+    /// `recurrentCostFraction` course fee, and a family runs ~2.1 crews per
+    /// aircraft (the crew sweep's steady ratio). Surfaced on the bay row because
+    /// the BUILD gate (6 aircraft) is well below break-even — the A/B probe puts
+    /// the narrowbody crossover near 14 — so without this a player can buy a bay
+    /// that never pays for itself and never know why.
+    func simBayPaybackAircraft(family: String) -> Int {
+        let course = Double(crewCourseCost(family: family))
+        let perCrewYear = 2.0 * Simulation.recurrentCostFraction * course * (1 - Simulation.centerCourseCostFactor)
+        let perAircraftYear = perCrewYear * 2.1
+        guard perAircraftYear > 0 else { return Int.max }
+        let cost = Double(simBayCost(family: family) + 36 * Simulation.simBayOpexPerMonth)
+        return max(Simulation.simBayMinAircraft, Int((cost / (perAircraftYear * 3.0)).rounded(.up)))
     }
     /// Operating hubs the center could be built at (real centers sit at a hub).
     var trainingCenterEligibleHubs: [String] { hubCodes.filter { hubOperating($0) } }

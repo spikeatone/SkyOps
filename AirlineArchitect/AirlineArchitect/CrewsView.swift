@@ -111,9 +111,15 @@ struct CrewsView: View {
         .transition(.opacity)
     }
 
-    // MARK: Provider card (the contract trainer; Phase 2 puts the Training Center here)
-    private var providerCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+    // MARK: Provider card — the contract trainer, or the player's own Training Center (Phase 2)
+    @ViewBuilder private var providerCard: some View {
+        if let center = sim.trainingCenter { centerCard(center) } else { contractCard }
+    }
+
+    private var contractCard: some View {
+        let hubs = sim.trainingCenterEligibleHubs
+        let cost = Simulation.trainingCenterFacilityCost
+        return VStack(alignment: .leading, spacing: 8) {
             Text("TRAINING").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
             HStack(spacing: 8) {
                 Image(systemName: "graduationcap.fill").font(.system(size: 16)).foregroundStyle(hireBlue)
@@ -123,12 +129,139 @@ struct CrewsView: View {
             }
             Text("Rated hire line-ready in \(Simulation.ratedHireDays) days · type-rating course \(Simulation.newHireCourseDays) days · recurrent \(Simulation.recurrentDays) days, every \(Crew.currencyDays) days (auto-scheduled a few crews at a time)")
                 .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+            Divider().overlay(cardBorder.opacity(0.5))
+            // Build your own — the mid-game facility.
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Build a training center").font(.karla(14, .bold)).foregroundStyle(primary)
+                    Text(hubs.isEmpty
+                         ? "Needs an operating hub. Then a sim bay per crew family (\(Simulation.simBayMinAircraft)+ aircraft) trains it in-house: courses 60% cheaper, a third shorter, no class-slot wait."
+                         : "At one of your hubs. Then a sim bay per crew family (\(Simulation.simBayMinAircraft)+ aircraft) trains it in-house: courses 60% cheaper, a third shorter, no class-slot wait.")
+                        .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(money(cost)).font(.karla(14, .bold)).foregroundStyle(primary)
+                }
+                Spacer(minLength: 6)
+                buildCenterControl(hubs: hubs, cost: cost)
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    /// One hub → a direct BUILD; several → a menu to pick the site; none → disabled.
+    @ViewBuilder private func buildCenterControl(hubs: [String], cost: Int) -> some View {
+        let afford = sim.playerBalance >= cost
+        if hubs.count == 1, let h = hubs.first {
+            Button { if sim.buildTrainingCenter(at: h) { Feedback.success() } } label: {
+                actionLabel("BUILD · \(h)", enabled: afford)
+            }.buttonStyle(.plain).disabled(!afford)
+        } else if hubs.count > 1 {
+            Menu {
+                ForEach(hubs, id: \.self) { h in
+                    Button("Build at \(h)") { if sim.buildTrainingCenter(at: h) { Feedback.success() } }
+                }
+            } label: { actionLabel("BUILD ▾", enabled: afford) }
+            .disabled(!afford)
+        } else {
+            actionLabel("BUILD", enabled: false)
+        }
+    }
+    private func actionLabel(_ t: LocalizedStringKey, enabled: Bool) -> some View {
+        Text(t).font(.karla(12, .bold)).foregroundStyle(.white)
+            .frame(height: 24).padding(.horizontal, 8)
+            .background(hireBlue).clipShape(RoundedRectangle(cornerRadius: 4))
+            .opacity(enabled ? 1 : 0.4)
+    }
+
+    private func centerCard(_ center: TrainingCenter) -> some View {
+        let opex = sim.trainingCenterMonthlyOpex
+        let payback = center.ledger.payback
+        let bays = center.bays.keys.sorted()
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("TRAINING").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
+            HStack(spacing: 8) {
+                Image(systemName: "building.2.fill").font(.system(size: 16)).foregroundStyle(hireBlue)
+                Text("Training Center · \(center.hubCode)").font(.karla(16, .heavy)).foregroundStyle(primary)
+                Spacer(minLength: 0)
+                Text(verbatim: "−" + compact(opex) + "/mo").font(.karla(13, .bold)).foregroundStyle(secondary)
+            }
+            if bays.isEmpty {
+                Text("No sim bays yet — add one on a crew family's card (\(Simulation.simBayMinAircraft)+ aircraft) to train that family in-house. Everyone else still trains with \(Simulation.crewProviderName).")
+                    .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+            } else {
+                ForEach(bays, id: \.self) { fam in
+                    HStack(spacing: 6) {
+                        Image(systemName: "graduationcap.fill").font(.system(size: 11)).foregroundStyle(hireBlue)
+                        Text(LocalizedStringKey(CREW_FAMILY_INFO[fam]?.name ?? fam)).font(.karla(13, .bold)).foregroundStyle(primary)
+                        Spacer(minLength: 6)
+                        Text("\(sim.centerLoad(family: fam))/\(Simulation.simBayCapacity) bay seats in use")
+                            .font(.karla(12)).foregroundStyle(secondary)
+                    }
+                }
+            }
+            // TRAINING P&L — what in-house courses saved against the contract price
+            // (a counterfactual, labelled as such), minus the facility + opex.
+            Divider().overlay(cardBorder.opacity(0.5))
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("TRAINING P&L").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
+                    Text("saved vs. contract prices − facility − opex").font(.karla(11)).foregroundStyle(secondary)
+                }
+                Spacer(minLength: 6)
+                Text(verbatim: payback >= 0 ? "+" + compact(payback) : "−" + compact(-payback))
+                    .font(.karla(16, .heavy)).foregroundStyle(payback >= 0 ? available : red)
+            }
+            PaybackSparkline(values: center.ledger.monthly.map { Double($0.payback) } + [Double(payback)],
+                             mint: available, red: red, frame: cardBorder)
+                .frame(height: 44)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    /// The family's sim-bay status once a center exists: an IN-HOUSE line with the
+    /// bay's load, or the ADD BAY action (gated on 6+ aircraft + cash).
+    private func bayRow(_ fam: String) -> some View {
+        HStack(spacing: 8) {
+            if sim.hasSimBay(family: fam) {
+                Image(systemName: "building.2.fill").font(.system(size: 12)).foregroundStyle(hireBlue)
+                Text("Trains in-house · \(sim.centerLoad(family: fam))/\(Simulation.simBayCapacity) bay seats in use")
+                    .font(.karla(13)).foregroundStyle(primary)
+                Spacer(minLength: 0)
+            } else {
+                let owned = sim.ownedCount(family: fam)
+                let enough = owned >= Simulation.simBayMinAircraft
+                let cost = sim.simBayCost(family: fam)
+                let can = sim.canAddSimBay(family: fam)
+                let payback = sim.simBayPaybackAircraft(family: fam)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Sim bay").font(.karla(13, .bold)).foregroundStyle(primary)
+                    Text(enough ? "Train this family in-house · \(money(cost))"
+                                : "Needs \(Simulation.simBayMinAircraft) aircraft in the family (have \(owned))")
+                        .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+                    // The build gate is well below break-even, so say where that is
+                    // rather than letting the player buy a bay that never repays.
+                    if enough && owned < payback {
+                        Text("Course savings repay it above ~\(payback) aircraft in this family")
+                            .font(.karla(11)).foregroundStyle(amber).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: 6)
+                Button { if sim.addSimBay(family: fam) { Feedback.success() } } label: {
+                    actionLabel("ADD BAY", enabled: can)
+                }.buttonStyle(.plain).disabled(!can)
+            }
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(subBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
     }
 
     // MARK: Crew card
@@ -165,6 +298,7 @@ struct CrewsView: View {
                 }
             }
             coverageLine(coverage)
+            if sim.trainingCenter != nil { bayRow(fam) }
             // TRAINING PIPELINE — only when there's something in it, or the policy is off
             if !training.isEmpty || lapsed > 0 || !sim.crewAutoRecurrentOn(fam) {
                 pipelineBand(fam, pool: pool, training: training, lapsed: lapsed)
@@ -180,7 +314,7 @@ struct CrewsView: View {
                     detail: "Already type-rated · line-ready in \(Simulation.ratedHireDays) days",
                     cost: sim.crewHireCost(family: fam, mode: .rated)) { hire(fam, name: info.name, mode: .rated) }
             hireRow(title: "New hire + type rating",
-                    detail: "\(Simulation.newHireCourseDays)-day course with \(Simulation.crewProviderName)",
+                    detail: newHireDetail(fam),
                     cost: sim.crewHireCost(family: fam, mode: .newHire)) { hire(fam, name: info.name, mode: .newHire) }
         }
         .padding(16)
@@ -228,6 +362,9 @@ struct CrewsView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "graduationcap.fill").font(.system(size: 11)).foregroundStyle(hireBlue)
                     Text(pipelineLabel(c.trainingKind, days: days)).font(.karla(13)).foregroundStyle(primary)
+                    if c.trainingProvider == .center {
+                        Text("· in-house").font(.karla(12)).foregroundStyle(hireBlue)
+                    }
                     Spacer(minLength: 0)
                 }
             }
@@ -350,10 +487,18 @@ struct CrewsView: View {
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
+    /// The new-hire door's detail line: in-house (30 days, no wait) once the family
+    /// has a bay seat free, otherwise the contract course plus its class-slot wait.
+    private func newHireDetail(_ fam: String) -> LocalizedStringKey {
+        sim.trainingProvider(for: fam) == .center
+            ? "\(Simulation.centerNewHireCourseDays)-day course in-house · no class-slot wait"
+            : "\(Simulation.newHireCourseDays)-day course with \(Simulation.crewProviderName) · plus up to \(Simulation.contractLeadDaysMax) days for a class slot"
+    }
+
     private func hire(_ fam: String, name: String, mode: Simulation.CrewHireMode) {
+        let days = sim.crewHireDays(mode: mode, family: fam)   // read BEFORE the hire (the bay seat it takes changes the answer)
         guard sim.hireCrew(family: fam, mode: mode) != nil else { return }
         Feedback.crewHired()
-        let days = sim.crewHireDays(mode: mode)
         let msg: LocalizedStringKey = mode == .rated
             ? "New \(name) crew hired — line-ready in \(days) days"
             : "New \(name) crew hired — in the type-rating course, line-ready in \(days) days"
@@ -369,5 +514,35 @@ struct CrewsView: View {
     private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
     private func compact(_ v: Int) -> String {
         v >= 1_000_000 ? (Currency.symbol + String(format: "%.1fM", Double(v) / 1_000_000)) : "\(Currency.symbol)\(v / 1000)k"
+    }
+}
+
+/// The Training Center's payback line: the monthly ledger points + a live trailing
+/// point, red below break-even / mint above, dashed zero line. Takes `values` as a
+/// CHANGING input (the live point moves), so the Canvas re-renders — the documented
+/// freeze-avoidance pattern.
+private struct PaybackSparkline: View {
+    let values: [Double]
+    let mint: Color, red: Color, frame: Color
+
+    var body: some View {
+        Canvas { ctx, size in
+            guard values.count >= 2 else { return }
+            let maxY = max(values.max() ?? 0, 0), minY = min(values.min() ?? 0, 0)
+            let range = max(1, maxY - minY)
+            let pad: CGFloat = 3
+            func sx(_ i: Int) -> CGFloat { pad + (size.width - 2 * pad) * CGFloat(i) / CGFloat(values.count - 1) }
+            func sy(_ v: Double) -> CGFloat { pad + (size.height - 2 * pad) * CGFloat(1 - (v - minY) / range) }
+            // Break-even (zero) line.
+            var z = Path(); z.move(to: CGPoint(x: pad, y: sy(0))); z.addLine(to: CGPoint(x: size.width - pad, y: sy(0)))
+            ctx.stroke(z, with: .color(frame), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            // One segment per step, coloured by which side of zero it ends on.
+            for i in 1..<values.count {
+                var p = Path()
+                p.move(to: CGPoint(x: sx(i - 1), y: sy(values[i - 1])))
+                p.addLine(to: CGPoint(x: sx(i), y: sy(values[i])))
+                ctx.stroke(p, with: .color(values[i] >= 0 ? mint : red), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            }
+        }
     }
 }

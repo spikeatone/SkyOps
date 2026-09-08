@@ -516,6 +516,7 @@ struct FinanceView: View {
                 equityRaised: sim.totalEquityRaised,
                 dividendsPaid: sim.totalDividendsPaid, buybackSpend: sim.totalBuybackSpend,
                 marketingSpend: sim.totalMarketingSpend,
+                trainingCenterSpend: sim.totalTrainingCenterSpend,
                 cashStart: Simulation.startingCapital, cashEnd: sim.playerBalance, isTotal: true)
         case .thisMonth:
             return delta(from: s.last, toLive: true)
@@ -554,6 +555,7 @@ struct FinanceView: View {
             dividendsPaid: d(sim.totalDividendsPaid, \.dividendsPaid),
             buybackSpend: d(sim.totalBuybackSpend, \.buybackSpend),
             marketingSpend: d(sim.totalMarketingSpend, \.marketingSpend),
+            trainingCenterSpend: d(sim.totalTrainingCenterSpend, \.trainingCenterSpend),
             cashStart: base?.cash ?? Simulation.startingCapital,
             cashEnd: toLive ? sim.playerBalance : (end?.cash ?? sim.playerBalance),
             isTotal: false)
@@ -592,6 +594,7 @@ struct FinanceView: View {
                 ledgerRow("Aircraft acquisition", f.acquisition, sign: .minus)
                 ledgerRow("Route openings", f.routeSpend, sign: .minus)
                 ledgerRow("Hubs & clubs built", f.hubSpend, sign: .minus)
+                if f.trainingCenterSpend > 0 { ledgerRow("Training center built", f.trainingCenterSpend, sign: .minus) }
                 ledgerRow("Fuel hedges", f.hedgeSpend, sign: .minus)
                 if f.marketingSpend > 0 { ledgerRow("Marketing", f.marketingSpend, sign: .minus) }
                 ledgerRow("Debt service", f.debtService, sign: .minus)
@@ -782,11 +785,13 @@ struct PeriodFigures {
     var dividendsPaid = 0, buybackSpend = 0
     /// Player route marketing — fare wars / ad campaigns / loyalty pushes.
     var marketingSpend = 0
+    /// Training center facility + sim bays.
+    var trainingCenterSpend = 0
     var cashStart, cashEnd: Int
     var isTotal: Bool
     var operatingProfit: Int { revenue - fees - operatingCost }
     var overhead: Int { leaseCost + insurance + maintenance + debtService + hubLabor + clubRent + integrationSpend }
-    var capitalOut: Int { acquisition + routeSpend + hedgeSpend + hubSpend + airlineAcquisition + dividendsPaid + buybackSpend + marketingSpend }
+    var capitalOut: Int { acquisition + routeSpend + hedgeSpend + hubSpend + airlineAcquisition + dividendsPaid + buybackSpend + marketingSpend + trainingCenterSpend }
     var capitalIn: Int { saleProceeds + offerIncome + loanProceeds + equityRaised }
 }
 

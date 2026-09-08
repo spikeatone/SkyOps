@@ -1,6 +1,226 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Course savings repay it above ~%lld aircraft in this family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Kursersparnis amortisiert ihn ab ca. %lld Flugzeugen in dieser Familie"
+          }
+        }
+      }
+    },
+    "%lld-day course in-house · no class-slot wait": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld-tägiger Kurs intern · kein Warten auf einen Kursplatz"
+          }
+        }
+      }
+    },
+    "%lld-day course with %@ · plus up to %lld days for a class slot": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld-tägiger Kurs bei %@ · plus bis zu %lld Tage Wartezeit auf einen Kursplatz"
+          }
+        }
+      }
+    },
+    "%lld/%lld bay seats in use": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld/%lld Simulatorplätze belegt"
+          }
+        }
+      }
+    },
+    "ADD BAY": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PLATZ HINZUFÜGEN"
+          }
+        }
+      }
+    },
+    "At one of your hubs. Then a sim bay per crew family (%lld+ aircraft) trains it in-house: courses 60%% cheaper, a third shorter, no class-slot wait.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An einem deiner Drehkreuze. Danach schult ein Simulatorplatz pro Crew-Familie (ab %lld Flugzeugen) intern: Kurse 60 %% günstiger, ein Drittel kürzer, kein Warten auf einen Kursplatz."
+          }
+        }
+      }
+    },
+    "BUILD": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BAUEN"
+          }
+        }
+      }
+    },
+    "Build a training center": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trainingszentrum bauen"
+          }
+        }
+      }
+    },
+    "Build at %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In %@ bauen"
+          }
+        }
+      }
+    },
+    "BUILD · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BAUEN · %@"
+          }
+        }
+      }
+    },
+    "BUILD ▾": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BAUEN ▾"
+          }
+        }
+      }
+    },
+    "Needs %lld aircraft in the family (have %lld)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benötigt %lld Flugzeuge in der Familie (vorhanden: %lld)"
+          }
+        }
+      }
+    },
+    "Needs an operating hub. Then a sim bay per crew family (%lld+ aircraft) trains it in-house: courses 60%% cheaper, a third shorter, no class-slot wait.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benötigt ein aktives Drehkreuz. Danach schult ein Simulatorplatz pro Crew-Familie (ab %lld Flugzeugen) intern: Kurse 60 %% günstiger, ein Drittel kürzer, kein Warten auf einen Kursplatz."
+          }
+        }
+      }
+    },
+    "No sim bays yet — add one on a crew family's card (%lld+ aircraft) to train that family in-house. Everyone else still trains with %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Simulatorplätze – füge auf der Karte einer Crew-Familie (ab %lld Flugzeugen) einen hinzu, um diese Familie intern zu schulen. Alle anderen trainieren weiterhin bei %@."
+          }
+        }
+      }
+    },
+    "saved vs. contract prices − facility − opex": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gespart ggü. Vertragspreisen − Anlage − Betriebskosten"
+          }
+        }
+      }
+    },
+    "Sim bay": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Simulatorplatz"
+          }
+        }
+      }
+    },
+    "Train this family in-house · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Familie intern schulen · %@"
+          }
+        }
+      }
+    },
+    "Training center built": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trainingszentrum gebaut"
+          }
+        }
+      }
+    },
+    "Training Center · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trainingszentrum · %@"
+          }
+        }
+      }
+    },
+    "TRAINING P&L": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAINING-BILANZ"
+          }
+        }
+      }
+    },
+    "Trains in-house · %lld/%lld bay seats in use": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schult intern · %lld/%lld Simulatorplätze belegt"
+          }
+        }
+      }
+    },
+    "· in-house": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· intern"
+          }
+        }
+      }
+    },
     "%lld %@ crews can't fly — currency lapsed": {
       "localizations": {
         "de": {

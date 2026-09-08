@@ -1,8 +1,58 @@
 # Crew Training — re-imagined (scope + recommendations)
 
-**Status: Phase 1 BUILT 8 Sep 2026 on branch `crew-training` (all 5 decisions confirmed — decision 4 =
-ratio + verdict). Verified `CrewPipelineVerify.swift` 63/63 + regressions green + full build +
-German clean. Phase 2 (Training Center) next.**
+**Status: Phase 1 MERGED to `main` (8 Sep 2026, `162b865`) · Phase 2 BUILT on branch
+`training-center` (8 Sep 2026). All 5 decisions confirmed (decision 4 = ratio + verdict; provider =
+"Global Aviation Training"). Verified `CrewPipelineVerify` 63/63 + `TrainingCenterVerify` 69/69 +
+`TrainingCenterABProbe` 5/5 + regressions + full build + German clean.**
+
+## Phase 2 as BUILT (differs from the §3.5 draft — read this before touching the numbers)
+
+- **Costs are GAME-SCALED, not real-world-scaled.** The draft priced a real Level D simulator
+  (facility $6M + bays $6–16M, $270k/mo). The game's training VOLUME can't amortize that: a
+  crew sits 2 recurrents a year, so a whole 16-aircraft narrowbody family only generates ~$1.3M
+  of course fees a year. Shipped: **facility $750k** + **bay $2.5M widebody / $1.25M narrowbody /
+  $800k turboprop**, opex **$4k/mo facility + $8k/mo per bay**. In-house course = **0.4×** the
+  contract price, **30d** initial (vs 45), **2d** recurrent (vs 4).
+- **The contract provider now has a LEAD TIME** (0–10 days for a class slot on a new hire), which
+  the center removes — the scope's §3.3 wait, pulled forward into Phase 2 because it's most of
+  what makes in-house feel different.
+- **⚠️ THE CONCURRENCY CAP IS THE BAY CAPACITY — do not restore a fraction-based cap for a family
+  with a bay.** The first A/B run had the auto-scheduler cap scale with pool size (20%) while a bay
+  seats only 4, so each wave pushed its surplus to the CONTRACTOR at full price: 1-in-5 overflow at
+  12 aircraft, 2-in-6 at 16, 6-in-10 at 24. Savings stopped scaling with the fleet and **16 aircraft
+  paid back WORSE than 12** — the opposite of the intended shape. With the cap set to the bay's
+  capacity, scheduled training all runs in-house (2-day courses inside a 30-day window churn 4 seats
+  far faster than crews come due); urgent about-to-lapse crews still bypass the cap to the
+  contractor, which is the safety valve.
+- **BALANCE GATE PASSED** (`TrainingCenterABProbe`, 6 arms × 5 sim-years, payback = savings vs
+  contract − facility − opex):
+
+  | family | 24 mo | 36 mo | 48 mo | 60 mo |
+  |---|---|---|---|---|
+  | 6 × A320 (the build gate) | −$1.70M | −$1.53M | −$1.39M | **−$1.26M — never** |
+  | 12 × A320 | −$1.27M | −$828k | −$622k | −$766k |
+  | 16 × A320 | −$744k | −$32k | **+$596k** | +$1.16M |
+  | 24 × A320 | −$117k | **+$812k** | +$1.32M | +$1.28M |
+  | 8 × B788 | −$1.05M | **+$350k** | +$1.47M | +$2.47M |
+
+  Value-sink for a small family, pays back for a large one — the Hubs-lesson threshold, never
+  dominant. **Re-run this probe after touching ANY center/course constant.**
+- **KNOWN TENSION worth a designer look: the build gate (6 aircraft) sits well below break-even
+  (~14 narrowbodies, ~7 widebodies).** The gate is the confirmed decision, so it stands; the trap is
+  defused in the UI instead — the bay row reads "Course savings repay it above ~N aircraft in this
+  family" (`simBayPaybackAircraft`, derived from the course fee and the 2.1-crews-per-aircraft ratio,
+  not hardcoded). Raise `simBayMinAircraft` to ~12 if you'd rather the game refuse the bad build
+  outright.
+- **The ledger IS the A/B** (methodology worth reusing): every in-house course books
+  `savings = contract price − in-house price`, so `payback = savings − facility − opex` is exactly
+  the delta against a contract-only twin with the same course volume. Economic events, AOG and
+  weather all cancel because they never touch the ledger — no two-sim A/B, no event poisoning
+  (the FareVerify lesson).
+- **Harness lesson (cost me two false failures):** on a FLYING fleet, a graduated crew goes straight
+  `.onDuty`, so asserting `.available` is wrong (assert `isLineReady`); and a cash-delta assertion
+  also contains a day of flight revenue plus the monthly opex, so measure a training charge via
+  `maintenanceSpend` minus the ledger's opex delta. `TrainingCenterVerify` test 5 parks the fleet
+  first to make concurrency deterministic.
 Designer ask (8 Sep 2026): make crew training real-world in timelines; hiring is not
 instant — an acquired aircraft comes with ONE crew, the next has to be hired AND trained;
 mid-game, build your OWN training center (early game = contracting out to a
