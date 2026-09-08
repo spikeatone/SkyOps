@@ -157,6 +157,12 @@ Notes:
 - `-DDEBUG` is required: `devInjectCash` and `cashInvariantResidual()` are
   `#if DEBUG` test hooks on `Simulation`.
 - `cashInvariantResidual()` must always return 0. Assert it after any money move.
+- **`de-findgaps.py` is only as fresh as the DerivedData you point it at.** It reads the
+  `.stringsdata` a Debug build emits, so run it against the DerivedData of a build that
+  contains the change (`DD=<path> python3 aa-1.1.x/de-findgaps.py`). A stale DerivedData
+  reported the multi-city rotation UI as "clean" when 21 of its strings had no German
+  (caught + fixed 8 Sep 2026). The only expected residue is the 2 DEBUG-only livery
+  gallery strings.
 - To exercise the history cap, `LaunchFixMain` flies a route for up to ~600k ticks
   (crew rest gaps mean ~1 flight per few thousand ticks); trim if it runs long.
 

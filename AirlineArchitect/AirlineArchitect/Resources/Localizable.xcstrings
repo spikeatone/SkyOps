@@ -1,6 +1,216 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "  →  ↺": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  →  ↺"
+          }
+        }
+      }
+    },
+    "%@ nm": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ nm"
+          }
+        }
+      }
+    },
+    "%@ → %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        }
+      }
+    },
+    "%@ → … · tap the next city (it loops back to %@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → … · tippe die nächste Stadt an (die Schleife führt zurück nach %@)"
+          }
+        }
+      }
+    },
+    "%@ → ↺ · tap another, or Done": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → ↺ · tippe eine weitere an oder Fertig"
+          }
+        }
+      }
+    },
+    "%@: %@ offered": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@ geboten"
+          }
+        }
+      }
+    },
+    "%lld seats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Sitze"
+          }
+        }
+      }
+    },
+    "Abandon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        }
+      }
+    },
+    "Edit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeiten"
+          }
+        }
+      }
+    },
+    "No idle aircraft — acquire one to fly a new route.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein freies Flugzeug – erwirb eines, um eine neue Route zu fliegen."
+          }
+        }
+      }
+    },
+    "Open route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Route eröffnen"
+          }
+        }
+      }
+    },
+    "Pick the aircraft, then tap the cities it will fly in order.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle das Flugzeug und tippe dann der Reihe nach die Städte an, die es anfliegen soll."
+          }
+        }
+      }
+    },
+    "Tap the cities %@ will fly, in order": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe der Reihe nach die Städte an, die %@ anfliegen soll"
+          }
+        }
+      }
+    },
+    "the route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "die Route"
+          }
+        }
+      }
+    },
+    "Total loop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamte Schleife"
+          }
+        }
+      }
+    },
+    "Undo stop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopp zurücknehmen"
+          }
+        }
+      }
+    },
+    "WHICH AIRCRAFT?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WELCHES FLUGZEUG?"
+          }
+        }
+      }
+    },
+    "· %@ rwy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %@ Startbahn"
+          }
+        }
+      }
+    },
+    "· OK": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· OK"
+          }
+        }
+      }
+    },
+    "· too far": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· zu weit"
+          }
+        }
+      }
+    },
     "%lld contested": {
       "localizations": {
         "de": {

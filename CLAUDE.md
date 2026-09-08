@@ -1108,7 +1108,9 @@ one contradicts the design thesis.)
     close-route confirm, the pending-reassignment + current-route + ReplacementPicker labels
     (Fleet), and the route MILESTONE toast (`Celebration.stops` — a route recoup / first-route on a
     rotation shows the loop, not just the ⇄ pair). German added for the 8 new catalog keys
-    (`de-findgaps.py` clean but for the 2 known DEBUG-only livery strings). Verified: RotationVerify
+    (`de-findgaps.py` clean but for the 2 known DEBUG-only livery strings — CORRECTION 8 Sep: that run
+    used a STALE DerivedData; the Phase 2 aircraft-first UI's 21 strings had NO German until they were
+    added 8 Sep — always point the gap checker at the DerivedData you actually built into). Verified: RotationVerify
     40/40 (+ a label test) + full Debug build. **The feature is now complete** (balance + labels
     done, designer-confirmed on device). The only residual is a nice-to-have live re-drive of the
     exact pick→sequence→confirm gesture chain in a session where the Simulator input isn't wedged.
