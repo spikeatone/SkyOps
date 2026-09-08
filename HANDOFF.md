@@ -5,7 +5,27 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 3 September 2026._
+_Snapshot: 8 September 2026._
+
+**► ⭐ ON `main`, NOT YET IN A BUILD (8 Sep session — all verified, all pushed):**
+- **CREW TRAINING PIPELINE, Phase 1** (merged `162b865`; design + the designer's 5 decisions in
+  `aa-1.1.x/CREW_TRAINING_SCOPE.md`). Hiring takes time (rated hire 10d at 2× course / new hire
+  45d at 1.25×), the bundled crew stays line-ready, per-crew 180-day currency with rolling
+  auto-recurrent (default ON) and LAPSED + requalify at 1.6× when it's off/unaffordable, a coverage
+  readout (ratio + verdict), Crews tab v2, provider "Global Aviation Training"; training cards moved
+  off Ops. `CrewPipelineVerify` 63/63 + regressions + free-tier probe. **Phase 2 (Training Center
+  at a hub) is next** — gate/shape already decided in the scope doc.
+- **MX re-imagining SCOPED + DECIDED** (`aa-1.1.x/MX_BASES_SCOPE.md`, all 5 decisions confirmed):
+  auto A checks (no cards), MRO +25% / 0–7d slot wait, line stations + hangar bases at hubs or
+  ≥3-route airports, MX moves to a Fleet ▸ Maintenance segment. NOT built yet — build after crew
+  Phase 2 (or first, designer's call).
+- **Ops tweaks** (`5a36c40`): every Ops box is a collapsible DRAWER (state on the sim, persisted,
+  alerts auto-open their box); the auto-slow gives the player's SPEED BACK once the cards that
+  arrived while slowed clear; the MX list sorts NEAREST DATE FIRST. `OpsTweaksVerify` 43/43.
+- **Transpacific routing fix** (`788fc10`): legs cross the antimeridian seam the short way
+  (`FlightPath.nearestCopy`); `PathWrapVerify` 16/16; designer-confirmed on device.
+- **German**: the rotation UI's 21 missing strings added (`21c7def`); `de-findgaps` is clean but for
+  the 2 known DEBUG-only livery strings — run it against the DerivedData you actually built into.
 
 **► ⭐ MULTI-CITY ROTATIONS — MERGED to `main` (Phases 1–2), NOT yet in a build (4 Sep).** A route is
 now an ordered rotation loop of 2–5 stops flown by an aircraft you pick FIRST (Open Route → WHICH
@@ -13,13 +33,11 @@ AIRCRAFT? → tap the sequence → confirm); each leg is range-checked; the loop
 2-airport shuttle is the 2-stop case (nothing regressed). Full design + status in
 `aa-1.1.x/MULTI_CITY_ROUTING_SCOPE.md`; CLAUDE.md "Decided — Route Network" has the summary. Verified
 RotationVerify 34/34 + RoundTrip 13/13 + soak 6/6 + Debug build; designer confirmed it works on device.
-⚠️ **BEFORE it ships to players (3 open items in the scope doc):** (1) a MULTI-SEED balance pass (a
-rotation must not be strictly better/worse than N separate 2-stop routes — the per-stop cost/slot is
-un-swept); (2) a rotation-aware LABEL audit of the remaining `↔` display sites (RoutesPanel detail,
-competition/incentive boxes, milestone strings still say "ORIG ↔ DEST"); (3) finish the live
-pick→sequence→confirm→open drive (the Simulator input channel wedged mid-session — no bug seen). These
-don't block the NEXT release unless you choose to include rotations in it; they block calling the
-feature done.
+**All three follow-ups CLOSED 4 Sep** — the balance pass (`RotationBalanceProbe` 6/6: a rotation is a
+genuine tradeoff, no retune), the rotation-aware label audit (every whole-route display reads as a loop;
+RotationVerify 40/40), and the German for its UI (8 Sep, `21c7def`). The feature is complete and
+ships with the next build; the only residual is a nice-to-have live re-drive of the exact
+pick→sequence→confirm gesture chain (designer already confirmed it works on device).
 
 **► ⭐ 1.7.0 (build 56) IS SUBMITTED FOR REVIEW — `WAITING_FOR_REVIEW` (3 Sep). Auto-releases on
 approval.** The whole release chain ran end-to-end from the CLI: version bumped 1.6.0→1.7.0 / 55→56
