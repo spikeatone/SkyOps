@@ -1,6 +1,386 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld %@ crews can't fly — currency lapsed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %@-Crews dürfen nicht fliegen – Lizenz abgelaufen"
+          }
+        }
+      }
+    },
+    "%lld crew · %lld aircraft": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Crew · %lld Flugzeuge"
+          }
+        }
+      }
+    },
+    "%lld crews lapsed — can't fly until requalified": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Crews mit abgelaufener Lizenz – flugunfähig bis zur Requalifizierung"
+          }
+        }
+      }
+    },
+    "%lld line-ready for %lld aircraft · %@ per aircraft": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld einsatzbereit für %lld Flugzeuge · %@ pro Flugzeug"
+          }
+        }
+      }
+    },
+    "%lld-day course with %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld-tägiger Kurs bei %@"
+          }
+        }
+      }
+    },
+    "1 %@ crew can't fly — currency lapsed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 %@-Crew darf nicht fliegen – Lizenz abgelaufen"
+          }
+        }
+      }
+    },
+    "1 crew lapsed — can't fly until requalified": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Crew mit abgelaufener Lizenz – flugunfähig bis zur Requalifizierung"
+          }
+        }
+      }
+    },
+    "a crew's currency has lapsed — requalify": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "die Lizenz einer Crew ist abgelaufen – requalifizieren"
+          }
+        }
+      }
+    },
+    "Already type-rated · line-ready in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereits typengeprüft · einsatzbereit in %lld Tagen"
+          }
+        }
+      }
+    },
+    "Auto-scheduled · %lld crews due within %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch geplant · %lld Crews in den nächsten %lld Tagen fällig"
+          }
+        }
+      }
+    },
+    "Auto-scheduled · 1 crew due within %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch geplant · 1 Crew in den nächsten %lld Tagen fällig"
+          }
+        }
+      }
+    },
+    "Auto-scheduled · none due within %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch geplant · keine in den nächsten %lld Tagen fällig"
+          }
+        }
+      }
+    },
+    "Continuous coverage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durchgehende Abdeckung"
+          }
+        }
+      }
+    },
+    "Crew currency lapsed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crew-Lizenz abgelaufen"
+          }
+        }
+      }
+    },
+    "New %@ crew hired — in the type-rating course, line-ready in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue %@-Crew eingestellt – im Type-Rating-Kurs, einsatzbereit in %lld Tagen"
+          }
+        }
+      }
+    },
+    "New %@ crew hired — line-ready in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue %@-Crew eingestellt – einsatzbereit in %lld Tagen"
+          }
+        }
+      }
+    },
+    "New crew in training · line-ready in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Crew im Training · einsatzbereit in %lld Tagen"
+          }
+        }
+      }
+    },
+    "New crew in training · line-ready tomorrow": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Crew im Training · morgen einsatzbereit"
+          }
+        }
+      }
+    },
+    "New hire + type rating": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neueinstellung + Type Rating"
+          }
+        }
+      }
+    },
+    "NEW · %lldd": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NEU · %lld T"
+          }
+        }
+      }
+    },
+    "No aircraft": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Flugzeug"
+          }
+        }
+      }
+    },
+    "OFF — crews lapse when their currency runs out": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AUS – Crews verlieren ihre Lizenz, wenn sie abläuft"
+          }
+        }
+      }
+    },
+    "Rated hire": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typengeprüfte Einstellung"
+          }
+        }
+      }
+    },
+    "Rated hire line-ready in %lld days · type-rating course %lld days · recurrent %lld days, every %lld days (auto-scheduled a few crews at a time)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typengeprüfte Einstellung einsatzbereit in %lld Tagen · Type-Rating-Kurs %lld Tage · wiederkehrendes Training %lld Tage, alle %lld Tage (automatisch geplant, jeweils wenige Crews)"
+          }
+        }
+      }
+    },
+    "RATED · %lldd": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TYPENGEPRÜFT · %lld T"
+          }
+        }
+      }
+    },
+    "Recurrent training": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederkehrendes Training"
+          }
+        }
+      }
+    },
+    "Recurrent training · back in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederkehrendes Training · zurück in %lld Tagen"
+          }
+        }
+      }
+    },
+    "Recurrent training · back tomorrow": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederkehrendes Training · morgen zurück"
+          }
+        }
+      }
+    },
+    "REQUALIFY %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "REQUALIFIZIEREN %@"
+          }
+        }
+      }
+    },
+    "Requalify with %@ (~%lld days, at the expedited rate). Auto-scheduled recurrent training on the Crews tab avoids this.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requalifizierung bei %@ (~%lld Tage, zum Eiltarif). Automatisch geplantes wiederkehrendes Training im Crews-Tab verhindert das."
+          }
+        }
+      }
+    },
+    "Requalify · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requalifizieren · %@"
+          }
+        }
+      }
+    },
+    "Requalifying · back in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requalifizierung · zurück in %lld Tagen"
+          }
+        }
+      }
+    },
+    "Requalifying · back tomorrow": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requalifizierung · morgen zurück"
+          }
+        }
+      }
+    },
+    "Thin — expect occasional crew holds": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Knapp – gelegentliche Crew-Wartezeiten zu erwarten"
+          }
+        }
+      }
+    },
+    "TRAINING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAINING"
+          }
+        }
+      }
+    },
+    "TRAINING PIPELINE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAININGS-PIPELINE"
+          }
+        }
+      }
+    },
+    "Under-crewed — holds likely": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterbesetzt – Wartezeiten wahrscheinlich"
+          }
+        }
+      }
+    },
+    "· contract provider": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· Vertragsanbieter"
+          }
+        }
+      }
+    },
     "  →  ↺": {
       "localizations": {
         "de": {

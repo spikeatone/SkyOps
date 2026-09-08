@@ -1045,22 +1045,19 @@ struct AddCrewPanel: View {
             } else {
                 ForEach(Array(families.enumerated()), id: \.element) { i, fam in
                     if i > 0 { Rectangle().fill(cardBorder).frame(height: 1) }
-                    let cost = sim.crewHireCost(family: fam)
-                    let afford = sim.playerBalance >= cost
+                    // Two doors (the training pipeline): a rated hire is line-ready in
+                    // ~10 days; a new hire goes through the 45-day type-rating course.
+                    let rated = sim.crewHireCost(family: fam, mode: .rated)
+                    let newHire = sim.crewHireCost(family: fam, mode: .newHire)
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(FAMILY_LABELS[fam] ?? fam).font(.karla(14, .bold)).foregroundStyle(labelC)
-                            Text("\(sim.crewCount(family: fam)) crew · \(sim.ownedCount(family: fam)) aircraft · \(money(cost))")
+                            Text("\(sim.crewCount(family: fam)) crew · \(sim.ownedCount(family: fam)) aircraft")
                                 .font(.karla(14)).foregroundStyle(bodyC)
                         }
                         Spacer(minLength: 8)
-                        Button { if sim.hireCrew(family: fam) != nil { Feedback.crewHired() } } label: {
-                            Text("HIRE")
-                                .font(.karla(12, .bold)).foregroundStyle(.white)
-                                .frame(height: 24).padding(.horizontal, 8)
-                                .background(afford ? Sky.coreGreen : Color(skyHex: 0xC9C9C9))
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                        }.buttonStyle(.plain).disabled(!afford)
+                        hireDoor("RATED · \(Simulation.ratedHireDays)d", cost: rated) { sim.hireCrew(family: fam, mode: .rated) }
+                        hireDoor("NEW · \(Simulation.newHireCourseDays)d", cost: newHire) { sim.hireCrew(family: fam, mode: .newHire) }
                     }
                 }
             }
@@ -1071,6 +1068,24 @@ struct AddCrewPanel: View {
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
         .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
+    }
+    /// One hire door: label + price, green when affordable. The action returns the
+    /// new crew id (nil = unaffordable) so the haptic only fires on a real hire.
+    private func hireDoor(_ label: LocalizedStringKey, cost: Int, action: @escaping () -> Int?) -> some View {
+        let afford = sim.playerBalance >= cost
+        return Button { if action() != nil { Feedback.crewHired() } } label: {
+            VStack(spacing: 1) {
+                Text(label).font(.karla(11, .bold)).lineLimit(1)
+                Text(compact(cost)).font(.karla(10)).opacity(0.9).lineLimit(1)
+            }
+            .foregroundStyle(.white)
+            .frame(height: 30).padding(.horizontal, 8)
+            .background(afford ? Sky.coreGreen : Color(skyHex: 0xC9C9C9))
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+        }.buttonStyle(.plain).disabled(!afford)
+    }
+    private func compact(_ v: Int) -> String {
+        v >= 1_000_000 ? (Currency.symbol + String(format: "%.1fM", Double(v) / 1_000_000)) : "\(Currency.symbol)\(v / 1000)k"
     }
     private func money(_ v: Int) -> String { Currency.symbol + v.formatted(.number.grouping(.automatic)) }
 }

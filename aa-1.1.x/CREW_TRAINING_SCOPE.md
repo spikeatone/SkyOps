@@ -1,7 +1,8 @@
 # Crew Training — re-imagined (scope + recommendations)
 
-**Status: DECIDED 8 Sep 2026 (designer) — decisions 1/2/3/5 confirmed, 4 pending (see §6).
-Phase 1 in progress on branch `crew-training`.**
+**Status: Phase 1 BUILT 8 Sep 2026 on branch `crew-training` (all 5 decisions confirmed — decision 4 =
+ratio + verdict). Verified `CrewPipelineVerify.swift` 63/63 + regressions green + full build +
+German clean. Phase 2 (Training Center) next.**
 Designer ask (8 Sep 2026): make crew training real-world in timelines; hiring is not
 instant — an acquired aircraft comes with ONE crew, the next has to be hired AND trained;
 mid-game, build your OWN training center (early game = contracting out to a

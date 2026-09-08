@@ -3175,6 +3175,49 @@ where numbers are involved.
     load) + a transient downtime expiry. `tickCrewTraining()` (daily) returns
     trainees, runs due deferrals, pushes due cards; `resizeCrewPools` clears
     training state when a family is sold off. Verified 11/11 headless.
+    **SUPERSEDED 8 Sep 2026 by the CREW TRAINING PIPELINE below** — the family-wide
+    card, `crewTrainingDueByFamily`/`DeferredByFamily`, `runTraining`, and the 25%
+    sideline fraction are GONE (`resolveTrainingNow`/`Defer` survive as the LAPSED
+    card's requalify/later actions, so the harness drainers still compile).
+  - **CREW TRAINING PIPELINE — BUILT (Phase 1, 8 Sep 2026, branch `crew-training`;
+    design + the 5 designer decisions in `aa-1.1.x/CREW_TRAINING_SCOPE.md`).**
+    Hiring is no longer instant. A crew is HIRED → in TRAINING with the contract
+    provider (**"Global Aviation Training"**, a fictional house name) → line-ready.
+    Two doors: **RATED hire** (2× course, line-ready in 10d) or **NEW HIRE** through
+    the type-rating course (1.25× course, 45d); `course` = the old 0.2%-of-price
+    hire cost (`crewCourseCost`). The BUNDLED crew that comes with an aircraft stays
+    line-ready (OEM initial-cadre training — real), so a starter flies on day one.
+    Each crew carries **CURRENCY** (`currencyExpiresTick`, 180d — the 6-month PIC
+    check): the per-family **auto-recurrent** policy (default ON, persisted) sends the
+    soonest-expiring available crews to a 4-day recurrent (15% of course each) a few
+    at a time (≤10% of the family, min 1; a crew about to lapse goes regardless of
+    the cap — the contractor has no capacity limit, the cap is about availability).
+    Policy OFF, or unaffordable → the crew **LAPSES** (`.lapsed`, never assigned) →
+    one per-family `.training` card ("currency lapsed") on the bell + the Crews card
+    — deliberately NOT on Ops — with **Requalify** at 1.6× the recurrent rate (the
+    MX overdue-surcharge pattern). A crew whose currency runs out mid-trip finishes
+    the trip, then lapses (`releaseCrew`). New `CrewStatus` cases `.training` /
+    `.lapsed` (save codes 3/4); `Crew.readyTick`/`trainingKind`/`currencyExpiresTick`
+    persisted (`CrewSave`), `crewAutoRecurrent` on GameSnapshot — all tolerant-decode;
+    a PRE-pipeline save gets its crews' currency **staggered across [30d, 180d]** on
+    load so a legacy fleet never lapses in one wave. **The CREW card's "Hire" is now a
+    rated hire that dismisses the card** (it can't fix THIS hold any more — Reserve is
+    the only instant fix; the new crew stops the NEXT holds). `hireCrew(family:)`
+    keeps compiling (mode defaults to `.rated`). **Coverage readout** (designer
+    decision 4 — REVERSES the earlier "the game doesn't calculate the crew need"
+    call, because 10–45-day latency makes the ratio a planning input, not a puzzle):
+    `crewCoverage(family:)` = line-ready crews per aircraft + a verdict from the
+    sim's own sweep thresholds (≥1.9 continuous · ≥1.5 thin · else under-crewed).
+    **Crews tab v2** (`CrewsView`): provider card, per-family DEPLOYMENT (2×2 grid +
+    coverage line), TRAINING PIPELINE (who's in a course + days back, lapsed +
+    REQUALIFY, the AUTO toggle), HIRE (both doors priced live); the Network Add Crew
+    panel shows both doors too. Verified `aa-1.1.x/CrewPipelineVerify.swift` 63/63
+    (incl. a $20M starter with one Beech 1900 surviving 45 days — an early version
+    of that test "failed" because it never answered an AOG card, the documented
+    headless trap) + RotationVerify 40/40 + OpsTweaksVerify 43/43 + RoundTrip 13/13
+    + full Debug build + `de-findgaps` clean. Phase 2 (the Training Center at a hub,
+    contract slot wait, capacity/overflow, Finance term + payback line) is next; its
+    gate + shape are already decided in the scope doc.
   - **#18 AIRPORT RECRUITMENT OFFER — DONE (the counterpart to the #16 slot
     buyback, which is the OPPOSITE: an airport buying YOUR slot).** A smaller,
     off-radar CONUS airport periodically courts the player to open a route TO it,

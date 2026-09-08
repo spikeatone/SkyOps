@@ -79,7 +79,7 @@ struct OpsView: View {
                         // so Needs Attention moving down doesn't hide anything.
                         opportunitiesGroup
                         fuelHedgeGroup
-                        if !sim.decisionQueue.isEmpty { needsAttentionGroup }
+                        if !opsDecisions.isEmpty { needsAttentionGroup }
                         if sim.ownedCount > 0 { maintenanceGroup }
                         if !sim.incentedRoutes.isEmpty { incentivesGroup }
                         if !sim.hubs.isEmpty || !sim.rivalHubs.isEmpty { hubsGroup }
@@ -756,11 +756,15 @@ struct OpsView: View {
     }
 
     // MARK: Needs Attention group
+    /// Crew-training cards live on the Crews tab + the bell, not here (designer,
+    /// 8 Sep 2026) — Ops shows the operational decisions only.
+    private var opsDecisions: [Simulation.Decision] { sim.decisionQueue.filter { $0.kind != .training } }
+
     private var needsAttentionGroup: some View {
         drawer(.needsAttention, "Needs Attention", trailing: {
-            Text("\(sim.decisionQueue.count)").font(.karla(14, .bold)).foregroundStyle(Sky.red)
+            Text("\(opsDecisions.count)").font(.karla(14, .bold)).foregroundStyle(Sky.red)
         }) {
-            ForEach(sim.decisionQueue) { NeedsAttentionCard(sim: sim, decision: $0) }
+            ForEach(opsDecisions) { NeedsAttentionCard(sim: sim, decision: $0) }
         }
     }
 

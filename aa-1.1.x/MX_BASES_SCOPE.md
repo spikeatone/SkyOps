@@ -1,7 +1,8 @@
 # Maintenance — backgrounded A checks, MRO premium, own maintenance bases (scope)
 
-**Status: PROPOSAL — needs 5 designer decisions (§6). Sibling of `CREW_TRAINING_SCOPE.md`; read
-them together — they share one "facility" pattern (§3.5).**
+**Status: DECIDED 8 Sep 2026 — all 5 decisions CONFIRMED by the designer as proposed (§6). Build
+order: crew training Phase 1 first (branch `crew-training`), then MX Phase 1. Sibling of
+`CREW_TRAINING_SCOPE.md`; read them together — they share one "facility" pattern (§3.5).**
 
 Player feedback (relayed 8 Sep 2026, and it's good): *"dealing with A-checks for an airline of 180
 planes takes about ⅓ of player time — too much. There should be a way to pay for maintenance hubs
