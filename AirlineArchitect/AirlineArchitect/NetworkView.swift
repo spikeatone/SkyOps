@@ -1081,6 +1081,9 @@ struct AddCrewPanel: View {
 /// the Figma.
 struct FuelHedgePanel: View {
     let sim: Simulation
+    /// Inside an OPS drawer the drawer supplies the header + card chrome, so the
+    /// panel renders just its rows.
+    var embedded: Bool = false
     @Environment(\.colorScheme) private var scheme
     private var isDark: Bool { scheme == .dark }
     private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
@@ -1089,8 +1092,22 @@ struct FuelHedgePanel: View {
     private var bodyC: Color      { isDark ? .white : Color(skyHex: 0x64748B) }
     private var labelC: Color     { isDark ? Sky.lightBlue : Color(skyHex: 0x64748B) }
     var body: some View {
+        if embedded {
+            rows   // the OPS drawer supplies the header + card chrome
+        } else {
+            rows
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(cardBG)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+                .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
+        }
+    }
+
+    private var rows: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Fuel Hedge").font(.karla(20, .heavy)).foregroundStyle(titleC)
+            if !embedded { Text("Fuel Hedge").font(.karla(20, .heavy)).foregroundStyle(titleC) }
 
             if sim.ownedCount == 0 {
                 Text("No aircraft owned yet — nothing to hedge. The premium is priced against your current fleet's real hold cost, so buy an aircraft first.")
@@ -1117,12 +1134,6 @@ struct FuelHedgePanel: View {
                 }
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
-        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
     }
 
     private func hedgeSlot(days: Int) -> some View {

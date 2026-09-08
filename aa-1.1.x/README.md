@@ -125,6 +125,16 @@ group never compiles them into the build.
   (no active hedge). Reach for it if anything touches the fuel-hedge state or the
   snapshot/restore of it.
 
+- **`PathWrapVerify.swift`** — the transpacific "routes draw across the Atlantic" fix
+  (8 Sep 2026): `FlightPath.pathPoints` runs every leg to the copy of its destination
+  NEAREST the origin on the wrap-around map. A two-file compile (FlightPath +
+  FlightState — see its header), 16/16.
+- **`OpsTweaksVerify.swift`** — the 8 Sep 2026 Ops tweaks (43/43): the auto-slow
+  SPEED RESTORE (given back once every card that arrived while slowed clears; a
+  player pick or a pre-existing card never fights it), the OPS DRAWERS (collapsed
+  set on the sim, persisted, legacy → open, alert auto-opens its box), and the MX
+  list's nearest-date-first order (the row's shown check == the sort's check).
+
 ## How to run
 The entry file must be named `main.swift` (top-level `MainActor.assumeIsolated {…}`).
 From the repo root:

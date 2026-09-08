@@ -92,10 +92,22 @@ one contradicts the design thesis.)
 
 - **Tick engine**: 1 tick = 1 sim-minute, decoupled from real-time. Speed
   multiplier just changes how often ticks fire; the tick logic itself never
-  changes with speed. Speeds: ¼× / ½× / 1× / 5× / 10× / 25×. No pause.
+  changes with speed. Speeds: ¼× / ½× / 1× / 5× / 10× / 25× / 100× (100× added
+  in 1.7). No pause.
   ¼× is rate-limited: 3 uses per FIXED sim-calendar-day boundary (resets when
   the day-of-sim-clock number changes, not on a rolling 24h window). Exhausting
   it snaps speed to 1×, not back to whatever was active before.
+  - **AUTO-SLOW + SPEED RESTORE (auto-slow 1.7; restore 8 Sep 2026, designer
+    request).** A NEW decision card while at >1× snaps the sim to 1× (never
+    fast-forward past a real choice at 100×) with a banner naming why. The sim
+    now GIVES THE SPEED BACK: `autoSlowRestoreSpeed` remembers the player's
+    setting and restores it once every card that arrived while slowed is cleared
+    (`autoSlowPendingIDs` — a card that PRE-DATES the slow, e.g. a lingering
+    offer, never holds the speed hostage). A deliberate pick meanwhile
+    (`requestSpeed`) drops the intent, so the game never overrides the player.
+    Both transient (not persisted; speed resets on load anyway). Verified in
+    `aa-1.1.x/OpsTweaksVerify.swift` (43/43, shared with the Ops drawers + the
+    MX list order).
 - **State machine per aircraft**: PARKED → BOARDING → TAXI_OUT → TAKEOFF →
   CRUISE → APPROACH → LANDING → TAXI_IN → TURNAROUND → loop. Durations were
   tuned so that PEAK velocity (not just average) matches across phases —
@@ -143,6 +155,17 @@ one contradicts the design thesis.)
   mandatory check. Verified: RoundTripVerify 13/13, MX sweep 6/6 (`MXProbe.swift`,
   SERVICED beats DEFERRED), soak 6/6. The "sell before the D check" strategic
   dynamic emerges naturally (D cost ≈¼ of residual near EOL).
+  - **MX LIST ORDER = NEAREST DATE FIRST (8 Sep 2026, designer request).** The
+    OPS ▸ MX list sorted by `mxMostUrgent` (highest FRACTION of interval
+    consumed), which put a D check 12k cycles out ABOVE an A check due in 146 —
+    the player wants the soonest date. `mxNearestCheck` (the soonest of A/C/D on
+    the tighter cycle-or-calendar axis, via `mxDaysUntilDue`) now drives BOTH the
+    row's shown check (`mxNextCheckETA`) and `mxFleet`'s order: due/overdue (most
+    overdue first) → soonest upcoming → in the shop last (soonest back first).
+    `mxMostUrgent` still drives the due/grounding LOGIC — only the display pick
+    changed. (A bigger MX rework — backgrounded A checks, MRO premium, own
+    maintenance bases, MX moving to a Fleet ▸ Maintenance section — is scoped in
+    `aa-1.1.x/MX_BASES_SCOPE.md`, awaiting designer decisions.)
 - **PREVENTIVE-MAINTENANCE BUDGET — SHELVED (branch `maint-budget-t22`), superseded
   by the MX program above.** A passive 3-tier PM budget (Minimal/Standard/Premium)
   that only nudged AOG frequency and/or repair cost. Two balance sweeps proved it
@@ -2789,6 +2812,23 @@ where numbers are involved.
     the route-log strings use `↔\u{FE0E}` (text variation selector) to force
     text presentation. Watch for this with any bare arrow/symbol char in a
     string (elsewhere the app uses `Image(systemName: "arrow.right")` instead).
+  - **OPS DRAWERS — DONE (8 Sep 2026; designer: with a big airline, Ops is a
+    long scroll).** Every section box is a collapsible drawer
+    (`OpsView.drawer(_:_:trailing:content:)`: chevron + a trailing summary that
+    stays visible when collapsed — Reputation tier/score, Needs Attention count,
+    "N due · M in shop", "N contested", "N hubs", "N routes"). The collapsed set
+    is `Simulation.opsCollapsedSections` (`Sim/OpsSection.swift`) — on the SIM,
+    not view `@State`, so it survives the tab switch that recreates OpsView — and
+    PERSISTED (`GameSnapshot.opsCollapsedSections`, tolerant-decode; legacy saves
+    → all open). **An alert about a box AUTO-OPENS it** (`opsAutoOpen`): any new
+    card → Needs Attention (+ its home box via `Decision.Kind.opsSection`:
+    mxCheck → Maintenance, hubOffer → Hubs), a rival entering a route →
+    Competition, an accepted airport offer → Incentives, a fuel-price spike →
+    Fuel Hedge. Events never auto-opens (events aren't alerts).
+    `FuelHedgePanel(embedded:)` drops its own title/card inside the drawer.
+    Verified: OpsTweaksVerify 43/43 (toggle, persist, legacy, auto-open, kind
+    map) + live on the iPad sim (collapse, survives Fleet→Ops, saved to disk).
+    German added for the 5 new summary strings.
 - **FINANCE tab — DONE, and the FIRST screen with NO Figma mockup (designer
   said to build critical info from the app's own design language).**
   `FinanceView.swift`, wired into the Finance tab. Four cards + a conditional

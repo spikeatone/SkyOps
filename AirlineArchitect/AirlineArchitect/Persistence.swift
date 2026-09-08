@@ -103,6 +103,9 @@ struct GameSnapshot: Codable {
     // correctly since `tick` is persisted too. Was previously UNPERSISTED — a
     // paid hedge silently vanished on app close/reopen (customer-reported).
     var fuelHedgeExpiryTick: Int? = nil
+    /// OPS tab drawers the player collapsed (OpsSection raw values). nil/absent in
+    /// older saves → everything open, the pre-drawer layout.
+    var opsCollapsedSections: [String]? = nil
 
     // Camera
     var cameraZoom = 1.0
@@ -352,6 +355,7 @@ extension GameSnapshot {
         totalClubRent = c.decodeSafeOpt(Int.self, .totalClubRent)
         hubLedgers = c.decodeSafeOpt([String: Simulation.HubLedger].self, .hubLedgers)
         fuelHedgeExpiryTick = c.decodeSafeOpt(Int.self, .fuelHedgeExpiryTick)
+        opsCollapsedSections = c.decodeSafeOpt([String].self, .opsCollapsedSections)
         cameraZoom = c.decodeSafe(.cameraZoom, default: 1.0)
         cameraCenterX = c.decodeSafe(.cameraCenterX, default: 0.0)
         cameraCenterY = c.decodeSafe(.cameraCenterY, default: 0.0)

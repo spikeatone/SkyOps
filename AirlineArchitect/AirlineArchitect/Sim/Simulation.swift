@@ -576,6 +576,7 @@ final class Simulation {
                     let name = competitorName(excluding: r.competitors)
                     r.competitionLevel += 1
                     r.competitors.append(name)
+                    opsAutoOpen(.competition)   // a rival landed on a route → surface the box
                     let why = subsidiaries.isEmpty ? "" : L(" as the market consolidates")
                     logOps(.market, L("Competitor entered your market"),
                            L("%@ now flies %@ ↔\u{FE0E} %@%@", name, r.originCode, r.destCode, why))
@@ -760,6 +761,10 @@ final class Simulation {
     /// Set the speed, enforcing the ¼× daily rate limit. Requesting ¼× when
     /// it's exhausted snaps to 1× instead. Non-¼× speeds set directly.
     func requestSpeed(_ s: Double) {
+        // The player picked a speed themselves — drop any pending auto-slow restore
+        // so we never override a deliberate choice later.
+        autoSlowRestoreSpeed = nil
+        autoSlowPendingIDs = []
         if s == 0.25 {
             let day = tick / 1440
             if day != quarterSpeedDay { quarterSpeedDay = day; quarterSpeedUsesToday = 0 }
@@ -3669,11 +3674,36 @@ final class Simulation {
     /// Owned aircraft with a due (or overdue) check, not already in the shop.
     var mxDueAircraft: [Aircraft] { aircraft.filter { $0.purchased && !$0.inMXShop && mxIsDue($0) } }
     var mxInShopCount: Int { aircraft.lazy.filter { $0.purchased && $0.inMXShop }.count }
-    /// All owned aircraft, most-maintenance-urgent first (for the OPS ▸ MX list).
+    /// Sim-days until a check is due on whichever axis is TIGHTER (cycles at ~2/sim-day,
+    /// or calendar). ≤0 = due; more negative = more overdue.
+    func mxDaysUntilDue(_ kind: Aircraft.MXKind, _ ac: Aircraft) -> Int {
+        var days = mxCyclesUntilDue(kind, ac) / 2
+        if let cal = mxCalendarInterval(kind) {
+            days = min(days, (cal - (tick - mxState(kind, ac).lastTick)) / 1440)
+        }
+        return days
+    }
+    /// The check due SOONEST in time across A/C/D — what the MX list shows and sorts
+    /// by ("nearest date first", designer request). Distinct from `mxMostUrgent`
+    /// (highest FRACTION of interval consumed), which drives the due/grounding logic:
+    /// a D check at 90% of a 15,000-cycle interval is still 1,500 cycles out, while an
+    /// A check at 80% of 600 is due next week — the player wants the A first. A check
+    /// that's already due wins by construction (days ≤ 0). nil while in the shop.
+    func mxNearestCheck(_ ac: Aircraft) -> (kind: Aircraft.MXKind, days: Int)? {
+        guard !ac.inMXShop else { return nil }
+        let all: [Aircraft.MXKind] = [.a, .c, .d]
+        return all.map { ($0, mxDaysUntilDue($0, ac)) }.min { $0.1 < $1.1 }
+    }
+    /// All owned aircraft for the MX list, NEAREST DATE FIRST: due/overdue (most
+    /// overdue first) → soonest upcoming → in the shop last (soonest back first).
     var mxFleet: [Aircraft] {
-        aircraft.filter { $0.purchased }.sorted {
-            ($0.inMXShop ? 2.0 : (mxMostUrgent($0)?.progress ?? 0)) >
-            ($1.inMXShop ? 2.0 : (mxMostUrgent($1)?.progress ?? 0))
+        func key(_ ac: Aircraft) -> Int {
+            if ac.inMXShop { return 1_000_000 + (mxShopDaysLeft(ac) ?? 0) }
+            return mxNearestCheck(ac)?.days ?? 999_999
+        }
+        return aircraft.filter { $0.purchased }.sorted { a, b in
+            let ka = key(a), kb = key(b)
+            return ka != kb ? ka < kb : a.tail < b.tail
         }
     }
     /// Sim-days until an aircraft's active MX check is back (or nil if not in shop).
@@ -3684,7 +3714,10 @@ final class Simulation {
     /// Human ETA for an aircraft's next check: the most-urgent kind + how soon, on
     /// whichever axis (cycles or calendar) is tighter. Returns (kind, short text).
     func mxNextCheckETA(_ ac: Aircraft) -> (kind: Aircraft.MXKind, text: String)? {
-        guard let u = mxMostUrgent(ac) else { return nil }
+        // The SOONEST check in time — the same pick the list sorts by, so the row a
+        // player sees near the top really is the nearest date.
+        guard let n = mxNearestCheck(ac) else { return nil }
+        let u = (kind: n.kind, progress: mxProgress(n.kind, ac))
         // "OVERDUE" vs "due now" — D-aware (mxIsOverdue uses D's calendar grace, not a
         // cycle-fraction band, so a D check actually reaches OVERDUE in a sane time).
         if u.progress >= 1.0 { return (u.kind, mxIsOverdue(ac) ? String(localized: "OVERDUE") : String(localized: "due now")) }
@@ -4183,6 +4216,7 @@ final class Simulation {
 
     private(set) var decisionQueue: [Decision] = [] {
         didSet {
+            let added = decisionQueue.filter { d in !oldValue.contains(where: { $0.id == d.id }) }
             // AUTO-SLOW-ON-ALERT (player feedback T1.4): when a NEW decision card
             // appears (queue grew) and we're fast-forwarding, snap to 1× so the
             // player can't blow past a real choice at 100×. Fits the design thesis
@@ -4195,16 +4229,39 @@ final class Simulation {
                     // a new card is easy to miss. Carries the new decision so the banner
                     // can name it; shown by ContentView, stays until tapped. Only fires
                     // when speed was actually high (at 1×/½× the player is already watching).
-                    if let newDec = decisionQueue.first(where: { d in !oldValue.contains(where: { $0.id == d.id }) }) {
+                    if let newDec = added.first {
                         autoSlowAlert = (kind: newDec.kind, tail: newDec.aircraft?.tail, fromSpeed: speed)
                     }
+                    // Remember the player's setting so it can be given BACK once every
+                    // decision that arrived while slowed is cleared (designer request).
+                    autoSlowRestoreSpeed = speed
                     speed = 1
                 }
-            } else if decisionQueue.count < oldValue.count, let a = autoSlowAlert,
-                      !decisionQueue.contains(where: { $0.kind == a.kind && $0.aircraft?.tail == a.tail }) {
-                // The alerted decision was resolved (possibly via a path OTHER than the
-                // banner tap) — drop the stale banner so it doesn't linger.
-                autoSlowAlert = nil
+                // Every card that arrives while slowed must clear before the restore —
+                // a card that PRE-DATES the slow (say, a lingering offer) never holds
+                // the player's speed hostage.
+                if autoSlowRestoreSpeed != nil { autoSlowPendingIDs.formUnion(added.map(\.id)) }
+                // OPS DRAWERS: an alert about a box auto-opens that drawer so the player
+                // doesn't have to hunt for it (designer request).
+                opsAutoOpen(.needsAttention)
+                for d in added { if let s = d.kind.opsSection { opsAutoOpen(s) } }
+            } else if decisionQueue.count < oldValue.count {
+                if let a = autoSlowAlert,
+                   !decisionQueue.contains(where: { $0.kind == a.kind && $0.aircraft?.tail == a.tail }) {
+                    // The alerted decision was resolved (possibly via a path OTHER than the
+                    // banner tap) — drop the stale banner so it doesn't linger.
+                    autoSlowAlert = nil
+                }
+                // SPEED RESTORE: once every decision that arrived while slowed is gone,
+                // return to the player's speed — unless they've since picked a speed
+                // themselves (requestSpeed drops the intent), in which case leave it.
+                if let r = autoSlowRestoreSpeed {
+                    autoSlowPendingIDs.formIntersection(Set(decisionQueue.map(\.id)))
+                    if autoSlowPendingIDs.isEmpty {
+                        autoSlowRestoreSpeed = nil
+                        if speed == 1 { speed = r }
+                    }
+                }
             }
         }
     }
@@ -4212,6 +4269,22 @@ final class Simulation {
     /// high speed. ContentView shows it as a brief (~4s) banner ("Slowed to 1× — …")
     /// so the player knows what happened, then clears it.
     var autoSlowAlert: (kind: Decision.Kind, tail: String?, fromSpeed: Double)?
+    /// TRANSIENT: the player's speed before an auto-slow, given back once every decision
+    /// that arrived while slowed is cleared (see the decisionQueue observer). Not
+    /// persisted — speed resets to the default on load anyway.
+    private(set) var autoSlowRestoreSpeed: Double?
+    private var autoSlowPendingIDs: Set<String> = []
+
+    // MARK: Ops drawers (collapsible section boxes)
+    /// Which OPS section boxes the player has COLLAPSED. Lives on the sim (not view
+    /// @State) so it survives the tab switch that recreates OpsView, and is PERSISTED
+    /// so a save doesn't reset the player's layout (designer request). An alert about
+    /// a box re-opens it (`opsAutoOpen`) so they never have to hunt.
+    private(set) var opsCollapsedSections: Set<OpsSection> = []
+    func toggleOpsSection(_ s: OpsSection) {
+        if opsCollapsedSections.contains(s) { opsCollapsedSections.remove(s) } else { opsCollapsedSections.insert(s) }
+    }
+    func opsAutoOpen(_ s: OpsSection) { opsCollapsedSections.remove(s) }
     /// Running maintenance spend (expedite/standard repair costs). The full
     /// fee/economy system is Phase 5; this keeps the costs real until then.
     private(set) var maintenanceSpend: Int = 0
@@ -4737,6 +4810,7 @@ final class Simulation {
         let r = createRoute(from: o, to: d, cost: 0, incentiveBonus: p.signingBonus, waived: waived)
         playerBalance += p.signingBonus
         totalOfferIncome += p.signingBonus
+        opsAutoOpen(.incentives)   // the deal now has a row in Airport Incentives
         if let spare = eligibleSpareForOffer(p) {
             assign(spare, to: r, origin: o, dest: d)
             logOps(.structural, L("Route offer accepted"),
@@ -4805,6 +4879,8 @@ final class Simulation {
             // type is cooling down, which shouldn't happen with 5 types + 30 days).
             let eligible = EconomicEvent.all.filter { (eventCooldownUntil[$0.id] ?? 0) <= tick }
             currentEvent = (eligible.isEmpty ? EconomicEvent.all : eligible).randomElement()!
+            // A fuel-price spike is exactly when the Fuel Hedge box matters — open it.
+            if currentEvent.costMultiplier > 1 { opsAutoOpen(.fuelHedge) }
             // Cooldown from ONSET: guarantees the same event can't recur within
             // `economicEventCooldownDays` regardless of how long this one lasts.
             eventCooldownUntil[currentEvent.id] = tick + Simulation.economicEventCooldownDays * 1440
@@ -5588,6 +5664,7 @@ final class Simulation {
         s.totalHubLabor = totalHubLabor
         s.totalClubRent = totalClubRent
         s.fuelHedgeExpiryTick = fuelHedgeExpiryTick
+        s.opsCollapsedSections = opsCollapsedSections.map(\.rawValue).sorted()
         s.aircraft = aircraft.filter { $0.purchased }.map { ac in
             AircraftSave(tail: ac.tail, typeId: ac.type.id, originCode: ac.origin.code, destCode: ac.dest.code,
                          stateIndex: ac.stateIndex, stateTick: ac.stateTick, cyclesAccrued: ac.cyclesAccrued,
@@ -5744,6 +5821,7 @@ final class Simulation {
         // Active fuel hedge (a PAID asset — must survive app close/reopen). Absolute
         // tick, so it stays valid because `tick` is restored above. nil in pre-fix saves.
         fuelHedgeExpiryTick = s.fuelHedgeExpiryTick
+        opsCollapsedSections = Set((s.opsCollapsedSections ?? []).compactMap(OpsSection.init(rawValue:)))
         nextHubBillTick = s.tick + Simulation.ticksPerMonth   // re-seed like insurance
         homeFrame = Simulation.frame(for: homeRegion, airports: airports)
         cameraZoom = s.cameraZoom; cameraCenter = CGPoint(x: s.cameraCenterX, y: s.cameraCenterY)

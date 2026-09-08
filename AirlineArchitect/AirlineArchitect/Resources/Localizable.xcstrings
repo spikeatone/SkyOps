@@ -1,6 +1,56 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld contested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld umkämpft"
+          }
+        }
+      }
+    },
+    "1 hub": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Drehkreuz"
+          }
+        }
+      }
+    },
+    "%lld hubs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Drehkreuze"
+          }
+        }
+      }
+    },
+    "1 route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Route"
+          }
+        }
+      }
+    },
+    "%lld routes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Routen"
+          }
+        }
+      }
+    },
     "%@ %@": {
       "localizations": {
         "de": {

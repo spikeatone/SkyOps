@@ -78,8 +78,7 @@ struct OpsView: View {
                         // Urgent decisions are also surfaced by the bell/Alerts modal,
                         // so Needs Attention moving down doesn't hide anything.
                         opportunitiesGroup
-                        // Fuel Hedge lives on Ops now (moved off the Network tab).
-                        FuelHedgePanel(sim: sim)
+                        fuelHedgeGroup
                         if !sim.decisionQueue.isEmpty { needsAttentionGroup }
                         if sim.ownedCount > 0 { maintenanceGroup }
                         if !sim.incentedRoutes.isEmpty { incentivesGroup }
@@ -115,8 +114,10 @@ struct OpsView: View {
     /// Hubs & Clubs status box — each hub's health, monthly bills, and any
     /// airports lost to a rival (the purple monuments).
     private var hubsGroup: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Hubs & Clubs").font(.karla(20, .heavy)).foregroundStyle(primary)
+        drawer(.hubs, "Hubs & Clubs", trailing: {
+            let n = sim.hubs.count
+            Text(n == 1 ? "1 hub" : "\(n) hubs").font(.karla(13, .semibold)).foregroundStyle(secondary)
+        }) {
             ForEach(sim.hubs.keys.sorted(), id: \.self) { code in
                 let operating = sim.hubOperating(code)
                 let hasClub = sim.hubs[code]?.hasClub == true
@@ -159,16 +160,13 @@ struct OpsView: View {
                 .padding(.vertical, 2)
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     private var incentivesGroup: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Airport Incentives").font(.karla(20, .heavy)).foregroundStyle(primary)
+        drawer(.incentives, "Airport Incentives", trailing: {
+            let n = sim.incentedRoutes.count
+            Text(n == 1 ? "1 route" : "\(n) routes").font(.karla(13, .semibold)).foregroundStyle(secondary)
+        }) {
             Text("Deals you accepted — waived opening fees and marketing bonuses.")
                 .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
             ForEach(sim.incentedRoutes) { r in
@@ -194,11 +192,6 @@ struct OpsView: View {
                 .padding(.vertical, 4)
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
     /// A route's title: a 2-stop route shows ORIG ⇄ DEST with the route icon; a
     /// multi-city rotation shows the whole loop (DEN → ORD → MSP → ↺).
@@ -243,13 +236,10 @@ struct OpsView: View {
     private var reputationGroup: some View {
         let rep = sim.reputation
         let dp = sim.reputationDemandPercent
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Reputation").font(.karla(20, .heavy)).foregroundStyle(primary)
-                Spacer()
-                Text(LocalizedStringKey(sim.reputationTier)).font(.karla(14, .bold)).foregroundStyle(repColor(rep))
-                Text("· \(Int(rep.rounded()))/100").font(.karla(14, .bold)).foregroundStyle(primary)
-            }
+        return drawer(.reputation, "Reputation", trailing: {
+            Text(LocalizedStringKey(sim.reputationTier)).font(.karla(14, .bold)).foregroundStyle(repColor(rep))
+            Text("· \(Int(rep.rounded()))/100").font(.karla(14, .bold)).foregroundStyle(primary)
+        }) {
             // Score bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -267,11 +257,6 @@ struct OpsView: View {
             Text("Built by on-time flights; hurt by groundings and crew holds.")
                 .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     // MARK: Maintenance (MX program — scheduled A/C/D checks; AOG stays in Needs Attention)
@@ -280,13 +265,10 @@ struct OpsView: View {
         let fleet = sim.mxFleet
         let due = sim.mxDueAircraft.count
         let inShop = sim.mxInShopCount
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Maintenance").font(.karla(20, .heavy)).foregroundStyle(primary)
-                Spacer()
-                Text("\(due) due · \(inShop) in shop").font(.karla(13, .semibold))
-                    .foregroundStyle(due > 0 ? Sky.red : secondary)
-            }
+        return drawer(.maintenance, "Maintenance", trailing: {
+            Text("\(due) due · \(inShop) in shop").font(.karla(13, .semibold))
+                .foregroundStyle(due > 0 ? Sky.red : secondary)
+        }) {
             Text("Scheduled A/C/D checks. Service due aircraft to stay airworthy — flying past a check raises breakdown risk. Emergencies (AOG) appear in Needs Attention.")
                 .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
             ForEach(Array(fleet.enumerated()), id: \.element.id) { idx, ac in
@@ -294,11 +276,6 @@ struct OpsView: View {
                 mxRow(ac)
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     @ViewBuilder private func mxRow(_ ac: Aircraft) -> some View {
@@ -554,8 +531,11 @@ struct OpsView: View {
     // MARK: Competition (rival carriers on the player's routes)
     private var competitionGroup: some View {
         let contested = sim.contestedRoutes
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("Competition").font(.karla(20, .heavy)).foregroundStyle(primary)
+        return drawer(.competition, "Competition", trailing: {
+            if !contested.isEmpty {
+                Text("\(contested.count) contested").font(.karla(13, .semibold)).foregroundStyle(Sky.red)
+            }
+        }) {
             if contested.isEmpty {
                 Text("No rival carriers on your routes. Profitable routes attract competitors — your reputation helps keep them out.")
                     .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
@@ -583,11 +563,6 @@ struct OpsView: View {
                 }
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     // MARK: Competition actions (per-route marketing levers)
@@ -640,8 +615,7 @@ struct OpsView: View {
 
     // MARK: Route Opportunities (underserved-markets finder)
     private var opportunitiesGroup: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Route Opportunities").font(.karla(20, .heavy)).foregroundStyle(primary)
+        drawer(.opportunities, "Route Opportunities") {
             Text("Underserved markets you don't fly yet — tap one to preview it on the map.")
                 .font(.karla(12)).foregroundStyle(secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -660,11 +634,6 @@ struct OpsView: View {
                 ForEach(sim.hubCodes, id: \.self) { hubOppDrawer($0) }
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     /// One tappable opportunity row (shared by the flat list and the hub drawers).
@@ -728,6 +697,45 @@ struct OpsView: View {
         }
     }
 
+    // MARK: Drawers (collapsible section boxes)
+    /// A collapsible section box (designer request: with a big airline, Ops is a long
+    /// scroll). The header — title, optional trailing summary, chevron — always shows;
+    /// the body only while the section isn't in the player's collapsed set, which lives
+    /// on the SIM (so it survives the tab switch that recreates this view) and is
+    /// PERSISTED (a save doesn't reset the layout). An alert about a box re-opens it
+    /// (`Simulation.opsAutoOpen`), so the player never has to hunt.
+    private func drawer<Content: View>(_ section: OpsSection, _ title: LocalizedStringKey,
+                                       @ViewBuilder content: () -> Content) -> some View {
+        drawer(section, title, trailing: { EmptyView() }, content: content)
+    }
+    private func drawer<Trailing: View, Content: View>(_ section: OpsSection, _ title: LocalizedStringKey,
+                                                       @ViewBuilder trailing: () -> Trailing,
+                                                       @ViewBuilder content: () -> Content) -> some View {
+        let open = !sim.opsCollapsedSections.contains(section)
+        return VStack(alignment: .leading, spacing: 10) {
+            Button {
+                Feedback.impact(.light)
+                withAnimation(.easeInOut(duration: 0.2)) { sim.toggleOpsSection(section) }
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(title).font(.karla(20, .heavy)).foregroundStyle(primary)
+                    Spacer(minLength: 6)
+                    trailing()
+                    Image(systemName: open ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if open { content() }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
     // MARK: Header
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -749,21 +757,22 @@ struct OpsView: View {
 
     // MARK: Needs Attention group
     private var needsAttentionGroup: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Needs Attention").font(.karla(20, .heavy)).foregroundStyle(primary)
+        drawer(.needsAttention, "Needs Attention", trailing: {
+            Text("\(sim.decisionQueue.count)").font(.karla(14, .bold)).foregroundStyle(Sky.red)
+        }) {
             ForEach(sim.decisionQueue) { NeedsAttentionCard(sim: sim, decision: $0) }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    /// Fuel Hedge lives on Ops now (moved off the Network tab); the panel supplies
+    /// the rows, the drawer supplies the header + card.
+    private var fuelHedgeGroup: some View {
+        drawer(.fuelHedge, "Fuel Hedge") { FuelHedgePanel(sim: sim, embedded: true) }
     }
 
     // MARK: Events group
     private var eventsGroup: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Events").font(.karla(20, .heavy)).foregroundStyle(primary)
+        drawer(.events, "Events") {
             if sim.opsEventLog.isEmpty {
                 Text("No recent events.").font(.karla(14)).foregroundStyle(secondary)
                     .padding(.vertical, 4)
@@ -793,11 +802,6 @@ struct OpsView: View {
                 .padding(.top, 6)
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
-        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     private func eventCard(_ e: OpsEvent) -> some View {
