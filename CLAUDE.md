@@ -1869,9 +1869,27 @@ where numbers are involved.
   far-south (Tahiti/NZ) content co-draw at the same x but different
   latitudes — correct, not a bug. Verified: seam renders Asia→Americas
   across the Pacific like a globe; default CONUS view pixel-unchanged (tiles
-  off-screen at that zoom). NOT fixed by this: a single flight leg whose
-  endpoints straddle the seam still draws the long way around (rare;
-  acceptable). The browser prototype does NOT have wrap.
+  off-screen at that zoom). The browser prototype does NOT have wrap.
+  - **SEAM-STRADDLING LEGS — FIXED (8 Sep 2026; player-reported "transpacific
+    routes route across the Atlantic").** The note above used to say a leg whose
+    endpoints straddle the seam "still draws the long way around (rare;
+    acceptable)" — it was NOT rare once Asia/Oceania airports existed: every
+    LAX↔HND-class leg (player route arc AND the aircraft flying it) drew east
+    across the whole map. Root cause: `FlightPath.pathPoints` interpolated between
+    two RAW `Airport.screen` points in flat screen space. Fix: every path now runs
+    to the copy of its destination NEAREST the origin (`FlightPath.nearestCopy`,
+    the screen-space twin of the ±180° normalization already in
+    `Airport.greatCircleNM` — sim distances/range checks were always right; only
+    the drawn arc + the aircraft riding it went the wrong way). The wrap period is
+    ONE shared `FlightPath.wrapWidth` (px) that `Simulation.projectAirports()`
+    refreshes every frame, so ALL callers are fixed at once (route arcs, suggestion
+    arc, rotation preview, aircraft motion, weather-hold rejoin) and a future call
+    site can't regress it; headless harnesses never project → 0 → the flat
+    prototype geometry unchanged. `.taxiIn/.turnaround` sit at `path.end` (the same
+    tiled copy the aircraft flew into) rather than the raw dest one period away.
+    `frameRoute` (Ops suggestion → map) also frames the short way now. Guard:
+    `aa-1.1.x/PathWrapVerify.swift` 16/16 (two-file compile, see its header);
+    designer confirmed on device.
 - **Phase 3 slice 2 — AOG + decision cards, DONE.** Faithful port:
   calibrated onset (2/100/month as continuous per-tick probability),
   family clustering (3×, 3-sim-day linear decay, families never

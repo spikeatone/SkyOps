@@ -42,7 +42,31 @@ enum FlightPath {
         var end: CGPoint
     }
 
-    static func pathPoints(origin: CGPoint, dest: CGPoint) -> PathPoints {
+    /// Horizontal wrap period of the map in screen pixels — the distance between
+    /// tiled copies of the world. `Simulation.projectAirports()` refreshes it
+    /// every frame from the live camera; 0 = no wrap (the headless harnesses
+    /// never project, so they keep the flat prototype geometry unchanged).
+    /// Every path runs to the copy of its destination NEAREST the origin, so a
+    /// transpacific leg crosses the Pacific seam instead of drawing the long way
+    /// round the world across the Atlantic (a real player-reported bug). This is
+    /// the screen-space twin of the ±180° longitude normalization in
+    /// `Airport.greatCircleNM` — the sim's distances were already right; only
+    /// the drawn arc and the aircraft riding it went the wrong way.
+    nonisolated(unsafe) static var wrapWidth: CGFloat = 0
+
+    /// `dest` shifted by whole wrap periods to the tiled copy nearest `origin`.
+    /// Identity when there's no wrap.
+    static func nearestCopy(of dest: CGPoint, to origin: CGPoint,
+                            wrapWidth: CGFloat = FlightPath.wrapWidth) -> CGPoint {
+        guard wrapWidth > 1 else { return dest }
+        var dx = (dest.x - origin.x).truncatingRemainder(dividingBy: wrapWidth)
+        if dx > wrapWidth / 2 { dx -= wrapWidth } else if dx < -wrapWidth / 2 { dx += wrapWidth }
+        return CGPoint(x: origin.x + dx, y: dest.y)
+    }
+
+    static func pathPoints(origin: CGPoint, dest rawDest: CGPoint,
+                           wrapWidth: CGFloat = FlightPath.wrapWidth) -> PathPoints {
+        let dest = nearestCopy(of: rawDest, to: origin, wrapWidth: wrapWidth)
         let midX = (origin.x + dest.x) / 2
         let dist = hypot(dest.x - origin.x, dest.y - origin.y)
         let arcHeight = min(120, max(15, dist * 0.12))
@@ -127,7 +151,9 @@ enum FlightPath {
                                     heading: heading(path, min(t, 0.999)))
 
         case .taxiIn, .turnaround:
-            return AircraftPosition(point: dest, alt: 0, heading: heading(path, 0.999))
+            // path.end, not the raw dest: keeps the aircraft in the same tiled
+            // copy it just flew into (the raw point is one wrap period away).
+            return AircraftPosition(point: path.end, alt: 0, heading: heading(path, 0.999))
         }
     }
 }

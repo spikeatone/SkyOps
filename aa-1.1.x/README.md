@@ -134,13 +134,16 @@ cd AirlineArchitect/AirlineArchitect
 cp ../../aa-1.1.x/PromoMain.swift /tmp/main.swift      # or LaunchFixMain.swift
 swiftc -O -DDEBUG \
   $(ls Sim/*.swift | grep -vE 'AircraftIcon.swift|SVGPath.swift') \
-  Persistence.swift /tmp/main.swift -o /tmp/harness
+  Persistence.swift ../../aa-1.1.x/RepaintVerifyStubs.swift /tmp/main.swift -o /tmp/harness
 /tmp/harness
 ```
 
 Notes:
 - Exclude the two SwiftUI files (`AircraftIcon.swift`, `SVGPath.swift`) — the sim
   layer is otherwise framework-free by design.
+- `RepaintVerifyStubs.swift` is REQUIRED since the 1.3 livery work: `Simulation`
+  references `Livery` (a view-layer type), and the stubs file provides a headless
+  stand-in. Without it the compile fails with `cannot find 'Livery' in scope`.
 - `-DDEBUG` is required: `devInjectCash` and `cashInvariantResidual()` are
   `#if DEBUG` test hooks on `Simulation`.
 - `cashInvariantResidual()` must always return 0. Assert it after any money move.

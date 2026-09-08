@@ -958,6 +958,10 @@ final class Simulation {
     /// Recompute every airport's screen position (call each frame after
     /// configure, since the camera can change between frames).
     func projectAirports() {
+        // Give the flight-path geometry the current wrap period so every leg
+        // runs the SHORT way across the antimeridian seam (a transpacific leg
+        // used to draw the long way round, across the Atlantic).
+        FlightPath.wrapWidth = wrapWidthPx
         for ap in airports { ap.screen = project(ap.unit) }
     }
 
@@ -1054,7 +1058,18 @@ final class Simulation {
     private func frameRoute(_ a: Airport, _ b: Airport) {
         guard viewport.width > 0, viewport.height > 0 else { return }
         userAdjustedCamera = true
-        let minX = min(a.unit.x, b.unit.x), maxX = max(a.unit.x, b.unit.x)
+        // Frame the SHORT way round: use b's tiled copy nearest a, so a
+        // transpacific pair frames the Pacific rather than the whole world via
+        // the Atlantic. The scene is periodic, so a centre shifted by a whole
+        // period is visually identical — wrapCameraX() below normalizes it.
+        let period = Simulation.wrapWidthUnits
+        var bx = b.unit.x
+        if period > 0 {
+            var dx = (bx - a.unit.x).truncatingRemainder(dividingBy: period)
+            if dx > period / 2 { dx -= period } else if dx < -period / 2 { dx += period }
+            bx = a.unit.x + dx
+        }
+        let minX = min(a.unit.x, bx), maxX = max(a.unit.x, bx)
         let minY = min(a.unit.y, b.unit.y), maxY = max(a.unit.y, b.unit.y)
         let w = max(maxX - minX, 0.001), h = max(maxY - minY, 0.001)
         // Pad so the pair occupies the middle ~45% of the frame.
