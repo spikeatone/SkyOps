@@ -1,6 +1,7 @@
 # Crew Training — re-imagined (scope + recommendations)
 
-**Status: PROPOSAL — needs 5 designer decisions (§6) before Phase 1 starts.**
+**Status: DECIDED 8 Sep 2026 (designer) — decisions 1/2/3/5 confirmed, 4 pending (see §6).
+Phase 1 in progress on branch `crew-training`.**
 Designer ask (8 Sep 2026): make crew training real-world in timelines; hiring is not
 instant — an acquired aircraft comes with ONE crew, the next has to be hired AND trained;
 mid-game, build your OWN training center (early game = contracting out to a
@@ -183,7 +184,17 @@ Build on a branch (`crew-training`), Phase 1 first; commit this doc to `main` no
 
 ---
 
-## 6. Decisions needed (5)
+## 6. Decisions (designer answers, 8 Sep 2026)
+
+| # | Decision | Answer |
+|---|---|---|
+| 1 | Timelines 45d / 30d / 10d; recurrent every 180d at 4d / 2d | **Confirmed — "feels right"** |
+| 2 | Recurrent automatic + rolling by default; LAPSED is the deferral penalty; no family-wide card | **Confirmed** |
+| 3 | Training Center: hub-required, one bay per family, ≥6 aircraft/family per bay, 4-crew capacity, contractor overflow | **Confirmed** |
+| 4 | Coverage readout on the Crews card | **PENDING** — designer asked for more detail (answered in chat 8 Sep) |
+| 5 | Provider naming | **"Global Aviation Training"** — a fictional house name (no real-brand reference); it's the contract provider named everywhere training is priced or scheduled |
+
+The original questions, for the record:
 
 1. **Timelines** — initial 45d contracted / 30d own; rated hire 10d; recurrent every 180d at 4d/2d.
    Right feel at 5×–100× speed, or compress further (e.g. 30/20/7)?
