@@ -38,12 +38,11 @@ CLAUDE.md "Decided — The 1.7 hang fixes"; measured A/B in `aa-1.1.x/TickCostPr
       [x] bound the MX list
 - [x] Repair three DEAD harnesses (Rotation + MXCoverage never called `main()`; SaveCompat wouldn't
       compile) — the save-loss regression net had been dark
-- [ ] **DESIGNER NOD NEEDED: `maxClosedRoutes = 40`** drops the oldest closed routes from the Routes
-      panel. CLAUDE.md says routes are "archived, not deleted" so one that never recouped stays
-      reviewable. Raise the constant if that trade is wrong.
-- [ ] Drive on the simulator before cutting a build — the view-layer fixes (tooltip/cash leaves, MX
-      cap, airport hero cache, splash backdrop) are invisible to every headless harness
-- [ ] Merge → bump to 1.7.1 / **build 57** (6 pbxproj configs) → archive/upload
+- [x] **`maxClosedRoutes = 40` — APPROVED by the designer 9 Sep** ("clear closed routes at 40").
+      Beyond 40 closures the oldest leave the Routes panel; a deliberate, approved partial reversal
+      of "archived, not deleted", taken because an unbounded list silently kills iCloud sync at ~68.
+- [x] Driven on the iPad sim 9 Sep — all five view-layer fixes confirmed, no freeze recurrence
+- [x] Merged to `main`; bumped to 1.7.1 / **build 57** (6 pbxproj configs each)
 - [ ] After it is live: re-read the TelemetryDeck Errors dashboard **grouped by MESSAGE, not error
       id** — 1.7+ carries build-at-occurrence tagging, so `b57` events are the ones that judge this fix
 
