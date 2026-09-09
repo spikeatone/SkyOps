@@ -103,3 +103,18 @@ struct SkySidebarRail: View {
         .buttonStyle(.plain)
     }
 }
+
+// MARK: - Centring overlays against the CONTENT column
+
+extension View {
+    /// Anything that presents itself as CENTRED — an alert, a banner, a toast —
+    /// must centre against the information area, not the whole window: on iPad the
+    /// sidebar rail occupies the left edge, so a window-centred card reads visibly
+    /// off-centre (designer, 8 Sep 2026). Insetting by the rail width moves the
+    /// centre of the available space to the centre of the content column. A dimmed
+    /// backdrop is applied OUTSIDE this so it still covers the rail. No-op on
+    /// iPhone, where there is no rail.
+    @ViewBuilder func centredInContentColumn(_ isPad: Bool) -> some View {
+        if isPad { self.padding(.leading, SkySidebarRail.width) } else { self }
+    }
+}

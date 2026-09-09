@@ -206,10 +206,7 @@ struct ContentView: View {
                             .padding(16)
                     }
                     .padding(.top, 44)
-                    // iPad: centre the card in the CONTENT column, not the whole
-                    // window — the sidebar rail made it sit visibly off-centre
-                    // (designer, 8 Sep 2026). The dim still covers the rail.
-                    .padding(.leading, isPadLayout ? SkySidebarRail.width : 0)
+                    .centredInContentColumn(isPadLayout)
                 }
                 .transition(.opacity)
             }
@@ -256,6 +253,7 @@ struct ContentView: View {
         .overlay(alignment: .top) {
             if let c = sim.celebrations.first, !Self.isScreenshotShot {
                 MilestoneToast(celebration: c)
+                    .centredInContentColumn(isPadLayout)
                     .id(c.id)
                     .padding(.top, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -278,6 +276,7 @@ struct ContentView: View {
                                     onTap: { sim.autoSlowAlert = nil; showAlerts = true })
                     .id(a.kind.alertLabel + (a.tail ?? ""))
                     .padding(.top, 8)
+                    .centredInContentColumn(isPadLayout)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }

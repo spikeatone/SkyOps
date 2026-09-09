@@ -258,7 +258,7 @@ struct CrewsView: View {
         return VStack(alignment: .leading, spacing: 8) {
             Text("TRAINING").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
             HStack(spacing: 8) {
-                Image(systemName: "graduationcap.fill").font(.system(size: 16)).foregroundStyle(hireBlue)
+                MilestoneIconArtView(name: "graduationcap.fill", color: hireBlue).frame(width: 18, height: 18)
                 Text(Simulation.crewProviderName).font(.karla(16, .heavy)).foregroundStyle(primary)
                 Text("· contract provider").font(.karla(13)).foregroundStyle(secondary)
                 Spacer(minLength: 0)
@@ -332,7 +332,7 @@ struct CrewsView: View {
             } else {
                 ForEach(bays, id: \.self) { fam in
                     HStack(spacing: 6) {
-                        Image(systemName: "graduationcap.fill").font(.system(size: 11)).foregroundStyle(hireBlue)
+                        MilestoneIconArtView(name: "graduationcap.fill", color: hireBlue).frame(width: 13, height: 13)
                         Text(LocalizedStringKey(CREW_FAMILY_INFO[fam]?.name ?? fam)).font(.karla(13, .bold)).foregroundStyle(primary)
                         Spacer(minLength: 6)
                         Text("\(sim.centerLoad(family: fam))/\(Simulation.simBayCapacity) bay seats in use")
@@ -498,7 +498,7 @@ struct CrewsView: View {
             ForEach(training, id: \.id) { c in
                 let days = max(1, ((c.readyTick ?? now) - now + 1439) / 1440)
                 HStack(spacing: 6) {
-                    Image(systemName: "graduationcap.fill").font(.system(size: 11)).foregroundStyle(hireBlue)
+                    MilestoneIconArtView(name: "graduationcap.fill", color: hireBlue).frame(width: 13, height: 13)
                     Text(pipelineLabel(c.trainingKind, days: days)).font(.karla(13)).foregroundStyle(primary)
                     if c.trainingProvider == .center {
                         Text("· in-house").font(.karla(12)).foregroundStyle(hireBlue)

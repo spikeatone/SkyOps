@@ -311,8 +311,21 @@ final class Simulation {
     static let clubFFRFareHit = 0.02           // FFR surge bites +2%/club (redemption liability)
     static let hubOfferDailyProbHealthy = 0.015
     static let hubOfferDailyProbUnderstaffed = 0.08   // vultures circle a struggling hub
-    static let hubSalePctHealthy = 0.60
+    // A rival's bid for a hub, as a fraction of what the player actually SANK into
+    // it (establish + club build — the club is destroyed with the hub, and leaving
+    // it out of the base is what produced the reported "about 30% of my cost").
+    // A healthy hub now draws around-or-above cost, sometimes a real premium: the
+    // buyer is acquiring a working fortress. It stays an easy refuse for a hub that
+    // is genuinely printing money — that is the player being RIGHT, not a broken
+    // offer — while a marginal-but-operating hub becomes a live decision. Not a
+    // farm: a sold airport can NEVER be re-hubbed, so each is one-shot.
+    static let hubSalePctHealthyMin = 0.90
+    static let hubSalePctHealthyMax = 1.40
     static let hubSalePctUnderstaffed = 0.35
+    // A slot buyback in MONTHS of the route's trailing net (floored at the old
+    // sunk-cost figure). Months, not days — see trailingMonthlyNet.
+    static let slotOfferMonthsMin = 3.0
+    static let slotOfferMonthsMax = 8.0
 
     /// Player routes anchored at this airport (either endpoint).
     /// Routes SERVING an airport — any stop on the rotation, not just its first and
@@ -386,6 +399,24 @@ final class Simulation {
     }
     /// Live payback point (spoke net − facility cost) — the chart's trailing value.
     func hubPaybackNow(_ code: String) -> Int { hubSpokeNet(code) - hubFacilityCost(code) }
+
+    /// What a route has been EARNING lately, normalised to a sim-month. Used to
+    /// price a slot buyback off the asset's earning power instead of its sunk cost
+    /// (player-reported: a route netting ~$1.8M/month drew a $200–400k offer — under
+    /// a week of its own profit, so the answer was always no and the card was noise).
+    /// Prefers the recent window; falls back to the lifetime average when the route
+    /// is too young or flies too rarely to fill it (history is capped at 60 records).
+    func trailingMonthlyNet(_ r: Route) -> Int {
+        let window = Simulation.ticksPerMonth
+        let recent = r.history.filter { $0.tick >= tick - window }
+        if recent.count >= 8, let first = recent.first?.tick {
+            let span = max(1, tick - first)
+            let net = recent.reduce(0) { $0 + $1.net }
+            return Int((Double(net) * Double(window) / Double(span)).rounded())
+        }
+        let monthsOpen = max(1.0, Double(tick - r.openedTick) / Double(window))
+        return Int((Double(r.cumulativeNet) / monthsOpen).rounded())
+    }
 
     /// Create a ledger for a hub that doesn't have one (real establish path passes
     /// the actual charged cost; legacy/acquired hubs approximate from the formula).
@@ -482,9 +513,13 @@ final class Simulation {
             let p = hubUnderstaffed(code) ? Simulation.hubOfferDailyProbUnderstaffed
                                           : Simulation.hubOfferDailyProbHealthy
             guard Double.random(in: 0..<1) < p, let ap = airport(code) else { continue }
-            let pct = hubUnderstaffed(code) ? Simulation.hubSalePctUnderstaffed
-                                            : Simulation.hubSalePctHealthy
-            let price = Int((Double(hubEstablishCost(ap)) * pct).rounded())
+            let pct = hubUnderstaffed(code)
+                ? Simulation.hubSalePctUnderstaffed
+                : Double.random(in: Simulation.hubSalePctHealthyMin...Simulation.hubSalePctHealthyMax)
+            // Base on EVERYTHING sunk into the hub. The club is torn down with it, so
+            // omitting its build cost was what made a healthy bid read as ~36% of cost.
+            let sunk = hubEstablishCost(ap) + ((hubs[code]?.hasClub ?? false) ? clubBuildCost(ap) : 0)
+            let price = Int((Double(sunk) * pct).rounded())
             // The buyer must plausibly operate where the hub IS — this name becomes a
             // permanent rival hub on the map.
             let rival = competitorName(excluding: [], near: [code])
@@ -4999,7 +5034,19 @@ final class Simulation {
             let candidates = playerRoutes.filter { max($0.openingCost, $0.incentiveWaived) > 0 }
             if let r = candidates.randomElement() {
                 let base = max(r.openingCost, r.incentiveWaived)
-                let amount = Int((Double(base) * Double.random(in: 2.0...4.0)).rounded())
+                let sunk = Int((Double(base) * Double.random(in: 2.0...4.0)).rounded())
+                // Price off what the route EARNS, floored at the old sunk-cost figure
+                // so a young or loss-making route still draws a sane bid. A profitable
+                // route is now worth months of its own profit rather than days of it,
+                // which is what makes Accept/Decline an actual decision. It is NOT a
+                // farm: accepting sells the SLOT — it isn't returned to the airport's
+                // available pool, so you can't simply re-open the same route and wait
+                // for the next bid.
+                let earned = trailingMonthlyNet(r)
+                let byEarnings = earned > 0
+                    ? Int((Double(earned) * Double.random(in: Simulation.slotOfferMonthsMin...Simulation.slotOfferMonthsMax)).rounded())
+                    : 0
+                let amount = max(sunk, byEarnings)
                 decisionQueue.append(Decision(id: "offer_\(r.id)_\(tick)", kind: .offer, aircraft: nil,
                     offer: SlotOffer(routeId: r.id, originCode: r.originCode, destCode: r.destCode, amount: amount)))
             }

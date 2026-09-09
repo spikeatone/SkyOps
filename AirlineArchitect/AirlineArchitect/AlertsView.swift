@@ -118,8 +118,17 @@ struct NeedsAttentionCard: View {
         let m = model(for: decision)
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: m.icon).font(.system(size: 18)).foregroundStyle(m.accent)
-                    .frame(width: 20, height: 20)
+                // Prefer the on-brand Figma art when this symbol has it (the crew
+                // training/school cap and the rest of the milestone set); SF Symbol
+                // otherwise. Same accent colour either way, so light/dark are unchanged.
+                Group {
+                    if MilestoneIconArt.has(m.icon) {
+                        MilestoneIconArtView(name: m.icon, color: m.accent)
+                    } else {
+                        Image(systemName: m.icon).font(.system(size: 18)).foregroundStyle(m.accent)
+                    }
+                }
+                .frame(width: 20, height: 20)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(m.category).font(.karla(16, .semibold)).foregroundStyle(m.accent)
                     Text(m.title).font(.karla(16, .semibold)).foregroundStyle(primary)
