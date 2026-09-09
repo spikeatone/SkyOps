@@ -52,6 +52,11 @@ final class Simulation {
     /// Map redraw cap. 30 fps is fluid to the eye and a fraction of the ~125/sec a
     /// raw 25× tick would force. (The sim keeps ticking at full speed regardless.)
     static let mapRenderFPS: Double = 30
+    /// Wall-clock budget for ONE wake's catch-up drain in `run()`. Sized against
+    /// the 8ms sleep there, so worst-case main-thread duty is ~43% rather than
+    /// unbounded. This is what stops a heavy fleet at 100× from pinning the drain
+    /// at its tick cap and blocking the main thread indefinitely.
+    static let maxDrainMs: Double = 6
     private(set) var airports: [Airport] = []
     private(set) var aircraft: [Aircraft] = []
 
@@ -1498,7 +1503,7 @@ final class Simulation {
         guard let idx = playerRoutes.firstIndex(where: { $0.id == routeId }) else { return false }
         let r = playerRoutes.remove(at: idx)
         r.closedTick = tick
-        closedPlayerRoutes.append(r)
+        archiveRoute(r)
         for ac in aircraft where ac.assignedRouteId == routeId {
             ac.assignedRouteId = nil
             if let cid = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == cid }) {
@@ -2570,7 +2575,30 @@ final class Simulation {
     /// Routes archived (not deleted) when their aircraft was sold — full
     /// history preserved so a closed route stays reviewable.
     private(set) var closedPlayerRoutes: [Route] = []
+    /// ⚠️ CAPPED (8 Sep 2026) — this list used to be UNBOUNDED, which is the same
+    /// class of bug as the uncapped `Route.history` that caused the build-27 save
+    /// crash: one side was capped and this one was left open. A closed route
+    /// carries up to `Route.maxHistory` (60) flight records ≈ 13.2KB, so a
+    /// long-running airline crossed the ~900KB iCloud KVS limit at ~68 routes
+    /// (silently ending cross-device sync) and 4MB at ~310 (degrading the load
+    /// menu to a placeholder and putting a full decode on the launch path).
+    /// Drop-oldest, the policy `Route.history` and `maxHubSnapshots` already use.
+    /// ⚠️ THIS IS A VISIBLE PRODUCT CHANGE: CLAUDE.md records that routes are
+    /// "archived, not deleted" so a route that never recouped stays reviewable.
+    /// Beyond this many closures the OLDEST are now dropped from the Routes panel.
+    /// Raising or removing the cap is a one-constant change if that trade is wrong.
+    static let maxClosedRoutes = 40
     private var nextRouteId = 1
+
+    /// The ONE place a route gets archived, so the cap cannot be bypassed by a
+    /// future call site (there are six today: sell, park, reassign, slot buyback,
+    /// activist close, offer forfeit).
+    private func archiveRoute(_ r: Route) {
+        closedPlayerRoutes.append(r)
+        if closedPlayerRoutes.count > Simulation.maxClosedRoutes {
+            closedPlayerRoutes.removeFirst(closedPlayerRoutes.count - Simulation.maxClosedRoutes)
+        }
+    }
 
     /// Open + closed routes, newest first (for the ROUTES panel).
     var allRoutes: [Route] { (playerRoutes + closedPlayerRoutes).sorted { $0.openedTick > $1.openedTick } }
@@ -2972,7 +3000,7 @@ final class Simulation {
         ac.assignedRouteId = nil
         let r = playerRoutes.remove(at: idx)
         r.closedTick = tick
-        closedPlayerRoutes.append(r)
+        archiveRoute(r)
         decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == id }
         // Free a slot at EVERY distinct stop the route consumed (a rotation can
         // touch up to 5 airports; a 2-stop route frees exactly its two ends).
@@ -2998,7 +3026,7 @@ final class Simulation {
             if let idx = playerRoutes.firstIndex(where: { $0.id == pid }) {
                 let pr = playerRoutes.remove(at: idx)
                 pr.closedTick = tick
-                closedPlayerRoutes.append(pr)
+                archiveRoute(pr)
                 decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == pid }
                 airports.first { $0.code == pr.originCode }?.slotsAvailable += 1
                 airports.first { $0.code == pr.destCode }?.slotsAvailable += 1
@@ -3309,12 +3337,41 @@ final class Simulation {
     /// puts it on that route. Runs per tick, early-returning when no spare exists.
     private func assignSpareToPendingRoutes() {
         guard !idleSpares.isEmpty else { return }
-        // Skip routes already reserved by a deferred reassignment — that route
-        // belongs to an aircraft still finishing its current leg.
-        for r in playerRoutes where !routeStaffed(r)
-            && !aircraft.contains(where: { $0.pendingRouteId == r.id }) {
+        // ⚠️ PERFORMANCE, and it is load-bearing at 100× (see run()'s drain budget).
+        // This used to run `routeStaffed(r)` AND a `pendingRouteId` contains-scan
+        // for EVERY route — two O(fleet) passes per route, i.e. O(routes × fleet)
+        // on EVERY tick, in the overwhelmingly common case where every route is
+        // already staffed and the scan finds nothing. Ablation measured it at ~55%
+        // of the whole tick at 300 routes / 420 aircraft. It bites now because the
+        // guard below only asks whether a SPARE exists, and the MX program creates
+        // spares by design (an aircraft in the shop has no `assignedRouteId`), so
+        // on a large fleet the scan is permanently on.
+        // ONE pass over the fleet builds both id sets; the loop is then O(routes)
+        // set lookups. Semantics are per-tick identical — do not throttle this to
+        // an hourly cadence instead, `tickOfferFulfillment`'s 14-day staffing
+        // deadline and `pendingStaffingReason` both document per-tick behaviour.
+        var staffed = Set<Int>(), reserved = Set<Int>()
+        for ac in aircraft {
+            // `purchased` scoping matches routeStaffed — background traffic must
+            // never couple to player routes (the ownership retrofit CLAUDE.md
+            // records getting missed once already).
+            if ac.purchased, let rid = ac.assignedRouteId { staffed.insert(rid) }
+            if let p = ac.pendingRouteId { reserved.insert(p) }
+        }
+        // The guard that was actually wanted: nothing pending → nothing to do.
+        guard playerRoutes.contains(where: { !staffed.contains($0.id) && !reserved.contains($0.id) })
+        else { return }
+        // Consumed as we assign. The old code re-read the computed `idleSpares`
+        // each iteration, which is what stopped one spare being handed to two
+        // routes — hoisting it without `remove(at:)` would reintroduce exactly
+        // that bug. Order is preserved (playerRoutes oldest-first, spare in fleet
+        // order) because the rotation/park/subfleet harnesses assert which tail
+        // lands on which route.
+        var spares = idleSpares
+        for r in playerRoutes where !staffed.contains(r.id) && !reserved.contains(r.id) {
             guard let o = airport(r.originCode), let d = airport(r.destCode) else { continue }
-            if let spare = idleSpares.first(where: { routeBlock(for: $0, from: o, to: d) == nil }) {
+            if let i = spares.firstIndex(where: { routeBlock(for: $0, from: o, to: d) == nil }) {
+                let spare = spares.remove(at: i)
                 assign(spare, to: r, origin: o, dest: d)
                 logOps(.structural, L("Aircraft assigned"), L("%@ → %@ ↔\u{FE0E} %@", spare.tail, r.originCode, r.destCode))
             }
@@ -5254,7 +5311,7 @@ final class Simulation {
         totalOfferIncome += offer.amount
         let r = playerRoutes.remove(at: idx)
         r.closedTick = tick
-        closedPlayerRoutes.append(r)
+        archiveRoute(r)
         for ac in aircraft where ac.assignedRouteId == offer.routeId {
             ac.assignedRouteId = nil
             if let cid = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == cid }) {
@@ -5471,7 +5528,7 @@ final class Simulation {
                 r.closedTick = tick
                 logOps(.structural, L("Route offer forfeited"),
                        L("%@ ↔\u{FE0E} %@: not staffed in time — $%@ bonus clawed back", r.originCode, r.destCode, r.incentiveBonus.formatted()))
-                closedPlayerRoutes.append(r)
+                archiveRoute(r)
             }
         }
         playerRoutes.removeAll { $0.closedTick != nil }
@@ -5956,7 +6013,7 @@ final class Simulation {
             // reviewable (including one that never recouped its cost).
             let r = playerRoutes.remove(at: idx)
             r.closedTick = tick
-            closedPlayerRoutes.append(r)
+            archiveRoute(r)
             logOps(.structural, L("Route closed"), L("%@ ↔︎ %@", r.originCode, r.destCode))
             decisionQueue.removeAll { $0.kind == .offer && $0.offer?.routeId == id }
             airports.first { $0.code == r.originCode }?.slotsAvailable += 1
@@ -6497,7 +6554,10 @@ final class Simulation {
 
         // Routes.
         playerRoutes = s.routes.map(restoreRoute)
-        closedPlayerRoutes = s.closedRoutes.map(restoreRoute)
+        // Trim on the way in too, so a save written BEFORE the cap existed heals
+        // itself on its next load (the same self-heal an oversized pre-1.1 save
+        // gets). `suffix` keeps the most recent closures, matching drop-oldest.
+        closedPlayerRoutes = s.closedRoutes.suffix(Simulation.maxClosedRoutes).map(restoreRoute)
 
         // Owned fleet (rebuild; background traffic regenerates below).
         let byCode = Dictionary(airports.map { ($0.code, $0) }, uniquingKeysWith: { a, _ in a })
@@ -6828,12 +6888,31 @@ final class Simulation {
             // app never becomes sim time.
             accumulatorMs += min(deltaMs, 250)
             let intervalMs = Simulation.baseTickMs / speed
+            // ⚠️ THE DRAIN IS TIME-BOXED, NOT TICK-BOXED — and that distinction is
+            // the whole fix for the 1.7 hang signal. A 50-TICK cap is unreachable
+            // at every speed up to 25× (interval ≥ 10ms), but at the 100× added in
+            // 1.7 the interval is 2.5ms: 50 ticks is only 125ms of SIM time, which
+            // is UNDER the 250ms input clamp above. So once per-tick cost `c`
+            // exceeds ~2.34ms on the device, each wake burns 50 × c milliseconds of
+            // real main-thread time without yielding, the accumulator refills
+            // faster than it drains, and the loop pins at the cap FOREVER — a
+            // permanent ~125–250ms non-yielding block. That is a hang, and it is
+            // exactly what MetricKit was reporting.
+            let drainDeadline = ContinuousClock.now.advanced(by: .milliseconds(Int(Simulation.maxDrainMs)))
             var ticksThisWake = 0
             while accumulatorMs >= intervalMs && ticksThisWake < 50 {
                 advanceTick()
                 accumulatorMs -= intervalMs
                 ticksThisWake += 1
+                // Check every 8th tick so the clock reads stay off the hot path.
+                if ticksThisWake & 7 == 0, ContinuousClock.now >= drainDeadline { break }
             }
+            // Never bank more than one wake's worth of backlog. A speed multiplier
+            // is a REQUEST, not a contract: a device that cannot sustain 100× now
+            // runs the world slower instead of freezing. This only ever SHRINKS the
+            // accumulator, so it strengthens — never weakens — the documented
+            // "time away from the app never becomes sim time" guarantee above.
+            accumulatorMs = min(accumulatorMs, intervalMs)
 
             // Throttle the UI heartbeat to ~5×/sec so list/HUD views observing
             // `displayTick` don't re-evaluate their whole body every sim-tick

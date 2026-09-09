@@ -5828,6 +5828,109 @@ Four gameplay issues the designer hit in one acquisition playthrough. Three fixe
 - **The graduation-cap icon is the designer's Figma art app-wide** (node 158:862, via
   `MilestoneIconArt`), keeping the existing light/dark tints.
 
+## Decided — The 1.7 hang fixes (8 Sep 2026; branch `hang-fixes-1.7.1`)
+
+TelemetryDeck reported **`hang.under3s` ×43**, a first-ever **`hang.3to10s` ×1**, and
+**`crash.sig9.exc10.code0.rbsterminatecontext-domain-10` ×3** on the shipping app —
+that slug is a RunningBoard/FRONTBOARD **watchdog SIGKILL**, i.e. launch or resume took
+too long, so the crash and the hangs are the SAME defect at different severities. A
+five-lens hunt with adversarial verification produced 9 confirmed findings; all were
+fixed. **The root cause is a PAIR, and 1.7 shipped both halves:**
+
+- **⚠️ `run()`'s catch-up drain was capped in TICKS, not TIME — and that cap is
+  unreachable below 100×.** At ≤25× the interval is ≥10ms so 50 ticks is ≥500ms of sim
+  time and the loop always drains. At the **100× added in 1.7** the interval is 2.5ms,
+  so 50 ticks is only **125ms of sim time — UNDER the 250ms input clamp**. Once
+  per-tick cost `c` exceeded ~2.34ms on the device, the accumulator refilled faster
+  than it drained and the loop **pinned at the cap indefinitely**: a permanent
+  ~125–250ms non-yielding main-thread block. Fixed with a **wall-clock budget**
+  (`Simulation.maxDrainMs = 6`, sized against the 8ms sleep → ~43% worst-case duty),
+  checked every 8th tick to keep clock reads off the hot path, plus
+  `accumulatorMs = min(accumulatorMs, intervalMs)` so no wake can bank a backlog the
+  device cannot pay off. **A speed multiplier is a REQUEST, not a contract — a device
+  that cannot sustain 100× now runs the world slower instead of freezing.** That clamp
+  only ever SHRINKS the accumulator, so it strengthens the documented "time away from
+  the app never becomes sim time" guarantee. **Do NOT "fix" a future recurrence by
+  raising the 250ms clamp, removing the isPaused reset, or deleting 100×** — the defect
+  was the tick-counted cap, not the multiplier.
+- **⚠️ `assignSpareToPendingRoutes()` ran an O(routes × fleet) scan on EVERY tick,
+  behind the WRONG GUARD.** It asked whether *a spare exists*, not whether *a route is
+  pending* — then evaluated two O(fleet) `contains` passes per route, almost always
+  finding nothing. Rewritten to ONE fleet pass building `staffed`/`reserved` id sets
+  (`Route.id` is `Int`, not UUID), then an O(routes) set-lookup loop behind the guard
+  that was actually wanted. **Measured A/B** (`aa-1.1.x/TickCostProbe.swift`, same
+  machine, `git show main` vs. the fix): 250 routes / 285 aircraft **0.575 → 0.291
+  ms/tick (49%)**; with 80 idle spares **0.495 → 0.232 (53%)**; growth for a ×178
+  routes×fleet increase **×11.0 → ×5.3**. ⚠️ **At ≤120 routes the win is inside the
+  noise** — an early probe run at that scale appeared to REFUTE the fix. Measure at
+  250+ or you will draw the wrong conclusion.
+  - **Why it only started biting in 1.7: the MX program creates idle spares by
+    design.** `serviceMXWithCoverage` nils `assignedRouteId` on an aircraft entering
+    the shop, and `isIdleSpare` does not exclude `inMXShop` — so a jet sitting out a
+    21-day D check counts as an idle spare for its whole downtime, and on a large
+    fleet the guard is permanently open. Before 1.7 a tidy player could hold zero
+    spares and the scan stayed off.
+  - **The two findings COMPOUND**: the scan sets `c`, and `c` decides whether the
+    drain collapses. Neither alone produces a >250ms block; together they do.
+- **`closedPlayerRoutes` was UNBOUNDED — the same bug class as the uncapped
+  `Route.history` that caused the build-27 save crash**, left open on the other side.
+  A closed route carries up to `Route.maxHistory` (60) flight records ≈ **13.2KB**, so
+  a long-running airline crossed the ~900KB iCloud KVS limit at **~68 closed routes**
+  (silently ending cross-device sync) and 4MB at ~310 (degrading the load menu and
+  putting a full decode on the launch path). Now capped at **`maxClosedRoutes = 40`**,
+  drop-oldest, funnelled through ONE private `archiveRoute(_:)` so a future seventh
+  call site cannot bypass it, and trimmed on restore (`suffix`) so an existing
+  oversized save self-heals. ⚠️ **THIS IS A VISIBLE PRODUCT CHANGE** — CLAUDE.md
+  records that routes are "archived, not deleted" so a route that never recouped stays
+  reviewable. Beyond 40 closures the oldest now leave the Routes panel. One constant
+  to raise if that trade is wrong.
+- **`loadSlot()` was the LAST synchronous full-save decode on the main thread** (the
+  1.4.2/1.4.3 async save + slot-decode work missed it) and the only decode path with
+  no size guard. Now `GameStore.loadAsync` on the EXISTING `saveQueue` (a second queue
+  would race `migrateLegacyIfNeeded`'s file moves). Deliberately still has NO size cap:
+  refusing an oversized save would strand it forever, and the documented self-heal
+  depends on the load succeeding. A `loadingSlot` re-entrancy guard is load-bearing —
+  unlike the idempotent `slotInfosAsync`, this REPLACES game state, so two completions
+  would let the last writer win and could leave `currentSlot` naming a different save
+  than `sim` holds (the next autosave would then overwrite the wrong slot).
+- **`AirportPhoto.image(for:)` was the only uncached image loader in the app**, called
+  from a `GeometryReader` body that evaluates at least twice per appearance — so every
+  airport tap re-read AND re-decoded a 1456×816 hero JPEG on the main thread (~9ms
+  here, ~25ms on an A15), and 1.6/1.7 grew that set to 117 heroes. Now an `NSCache`
+  (not a dictionary — this app already has a watchdog-kill symptom and NSCache evicts
+  under pressure), **keyed on the RESOLVED BUNDLE NAME, never the airport code** (384
+  airports share 9 archetypes; code-keying would multiply retained bitmaps ~13×), with
+  **misses memoized separately** — omitting that leaves the 3–6-lookup `Bundle.path`
+  loop running every layout pass for the ~276 airports with no city file, the classic
+  silent half-fix.
+- **Cold launch decoded a 2.3MB backdrop PNG behind the splash**, which is fully
+  opaque and covers it for ~2.6s. Now `showSplash ? nil : coldLaunchBackdrop` at the
+  two splash-covered sites — the decode moves out of the watchdog-policed launch
+  window. (`LiveryDesignView` comes after naming, never under the splash, so it stays
+  unconditional.)
+- **Selecting an aircraft subscribed the ENTIRE NetworkView body to raw `sim.tick`** —
+  the fourth instance of this codebase's documented churn bug. Fixed with the file's
+  own leaf-isolation pattern (`LiveTooltip`, plus `LiveCash` for the cash figure,
+  which invalidated the same body on every settled leg). ⚠️ `AircraftTooltip` must
+  keep receiving a CHANGING value input or it hits the opposite documented bug and
+  freezes at selection time.
+- **`OpsView` has no `LazyVStack` anywhere**, so the Maintenance drawer eagerly built
+  one row per owned aircraft, rebuilt at the 5Hz `displayTick`. Capped at 12 rows plus
+  a "Show all N" toggle — safe ONLY because `mxFleet` sorts nearest-date-first, and the
+  slice always includes `expandedMXTail` so an open Details view cannot vanish
+  mid-interaction. The alert chip still counts the FULL fleet.
+- **⚠️ TWO HARNESSES WERE SILENTLY NO-OPING IN THE REPO.** `RotationVerify` and
+  `MXCoverageVerify` define `@MainActor func main()` with no top-level
+  `MainActor.assumeIsolated { main() }`, so they compiled to binaries that ran and
+  printed NOTHING — and an empty run reads like a pass if you only grep for "FAIL".
+  Each session had been re-adding the line to its `/tmp` copy instead of the source.
+  Fixed at the source; they really do run **55/55** and **81/81**. `SaveCompatVerify`
+  was separately DEAD (compile error): it referenced `GameSnapshot.crewTrainingDue`,
+  removed when the crew-training pipeline replaced the family-wide recurrent card — so
+  the regression net for the SAVE-LOSS bug class had been dark since 8 Sep. Repaired
+  to `crewAutoRecurrent`; **12/12**. **If a harness prints nothing, suspect this before
+  suspecting the code.**
+
 ## Release status — see `HANDOFF.md`
 
 ⚠️ **`RELEASE_STATUS.md` NO LONGER EXISTS.** It covered the 1.0 / build 26 launch and

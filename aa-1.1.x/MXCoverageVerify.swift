@@ -329,3 +329,9 @@ func main() {
     printResult()
     func printResult() { print("\nMXCoverageVerify: \(pass)/\(pass + fail) passed" + (fail == 0 ? "  ✅" : "  ❌ \(fail) FAILED")) }
 }
+
+// Entry point. WITHOUT this the file compiles to a binary that defines
+// main() and never calls it — the harness "passes" by printing NOTHING.
+// (Both this file and MXCoverageVerify/RotationVerify were silently no-oping
+// in the repo; each session was re-adding this line to its /tmp copy.)
+MainActor.assumeIsolated { main() }

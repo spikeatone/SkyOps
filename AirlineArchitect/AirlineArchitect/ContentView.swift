@@ -404,14 +404,20 @@ struct ContentView: View {
             liveryUpdatePrompt
         } else if showLoadMenu {
             // Load / slot-picker menu — takes precedence over naming.
+            // `showSplash ? nil` — the splash's navy gradient is opaque and
+            // full-bleed, so this backdrop is INVISIBLE for the ~2.6s it is up.
+            // Decoding its 2.3MB PNG on the main thread inside the watchdog-policed
+            // launch window bought nothing; the `if let o = backdropOpacity` guard
+            // inside makes nil a clean no-op.
             SaveSlotsView(onLoad: loadSlot, onNew: newGame(in:), onDelete: { GameStore.clear(slot: $0) },
-                          backdropOpacity: coldLaunchBackdrop)
+                          backdropOpacity: showSplash ? nil : coldLaunchBackdrop,
+                          busySlot: loadingSlot)
                 .id(cloudGen)   // rebuild (re-read slots) when iCloud merges a change
                 .transition(.opacity)
         } else if sim.playerAirlineName == nil {
             // Step 1: name the airline (+ tail code + region). Does NOT start the
             // game — it advances to the livery design screen.
-            AirlineNamingView(backdropOpacity: coldLaunchBackdrop) { name, tailCode, region in
+            AirlineNamingView(backdropOpacity: showSplash ? nil : coldLaunchBackdrop) { name, tailCode, region in
                 if currentSlot == nil { currentSlot = GameStore.firstFreeSlot ?? 0 }
                 sim.setHomeRegion(region)
                 sim.nameAirline(name, tailCode: tailCode)
@@ -558,8 +564,29 @@ struct ContentView: View {
 
     /// Load a saved slot into a fresh sim instance (so no residue from a prior
     /// game survives), restart its run loop, and enter it.
+    /// Guards against a second tap while a decode is in flight. `slotInfosAsync`
+    /// is an idempotent READ; this REPLACES game state, so two completions landing
+    /// would let the last writer win non-deterministically — worse, `currentSlot`
+    /// could end up naming a different save than `sim` holds, and the next autosave
+    /// would then overwrite the wrong slot.
+    @State private var loadingSlot: Int?
+
     private func loadSlot(_ slot: Int) {
-        guard let snap = GameStore.load(slot: slot) else { return }
+        guard loadingSlot == nil else { return }
+        loadingSlot = slot
+        // The decode moves OFF main (it was the last synchronous full-save decode
+        // left in the view layer); everything below stays on the main actor —
+        // `Simulation` is @MainActor, and restore/briefingItems measured ~2.6ms
+        // combined, so they belong here.
+        GameStore.loadAsync(slot: slot) { snap in
+            defer { loadingSlot = nil }
+            guard loadingSlot == slot, let snap else { return }
+            finishLoad(slot: slot, snap: snap)
+        }
+    }
+
+    @MainActor
+    private func finishLoad(slot: Int, snap: GameSnapshot) {
         let fresh = Simulation()
         fresh.restore(from: snap)
         sim = fresh

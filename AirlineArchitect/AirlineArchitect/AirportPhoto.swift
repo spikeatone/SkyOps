@@ -168,19 +168,51 @@ enum AirportPhoto {
     /// Bundled MJ art if present; nil → the styled placeholder renders. Lookup
     /// order: per-airport override (`airport_<CODE>`) → shared-metro override
     /// (`airport_<shared>`, e.g. `airport_NYC`) → archetype (`airport_<archetype>`).
+    /// ⚠️ MEMOIZED (8 Sep 2026) — this was the ONLY uncached image loader left in
+    /// the app, and it is called from `AirportHero`'s `GeometryReader` body, which
+    /// evaluates at least twice per appearance (the `measuredWidth` relayout) and
+    /// again on every rotation / iPad rail dock. Each miss re-read AND re-decoded a
+    /// 1456×816 hero JPEG on the main thread (~9ms measured, ~25ms on an A15), and
+    /// 1.6/1.7 grew this set to 117 bundled heroes.
+    ///
+    /// `NSCache` rather than a plain dictionary ON PURPOSE: a dictionary retains
+    /// every hero the player ever taps (worst case ~117 decoded bitmaps), and this
+    /// app already has a watchdog-kill symptom — NSCache evicts under memory
+    /// pressure. Misses are memoized separately in `absent`, or the 3–6 lookup
+    /// `Bundle.path` loop still runs every layout pass for the ~276 airports with
+    /// no city file (that omission is the classic silent half-fix).
+    ///
+    /// Keyed on the RESOLVED BUNDLE NAME, never the airport code: 384 airports
+    /// share 9 archetype images, so code-keying would multiply retained bitmaps
+    /// ~13× and turn a latency fix into a memory regression.
+    private static let cache: NSCache<NSString, UIImage> = {
+        let c = NSCache<NSString, UIImage>()
+        c.countLimit = 24            // generous: the working set is a card at a time
+        return c
+    }()
+    private static var absent = Set<String>()
+
     static func image(for airport: Airport) -> Image? {
         var names = ["airport_\(airport.code)"]
         if let shared = sharedOverride[airport.code] { names.append("airport_\(shared)") }
         names.append("airport_\(archetype(for: airport).rawValue)")
+        // Precedence is per-CANDIDATE (per-code → shared-metro → archetype), so the
+        // cache is consulted inside this loop and never hoisted above it.
         for name in names {
+            if let hit = cache.object(forKey: name as NSString) { return Image(uiImage: hit) }
+            if absent.contains(name) { continue }
+            var found: UIImage?
             for ext in ["jpg", "png", "heic"] {
                 if let path = Bundle.main.path(forResource: name, ofType: ext),
-                   let ui = UIImage(contentsOfFile: path) {
-                    return Image(uiImage: ui)
-                }
+                   let ui = UIImage(contentsOfFile: path) { found = ui; break }
             }
+            if let ui = found {
+                cache.setObject(ui, forKey: name as NSString)
+                return Image(uiImage: ui)
+            }
+            absent.insert(name)      // memoize the MISS too
         }
-        return nil
+        return nil                   // → AirportPhotoPlaceholder, unchanged
     }
 }
 

@@ -19,6 +19,10 @@ struct SaveSlotsView: View {
     /// and naming screen use — so a returning player's splash → load-menu
     /// handoff carries the texture through instead of dropping it. `nil` = off.
     var backdropOpacity: Double? = nil
+    /// The slot whose save is currently being decoded off-main, if any. The rows
+    /// stay up (the decode is ~100-300ms) but go non-interactive, so the menu
+    /// reads as busy rather than dead and a second tap can't land mid-flight.
+    var busySlot: Int? = nil
     /// Tint for that motif — white on the dark theme, brand ink on the light one.
 
     /// Rebuilt from disk (OFF the main thread) whenever the menu appears or a slot
@@ -58,6 +62,8 @@ struct SaveSlotsView: View {
                     if loaded {
                         ForEach(0..<GameStore.slotCount, id: \.self) { i in
                             slotRow(i, info: slots[safe: i] ?? nil)
+                                .opacity(busySlot == nil || busySlot == i ? 1 : 0.45)
+                                .disabled(busySlot != nil)
                         }
                     } else {
                         // Decoding the slots off-main; a brief, quiet placeholder

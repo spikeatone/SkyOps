@@ -32,13 +32,18 @@ func run() {
     snap.loans = [LoanSave(id: 1, originalPrincipal: 5_000_000, remainingPrincipal: 4_800_000,
                            monthlyRate: 0.006, monthlyPayment: 90000, termMonths: 60, takenTick: 1000)]
     snap.playerFareWarUntil = [7: 99999]
-    snap.crewTrainingDue = ["A320_FAMILY": 120000]
+    // `crewTrainingDue` was REMOVED when the crew-training pipeline replaced the
+    // old family-wide recurrent card (8 Sep 2026). Its removal silently broke this
+    // harness's compile — which is how the guard for the save-loss bug class went
+    // dark. `crewAutoRecurrent` is the field that replaced it.
+    snap.crewAutoRecurrent = ["A320_FAMILY": true]
 
     let data = try! JSONEncoder().encode(snap)
 
     // 2. Strip keys added by LATER builds → simulate an OLDER build's on-disk save.
     var obj = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
     for k in ["playerFareWarUntil", "adCampaignUntil", "loyaltyPushUntil", "crewTrainingDue",
+              "crewAutoRecurrent", "trainingCenter", "opsCollapsedSections",
               "crewTrainingDeferred", "loans", "totalLoanProceeds", "totalDebtService", "reputation",
               "firedMilestones", "stressTestCount", "totalMarketingSpend", "totalFlightsFlown",
               "playerTailCode"] { obj.removeValue(forKey: k) }

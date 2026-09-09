@@ -28,6 +28,25 @@ only, and update it in the same session as the work.
 
 ## In flight
 
+### ⭐ 1.7.1 HANG FIXES — branch `hang-fixes-1.7.1`, built + verified, NOT merged
+Nine confirmed findings behind the live `hang.under3s` ×43 / watchdog-SIGKILL ×3 signal. Detail in
+CLAUDE.md "Decided — The 1.7 hang fixes"; measured A/B in `aa-1.1.x/TickCostProbe.swift`.
+- [x] Time-box `run()`'s catch-up drain (the 50-TICK cap is unreachable below 100×, and at 100× it
+      pinned forever) · [x] `assignSpareToPendingRoutes` O(routes×fleet) → set lookups (49–53% of the
+      tick at 250 routes) · [x] cap `closedPlayerRoutes` · [x] `loadAsync` off main · [x] cache
+      `AirportPhoto` · [x] skip the backdrop behind the splash · [x] `LiveTooltip`/`LiveCash` leaves ·
+      [x] bound the MX list
+- [x] Repair three DEAD harnesses (Rotation + MXCoverage never called `main()`; SaveCompat wouldn't
+      compile) — the save-loss regression net had been dark
+- [ ] **DESIGNER NOD NEEDED: `maxClosedRoutes = 40`** drops the oldest closed routes from the Routes
+      panel. CLAUDE.md says routes are "archived, not deleted" so one that never recouped stays
+      reviewable. Raise the constant if that trade is wrong.
+- [ ] Drive on the simulator before cutting a build — the view-layer fixes (tooltip/cash leaves, MX
+      cap, airport hero cache, splash backdrop) are invisible to every headless harness
+- [ ] Merge → bump to 1.7.1 / **build 57** (6 pbxproj configs) → archive/upload
+- [ ] After it is live: re-read the TelemetryDeck Errors dashboard **grouped by MESSAGE, not error
+      id** — 1.7+ carries build-at-occurrence tagging, so `b57` events are the ones that judge this fix
+
 ### ⏭️ NEXT SESSION — MX + TRAINING AUTOMATION AT SCALE (designer issue #4, deferred on purpose)
 Designer, 8 Sep: *"For my 200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and
 near all-time at anything faster. This really needs to be automated via maintenance bases or
