@@ -5880,10 +5880,13 @@ fixed. **The root cause is a PAIR, and 1.7 shipped both halves:**
   putting a full decode on the launch path). Now capped at **`maxClosedRoutes = 40`**,
   drop-oldest, funnelled through ONE private `archiveRoute(_:)` so a future seventh
   call site cannot bypass it, and trimmed on restore (`suffix`) so an existing
-  oversized save self-heals. ⚠️ **THIS IS A VISIBLE PRODUCT CHANGE** — CLAUDE.md
-  records that routes are "archived, not deleted" so a route that never recouped stays
-  reviewable. Beyond 40 closures the oldest now leave the Routes panel. One constant
-  to raise if that trade is wrong.
+  oversized save self-heals. ⚠️ **THIS IS A VISIBLE PRODUCT CHANGE, AND IT IS THE
+  DESIGNER'S CALL — CONFIRMED 9 Sep 2026 ("clear closed routes at 40").** The standing
+  rule elsewhere in this file is that routes are "archived, not deleted" so a route that
+  never recouped stays reviewable; beyond 40 closures the OLDEST now leave the Routes
+  panel. That partial reversal is deliberate and approved, not an oversight — the
+  alternative was an unbounded list that silently kills iCloud sync at ~68 closed
+  routes. One constant if it ever needs revisiting.
 - **`loadSlot()` was the LAST synchronous full-save decode on the main thread** (the
   1.4.2/1.4.3 async save + slot-decode work missed it) and the only decode path with
   no size guard. Now `GameStore.loadAsync` on the EXISTING `saveQueue` (a second queue
