@@ -1,8 +1,8 @@
-Studio context (please read before evaluating under Guideline 4.3):
+Studio context (please read before evaluating under 4.3):
 
 This app has been LIVE and approved on this account continuously through 1.0 to 1.7.0. This submission (1.8.0) is a feature update to that same app — crew training, multi-city routing, and a relocated maintenance section. No new purchase; identity, pricing and business model unchanged.
 
-Airline Architect is part of the Architect series by Postmark Digital, a catalog of individually designed simulation games, each modeling a different real-world domain. They share a deliberate studio design language — our house UI style and typography — as any studio's titles share a visual identity. Each is an independent game with its own simulation, mechanics, content and data — not a reskin or a template.
+Airline Architect is part of the Architect series by Postmark Digital, a catalog of individually designed simulation games, each modeling a different real-world domain. They share a studio design language — our house UI style and typography — as any studio's titles share a visual identity. Each is an independent game with its own simulation, mechanics, content and data — not a reskin or a template.
 
 Approved titles on this same account (verifiable): Airline Architect — App ID 6790569697 (this app); FC Architect — App ID 6798026159 (football management); Vineyard Architect (winegrowing).
 
@@ -20,4 +20,4 @@ TESTING NOTES: The sim runs continuously — use the speed control at the bottom
 
 PRIVACY: no personal data, no ad SDKs, no tracking. Anonymous aggregate analytics via TelemetryDeck (no identifiers); RevenueCat verifies purchase status only. Saves sync across the user's own devices via iCloud; no game data reaches us, and we run no server.
 
-Thank you for reviewing. postmarkdigitalco@gmail.com
+Thanks for reviewing. postmarkdigitalco@gmail.com
