@@ -52,13 +52,16 @@ near all-time at anything faster. This really needs to be automated via maintena
 something as it's very tedious. Same with training."* Half of it already landed this session (the
 auto-slow exemption stopped MX pinning the sim at 1×; the Chief Pilot answers "shortfall vs.
 in-training"), but the CARD VOLUME itself is untouched.
-- [ ] Build `aa-1.1.x/MX_BASES_SCOPE.md` — all 5 decisions already confirmed: auto A checks (no
-      cards, Ops event only, toggle on Fleet ▸ Maintenance) · MRO +25% and a 0–7-day C/D slot wait
-      as the default provider · line stations ($4M) + hangar bases ($18–45M) at an operating hub OR
-      any airport with ≥3 of your routes, 2-aircraft C/D capacity per hangar line · overnight at a
-      base/hub line station = zero lost legs (existing 1-day downtime elsewhere) · MX moves to a
-      third Fleet segment (My Fleet · Marketplace · Maintenance), Ops keeping only alert cards + a
-      one-line summary drawer.
+- [x] **MX moved to a third Fleet segment (My Fleet · Marketplace · Maintenance), Ops reduced to a
+      one-line summary row** — done 9 Sep, driven on the iPad sim. `MaintenanceView.swift` owns the
+      whole due-list / Details / coverage flow; Ops keeps the `.mxCheck` alert cards plus a tappable
+      "Maintenance · N due · M in shop · Fleet ›" row (`sim.pendingMaintenance` intent, adopted in
+      FleetView's `.onAppear` per the standing pre-switch-intent rule).
+- [ ] The REST of `MX_BASES_SCOPE.md`, all 5 decisions already confirmed: auto A checks (no cards,
+      Ops event only, toggle on Fleet ▸ Maintenance) · MRO +25% and a 0–7-day C/D slot wait as the
+      default provider · line stations ($4M) + hangar bases ($18–45M) at an operating hub OR any
+      airport with ≥3 of your routes, 2-aircraft C/D capacity per hangar line · overnight at a
+      base/hub line station = zero lost legs (existing 1-day downtime elsewhere).
 - [ ] ⚠️ **Fix the MX day-conversion bug in the same pass** — four sites in `Sim/Simulation.swift`
       (~3715 / 3773 / 3827 / 3879, each commented "~2 cycles/sim-day") convert cycles→days at a
       hardcoded 2 when the engine flies ~3.52, so **every MX date the player sees is ~76% too far

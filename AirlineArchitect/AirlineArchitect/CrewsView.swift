@@ -38,6 +38,9 @@ struct CrewsView: View {
     private var isDark: Bool { scheme == .dark }
 
     @State private var successMessage: LocalizedStringKey?
+    /// Set by the Chief Pilot's "+N more families" control; the ScrollViewReader
+    /// consumes it, jumps to that family's card, and clears it.
+    @State private var scrollToFamily: String?
 
     // Theme tokens (light Figma / dark Sky).
     private var bg: Color         { isDark ? Sky.darkBG : Color(skyHex: 0xF1F1F1) }
@@ -75,13 +78,22 @@ struct CrewsView: View {
                     }
                     .frame(maxWidth: .infinity).padding(.top, 40)
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 16) {
-                            chiefPilotCard
-                            providerCard
-                            ForEach(fams, id: \.self) { crewCard($0) }
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 16) {
+                                chiefPilotCard
+                                providerCard
+                                // `.id(fam)` is what the Chief Pilot's "+N more
+                                // families" line scrolls to — see `jumpTarget`.
+                                ForEach(fams, id: \.self) { crewCard($0).id($0) }
+                            }
+                            .padding(.bottom, 8)
                         }
-                        .padding(.bottom, 8)
+                        .onChange(of: scrollToFamily) { _, fam in
+                            guard let fam else { return }
+                            withAnimation(.easeInOut(duration: 0.35)) { proxy.scrollTo(fam, anchor: .top) }
+                            scrollToFamily = nil
+                        }
                     }
                 }
                 Spacer(minLength: 0)
@@ -156,8 +168,24 @@ struct CrewsView: View {
                     adviceRow(o)
                 }
                 if flagged.count > 4 {
-                    Text("+\(flagged.count - 4) more families below")
-                        .font(.karla(11)).foregroundStyle(secondary)
+                    // Was a plain Text — a player reported tapping it and nothing
+                    // happening, which is fair: it names a destination, so it should
+                    // take you there. Now it scrolls to the first family that didn't
+                    // fit in the top four.
+                    Button {
+                        Feedback.impact(.light)
+                        scrollToFamily = flagged.dropFirst(4).first?.family
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("+\(flagged.count - 4) more families")
+                                .font(.karla(11, .semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .foregroundStyle(Sky.brightBlue)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

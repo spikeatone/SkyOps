@@ -3211,6 +3211,11 @@ final class Simulation {
     /// FleetView adopts + clears it on appear. No aircraft/side-effect (unlike
     /// pendingReplacement, which swaps+sells the tapped aircraft on purchase).
     var pendingMarketplace = false
+    /// TRANSIENT (not persisted): Ops' one-line Maintenance summary sets this so the
+    /// Fleet tab opens straight to its MAINTENANCE segment — the MX section's home
+    /// since 9 Sep. Same shape as `pendingMarketplace`; FleetView adopts + clears it
+    /// on appear (the tab switch recreates that view, so .onChange would not fire).
+    var pendingMaintenance = false
     /// TRANSIENT (not persisted): set alongside pendingMarketplace when the player taps
     /// "Acquire a replacement" on an aircraft's MX Details — the TAIL of the aircraft
     /// awaiting cover. When they then buy/lease a SUITABLE like-size jet, the buy path

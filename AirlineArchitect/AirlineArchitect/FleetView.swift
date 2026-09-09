@@ -80,7 +80,7 @@ struct FleetView: View {
     @State private var pendingLivery: PendingLivery?
     /// Fleet-list status filter, driven by tapping a status box (nil = all).
     @State private var fleetFilter: FleetStatus?
-    enum Segment: Hashable { case myFleet, marketplace }
+    enum Segment: Hashable { case myFleet, marketplace, maintenance }
 
     /// Marketplace category filter (nil = all) + sort, to quickly narrow the
     /// list to the class/spec a route needs.
@@ -258,6 +258,13 @@ struct FleetView: View {
     /// be adopted in .onAppear (the tab bar recreates this view on the tab switch, so an
     /// .onChange wouldn't fire — the standing rule for a pre-switch intent).
     private func adoptMarketplaceIfAny() {
+        // Maintenance wins if both are somehow set — it is the more specific intent.
+        if sim.pendingMaintenance {
+            sim.pendingMaintenance = false
+            sim.pendingMarketplace = false
+            segment = .maintenance
+            return
+        }
         guard sim.pendingMarketplace else { return }
         sim.pendingMarketplace = false
         segment = .marketplace
@@ -296,6 +303,10 @@ struct FleetView: View {
             if segment == .myFleet {
                 statusBar
                 fleetList(selectedID: nil)
+            } else if segment == .maintenance {
+                // "Acquire a replacement" from a C/D coverage flow now just moves to
+                // the sibling Marketplace segment instead of switching tabs.
+                MaintenanceSection(sim: sim) { segment = .marketplace }
             } else {
                 marketplacePlaceholder
             }
@@ -349,7 +360,8 @@ struct FleetView: View {
             }
             Divider().overlay(cardBorder)
             HStack(spacing: 14) {
-                Text(segment == .myFleet ? "FLEET HOME" : "MARKETPLACE")
+                Text(segment == .myFleet ? "FLEET HOME"
+                     : (segment == .maintenance ? "MAINTENANCE" : "MARKETPLACE"))
                     .font(.karla(22, .bold)).foregroundStyle(titleColor)
                 Spacer()
                 // Re-customise the fleet livery (also the ONLY way an existing/
@@ -381,6 +393,10 @@ struct FleetView: View {
         HStack(spacing: 4) {
             segButton("My Fleet", .myFleet)
             segButton("Marketplace", .marketplace)
+            // MX moved here from Ops (9 Sep) — maintenance is fleet ADMIN, not a
+            // disruption, so it belongs beside the fleet rather than on the alerts
+            // screen. See MaintenanceView.swift.
+            segButton("Maintenance", .maintenance)
         }
         .padding(4)
         .background(segBG)

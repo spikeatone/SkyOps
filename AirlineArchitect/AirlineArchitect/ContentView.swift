@@ -475,7 +475,8 @@ struct ContentView: View {
                          onShowAirport: { code in sim.focusCamera(on: code); tab = 0 },
                          onPreviewRoute: { opp in sim.suggestRoute(from: opp.originCode, to: opp.destCode); tab = 0 },
                          isPro: store.isPro, onUpgrade: { upgrade(nil) },
-                         onAcquire: { sim.pendingMarketplace = true; tab = 1 })   // → Fleet ▸ Marketplace to buy/lease a cover
+                         onAcquire: { sim.pendingMarketplace = true; tab = 1 },   // → Fleet ▸ Marketplace to buy/lease a cover
+                         onOpenMaintenance: { sim.pendingMaintenance = true; tab = 1 })   // → Fleet ▸ Maintenance
         default: FinanceView(sim: sim, store: store, onBell: { showAlerts = true },
                              onSave: saveCurrent, onQuit: quitToMenu, onUpgrade: { upgrade(nil) })
         }
