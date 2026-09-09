@@ -227,6 +227,28 @@ func main() {
         check(r3?.uniqueStops == ["SEA", "SFO", "LAX"], "11: 3-stop uniqueStops")
     }
 
+    // ── 12. A rotation SERVES every stop, not just its endpoints (8 Sep 2026) ──
+    // originCode/destCode are only the FIRST and LAST stop of a loop, so anything
+    // keyed off that pair saw a partial route: the map drew ONE arc (player-
+    // reported: "my multi-leg route doesn't show the dotted lines"), and the hub
+    // gate/fortress ignored intermediate cities.
+    do {
+        let sim = newSim()
+        guard let ac = buySpare(sim, "A320") else { check(false, "setup 12"); printResult(); return }
+        _ = sim.openRotation(stops: ["DEN", "ORD", "MSP"], using: ac)
+        guard let r = sim.playerRoutes.first(where: { $0.id == ac.assignedRouteId }) else { check(false, "12 route"); printResult(); return }
+        // The map draws one arc per LEG, closing the loop.
+        let legs = Simulation.rotationLegs(r.stops)
+        check(legs.count == 3, "12: a 3-stop rotation draws 3 legs (got \(legs.count))")
+        check(legs.contains { $0 == "MSP" && $1 == "DEN" }, "12: the closing leg MSP->DEN is drawn")
+        check(Simulation.rotationLegs(["DEN", "ORD"]).count == 2, "12: a 2-stop route still yields the A<->B pair")
+        // routesAt counts the MIDDLE stop, so it feeds the hub gate.
+        check(sim.routesAt("ORD") == 1, "12: routesAt counts an intermediate stop")
+        check(sim.routesAt("DEN") == 1 && sim.routesAt("MSP") == 1, "12: routesAt counts both endpoints")
+        check(sim.routesAt("SEA") == 0, "12: routesAt ignores an unserved airport")
+        check(sim.hubRoutes("ORD").count == 1, "12: hubRoutes includes a rotation through the hub")
+    }
+
     printResult()
     func printResult() { print("\nRotationVerify: \(pass)/\(pass + fail) passed" + (fail == 0 ? "  ✅" : "  ❌ \(fail) FAILED")) }
 }

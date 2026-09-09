@@ -3215,9 +3215,51 @@ where numbers are involved.
     (incl. a $20M starter with one Beech 1900 surviving 45 days — an early version
     of that test "failed" because it never answered an AOG card, the documented
     headless trap) + RotationVerify 40/40 + OpsTweaksVerify 43/43 + RoundTrip 13/13
-    + full Debug build + `de-findgaps` clean. Phase 2 (the Training Center at a hub,
-    contract slot wait, capacity/overflow, Finance term + payback line) is next; its
-    gate + shape are already decided in the scope doc.
+    + full Debug build + `de-findgaps` clean. **MERGED to `main` 8 Sep (`162b865`).**
+  - **TRAINING CENTER — BUILT (crew-training Phase 2, 8 Sep 2026, branch
+    `training-center`; `Sim/TrainingCenter.swift` + the "Training Center" MARK in
+    Simulation.swift).** The player's own facility at an OPERATING hub, with one sim
+    BAY per crew family (gate: 6+ owned aircraft in that family). In-house courses
+    cost **0.4×** the contract price and run **30d** initial / **2d** recurrent (vs
+    45/4); the contract provider also carries a **0–10 day class-slot wait** on a new
+    hire, which the center removes. A bay seats **4 crews**; past that, courses
+    overflow to the contractor at contract price and timeline — an under-built center
+    costs money, never dead-ends. Costs are GAME-SCALED, not real-world-scaled
+    (facility $750k; bay $2.5M WB / $1.25M NB / $800k TP; opex $4k + $8k/bay per
+    month) — a real Level D sim's price can never amortize against this game's
+    training volume. `totalTrainingCenterSpend` is a new CASH-INVARIANT capital term
+    (also in `FinanceSnapshot`/`FinanceSave`/`PeriodFigures.capitalOut` + a "Training
+    center built" ledger row); opex flows through the maintenance-&-crew overhead
+    line. The Crews tab's TRAINING card becomes the center card (bays, seat load, a
+    **TRAINING P&L** payback sparkline); each family card gets a bay row.
+    - **⚠️ THE RECURRENT CONCURRENCY CAP IS THE BAY CAPACITY for a family with a bay —
+      do NOT restore a pool-fraction cap there.** The first A/B run capped at 20% of
+      the pool while a bay seats 4, so every wave pushed its surplus to the CONTRACTOR
+      at full price (1-in-5 overflow at 12 aircraft, 2-in-6 at 16, 6-in-10 at 24):
+      savings stopped scaling with the fleet and **16 aircraft paid back WORSE than
+      12**, the inverse of the intended shape. Urgent about-to-lapse crews still
+      bypass the cap (contract if the bay is full) — that's the safety valve.
+    - **Balance gate PASSED** (`aa-1.1.x/TrainingCenterABProbe.swift` 5/5, 6 arms ×
+      5 sim-years): 6×A320 never pays back (−$1.26M at 60mo), 16×A320 crosses ~month
+      36 (+$1.16M at 60), 24×A320 ~month 30, 8×B788 ~month 33 (+$2.47M) — value-sink
+      small, pays back large, the Hubs-lesson threshold. **The probe's METHOD is the
+      reusable bit: the center's own ledger IS the A/B** (each in-house course books
+      `contract − in-house`, so `payback = savings − facility − opex` is exactly the
+      delta vs a contract-only twin) — no two-sim A/B, so economic events can't poison
+      it. Re-run after touching ANY center/course constant.
+    - **KNOWN TENSION (designer call, flagged not overridden): the build gate of 6
+      aircraft sits well below break-even (~14 NB / ~7 WB).** Defused in the UI rather
+      than by moving the confirmed gate — the bay row reads "Course savings repay it
+      above ~N aircraft in this family" (`simBayPaybackAircraft`, derived from the
+      course fee + the 2.1-crews-per-aircraft ratio). Raise `simBayMinAircraft` to ~12
+      if the game should refuse the bad build outright.
+    - Verified `aa-1.1.x/TrainingCenterVerify.swift` **69/69** + CrewPipeline 63/63 +
+      Rotation 47/47 + OpsTweaks 43/43 + RoundTrip 13/13 + full build + German clean.
+      **Harness lesson:** on a flying fleet a graduated crew goes straight `.onDuty`
+      (assert `isLineReady`, not `.available`), and a cash-delta assertion also
+      contains flight revenue + the monthly opex — measure a training charge via
+      `maintenanceSpend` minus the ledger's opex delta, and park the fleet when
+      asserting concurrency.
   - **#18 AIRPORT RECRUITMENT OFFER — DONE (the counterpart to the #16 slot
     buyback, which is the OPPOSITE: an airport buying YOUR slot).** A smaller,
     off-radar CONUS airport periodically courts the player to open a route TO it,

@@ -188,13 +188,20 @@ struct MapView: View {
         ctx.stroke(arcs, with: .color(cruiseColor.opacity(0.07)), lineWidth: 1)
 
         // The player's opened routes — brighter, so the real network stands out.
+        // EVERY leg of a rotation, not just origin→dest: for a multi-city loop
+        // those two are merely the FIRST and LAST stop, so drawing the pair alone
+        // showed one arc and hid the rest of the loop (player-reported, 8 Sep 2026).
+        // `rotationLegs` closes the loop, so a 2-stop route yields A→B (+ B→A drawn
+        // over it) exactly as before.
         var playerArcs = Path()
         for route in sim.playerRoutes {
-            guard let o = sim.airports.first(where: { $0.code == route.originCode }),
-                  let d = sim.airports.first(where: { $0.code == route.destCode }) else { continue }
-            let pp = FlightPath.pathPoints(origin: o.screen, dest: d.screen)
-            playerArcs.move(to: pp.start)
-            playerArcs.addQuadCurve(to: pp.end, control: pp.mid)
+            for (a, b) in Simulation.rotationLegs(route.stops) {
+                guard let o = sim.airports.first(where: { $0.code == a }),
+                      let d = sim.airports.first(where: { $0.code == b }) else { continue }
+                let pp = FlightPath.pathPoints(origin: o.screen, dest: d.screen)
+                playerArcs.move(to: pp.start)
+                playerArcs.addQuadCurve(to: pp.end, control: pp.mid)
+            }
         }
         ctx.stroke(playerArcs, with: .color(climbColor.opacity(0.55)),
                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))

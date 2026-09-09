@@ -67,14 +67,16 @@ func main() {
         check(!r.isLineReady && sim.crewCoverage(family: FAM).lineReady == 1, "2: a training crew doesn't count for coverage")
         guard let nid = sim.hireCrew(family: FAM, mode: .newHire) else { check(false, "2: new hire"); printResult(); return }
         let n = pool(sim, FAM).first { $0.id == nid }!
-        check(n.readyTick == sim.tick + Simulation.newHireCourseDays * 1440, "2: new hire ready in 45 days")
+        // A contract new hire also waits 0–10 days for a class slot (Phase 2).
+        let lead = (n.readyTick! - sim.tick) / 1440 - Simulation.newHireCourseDays
+        check(lead >= 0 && lead <= Simulation.contractLeadDaysMax, "2: new hire ready in 45 days + a 0–10 day class-slot wait (got +\(lead))")
         check(sim.hireCrew(family: FAM) != nil, "2: old hireCrew(family:) signature still works")
         days(sim, 11)
         check(r.status == .available && r.readyTick == nil && r.trainingKind == nil, "2: rated hire graduated on schedule")
         check(r.currencyExpiresTick > sim.tick + (Crew.currencyDays - 2) * 1440, "2: graduate gets fresh ~180d currency")
         check(n.status == .training, "2: new hire still in the course at day 11")
-        days(sim, 35)
-        check(n.status == .available, "2: new hire graduated by day 46")
+        days(sim, 46)
+        check(n.status == .available, "2: new hire graduated by day 57 (45 + up to 10 wait)")
         check(sim.cashInvariantResidual() == 0, "2: cash invariant after hires")
     }
     // ── 3. Rolling auto-recurrent: window, cap, urgency override, cost ───────────

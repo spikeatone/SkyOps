@@ -206,6 +206,10 @@ struct ContentView: View {
                             .padding(16)
                     }
                     .padding(.top, 44)
+                    // iPad: centre the card in the CONTENT column, not the whole
+                    // window — the sidebar rail made it sit visibly off-centre
+                    // (designer, 8 Sep 2026). The dim still covers the rail.
+                    .padding(.leading, isPadLayout ? SkySidebarRail.width : 0)
                 }
                 .transition(.opacity)
             }

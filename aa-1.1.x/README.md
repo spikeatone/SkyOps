@@ -144,6 +144,22 @@ group never compiles them into the build.
   starter test answers AOG cards (Standard repair) as well as CREW cards — an unanswered
   AOG grounds the aircraft for good and reads as a crew failure.
 
+- **`TrainingCenterVerify.swift`** — the Training Center, crew-training Phase 2 (8 Sep 2026;
+  scope §3.5), 69/69: the operating-hub gate, one facility, the 6-aircraft bay gate + cost by
+  class, exact charges into the `totalTrainingCenterSpend` capital term, in-house pricing
+  (0.65× new hire / 0.4× recurrent) + timelines (30d / 2d, no class-slot wait), the 4-seat bay
+  capacity with contractor overflow, 2× recurrent concurrency, monthly opex + the ledger
+  payback point, persistence round-trip + a pre-center save, and the contract 0–10-day
+  class-slot lottery.
+- **`TrainingCenterABProbe.swift`** — the Training Center's BALANCE GATE. The center's own
+  ledger IS the A/B (every in-house course books `contract price − in-house price`, so
+  `payback = savings − facility − opex` is exactly the delta vs a contract-only twin with the
+  same course volume — events cancel because they never touch the ledger). One family per
+  arm on a DEN hub, crewed to ~2.1/aircraft, auto-recurrent on, center + bay on day 0;
+  prints payback at 12/24/36/48/60 months for 6/8/12/16/24 A320s and 8 787s, and asserts
+  the threshold shape (a value-sink at the 6-aircraft gate, payback for 16+ narrowbodies
+  and 8 widebodies). Re-run after touching any center/course constant.
+
 ## How to run
 The entry file must be named `main.swift` (top-level `MainActor.assumeIsolated {…}`).
 From the repo root:

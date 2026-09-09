@@ -183,7 +183,7 @@ final class Simulation {
     /// the NETWORK Hubs panel lists, newest first.
     func hubRoutes(_ code: String) -> [Route] {
         playerRoutes
-            .filter { $0.isOpen && ($0.originCode == code || $0.destCode == code) }
+            .filter { $0.isOpen && $0.stops.contains(code) }   // any stop on the rotation
             .sorted { $0.openedTick > $1.openedTick }
     }
 
@@ -311,8 +311,11 @@ final class Simulation {
     static let hubSalePctUnderstaffed = 0.35
 
     /// Player routes anchored at this airport (either endpoint).
+    /// Routes SERVING an airport — any stop on the rotation, not just its first and
+    /// last (for a multi-city loop `originCode`/`destCode` are only the endpoints, so
+    /// counting those alone hid a rotation's intermediate cities from the hub gate).
     func routesAt(_ code: String) -> Int {
-        playerRoutes.filter { $0.originCode == code || $0.destCode == code }.count
+        playerRoutes.filter { $0.stops.contains(code) }.count
     }
     /// CREATE A HUB unlocks at 5 routes; a rival-held airport can never be re-hubbed.
     func hubEligible(_ code: String) -> Bool {
@@ -567,8 +570,10 @@ final class Simulation {
                 var entryRate = Simulation.competitorEntryDailyProbability * (1.5 - deter)
                 // Fortress hub: −50% entry on routes touching the player's
                 // operating hub. A SOLD hub is the mirror: +50% entry there.
-                if routeTouchesOperatingHub(r.originCode, r.destCode) { entryRate *= Simulation.hubFortressEntryFactor }
-                if rivalHubs[r.originCode] != nil || rivalHubs[r.destCode] != nil { entryRate *= Simulation.rivalHubEntryFactor }
+                // (Any stop on the rotation, not just its endpoints — a loop through
+                // your hub is a fortress route too.)
+                if r.stops.contains(where: { hubOperating($0) }) { entryRate *= Simulation.hubFortressEntryFactor }
+                if r.stops.contains(where: { rivalHubs[$0] != nil }) { entryRate *= Simulation.rivalHubEntryFactor }
                 // Consolidation: each acquisition makes the survivors hungrier,
                 // so taking a competitor out of the market doesn't quiet it.
                 entryRate *= consolidationEntryMultiplier
@@ -1525,7 +1530,7 @@ final class Simulation {
             - (totalIntegrationSpend + totalSenioritySpend + totalDiligenceSpend)
             - totalAcquisitionSpend - totalRouteSpend - totalHedgeSpend - totalHubSpend
             - totalAcquisitionPrice - totalDividendsPaid - totalBuybackSpend - totalMarketingSpend
-            - totalRepaintSpend - totalMaintenanceCheckSpend
+            - totalRepaintSpend - totalMaintenanceCheckSpend - totalTrainingCenterSpend
             + totalSaleProceeds + totalOfferIncome + totalLoanProceeds + totalEquityRaised
         return expected - playerBalance
     }
@@ -4027,60 +4032,109 @@ final class Simulation {
         let price = AircraftType.all.first { $0.family == family }?.purchasePrice ?? 0
         return Int((Double(price) * Simulation.crewHireCostRate).rounded())
     }
+    /// The course price by provider: in-house is `centerCourseCostFactor` of the
+    /// contract price (the sim is a sunk cost; a session is instructor time).
+    func crewCourseCost(family: String, provider: TrainingProvider) -> Int {
+        let course = Double(crewCourseCost(family: family))
+        return provider == .center ? Int((course * Simulation.centerCourseCostFactor).rounded()) : Int(course)
+    }
     /// What a hire costs through each door (rated = 2× course; new hire = recruit
-    /// fee + the course). Same function the Crews tab, the Add Crew panel and the
-    /// CREW card all price from.
+    /// fee + the course at whichever provider would deliver it NOW). Same function
+    /// the Crews tab, the Add Crew panel and the CREW card all price from.
     func crewHireCost(family: String, mode: CrewHireMode = .rated) -> Int {
+        crewHireCost(family: family, mode: mode, provider: mode == .newHire ? trainingProvider(for: family) : .contract)
+    }
+    func crewHireCost(family: String, mode: CrewHireMode, provider: TrainingProvider) -> Int {
         let course = Double(crewCourseCost(family: family))
         switch mode {
         case .rated:   return Int((course * Simulation.ratedHireCostMultiple).rounded())
-        case .newHire: return Int((course * (1.0 + Simulation.newHireRecruitFraction)).rounded())
+        case .newHire:
+            let factor = provider == .center ? Simulation.centerCourseCostFactor : 1.0
+            return Int((course * (Simulation.newHireRecruitFraction + factor)).rounded())
         }
     }
-    /// Sim-days until a hire through each door is line-ready.
+    /// Sim-days until a hire through each door is line-ready — the CONTRACT
+    /// baseline (a contract new hire also waits 0–`contractLeadDaysMax` days for a
+    /// class slot, rolled at hire time).
     func crewHireDays(mode: CrewHireMode) -> Int {
         switch mode { case .rated: return Simulation.ratedHireDays; case .newHire: return Simulation.newHireCourseDays }
     }
-    /// One recurrent event, per crew; requalifying a LAPSED crew pays the premium.
-    func crewRecurrentCost(family: String) -> Int {
-        Int((Double(crewCourseCost(family: family)) * Simulation.recurrentCostFraction).rounded())
+    /// …and for a family, given who'd deliver the course now (in-house is a third shorter).
+    func crewHireDays(mode: CrewHireMode, family: String) -> Int {
+        mode == .newHire && trainingProvider(for: family) == .center ? Simulation.centerNewHireCourseDays : crewHireDays(mode: mode)
     }
-    func crewRequalCost(family: String) -> Int {
-        Int((Double(crewRecurrentCost(family: family)) * Simulation.requalCostMultiple).rounded())
+    /// One recurrent event, per crew; requalifying a LAPSED crew pays the premium.
+    func crewRecurrentCost(family: String) -> Int { crewRecurrentCost(family: family, provider: trainingProvider(for: family)) }
+    func crewRecurrentCost(family: String, provider: TrainingProvider) -> Int {
+        Int((Double(crewCourseCost(family: family, provider: provider)) * Simulation.recurrentCostFraction).rounded())
+    }
+    func crewRequalCost(family: String) -> Int { crewRequalCost(family: family, provider: trainingProvider(for: family)) }
+    func crewRequalCost(family: String, provider: TrainingProvider) -> Int {
+        Int((Double(crewRecurrentCost(family: family, provider: provider)) * Simulation.requalCostMultiple).rounded())
     }
     func crewLapsedCount(family: String) -> Int { (crewPoolsByFamily[family] ?? []).filter { $0.status == .lapsed }.count }
-    /// Total to requalify every lapsed crew in a family (the exception card's price).
-    func crewRetrainCost(family: String) -> Int { crewLapsedCount(family: family) * crewRequalCost(family: family) }
+    /// Total to requalify every lapsed crew in a family (the exception card's price):
+    /// the first free bay seats in-house, the rest with the contractor.
+    func crewRetrainCost(family: String) -> Int { requalPlan(family: family).total }
+    /// Provider per lapsed crew, in order — free in-house seats first, then overflow.
+    private func requalPlan(family: String) -> (total: Int, providers: [TrainingProvider]) {
+        var free = hasSimBay(family: family) ? max(0, Simulation.simBayCapacity - centerLoad(family: family)) : 0
+        var providers: [TrainingProvider] = []
+        var total = 0
+        for _ in 0..<crewLapsedCount(family: family) {
+            let p: TrainingProvider = free > 0 ? .center : .contract
+            if p == .center { free -= 1 }
+            providers.append(p)
+            total += crewRequalCost(family: family, provider: p)
+        }
+        return (total, providers)
+    }
 
     /// Hire one crew through a door. Charged now; the crew is IN TRAINING until its
     /// course ends (line-ready at `readyTick`). Returns the id, or nil if unaffordable.
     @discardableResult
     func hireCrew(family: String, mode: CrewHireMode = .rated) -> Int? {
-        let cost = crewHireCost(family: family, mode: mode)
+        let provider: TrainingProvider = mode == .newHire ? trainingProvider(for: family) : .contract
+        let cost = crewHireCost(family: family, mode: mode, provider: provider)
         guard playerBalance >= cost else { return nil }
         playerBalance -= cost
         maintenanceSpend += cost
         let id = crewPoolsByFamily[family]?.count ?? 0
         let crew = Crew(id: id)
-        startCourse(crew, .initial, days: crewHireDays(mode: mode))
-        crewPoolsByFamily[family, default: []].append(crew)
         let name = CREW_FAMILY_INFO[family]?.name ?? family
-        logOps(.structural, L("Crew hired"),
-               mode == .rated
-                   ? L("%@: rated crew hired · line-ready in %@ days", name, Simulation.ratedHireDays)
-                   : L("%@: new hire in the type-rating course with %@ · line-ready in %@ days", name, Simulation.crewProviderName, Simulation.newHireCourseDays))
+        switch mode {
+        case .rated:
+            // IOE is line flying — no course, no provider, no bay seat.
+            startCourse(crew, .initial, days: Simulation.ratedHireDays, provider: nil)
+            logOps(.structural, L("Crew hired"), L("%@: rated crew hired · line-ready in %@ days", name, Simulation.ratedHireDays))
+        case .newHire where provider == .center:
+            startCourse(crew, .initial, days: Simulation.centerNewHireCourseDays, provider: .center)
+            recordTrainingSavings(crewHireCost(family: family, mode: .newHire, provider: .contract) - cost)
+            logOps(.structural, L("Crew hired"), L("%@: new hire in the type-rating course in-house · line-ready in %@ days", name, Simulation.centerNewHireCourseDays))
+        case .newHire:
+            // The contractor's next class isn't tomorrow: 0–10 days for a slot (real).
+            let lead = Int.random(in: 0...Simulation.contractLeadDaysMax)
+            startCourse(crew, .initial, days: Simulation.newHireCourseDays + lead, provider: .contract)
+            logOps(.structural, L("Crew hired"), L("%@: new hire in the type-rating course with %@ · line-ready in %@ days", name, Simulation.crewProviderName, Simulation.newHireCourseDays + lead))
+        }
+        crewPoolsByFamily[family, default: []].append(crew)
         return id
     }
 
-    private func startCourse(_ crew: Crew, _ kind: Crew.TrainingKind, days: Int) {
+    private func startCourse(_ crew: Crew, _ kind: Crew.TrainingKind, days: Int, provider: TrainingProvider?) {
         crew.status = .training
         crew.trainingKind = kind
+        crew.trainingProvider = provider
         crew.readyTick = tick + days * 1440
         crew.dutyTicks = 0
         crew.restTicksLeft = 0
     }
     /// Fresh currency from now (the 6-month check).
     private func refreshCurrency(_ crew: Crew) { crew.currencyExpiresTick = tick + Crew.currencyDays * 1440 }
+    /// Recurrent/requal course length by provider (in-house is half the contract's 4 days).
+    private func recurrentDays(_ provider: TrainingProvider) -> Int {
+        provider == .center ? Simulation.centerRecurrentDays : Simulation.recurrentDays
+    }
 
     /// Requalify every lapsed crew in a family now (the exception card's action).
     /// Returns false, changing nothing, if unaffordable.
@@ -4088,13 +4142,19 @@ final class Simulation {
     func retrainLapsed(family: String) -> Bool {
         let lapsed = (crewPoolsByFamily[family] ?? []).filter { $0.status == .lapsed }
         guard !lapsed.isEmpty else { return false }
-        let cost = lapsed.count * crewRequalCost(family: family)
-        guard playerBalance >= cost else { return false }
-        chargeDecisionCost(cost)
-        for c in lapsed { startCourse(c, .requal, days: Simulation.recurrentDays) }
+        let plan = requalPlan(family: family)
+        guard playerBalance >= plan.total else { return false }
+        chargeDecisionCost(plan.total)
+        for (c, p) in zip(lapsed, plan.providers) {
+            startCourse(c, .requal, days: recurrentDays(p), provider: p)
+            if p == .center { recordTrainingSavings(crewRequalCost(family: family, provider: .contract) - crewRequalCost(family: family, provider: .center)) }
+        }
         decisionQueue.removeAll { $0.kind == .training && $0.trainingFamily == family }
+        let inHouse = plan.providers.filter { $0 == .center }.count
         logOps(.structural, L("Crew requalification"),
-               L("%@: %@ lapsed crew back in training with %@ · ~%@ days", CREW_FAMILY_INFO[family]?.name ?? family, lapsed.count, Simulation.crewProviderName, Simulation.recurrentDays))
+               inHouse == lapsed.count
+                   ? L("%@: %@ lapsed crew back in training in-house · ~%@ days", CREW_FAMILY_INFO[family]?.name ?? family, lapsed.count, Simulation.centerRecurrentDays)
+                   : L("%@: %@ lapsed crew back in training with %@ · ~%@ days", CREW_FAMILY_INFO[family]?.name ?? family, lapsed.count, Simulation.crewProviderName, Simulation.recurrentDays))
         return true
     }
 
@@ -4103,10 +4163,10 @@ final class Simulation {
     private func tickCrewTraining() {
         for fam in Array(crewPoolsByFamily.keys) {
             let pool = crewPoolsByFamily[fam] ?? []
-            // 1. Courses that finished → line-ready with fresh currency.
+            // 1. Courses that finished → line-ready with fresh currency (and the bay seat frees).
             for c in pool where c.status == .training {
                 if let r = c.readyTick, tick >= r {
-                    c.status = .available; c.readyTick = nil; c.trainingKind = nil
+                    c.status = .available; c.readyTick = nil; c.trainingKind = nil; c.trainingProvider = nil
                     refreshCurrency(c)
                 }
             }
@@ -4122,23 +4182,41 @@ final class Simulation {
             //    has no capacity limit; the cap is about availability, not slots).
             if crewAutoRecurrentOn(fam) {
                 let inRecurrent = pool.filter { $0.status == .training && $0.trainingKind == .recurrent }.count
-                let cap = max(1, Int(Double(pool.count) * Simulation.recurrentConcurrencyFraction))
+                // With a sim bay the cap IS the bay's capacity: scheduling more than
+                // the bay holds would push the surplus to the CONTRACTOR at full price
+                // for no benefit — and because the fraction-based cap grows with the
+                // pool, that made a BIGGER family overflow more and saved LESS (the
+                // A/B probe caught 16 aircraft paying back worse than 12). Courses are
+                // 2 days inside a 30-day window, so 4 seats churn far faster than the
+                // fleet comes due; nobody lapses waiting. Urgent crews still bypass the
+                // cap below (going contract if the bay is full — the safety valve).
+                let cap = hasSimBay(family: fam)
+                    ? Simulation.simBayCapacity
+                    : max(1, Int(Double(pool.count) * Simulation.recurrentConcurrencyFraction))
                 var slots = cap - inRecurrent
                 let due = pool.filter { $0.status == .available && $0.currencyExpiresTick - tick <= Simulation.recurrentWindowDays * 1440 }
                               .sorted { $0.currencyExpiresTick < $1.currencyExpiresTick }
-                var sent = 0
+                var sent = 0, inHouse = 0
                 for c in due {
                     let urgent = c.currencyExpiresTick - tick <= (Simulation.recurrentDays + 1) * 1440
                     guard slots > 0 || urgent else { break }
-                    let cost = crewRecurrentCost(family: fam)
+                    let provider = trainingProvider(for: fam)   // re-evaluated per crew: bay seats fill up
+                    let cost = crewRecurrentCost(family: fam, provider: provider)
                     guard playerBalance >= cost else { break }   // can't pay → it lapses (the teeth)
                     chargeDecisionCost(cost)
-                    startCourse(c, .recurrent, days: Simulation.recurrentDays)
+                    startCourse(c, .recurrent, days: recurrentDays(provider), provider: provider)
+                    if provider == .center {
+                        inHouse += 1
+                        recordTrainingSavings(crewRecurrentCost(family: fam, provider: .contract) - cost)
+                    }
                     slots -= 1; sent += 1
                 }
                 if sent > 0 {
+                    let name = CREW_FAMILY_INFO[fam]?.name ?? fam
                     logOps(.structural, L("Recurrent training"),
-                           L("%@: %@ crew in recurrent with %@ · back in ~%@ days", CREW_FAMILY_INFO[fam]?.name ?? fam, sent, Simulation.crewProviderName, Simulation.recurrentDays))
+                           inHouse == sent
+                               ? L("%@: %@ crew in recurrent in-house · back in ~%@ days", name, sent, Simulation.centerRecurrentDays)
+                               : L("%@: %@ crew in recurrent with %@ · back in ~%@ days", name, sent, Simulation.crewProviderName, Simulation.recurrentDays))
                 }
             }
             // 4. The LAPSED exception card — one per family, on the bell + the Crews
@@ -4237,6 +4315,128 @@ final class Simulation {
         guard let id = ac.crewId,
               let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == id }) else { return nil }
         return (Double(crew.dutyTicks) / 60.0, Double(Crew.maxDutyTicks) / 60.0)
+    }
+
+    // MARK: - Training Center (Phase 2 — the player's own facility)
+    //
+    // Designer-decided 8 Sep 2026 (scope §3.5, decision 3): hub-required, one sim
+    // bay per crew family, ≥6 aircraft in the family per bay, 4 crews per bay at a
+    // time with contractor overflow. COSTS ARE GAME-SCALED — the scope's draft priced
+    // a real Level D simulator ($6M facility + $6–16M bays, $270k/mo), which the
+    // game's training volume (~2 crews per aircraft, no attrition) can never
+    // amortize (a family's whole contract training bill at 16 narrowbodies is
+    // ~$1.4M/yr); `TrainingCenterABProbe` sized these so a narrowbody bay is a
+    // value-sink at 6 aircraft (the gate) and pays back in ~4 years at 16, a
+    // widebody bay in ~3 at 8. The in-house course discount is the real lever.
+    static let trainingCenterFacilityCost = 750_000
+    static let trainingCenterFacilityOpexPerMonth = 4_000
+    static let simBayOpexPerMonth = 8_000
+    static let simBayCapacity = 4                  // crews in a bay's courses at once
+    static let simBayMinAircraft = 6               // owned aircraft in the family, to equip a bay
+    static let centerCourseCostFactor = 0.4        // in-house course/recurrent price vs contract
+    static let centerNewHireCourseDays = 30        // vs 45 contracted (−33%)
+    static let centerRecurrentDays = 2             // vs 4 contracted
+    static let contractLeadDaysMax = 10            // 0–10 day wait for a contract class slot (new hires)
+
+    private(set) var trainingCenter: TrainingCenter?
+    /// Facility + bays (capital-out; a cash-invariant term).
+    private(set) var totalTrainingCenterSpend = 0
+    private var nextTrainingBillTick = 0
+
+    /// Bay cost by the family's aircraft class (a widebody sim is the expensive one).
+    func simBayCost(family: String) -> Int {
+        switch AircraftType.all.first(where: { $0.family == family })?.bodyType {
+        case .widebody2Engine, .widebody4Engine: return 2_500_000
+        case .narrowbody:                        return 1_250_000
+        default:                                 return 800_000   // turboprop / regional jet
+        }
+    }
+    /// Roughly the family size at which a bay's course savings repay it (the bay
+    /// plus ~3 years of its opex). DERIVED, not a magic number: a crew sits 2
+    /// recurrents a year, each saving `1 − centerCourseCostFactor` of the
+    /// `recurrentCostFraction` course fee, and a family runs ~2.1 crews per
+    /// aircraft (the crew sweep's steady ratio). Surfaced on the bay row because
+    /// the BUILD gate (6 aircraft) is well below break-even — the A/B probe puts
+    /// the narrowbody crossover near 14 — so without this a player can buy a bay
+    /// that never pays for itself and never know why.
+    func simBayPaybackAircraft(family: String) -> Int {
+        let course = Double(crewCourseCost(family: family))
+        let perCrewYear = 2.0 * Simulation.recurrentCostFraction * course * (1 - Simulation.centerCourseCostFactor)
+        let perAircraftYear = perCrewYear * 2.1
+        guard perAircraftYear > 0 else { return Int.max }
+        let cost = Double(simBayCost(family: family) + 36 * Simulation.simBayOpexPerMonth)
+        return max(Simulation.simBayMinAircraft, Int((cost / (perAircraftYear * 3.0)).rounded(.up)))
+    }
+    /// Operating hubs the center could be built at (real centers sit at a hub).
+    var trainingCenterEligibleHubs: [String] { hubCodes.filter { hubOperating($0) } }
+    func canBuildTrainingCenter(at code: String) -> Bool {
+        trainingCenter == nil && hubOperating(code) && playerBalance >= Simulation.trainingCenterFacilityCost
+    }
+    @discardableResult
+    func buildTrainingCenter(at code: String) -> Bool {
+        guard canBuildTrainingCenter(at: code) else { return false }
+        let cost = Simulation.trainingCenterFacilityCost
+        playerBalance -= cost
+        totalTrainingCenterSpend += cost
+        var center = TrainingCenter(hubCode: code, openedTick: tick)
+        center.ledger.facilitySpend += cost
+        trainingCenter = center
+        nextTrainingBillTick = tick + Simulation.ticksPerMonth
+        logOps(.structural, L("Training center opened"),
+               L("Your own training center is open at %@ — add a sim bay per crew family to train in-house", code), airportCode: code)
+        return true
+    }
+    func hasSimBay(family: String) -> Bool { trainingCenter?.bays[family] != nil }
+    func canAddSimBay(family: String) -> Bool {
+        trainingCenter != nil && !hasSimBay(family: family)
+            && ownedCount(family: family) >= Simulation.simBayMinAircraft
+            && playerBalance >= simBayCost(family: family)
+    }
+    @discardableResult
+    func addSimBay(family: String) -> Bool {
+        guard canAddSimBay(family: family) else { return false }
+        let cost = simBayCost(family: family)
+        playerBalance -= cost
+        totalTrainingCenterSpend += cost
+        trainingCenter?.bays[family] = TrainingCenter.SimBay(builtTick: tick)
+        trainingCenter?.ledger.facilitySpend += cost
+        logOps(.structural, L("Sim bay added"),
+               L("%@ crews now train in-house at %@ — courses cheaper and shorter, no waiting for a class slot",
+                 CREW_FAMILY_INFO[family]?.name ?? family, trainingCenter?.hubCode ?? ""))
+        return true
+    }
+    /// Crews currently in an in-house course for a family (the bay's load).
+    func centerLoad(family: String) -> Int {
+        (crewPoolsByFamily[family] ?? []).filter { $0.status == .training && $0.trainingProvider == .center }.count
+    }
+    /// Who'd deliver the NEXT course for a family: the center if it has a bay with a
+    /// free seat, else the contractor — overflow pays the contract price, which is
+    /// the capacity decision (an under-built center costs money, never a dead end).
+    func trainingProvider(for family: String) -> TrainingProvider {
+        hasSimBay(family: family) && centerLoad(family: family) < Simulation.simBayCapacity ? .center : .contract
+    }
+    /// Monthly facility + bay opex (through the maintenance-&-crew overhead line) and
+    /// one payback point — the same recurring cadence as insurance/leases/hubs.
+    private func tickTrainingCenterBilling() {
+        guard var center = trainingCenter, tick >= nextTrainingBillTick else { return }
+        nextTrainingBillTick = tick + Simulation.ticksPerMonth
+        let opex = Simulation.trainingCenterFacilityOpexPerMonth + center.bays.count * Simulation.simBayOpexPerMonth
+        chargeDecisionCost(opex)
+        center.ledger.opexPaid += opex
+        center.ledger.monthly.append(.init(tick: tick, payback: center.ledger.payback))
+        if center.ledger.monthly.count > TrainingCenter.maxSnapshots {
+            center.ledger.monthly.removeFirst(center.ledger.monthly.count - TrainingCenter.maxSnapshots)
+        }
+        trainingCenter = center
+    }
+    /// Book what an in-house course saved against the contract price (counterfactual).
+    private func recordTrainingSavings(_ amount: Int) {
+        guard amount > 0, trainingCenter != nil else { return }
+        trainingCenter!.ledger.savings += amount
+    }
+    var trainingCenterMonthlyOpex: Int {
+        guard let c = trainingCenter else { return 0 }
+        return Simulation.trainingCenterFacilityOpexPerMonth + c.bays.count * Simulation.simBayOpexPerMonth
     }
 
     // MARK: - Decisions (AOG + CREW cards; SELL arrives with the economy)
@@ -5178,6 +5378,8 @@ final class Simulation {
         var dividendsPaid = 0, buybackSpend = 0
         /// Player route marketing — fare wars / ad campaigns / loyalty pushes (capital-out).
         var marketingSpend = 0
+        /// Training center facility + sim bays (capital-out).
+        var trainingCenterSpend = 0
         let cash, netWorth: Int
     }
     private(set) var financeSnapshots: [FinanceSnapshot] = []
@@ -5195,6 +5397,7 @@ final class Simulation {
                         equityRaised: totalEquityRaised,
                         dividendsPaid: totalDividendsPaid, buybackSpend: totalBuybackSpend,
                         marketingSpend: totalMarketingSpend,
+                        trainingCenterSpend: totalTrainingCenterSpend,
                         cash: playerBalance, netWorth: playerBalance + fleetMarketValue)
     }
 
@@ -5757,6 +5960,8 @@ final class Simulation {
         s.totalHubSpend = totalHubSpend
         s.totalHubLabor = totalHubLabor
         s.totalClubRent = totalClubRent
+        s.trainingCenter = trainingCenter
+        s.totalTrainingCenterSpend = totalTrainingCenterSpend
         s.fuelHedgeExpiryTick = fuelHedgeExpiryTick
         s.opsCollapsedSections = opsCollapsedSections.map(\.rawValue).sorted()
         s.aircraft = aircraft.filter { $0.purchased }.map { ac in
@@ -5782,7 +5987,7 @@ final class Simulation {
         s.closedRoutes = closedPlayerRoutes.map(routeSave)
         s.crewPools = crewPoolsByFamily.mapValues { $0.map {
             CrewSave(id: $0.id, status: $0.status.saveCode, dutyTicks: $0.dutyTicks, restTicksLeft: $0.restTicksLeft,
-                     readyTick: $0.readyTick,
+                     readyTick: $0.readyTick, provider: $0.trainingProvider?.rawValue,
                      // Written even when `.max` (a crew still in training has no currency
                      // yet) — ONLY a pre-pipeline save lacks the key, and that's what the
                      // legacy stagger on restore keys off.
@@ -5803,7 +6008,8 @@ final class Simulation {
                         integrationSpend: f.integrationSpend,
                         equityRaised: f.equityRaised,
                         dividendsPaid: f.dividendsPaid, buybackSpend: f.buybackSpend,
-                        marketingSpend: f.marketingSpend)
+                        marketingSpend: f.marketingSpend,
+                        trainingCenterSpend: f.trainingCenterSpend)
         }
         return s
     }
@@ -5919,6 +6125,9 @@ final class Simulation {
         totalHubSpend = s.totalHubSpend ?? 0
         totalHubLabor = s.totalHubLabor ?? 0
         totalClubRent = s.totalClubRent ?? 0
+        trainingCenter = s.trainingCenter
+        totalTrainingCenterSpend = s.totalTrainingCenterSpend ?? 0
+        nextTrainingBillTick = s.tick + Simulation.ticksPerMonth   // re-seed like the hubs
         // Active fuel hedge (a PAID asset — must survive app close/reopen). Absolute
         // tick, so it stays valid because `tick` is restored above. nil in pre-fix saves.
         fuelHedgeExpiryTick = s.fuelHedgeExpiryTick
@@ -5934,6 +6143,7 @@ final class Simulation {
                 let c = Crew(id: cs.id); c.status = CrewStatus(saveCode: cs.status); c.dutyTicks = cs.dutyTicks; c.restTicksLeft = cs.restTicksLeft
                 c.readyTick = cs.readyTick
                 c.trainingKind = cs.trainingKind.flatMap(Crew.TrainingKind.init(rawValue:))
+                c.trainingProvider = cs.provider.flatMap(TrainingProvider.init(rawValue:))
                 if let cur = cs.currencyExpires {
                     c.currencyExpiresTick = cur
                 } else {
@@ -6000,6 +6210,7 @@ final class Simulation {
                             equityRaised: f.equityRaised ?? 0,
                             dividendsPaid: f.dividendsPaid ?? 0, buybackSpend: f.buybackSpend ?? 0,
                             marketingSpend: f.marketingSpend ?? 0,
+                            trainingCenterSpend: f.trainingCenterSpend ?? 0,
                             cash: f.cash, netWorth: f.netWorth)
         }
         if financeSnapshots.isEmpty { financeSnapshots = [financeSnapshotNow()] }
@@ -6045,6 +6256,7 @@ final class Simulation {
         tickLoanBilling()
         tickStockPrice()
         tickHubBilling()
+        tickTrainingCenterBilling()
         tickUsedMarketReplenishment()
         tickSolvency()
         assignSpareToPendingRoutes()   // staff any offer-opened routes with an in-range spare

@@ -96,6 +96,9 @@ struct GameSnapshot: Codable {
     var totalHubSpend: Int? = nil
     var totalHubLabor: Int? = nil
     var totalClubRent: Int? = nil
+    /// The player's training center (facility, sim bays, payback ledger); nil = none.
+    var trainingCenter: TrainingCenter? = nil
+    var totalTrainingCenterSpend: Int? = nil
     // Per-hub payback ledgers (nil in pre-ledger saves; backfilled on restore).
     var hubLedgers: [String: Simulation.HubLedger]? = nil
 
@@ -212,6 +215,7 @@ struct CrewSave: Codable {
     var dutyTicks: Int
     var restTicksLeft: Int
     var readyTick: Int? = nil        // training: tick the course ends
+    var provider: Int? = nil         // TrainingProvider rawValue (a .center course holds a bay seat)
     var currencyExpires: Int? = nil  // recurrent currency; nil = pre-pipeline save (staggered on load)
     var trainingKind: Int? = nil     // Crew.TrainingKind rawValue
 }
@@ -226,6 +230,7 @@ struct FinanceSave: Codable {
     var equityRaised: Int? = nil
     var dividendsPaid: Int? = nil, buybackSpend: Int? = nil
     var marketingSpend: Int? = nil
+    var trainingCenterSpend: Int? = nil   // declared LAST so the memberwise call order matches FinanceSnapshot
 }
 
 struct LoanSave: Codable {
@@ -362,6 +367,8 @@ extension GameSnapshot {
         totalHubSpend = c.decodeSafeOpt(Int.self, .totalHubSpend)
         totalHubLabor = c.decodeSafeOpt(Int.self, .totalHubLabor)
         totalClubRent = c.decodeSafeOpt(Int.self, .totalClubRent)
+        trainingCenter = c.decodeSafeOpt(TrainingCenter.self, .trainingCenter)
+        totalTrainingCenterSpend = c.decodeSafeOpt(Int.self, .totalTrainingCenterSpend)
         hubLedgers = c.decodeSafeOpt([String: Simulation.HubLedger].self, .hubLedgers)
         fuelHedgeExpiryTick = c.decodeSafeOpt(Int.self, .fuelHedgeExpiryTick)
         opsCollapsedSections = c.decodeSafeOpt([String].self, .opsCollapsedSections)
@@ -486,6 +493,7 @@ extension CrewSave {
         dutyTicks = c.decodeSafe(.dutyTicks, default: 0)
         restTicksLeft = c.decodeSafe(.restTicksLeft, default: 0)
         readyTick = c.decodeSafeOpt(Int.self, .readyTick)
+        provider = c.decodeSafeOpt(Int.self, .provider)
         currencyExpires = c.decodeSafeOpt(Int.self, .currencyExpires)
         trainingKind = c.decodeSafeOpt(Int.self, .trainingKind)
     }
@@ -514,6 +522,7 @@ extension FinanceSave {
         hubSpend = c.decodeSafeOpt(Int.self, .hubSpend)
         hubLabor = c.decodeSafeOpt(Int.self, .hubLabor)
         clubRent = c.decodeSafeOpt(Int.self, .clubRent)
+        trainingCenterSpend = c.decodeSafeOpt(Int.self, .trainingCenterSpend)
         airlineAcquisition = c.decodeSafeOpt(Int.self, .airlineAcquisition)
         integrationSpend = c.decodeSafeOpt(Int.self, .integrationSpend)
         equityRaised = c.decodeSafeOpt(Int.self, .equityRaised)

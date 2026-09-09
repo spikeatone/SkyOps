@@ -43,6 +43,9 @@ final class Crew {
     /// Tick the current course ends (status == .training); nil when line-ready.
     var readyTick: Int? = nil
     var trainingKind: TrainingKind? = nil
+    /// Who's delivering the current course (nil = none / a rated hire's IOE). A
+    /// `.center` course occupies a seat in the family's sim bay.
+    var trainingProvider: TrainingProvider? = nil
     /// Tick this crew's recurrent currency lapses. `.max` = not yet set (never
     /// lapses) — Simulation sets it when a crew goes line-ready, so a creation
     /// site that forgets fails SAFE (no phantom groundings).
