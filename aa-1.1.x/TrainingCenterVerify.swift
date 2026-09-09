@@ -58,7 +58,7 @@ func main() {
     // ── 2. Build at an operating hub; one facility; the capital term ─────────────
     do {
         let sim = newSim()
-        guard hubSetup(sim, "A320", n: 6) else { check(false, "setup 2 (hub)"); printResult(); return }
+        guard hubSetup(sim, "A320", n: Simulation.simBayMinAircraft) else { check(false, "setup 2 (hub)"); printResult(); return }
         check(sim.trainingCenterEligibleHubs == ["DEN"], "2: DEN is the eligible site")
         let before = sim.playerBalance
         check(sim.buildTrainingCenter(at: "DEN"), "2: build accepted")
@@ -68,13 +68,13 @@ func main() {
         check(!sim.buildTrainingCenter(at: "DEN"), "2: a second facility is refused")
         check(sim.cashInvariantResidual() == 0, "2: cash invariant after the build")
         // Bay gate + cost by class.
-        check(sim.canAddSimBay(family: FAM), "2: a bay for a 6-aircraft family is allowed")
+        check(sim.canAddSimBay(family: FAM), "2: a bay at the gate-size family is allowed")
         check(!sim.canAddSimBay(family: "B777"), "2: no bay for a family you don't fly")
-        check(sim.simBayCost(family: FAM) == 1_250_000 && sim.simBayCost(family: "B787") == 2_500_000 && sim.simBayCost(family: "DASH8_FAMILY") == 800_000, "2: bay cost by class (NB/WB/TP)")
+        check(sim.simBayCost(family: FAM) == 18_000_000 && sim.simBayCost(family: "B787") == 22_000_000 && sim.simBayCost(family: "DASH8_FAMILY") == 12_000_000, "2: bay cost by class (NB/WB/TP)")
         let b2 = sim.playerBalance
         check(sim.addSimBay(family: FAM), "2: bay added")
-        check(b2 - sim.playerBalance == 1_250_000 && sim.hasSimBay(family: FAM), "2: bay charged exactly")
-        check(sim.totalTrainingCenterSpend == Simulation.trainingCenterFacilityCost + 1_250_000, "2: capital term = facility + bay")
+        check(b2 - sim.playerBalance == 18_000_000 && sim.hasSimBay(family: FAM), "2: bay charged exactly")
+        check(sim.totalTrainingCenterSpend == Simulation.trainingCenterFacilityCost + 18_000_000, "2: capital term = facility + bay")
         check(!sim.addSimBay(family: FAM), "2: a second bay for the same family is refused")
         check(sim.trainingProvider(for: FAM) == .center, "2: the center now delivers this family's courses")
         check(sim.cashInvariantResidual() == 0, "2: cash invariant after the bay")
@@ -161,7 +161,7 @@ func main() {
         check(sim.trainingCenter!.ledger.monthly.count == monthsBefore + 1, "6: a monthly payback point appended")
         check(sim.trainingCenter!.ledger.payback == sim.trainingCenter!.ledger.savings - sim.trainingCenter!.ledger.facilitySpend - sim.trainingCenter!.ledger.opexPaid, "6: payback = savings − facility − opex")
         check(sim.trainingCenterMonthlyOpex == opex, "6: monthly opex readout")
-        check((sim.financeSnapshots.last?.trainingCenterSpend ?? -1) == Simulation.trainingCenterFacilityCost + 1_250_000, "6: the finance snapshot carries the capital term")
+        check((sim.financeSnapshots.last?.trainingCenterSpend ?? -1) == Simulation.trainingCenterFacilityCost + 18_000_000, "6: the finance snapshot carries the capital term")
         check(sim.cashInvariantResidual() == 0, "6: cash invariant after billing")
 
         // ── 7. Persistence: round-trip + legacy ───────────────────────────────────

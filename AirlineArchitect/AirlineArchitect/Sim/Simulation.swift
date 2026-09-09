@@ -1908,6 +1908,10 @@ final class Simulation {
     @discardableResult
     func openBooks(on p: CompetitorProfile) -> Bool {
         let cost = diligenceCost(for: p)
+        // Never sell the player diligence on a carrier they already OWN — you can
+        // read your own books for free, and this is a live cash-moving path that
+        // would buy them nothing.
+        guard !isSubsidiary(p.id) else { return false }
         guard !diligencedCarriers.contains(p.id), playerBalance >= cost else { return false }
         playerBalance -= cost
         totalDiligenceSpend += cost
@@ -2887,6 +2891,14 @@ final class Simulation {
     private func assign(_ ac: Aircraft, to r: Route, origin: Airport, dest: Airport) {
         r.assignmentHistory.append(RouteAssignment(id: r.assignmentHistory.count, tail: ac.tail,
                                                    typeName: ac.type.name, assignedTick: tick))
+        // OPERATOR OF RECORD: the first aircraft to fly a route stamps its flag on
+        // it. Without this only INHERITED routes carried a subsidiary code, so a
+        // route the player opened for a subsidiary after the deal was invisible to
+        // any per-subsidiary P&L — exactly the growth a player is proudest of.
+        // Deliberately set ONCE and never rewritten on transfer: the route's
+        // lifetime totals were earned under this flag, and re-tagging on an
+        // aircraft transfer would silently re-attribute the whole history.
+        if r.subsidiaryCode == nil, r.flights == 0 { r.subsidiaryCode = ac.subsidiaryCode }
         ac.assignedRouteId = r.id
         ac.legIndex = 0            // start at the first leg of the rotation
         ac.origin = origin
@@ -4413,6 +4425,57 @@ final class Simulation {
             }
     }
 
+    // MARK: Subsidiary live P&L
+    //
+    // A scouted CompetitorProfile is frozen by construction (every field is `let`,
+    // derived from the persisted seed), so an ACQUIRED carrier's card showed its
+    // pre-acquisition numbers forever — a player who fixed the fleet and opened
+    // profitable routes still saw the loss-making airline they bought
+    // (player-reported, 8 Sep 2026). These are computed LIVE from the routes and
+    // aircraft flying under that flag, using the lifetime running totals that
+    // already survive the 60-record history cap. No new accumulators, so the cash
+    // invariant is untouched.
+    struct SubsidiaryFinancials {
+        let code: String
+        let revenue: Int, fees: Int, operatingCost: Int, leaseCost: Int
+        let net: Int, flights: Int
+        let routesOpen: Int, routesClosed: Int
+        let aircraft: Int, aircraftGrounded: Int
+        let averageLoadPct: Int
+        /// Routes flown under this flag that the SUB opened after the deal.
+        let routesOpenedSinceAcquisition: Int
+    }
+
+    /// Every route flown under a subsidiary's flag (open + closed).
+    func subsidiaryRoutes(_ code: String) -> [Route] {
+        (playerRoutes + closedPlayerRoutes).filter { $0.subsidiaryCode == code }
+    }
+    func subsidiaryAircraft(_ code: String) -> [Aircraft] {
+        aircraft.filter { $0.purchased && $0.subsidiaryCode == code }
+    }
+    /// Live operating P&L for one subsidiary. nil if the player doesn't own it.
+    func subsidiaryFinancials(_ code: String) -> SubsidiaryFinancials? {
+        guard let sub = subsidiaries.first(where: { $0.code == code }) else { return nil }
+        let routes = subsidiaryRoutes(code)
+        let fleet = subsidiaryAircraft(code)
+        let flights = routes.reduce(0) { $0 + $1.flights }
+        let loadSum = routes.reduce(0.0) { $0 + $1.loadFactorSum }
+        return SubsidiaryFinancials(
+            code: code,
+            revenue: routes.reduce(0) { $0 + $1.revenueTotal },
+            fees: routes.reduce(0) { $0 + $1.feesTotal },
+            operatingCost: routes.reduce(0) { $0 + $1.opCostTotal },
+            leaseCost: routes.reduce(0) { $0 + $1.totalLeaseCost },
+            net: routes.reduce(0) { $0 + $1.cumulativeNet },
+            flights: flights,
+            routesOpen: routes.filter { $0.isOpen }.count,
+            routesClosed: routes.filter { !$0.isOpen }.count,
+            aircraft: fleet.count,
+            aircraftGrounded: fleet.filter { $0.maint || $0.inMXShop }.count,
+            averageLoadPct: flights > 0 ? Int((loadSum / Double(flights) * 100).rounded()) : 0,
+            routesOpenedSinceAcquisition: routes.filter { $0.openedTick > sub.acquiredTick }.count)
+    }
+
     /// Duty/rest clock. Ported from tickCrewPool(): on-duty accrues duty time;
     /// a completed rest period is the ONLY place dutyTicks resets (Part 117).
     private func tickCrewPool() {
@@ -4476,15 +4539,30 @@ final class Simulation {
     // time with contractor overflow. COSTS ARE GAME-SCALED — the scope's draft priced
     // a real Level D simulator ($6M facility + $6–16M bays, $270k/mo), which the
     // game's training volume (~2 crews per aircraft, no attrition) can never
-    // amortize (a family's whole contract training bill at 16 narrowbodies is
-    // ~$1.4M/yr); `TrainingCenterABProbe` sized these so a narrowbody bay is a
-    // value-sink at 6 aircraft (the gate) and pays back in ~4 years at 16, a
-    // widebody bay in ~3 at 8. The in-house course discount is the real lever.
-    static let trainingCenterFacilityCost = 750_000
-    static let trainingCenterFacilityOpexPerMonth = 4_000
-    static let simBayOpexPerMonth = 8_000
+    // amortize. COSTS ARE REAL-WORLD-SCALED (designer, 8 Sep 2026), to this
+    // breakdown for a ~10-simulator centre ($160–270M all-in, land excluded):
+    //   Level D full-flight sims   $12–22M each   → the BAY price (the device is
+    //                                                the cost, not the building)
+    //   Facility construction/fit-out $30–40M     → the one-off FACILITY price
+    //                                                (~60–75k sq ft, specialised)
+    //   Initial spares + test gear  ~$1M per sim  → folded into the bay price
+    // A 10-bay narrowbody centre here comes to $35M + 10×$18M = $215M, inside the
+    // cited band.
+    // CONSEQUENCE, and it is the honest one: at this price a bay CANNOT repay
+    // itself on course-fee savings until a family is very large — which is exactly
+    // why only major airlines own simulators in reality. The centre is a late-game
+    // milestone for a mega-fleet, not a mid-game upgrade, and `simBayPaybackAircraft`
+    // tells the player the threshold up front so it is never a trap.
+    static let trainingCenterFacilityCost = 35_000_000
+    static let trainingCenterFacilityOpexPerMonth = 150_000
+    static let simBayOpexPerMonth = 85_000   // ~$1M/yr to run a full-flight sim
     static let simBayCapacity = 4                  // crews in a bay's courses at once
-    static let simBayMinAircraft = 6               // owned aircraft in the family, to equip a bay
+    // Owned aircraft in the family before a bay can be equipped. Was 6 under the
+    // old game-scaled prices; REAL simulator prices (above) make a bay a serious
+    // capital commitment, and a 6-aircraft gate would invite a build that cannot
+    // repay — so the gate moved with the price. Only sizeable operators own sims,
+    // which is also what happens in reality.
+    static let simBayMinAircraft = 20
     static let centerCourseCostFactor = 0.4        // in-house course/recurrent price vs contract
     static let centerNewHireCourseDays = 30        // vs 45 contracted (−33%)
     static let centerRecurrentDays = 2             // vs 4 contracted
@@ -4498,9 +4576,10 @@ final class Simulation {
     /// Bay cost by the family's aircraft class (a widebody sim is the expensive one).
     func simBayCost(family: String) -> Int {
         switch AircraftType.all.first(where: { $0.family == family })?.bodyType {
-        case .widebody2Engine, .widebody4Engine: return 2_500_000
-        case .narrowbody:                        return 1_250_000
-        default:                                 return 800_000   // turboprop / regional jet
+        // Real Level D full-flight simulator prices ($12–22M), spares included.
+        case .widebody2Engine, .widebody4Engine: return 22_000_000
+        case .narrowbody:                        return 18_000_000
+        default:                                 return 12_000_000   // turboprop / regional jet
         }
     }
     /// Roughly the family size at which a bay's course savings repay it (the bay
@@ -4516,8 +4595,12 @@ final class Simulation {
         let perCrewYear = 2.0 * Simulation.recurrentCostFraction * course * (1 - Simulation.centerCourseCostFactor)
         let perAircraftYear = perCrewYear * 2.1
         guard perAircraftYear > 0 else { return Int.max }
-        let cost = Double(simBayCost(family: family) + 36 * Simulation.simBayOpexPerMonth)
-        return max(Simulation.simBayMinAircraft, Int((cost / (perAircraftYear * 3.0)).rounded(.up)))
+        // A 5-year horizon, not 3: at real simulator prices a sim bay is a capital
+        // asset with an aircraft-like life, and judging it on 3 years would read as
+        // "never worth it" for every family.
+        let years = 5.0
+        let cost = Double(simBayCost(family: family)) + years * 12.0 * Double(Simulation.simBayOpexPerMonth)
+        return max(Simulation.simBayMinAircraft, Int((cost / (perAircraftYear * years)).rounded(.up)))
     }
     /// Operating hubs the center could be built at (real centers sit at a hub).
     var trainingCenterEligibleHubs: [String] { hubCodes.filter { hubOperating($0) } }

@@ -1,6 +1,86 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "AT ACQUISITION": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BEIM ERWERB"
+          }
+        }
+      }
+    },
+    "Average load": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durchschnittliche Auslastung"
+          }
+        }
+      }
+    },
+    "CURRENT PERFORMANCE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AKTUELLE LEISTUNG"
+          }
+        }
+      }
+    },
+    "Flights flown": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geflogene Flüge"
+          }
+        }
+      }
+    },
+    "Net": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Netto"
+          }
+        }
+      }
+    },
+    "No flights flown under your flag yet — put its aircraft on routes to start its book.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Flüge unter deiner Flagge – setze die Flugzeuge auf Routen ein, um die Bücher zu eröffnen."
+          }
+        }
+      }
+    },
+    "Opened since the deal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seit dem Kauf eröffnet"
+          }
+        }
+      }
+    },
+    "under your ownership": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unter deiner Führung"
+          }
+        }
+      }
+    },
     "\"Crew levels look healthy across the fleet. Nothing needs you today.\"": {
       "localizations": {
         "de": {

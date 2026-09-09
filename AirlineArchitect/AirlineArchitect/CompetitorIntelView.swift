@@ -168,10 +168,52 @@ struct CompetitorIntelView: View {
                 }
             }
 
+            // A carrier you OWN reports its CURRENT numbers, computed live from the
+            // routes and aircraft flying under its flag. The scouted profile below
+            // is frozen at world-generation by construction, so for a subsidiary it
+            // is a historical record, not a status report — it's kept and relabelled
+            // rather than hidden, since the "what did I buy vs what have I built"
+            // comparison is the interesting part.
+            if sim.isSubsidiary(p.id), let f = sim.subsidiaryFinancials(p.id) {
+                box {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("CURRENT PERFORMANCE").font(.karla(12, .bold)).foregroundStyle(Sky.coreGreen)
+                            Spacer()
+                            Text("under your ownership").font(.karla(11)).foregroundStyle(secondary)
+                        }
+                        if f.flights == 0 {
+                            Text("No flights flown under your flag yet — put its aircraft on routes to start its book.")
+                                .font(.karla(12)).foregroundStyle(secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            line("Revenue", compactMoney(f.revenue))
+                            line("Fees", compactMoney(-f.fees), red)
+                            line("Operating cost", compactMoney(-f.operatingCost), red)
+                            if f.leaseCost > 0 { line("Lease cost", compactMoney(-f.leaseCost), red) }
+                            line("Net", compactMoney(f.net), f.net < 0 ? red : Sky.coreGreen)
+                            line("Flights flown", "\(f.flights)")
+                            line("Average load", "\(f.averageLoadPct)%")
+                        }
+                        Divider().overlay(cardBorder.opacity(0.5))
+                        line("Aircraft", f.aircraftGrounded > 0
+                             ? "\(f.aircraft) · \(f.aircraftGrounded) grounded"
+                             : "\(f.aircraft)")
+                        line("Routes", f.routesClosed > 0
+                             ? "\(f.routesOpen) open · \(f.routesClosed) closed"
+                             : "\(f.routesOpen) open")
+                        if f.routesOpenedSinceAcquisition > 0 {
+                            line("Opened since the deal", "\(f.routesOpenedSinceAcquisition)", Sky.coreGreen)
+                        }
+                    }
+                }
+            }
+
             // Topline financials
             box {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("TOPLINE PERFORMANCE").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                    Text(sim.isSubsidiary(p.id) ? "AT ACQUISITION" : "TOPLINE PERFORMANCE")
+                        .font(.karla(12, .bold)).foregroundStyle(titleColor)
                     line("Annual revenue", compactMoney(Int(p.annualRevenue)))
                     line("Operating margin", marginLabel(p),
                          p.operatingMargin < 0 ? red : Sky.coreGreen)
