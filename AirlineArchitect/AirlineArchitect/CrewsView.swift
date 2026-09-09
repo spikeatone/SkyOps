@@ -186,7 +186,9 @@ struct CrewsView: View {
                 Image(systemName: "building.2.fill").font(.system(size: 16)).foregroundStyle(hireBlue)
                 Text("Training Center · \(center.hubCode)").font(.karla(16, .heavy)).foregroundStyle(primary)
                 Spacer(minLength: 0)
-                Text(verbatim: "−" + compact(opex) + "/mo").font(.karla(13, .bold)).foregroundStyle(secondary)
+                // Literal-with-interpolation (NOT Text(verbatim:) + concatenation) so
+                // the "/mo" suffix actually enters the string catalog and gets German.
+                Text("−\(compact(opex))/mo").font(.karla(13, .bold)).foregroundStyle(secondary)
             }
             if bays.isEmpty {
                 Text("No sim bays yet — add one on a crew family's card (\(Simulation.simBayMinAircraft)+ aircraft) to train that family in-house. Everyone else still trains with \(Simulation.crewProviderName).")
@@ -496,9 +498,14 @@ struct CrewsView: View {
     }
 
     private func hire(_ fam: String, name: String, mode: Simulation.CrewHireMode) {
-        let days = sim.crewHireDays(mode: mode, family: fam)   // read BEFORE the hire (the bay seat it takes changes the answer)
-        guard sim.hireCrew(family: fam, mode: mode) != nil else { return }
+        guard let id = sim.hireCrew(family: fam, mode: mode) else { return }
         Feedback.crewHired()
+        // Quote the crew's ACTUAL readyTick, not the course baseline: a contract new
+        // hire also waits 0–10 days for a class slot, so the baseline disagreed with
+        // the pipeline row rendered right below (banner said 45, the row said 52).
+        let hired = sim.crewPoolsByFamily[fam]?.first { $0.id == id }
+        let days = hired?.readyTick.map { max(1, ($0 - sim.tick + 1439) / 1440) }
+            ?? sim.crewHireDays(mode: mode, family: fam)
         let msg: LocalizedStringKey = mode == .rated
             ? "New \(name) crew hired — line-ready in \(days) days"
             : "New \(name) crew hired — in the type-rating course, line-ready in \(days) days"
@@ -527,15 +534,25 @@ private struct PaybackSparkline: View {
 
     var body: some View {
         Canvas { ctx, size in
-            guard values.count >= 2 else { return }
+            // Draw the break-even line even with a single point — the ledger has no
+            // monthly points until the first billing tick, and an empty 44pt band
+            // under a live "TRAINING P&L" figure reads as broken.
+            guard let first = values.first else { return }
             let maxY = max(values.max() ?? 0, 0), minY = min(values.min() ?? 0, 0)
             let range = max(1, maxY - minY)
             let pad: CGFloat = 3
-            func sx(_ i: Int) -> CGFloat { pad + (size.width - 2 * pad) * CGFloat(i) / CGFloat(values.count - 1) }
+            func sx(_ i: Int) -> CGFloat { pad + (size.width - 2 * pad) * CGFloat(i) / CGFloat(max(1, values.count - 1)) }
             func sy(_ v: Double) -> CGFloat { pad + (size.height - 2 * pad) * CGFloat(1 - (v - minY) / range) }
             // Break-even (zero) line.
             var z = Path(); z.move(to: CGPoint(x: pad, y: sy(0))); z.addLine(to: CGPoint(x: size.width - pad, y: sy(0)))
             ctx.stroke(z, with: .color(frame), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            guard values.count >= 2 else {
+                // Single point (a center built this month): mark where it stands.
+                let r: CGFloat = 2.5, y = sy(first)
+                ctx.fill(Path(ellipseIn: CGRect(x: pad - r, y: y - r, width: r * 2, height: r * 2)),
+                         with: .color(first >= 0 ? mint : red))
+                return
+            }
             // One segment per step, coloured by which side of zero it ends on.
             for i in 1..<values.count {
                 var p = Path()

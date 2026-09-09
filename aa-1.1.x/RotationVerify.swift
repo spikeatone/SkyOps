@@ -249,6 +249,35 @@ func main() {
         check(sim.hubRoutes("ORD").count == 1, "12: hubRoutes includes a rotation through the hub")
     }
 
+    // ── 13. Hub economics count a PASS-THROUGH rotation (review, 8 Sep 2026) ──
+    // Test 12 made routesAt/hubRoutes stops-aware, which lets a hub be established on
+    // a rotation's INTERMEDIATE stop. Two consumers were missed in that sweep and had
+    // to be fixed after review: the hub's demand bonus (hubDemandMultiplier) and the
+    // payback chart's return side (hubSpokeNet) both still keyed off the endpoint
+    // pair, so such a hub silently delivered +0% demand and a chart that could never
+    // recoup — while STILL billing labor per serving route.
+    do {
+        let sim = newSim()
+        // Five SLC -> DEN -> PHX rotations: DEN is strictly intermediate on every one.
+        var opened = 0
+        for _ in 0..<5 {
+            guard let ac = buySpare(sim, "A320") else { break }
+            if sim.openRotation(stops: ["SLC", "DEN", "PHX"], using: ac) == Simulation.RotationResult.success { opened += 1 }
+        }
+        check(opened == 5, "13: five pass-through rotations opened (got \(opened))")
+        check(sim.routesAt("DEN") == 5, "13: routesAt counts DEN on all five")
+        // The demand bonus must see them — this is the hub's headline benefit.
+        let others = sim.hubDemandMultiplier(originCode: "DEN", destCode: "ATL")
+        check(others > 1.0, "13: hubDemandMultiplier counts pass-through rotations (got \(others))")
+        check(sim.hubBonusPercent(originCode: "DEN", destCode: "ATL") > 0, "13: prospective hub bonus is non-zero at DEN")
+        // And the payback chart's return side must include their net.
+        for r in sim.playerRoutes { r.cumulativeNet = 1_000_000 }
+        check(sim.hubSpokeNet("DEN") == 5_000_000, "13: hubSpokeNet counts pass-through rotations (got \(sim.hubSpokeNet("DEN")))")
+        check(sim.hubSpokeNet("SLC") == 5_000_000, "13: hubSpokeNet still counts a first stop")
+        check(sim.hubSpokeNet("PHX") == 5_000_000, "13: hubSpokeNet still counts a last stop")
+        check(sim.hubSpokeNet("ATL") == 0, "13: hubSpokeNet ignores an unserved airport")
+    }
+
     printResult()
     func printResult() { print("\nRotationVerify: \(pass)/\(pass + fail) passed" + (fail == 0 ? "  ✅" : "  ❌ \(fail) FAILED")) }
 }

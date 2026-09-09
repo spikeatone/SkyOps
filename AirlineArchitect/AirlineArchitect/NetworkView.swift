@@ -1056,8 +1056,10 @@ struct AddCrewPanel: View {
                                 .font(.karla(14)).foregroundStyle(bodyC)
                         }
                         Spacer(minLength: 8)
+                        // The NEW door's day count must be provider-aware like its price —
+                        // in-house is 30 days, contract 45 (+ a class-slot wait).
                         hireDoor("RATED · \(Simulation.ratedHireDays)d", cost: rated) { sim.hireCrew(family: fam, mode: .rated) }
-                        hireDoor("NEW · \(Simulation.newHireCourseDays)d", cost: newHire) { sim.hireCrew(family: fam, mode: .newHire) }
+                        hireDoor("NEW · \(sim.crewHireDays(mode: .newHire, family: fam))d", cost: newHire) { sim.hireCrew(family: fam, mode: .newHire) }
                     }
                 }
             }

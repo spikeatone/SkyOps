@@ -77,7 +77,11 @@ final class Simulation {
     /// omits a route's own id when it's already open (so it doesn't count itself).
     func hubDemandMultiplier(originCode: String, destCode: String, excludingRouteId: Int? = nil) -> Double {
         func others(_ code: String) -> Int {
-            playerRoutes.filter { ($0.originCode == code || $0.destCode == code) && $0.id != excludingRouteId }.count
+            // Any route SERVING the airport connects passengers there — including a
+            // rotation that merely passes THROUGH it (its originCode/destCode are only
+            // the first and last stop). Missing this made a hub built on intermediate
+            // stops — which `routesAt` now permits — deliver a +0% network bonus.
+            playerRoutes.filter { $0.stops.contains(code) && $0.id != excludingRouteId }.count
         }
         // A declared, OPERATING hub amplifies the per-spoke connection bonus at
         // its endpoint (8% → 12%); the +80% cap deliberately does NOT rise
@@ -363,9 +367,15 @@ final class Simulation {
     /// Cumulative net of ALL player routes (open + closed) touching this airport —
     /// the "return" side of the hub-portfolio payback (routes the hub concentrates,
     /// NOT the hub's isolated marginal uplift, which is an unmeasurable counterfactual).
+    /// Counts any route SERVING the airport (any stop on the rotation) — the same
+    /// test `routesAt`/`hubRoutes` use, so the chart's return side can't disagree
+    /// with the flight list above it or with the labor bill, which are both charged
+    /// per serving route. NOTE: monthly points stored BEFORE this fix understate
+    /// spokeNet for pass-through rotations; the line self-corrects from the next
+    /// billing tick on, it doesn't rewrite history.
     func hubSpokeNet(_ code: String) -> Int {
         (playerRoutes + closedPlayerRoutes)
-            .filter { $0.originCode == code || $0.destCode == code }
+            .filter { $0.stops.contains(code) }
             .reduce(0) { $0 + $1.cumulativeNet }
     }
     /// Total facility spend booked to this hub (establish + club build + labor + rent).

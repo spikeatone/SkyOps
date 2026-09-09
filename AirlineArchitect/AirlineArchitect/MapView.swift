@@ -191,11 +191,18 @@ struct MapView: View {
         // EVERY leg of a rotation, not just origin→dest: for a multi-city loop
         // those two are merely the FIRST and LAST stop, so drawing the pair alone
         // showed one arc and hid the rest of the loop (player-reported, 8 Sep 2026).
-        // `rotationLegs` closes the loop, so a 2-stop route yields A→B (+ B→A drawn
-        // over it) exactly as before.
+        // DEDUPED by UNORDERED pair: `rotationLegs` closes the loop, so a 2-stop
+        // route yields both A→B and B→A — the identical arc twice. Two overlapping
+        // subpaths in one dashed Path each RESTART the dash phase, so the reverse
+        // pass fills the forward pass's gaps and every ordinary route rendered
+        // near-solid instead of dashed (caught in review; the first version of this
+        // fix claimed it was visually unchanged, which was wrong).
         var playerArcs = Path()
+        var drawn = Set<String>()
         for route in sim.playerRoutes {
             for (a, b) in Simulation.rotationLegs(route.stops) {
+                let key = a < b ? a + "|" + b : b + "|" + a
+                guard drawn.insert(key).inserted else { continue }
                 guard let o = sim.airports.first(where: { $0.code == a }),
                       let d = sim.airports.first(where: { $0.code == b }) else { continue }
                 let pp = FlightPath.pathPoints(origin: o.screen, dest: d.screen)
