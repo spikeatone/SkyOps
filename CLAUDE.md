@@ -6,7 +6,7 @@ re-derive decisions that were already made and validated. If you're about to
 suggest something that contradicts a "Decided" item below, stop and check
 whether there's a reason logged here before overriding it.
 
-> ⭐ **THE FAMILY LAYER — `~/Architect Universe/PostmarkOps`
+> ⭐ **THE FAMILY LAYER — `~/Architect Universe/~PostmarkOps`
 > ([repo](https://github.com/spikeatone/PostmarkOps), private).** Postmark Digital's shared operating
 > layer, kept OUT of the app repos so it can't go stale in six places at once:
 > - **`ARCHITECT_FAMILY.md`** — what the family already built (an adoption matrix of which app has
@@ -5706,13 +5706,47 @@ scheduled and deployed — **without** "assign every crew to every flight" tediu
   The Crews card shows the SPLIT (course savings · crew time returned · facility + bays · running
   costs) because that asymmetry IS the teaching point. Bookkeeping only — no cash moves, invariant
   untouched (asserted).
-- **⚠️ OPEN BALANCE QUESTION — the repriced center does NOT pay back at game scale, and the old
-  pass/fail gate is GONE.** `TrainingCenterABProbe` was rewritten from a gate into a MEASUREMENT
-  tool (its old arms — 6/8/12/16 aircraft — can't even build a bay now, and its old thresholds
-  were set against $750k facility costs). It now asserts only what must hold regardless of tuning
-  (the ledger identity, payback improving with fleet size, and a stretched family booking more
-  time value than a deeply-covered one) and PRINTS the payback table for the designer. Read the
-  numbers in `CREW_TRAINING_SCOPE.md` before tuning anything here.
+- **⚠️ PRICES WALKED BACK 8 Sep — TWO CORRECTIONS, and this is NOT a reversal of the real-pricing
+  decision.** Designer direction: *"walk prices back toward game scale BUT not too far, because game
+  scale on new a/c purchases IS real world — I don't want to skew things just because sim centres are
+  expensive."* Both corrections apply the designer's own source properly and leave every DEVICE price
+  inside the real $12–22M band:
+  1. **The facility was pricing a TEN-BAY CAMPUS.** The source's $30–40M / 60–75k sq ft is for ten
+     simulators — the old code comment even said "a 10-bay centre comes to $35M + 10×$18M = $215M" —
+     but the player builds a ONE-to-four bay centre and paid for all ten halls. Facility is now an
+     **$8M shell**; each bay carries its own ~6k sq ft high-bay hall (~$3M at $400–600/sq ft) folded
+     into `simBayCost`: **WB $21M / NB $17M / TP-RJ $13M**. The ten-bay total still lands inside the
+     cited band ($8M + 10×$17M = $178M), and an NB bay is ~23% of this game's $74M A320 — the real
+     device-to-aircraft relationship, which is precisely what the designer did not want skewed.
+  2. **Bay opex was the heavy-utilization rate.** $85k/mo (~$1M/yr) is a sim run ~20 hrs/day and is
+     mostly VARIABLE (instructors, wear, spares). This game's bay runs a handful of courses a month,
+     so it costs the FIXED side: **$30k/mo** (maintenance contract, recurrent QTG certification, the
+     hall). Facility opex $150k → $35k/mo.
+  Measured effect (large arm, 45×A320, 60 months): **−$48.1M → −$21.8M → −$16.9M**, a 65% cut in the
+  shortfall. ⚠️ **Run-to-run variance is large** — that same arm's fee savings came out $8.2M / $5.3M
+  / $4.1M across three runs of an identical configuration, because course volume rides on random
+  events and crew availability. **Never tune off a single run.**
+- **⚠️ THE REMAINING GAP IS THROUGHPUT, NOT PRICE. DO NOT CUT PRICES AGAIN** — the next cut would
+  have to go below real device cost, the one thing the designer ruled out. The probe now prints a
+  **COURSE-FEE CAPTURE** rate (actual fee savings ÷ the ceiling if every crew's every recurrent ran
+  in-house): **59% at the gate, 32% for the best arm, 10% for a crew-thin family, 35% widebody.** At
+  a price of ZERO the centre would still forfeit two-thirds of the available saving. **ROOT CAUSE,
+  line-level:** the auto-recurrent scheduler's eligibility filter is
+  `pool.filter { $0.status == .available && … }`, so it only ever sees crews idle at that instant. A
+  crew flies ~55% of the time, so most of the family is never considered on any daily pass, and a
+  crew that happens to be flying when its currency window closes is never scheduled at all — it
+  **LAPSES instead of training**. The scheduler's own comment ("4 seats churn far faster than the
+  fleet comes due; nobody lapses waiting") assumes crews are REACHABLE; they aren't. **This bites
+  beyond the training centre: crews lapse more than the design intends in every game, bay or not.**
+  The fix (queue an on-duty/resting crew for its next release instead of dropping it from the pass)
+  is a DESIGNER CALL, not taken unilaterally. At ~80% capture the large arm's payback lands near
+  **~9 years** — the same timescale as buying an aircraft here (~8 years), which is the right feel
+  for real infrastructure.
+- **`TrainingCenterABProbe` is a MEASUREMENT tool, not a pass/fail gate** (its old 6/8/12/16-aircraft
+  arms can't even build a bay at the 20 gate, and its thresholds were set against $750k facility
+  costs). It asserts only what must hold regardless of tuning — the ledger identity and payback
+  improving with fleet size — and PRINTS the payback table plus the capture rate. Read
+  `CREW_TRAINING_SCOPE.md` before tuning anything here.
 - **THE LEDGER IS THE A/B** (methodology worth reusing): every in-house course books
   `contract price − in-house price`, so `payback` is exactly the delta vs. a contract-only twin
   with the same course volume. Economic events, AOG and weather all cancel because they never
@@ -5811,8 +5845,12 @@ twin, load-menu off main) · 1.5.0 (54, A350-1000 + 747-8i + map-render throttle
 (`READY_FOR_SALE`). 1.6.0 (55, German localization + 43 new city hero images/framing fix + GC
 per-achievement icons) is now ALSO LIVE (`READY_FOR_SALE`, approved 31 Aug — cleared 4.3(a); the
 city artwork made it a content update, not localization-only). Next new build = 56+.**
-⚠️ **1.7.0 (build 56) IS SUBMITTED FOR REVIEW — `WAITING_FOR_REVIEW` (3 Sep), auto-releases on
-approval. Next new build = 57+.** The whole chain ran from the CLI: bumped 1.6.0→1.7.0 / 55→56
+⚠️ **1.7.0 (build 56) IS LIVE — `READY_FOR_SALE` (confirmed via the ASC API 8 Sep; submitted 3 Sep,
+approved since). Next new build = 57+.** Two live consequences: it is the first build whose MetricKit
+reports carry **build-at-occurrence tagging** (so the TelemetryDeck Errors dashboard can finally
+separate stale hangs from live ones — group by MESSAGE, not by error id, since the tag rides in the
+message field), and it put the **100× speed pill** in players' hands on a sim whose tick loop runs on
+the MainActor. The whole chain ran from the CLI: bumped 1.6.0→1.7.0 / 55→56
 (6 configs), archived→exported→validated (VERIFY SUCCEEDED)→uploaded (UPLOAD SUCCEEDED, Delivery UUID
 `40110d3c-3dfa-4587-991f-c6628f26ad98`, 78.5 MB), build 56 attached, review submission
 `92dd48c8-b6a5-49fa-8f89-f375d5a29ef3` submitted. **The designer's 40 new city hero images LANDED and
@@ -5847,7 +5885,7 @@ rocket stays OFF** (no in-app GC entry point). 1.4.1 ALSO carries the Tech Ops w
 externalization + Test Store + MetricKit — see "Decided — Tech Ops modernization"). Build 50 (the
 GC-only cut) is superseded by build 51 — attach 51. Next new build after 51 must be **52+**. Query review
 state directly rather than trusting any doc's snapshot:
-`cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
+`cd ~/Architect\ Universe/~PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 
 ## Working agreement for future sessions
 

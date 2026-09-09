@@ -24,7 +24,7 @@ archive → upload → submit).**_
 > Read `HANDOFF.md` first, then `CLAUDE.md`. Tree is clean on `main`, all pushed.
 >
 > **RELEASE STATE (verify, don't trust this snapshot):**
-> `cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
+> `cd ~/Architect\ Universe/~PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
 > - **1.6.0 (build 55) is LIVE** (`READY_FOR_SALE`) — German localization + 43 city hero
 >   images + per-achievement Game Center icons. Cleared 4.3(a) (the artwork made it a real
 >   content update, not localization-only). Next new build = **56+**.
@@ -106,7 +106,7 @@ archive → upload → submit).**_
 
 ```bash
 # review status
-cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"
+cd ~/Architect\ Universe/~PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"
 
 # headless harness pattern (entry file MUST be main.swift; ~30s compile under -O)
 cd AirlineArchitect/AirlineArchitect

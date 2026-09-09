@@ -4555,16 +4555,31 @@ final class Simulation {
     //   Facility construction/fit-out $30–40M     → the one-off FACILITY price
     //                                                (~60–75k sq ft, specialised)
     //   Initial spares + test gear  ~$1M per sim  → folded into the bay price
-    // A 10-bay narrowbody centre here comes to $35M + 10×$18M = $215M, inside the
-    // cited band.
-    // CONSEQUENCE, and it is the honest one: at this price a bay CANNOT repay
-    // itself on course-fee savings until a family is very large — which is exactly
-    // why only major airlines own simulators in reality. The centre is a late-game
-    // milestone for a mega-fleet, not a mid-game upgrade, and `simBayPaybackAircraft`
-    // tells the player the threshold up front so it is never a trap.
-    static let trainingCenterFacilityCost = 35_000_000
-    static let trainingCenterFacilityOpexPerMonth = 150_000
-    static let simBayOpexPerMonth = 85_000   // ~$1M/yr to run a full-flight sim
+    // ⚠️ CORRECTED 8 Sep 2026 — the FACILITY used to be a flat $35M, which was the
+    // building cost of a TEN-SIMULATOR CAMPUS (the source's $30–40M / 60–75k sq ft
+    // is for ten bays). The player builds a one-to-four bay centre and was paying
+    // for all ten halls. So the facility is now a small SHELL, and each bay carries
+    // its own high-bay hall (~6k sq ft with a motion pit, ~$3M at the source's
+    // $400–600/sq ft) folded into `simBayCost` alongside the device.
+    // The 10-bay total still lands where the source says it should:
+    //   $8M shell + 10 × $17M (device + hall) = $178M, inside the cited $160–270M.
+    // The DEVICE price is untouched and still real ($12–22M) — the correction is
+    // only that one sim no longer buys ten sims' worth of building.
+    // CONSEQUENCE, and it is still the honest one: a bay repays on a capital
+    // timescale comparable to buying an AIRCRAFT (this game's aircraft take ~8
+    // years individually), not on a quick mid-game payback. It stays a large-fleet
+    // commitment, and `simBayPaybackAircraft` tells the player the threshold up
+    // front so it is never a trap.
+    static let trainingCenterFacilityCost = 8_000_000
+    static let trainingCenterFacilityOpexPerMonth = 35_000   // a shell, not a campus
+    // ⚠️ ALSO CORRECTED 8 Sep: was $85k/mo (~$1M/yr), the commonly-cited cost of a
+    // full-flight sim. That figure is for a sim run ~20 hours a day, and most of it
+    // is VARIABLE — instructors, wear, spares consumption — scaling with utilization.
+    // This game's bay runs a handful of courses a month, so charging the
+    // heavy-utilization rate was the wrong number, not a game-scale concession.
+    // $30k/mo (~$360k/yr) is the FIXED side a lightly-used device still costs:
+    // the maintenance contract, recurrent QTG certification, and the hall.
+    static let simBayOpexPerMonth = 30_000
     static let simBayCapacity = 4                  // crews in a bay's courses at once
     // Owned aircraft in the family before a bay can be equipped. Was 6 under the
     // old game-scaled prices; REAL simulator prices (above) make a bay a serious
@@ -4584,11 +4599,15 @@ final class Simulation {
 
     /// Bay cost by the family's aircraft class (a widebody sim is the expensive one).
     func simBayCost(family: String) -> Int {
+        // Real Level D full-flight simulator prices ($12–22M incl. spares) PLUS the
+        // ~$3M high-bay hall that sim needs (see the facility note above — the hall
+        // moved here from the flat facility price so a small centre stops paying
+        // for a ten-bay building). A narrowbody bay lands at ~23% of this game's
+        // $74M A320, which is the real device-to-aircraft relationship.
         switch AircraftType.all.first(where: { $0.family == family })?.bodyType {
-        // Real Level D full-flight simulator prices ($12–22M), spares included.
-        case .widebody2Engine, .widebody4Engine: return 22_000_000
-        case .narrowbody:                        return 18_000_000
-        default:                                 return 12_000_000   // turboprop / regional jet
+        case .widebody2Engine, .widebody4Engine: return 21_000_000   // $18M device + hall
+        case .narrowbody:                        return 17_000_000   // $14M device + hall
+        default:                                 return 13_000_000   // turboprop / RJ: $10M + hall
         }
     }
     /// Roughly the family size at which a bay's course savings repay it (the bay

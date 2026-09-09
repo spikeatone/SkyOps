@@ -50,24 +50,59 @@ confirmed (decision 4 = ratio + verdict; provider = "Global Aviation Training").
   four-line SPLIT (course savings · crew time returned · facility + bays · running costs) because
   that asymmetry is the teaching point, and the bay row reads "Course fees alone repay it above ~N
   aircraft; crew time saved counts on top."
-- **⚠️ OPEN BALANCE QUESTION — AT REAL PRICES THE CENTER NEVER PAYS BACK AT GAME SCALE.** Measured
-  after the repricing (`TrainingCenterABProbe`, 5 sim-years, DEN hub, auto-recurrent on, center +
-  one bay on day 0):
+- **⚠️ TWO PRICING CORRECTIONS (8 Sep, designer direction "walk prices back toward game scale, but
+  not too far — aircraft prices here ARE real world, so don't skew things just because sim centres
+  are expensive"). Neither is a game-scale concession; both apply the designer's own source
+  CORRECTLY, and no device price moved below the real band.**
+  1. **The facility was the building for a TEN-BAY CAMPUS.** The source's $30–40M / 60–75k sq ft is
+     for a ten-simulator centre — and the code said so itself ("a 10-bay narrowbody centre comes to
+     $35M + 10×$18M = $215M"). But the player builds a ONE-to-four bay centre and was paying for all
+     ten halls. So the facility is now an **$8M shell**, and each bay carries its own ~6k sq ft
+     high-bay hall (~$3M at the source's $400–600/sq ft) folded into `simBayCost` beside the device:
+     **WB $21M · NB $17M · TP-RJ $13M**. The ten-bay total still lands where the source says
+     ($8M + 10×$17M = **$178M**, inside the cited $160–270M), and an NB bay is ~23% of this game's
+     $74M A320 — the real device-to-aircraft relationship, which is the thing the designer did not
+     want skewed.
+  2. **Bay opex was the heavy-utilization rate.** $85k/mo (~$1M/yr) is what a sim costs when it runs
+     ~20 hours a day, and most of that is VARIABLE (instructors, wear, spares). This game's bay runs
+     a handful of courses a month, so **$30k/mo** (~$360k/yr — the maintenance contract, recurrent
+     QTG certification, the hall) is the right number for a lightly-used device. Facility opex
+     $150k → $35k/mo (a shell, not a campus).
+- **RESULT: the shortfall fell 65%, and pricing has now gone as far as it honestly can.** Same probe,
+  same arms, 60 months (large arm = 45×A320): **−$48.1M → −$21.8M (facility fix) → −$16.9M (opex
+  fix)**. Current table:
 
   | arm | fees | crew time | opex | facility | payback @ 60 mo |
   |---|---|---|---|---|---|
-  | 20 × A320 (the gate) | +$4.6M | +$2.3M | −$14.1M | −$53.0M | **−$60.3M** |
-  | 45 × A320 | +$8.2M | +$10.8M | −$14.1M | −$53.0M | **−$48.1M** |
-  | 45 × A320, crewed thin (1.4/ac) | +$494k | +$1.6M | −$14.1M | −$53.0M | **−$65.0M** |
-  | 20 × B788 | +$14.2M | +$18k | −$14.1M | −$57.0M | **−$56.9M** |
+  | 20 × A320 (the gate) | +$3.3M | +$1.9M | −$3.9M | −$25.0M | **−$23.7M** |
+  | 45 × A320 | +$4.1M | +$7.9M | −$3.9M | −$25.0M | **−$16.9M** |
+  | 45 × A320, crewed thin (1.4/ac) | +$856k | +$2.4M | −$3.9M | −$25.0M | **−$25.7M** |
+  | 20 × B788 | +$5.3M | +$9k | −$3.9M | −$29.0M | **−$27.6M** |
 
-  Payback does improve with fleet size (−$60.3M → −$48.1M), but nothing comes close: five years of
-  a 45-aircraft narrowbody family returns $19M against $67M of capital + opex. **This is a designer
-  call, not a bug to tune away** — the real-world pricing was an explicit instruction, and the
-  honest options are (a) accept the center as a prestige/realism purchase that never repays, and
-  say so in the UI; (b) raise the value of a crew-day or the days saved; (c) lower the real prices
-  toward game scale (i.e. re-open the reversed decision); or (d) give the center a benefit that
-  isn't fee-or-time — e.g. capacity the contractor simply won't sell you.
+  ⚠️ **RUN-TO-RUN VARIANCE IS LARGE — read these as ranges, not points.** The large arm's fee savings
+  came out $8.2M / $5.3M / $4.1M across three runs of the same configuration (course volume rides on
+  random events and crew availability). Do not tune off a single run.
+- **⚠️ THE REMAINING GAP IS THROUGHPUT, NOT PRICE — and the probe now measures it.** A new
+  COURSE-FEE CAPTURE diagnostic compares actual fee savings against the ceiling if every crew's
+  every recurrent ran in-house: **gate 59% · large 32% · stretched 10% · widebody 35%.** So even at
+  a price of ZERO the centre would leave two-thirds of the available saving unclaimed. **ROOT CAUSE,
+  line-level:** the auto-recurrent scheduler's eligibility filter is
+  `pool.filter { $0.status == .available && … }` — it only ever sees crews that are IDLE at that
+  moment. A crew flies ~55% of the time, so on any given daily pass most of the family is `.onDuty`
+  or `.resting` and is simply never considered; a crew that happens to be flying when its currency
+  window closes is never scheduled at all and **lapses instead of training**. That is exactly why the
+  crew-stretched arm captures only 10% — a thin pool means nobody is ever idle. The scheduler's own
+  comment ("4 seats churn far faster than the fleet comes due; nobody lapses waiting") assumes crews
+  are REACHABLE, and they are not.
+  **This has a consequence beyond the training centre: crews lapse more often than the design
+  intends, in every game, bay or no bay.**
+- **RECOMMENDATION (designer's call, NOT taken unilaterally):** do not cut prices further — the next
+  cut would have to go below real device cost, which is the thing the designer explicitly ruled out.
+  Fix the scheduler instead so a crew that is on duty or resting can be QUEUED for recurrent at its
+  next release, rather than falling out of the pass. If capture moves 32% → ~80%, the large arm's
+  payback lands near **~9 years** — the same timescale as buying an aircraft in this game (~8 years),
+  which is the right feel for real infrastructure: a long-lived capital asset competing with another
+  aeroplane, neither a quick win nor "never".
 - **⚠️ A REAL FINDING inside the time-value model: a crew-STRETCHED family books LESS time value
   than a deeply-covered one** ($1.6M vs $10.8M for the same 45 aircraft), the opposite of the naive
   reading. The scarcity premium is real — `TrainingCenterVerify` test 9 proves it in isolation — but

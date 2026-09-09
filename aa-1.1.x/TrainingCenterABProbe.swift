@@ -108,7 +108,12 @@ func main() {
     ]
     var results: [Result] = []
     print("TRAINING CENTER — payback (course savings + crew time − facility − opex), \(months) months")
-    print("costs are REAL simulator prices (facility $35M, bay $12–22M) — see CREW_TRAINING_SCOPE.md")
+    print("real device prices; facility is a SHELL and each bay carries its own hall — see CREW_TRAINING_SCOPE.md")
+    print(String(format: "facility $%.0fM + opex $%.0fk/mo · bay opex $%.0fk/mo · gate %d aircraft",
+                 Double(Simulation.trainingCenterFacilityCost) / 1_000_000,
+                 Double(Simulation.trainingCenterFacilityOpexPerMonth) / 1_000,
+                 Double(Simulation.simBayOpexPerMonth) / 1_000,
+                 Simulation.simBayMinAircraft))
     print(String(repeating: "-", count: 110))
     print(String(format: "%-10@ %-5@ %3@ %6@ | %10@ %10@ %10@ %10@ %10@ | %9@ %9@ %9@ %9@",
                  "arm", "type", "n", "crews", "12 mo", "24 mo", "36 mo", "48 mo", "60 mo",
@@ -141,6 +146,23 @@ func main() {
                         : String(format: "still %@ short at %d yr", money(-p), months / 12)
         let perCrew = r.crews > 0 ? r.timeValue / r.crews : 0
         print("  \(r.label) (\(r.n)× \(r.type), \(r.crews) crews): \(yrs) · time value \(money(perCrew))/crew")
+    }
+    // CAPTURE RATE — the diagnostic that says whether the centre is thin because it's
+    // priced wrong, or because the scheduler never actually sends the crews in-house.
+    // Theoretical ceiling = every crew does 365/currencyDays recurrents a year, all
+    // in-house, each saving (1 − centerCourseCostFactor) of the recurrent fee.
+    print("\nCOURSE-FEE CAPTURE (actual fee savings vs. the theoretical ceiling if every")
+    print("crew's every recurrent ran in-house — a low number means throughput, not price):")
+    for r in results {
+        guard let type = AircraftType.all.first(where: { $0.id == r.type }) else { continue }
+        let courseBasis = Double(type.purchasePrice) * 0.002          // crewCourseCost basis
+        let recurrentFee = courseBasis * Simulation.recurrentCostFraction
+        let savingEach = recurrentFee * (1 - Simulation.centerCourseCostFactor)
+        let perYear = 365.0 / Double(Crew.currencyDays)
+        let ceiling = savingEach * perYear * Double(r.crews) * (Double(months) / 12.0)
+        let pct = ceiling > 0 ? Double(r.savings) / ceiling * 100 : 0
+        print(String(format: "  %-10@ actual %@ vs ceiling %@ → %.0f%% captured",
+                     r.label, money(r.savings), money(Int(ceiling)), pct))
     }
     print("\nTrainingCenterABProbe: \(pass)/\(pass + fail) passed" + (fail == 0 ? "  ✅" : "  ❌ \(fail) FAILED"))
 }

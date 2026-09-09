@@ -34,22 +34,36 @@ _Snapshot: 8 September 2026._
   crew time returned · facility + bays · running costs) plus the explainer. Bookkeeping only — no
   cash moves, invariant untouched. Verified `TrainingCenterVerify` **75/75** (test 9 covers the time
   value) + `CrewPipelineVerify` 63/63 + regressions + free-tier probe.
-  ⚠️ **OPEN DESIGNER CALL — AT REAL PRICES THE CENTRE NEVER PAYS BACK, and the old balance GATE is
-  gone.** Re-measured after the repricing (table in `CREW_TRAINING_SCOPE.md`): 45 A320s over 5 years
-  return $8.2M of fees + $10.8M of crew time against $53M facility + $14.1M opex — **still $48.1M
-  short**, and that's the BEST arm. Payback does improve with fleet size, but nothing repays.
-  `TrainingCenterABProbe` was therefore rewritten from a pass/fail gate into a MEASUREMENT tool (its
-  old 6/8/12/16-aircraft arms can't even build a bay at the new 20 gate, and its thresholds were set
-  against $750k facility costs); it now asserts only the ledger identity + payback-improves-with-
-  scale and prints the table. **Four honest options, designer's pick:** (a) accept it as a
-  prestige/realism purchase that never repays and SAY so in the UI; (b) raise the crew-day value or
-  the days saved; (c) walk the real prices back toward game scale (re-opening the instruction);
-  (d) give the centre a benefit that is neither fee nor time — capacity the contractor won't sell.
-  Second finding worth knowing: a crew-STRETCHED family books LESS time value than a deeply-covered
-  one ($1.6M vs $10.8M at 45 aircraft) — the scarcity premium is real in isolation but is swamped
-  because understaffing collapses both the `dailyNet` a crew-day is priced against and the number of
-  courses to shorten. **Don't remove the shortfall factor to "fix" that** — it's what stops a
-  deeply-covered airline booking value for crew it never needed.
+  ⚠️ **PRICES WALKED BACK (designer direction: "not too far — aircraft prices here ARE real world, so
+  don't skew things just because sim centres are expensive"). TWO CORRECTIONS, both applying the
+  designer's own source properly, NO device price below the real band — shortfall down 65%.**
+  (1) The **facility was the building for a TEN-BAY CAMPUS** ($30–40M / 60–75k sq ft is a ten-sim
+  figure, and the code said so) while the player builds a one-to-four bay centre. It is now an **$8M
+  shell**, with each bay carrying its own ~$3M high-bay hall folded in beside the device: **WB $21M ·
+  NB $17M · TP-RJ $13M**. The ten-bay total still lands inside the cited band ($8M + 10×$17M = $178M),
+  and an NB bay is ~23% of this game's $74M A320 — the real device-to-aircraft ratio. (2) **Bay opex
+  was the heavy-utilization rate** ($85k/mo is a sim run ~20 hrs/day, mostly variable cost); a bay
+  running a handful of courses a month costs the FIXED side, **$30k/mo**. Facility opex $150k → $35k.
+  Measured (large arm, 45×A320, 60 mo): **−$48.1M → −$21.8M → −$16.9M**. Full table in
+  `CREW_TRAINING_SCOPE.md`. ⚠️ Variance across runs is large (that arm's fees came out $8.2M / $5.3M /
+  $4.1M on three runs of the SAME config) — read the table as ranges, never tune off one run.
+  ⚠️ **THE REMAINING GAP IS THROUGHPUT, NOT PRICE — don't cut prices again.** A new CAPTURE-RATE
+  diagnostic in the probe measures actual fee savings against the ceiling if every crew's every
+  recurrent ran in-house: **32% for the best arm, 10% for a crew-thin one.** At a price of ZERO the
+  centre would still forfeit two-thirds of the saving. **Root cause:** the auto-recurrent scheduler
+  filters `status == .available`, so it only ever sees crews idle at that instant — a crew flies ~55%
+  of the time, so most of the family is never considered, and one that is flying when its currency
+  window closes is never scheduled and **lapses instead of training**. That also means crews lapse
+  more than intended in EVERY game, bay or no bay. Fixing it (queue on-duty/resting crews for their
+  next release) should move capture toward ~80% and land payback near **~9 years** — the same
+  timescale as buying an aircraft here, which is the right feel for real infrastructure.
+  `TrainingCenterABProbe` stays a MEASUREMENT tool, not a gate (its old 6/8/12/16-aircraft arms can't
+  build a bay at the 20 gate, and its thresholds were set against $750k facility costs).
+  Second finding worth keeping: a crew-STRETCHED family books LESS time value than a deeply-covered
+  one — the scarcity premium is real in isolation but is swamped because understaffing collapses both
+  the `dailyNet` a crew-day is priced against and the number of courses to shorten. **Don't remove
+  the shortfall factor to "fix" that** — it's what stops a deeply-covered airline booking value for
+  crew it never needed.
 - **THE CHIEF PILOT — a persona atop CREWS** (`dd41c23`; designer asked first "is that too much of a
   crutch?", then said build him). **Capt. Morgan Ellis** reads the crew pipeline you already have and
   says what it means: per-family outlooks (`crewOutlook(family:)` → shortfall / training block /
@@ -145,8 +159,13 @@ RotationVerify 40/40), and the German for its UI (8 Sep, `21c7def`). The feature
 ships with the next build; the only residual is a nice-to-have live re-drive of the exact
 pick→sequence→confirm gesture chain (designer already confirmed it works on device).
 
-**► ⭐ 1.7.0 (build 56) IS SUBMITTED FOR REVIEW — `WAITING_FOR_REVIEW` (3 Sep). Auto-releases on
-approval.** The whole release chain ran end-to-end from the CLI: version bumped 1.6.0→1.7.0 / 55→56
+**► ⭐ 1.7.0 (build 56) IS LIVE — `READY_FOR_SALE` (confirmed via ASC 8 Sep; submitted 3 Sep and
+approved since).** ⚠️ **Next new build = 57+.** Two consequences worth carrying: 1.7 is the first
+build whose MetricKit reports carry **build-at-occurrence tagging**, so the TelemetryDeck Errors
+dashboard can finally separate stale hangs from live ones (group by message, not by error id); and
+1.7 put the **100× speed pill** in players' hands, on a sim whose tick loop runs on the MainActor —
+the prime suspect for the ongoing `hang.under3s` signal. The whole release chain ran end-to-end from
+the CLI: version bumped 1.6.0→1.7.0 / 55→56
 (6 configs), archived → exported → validated (VERIFY SUCCEEDED) → uploaded (UPLOAD SUCCEEDED,
 **Delivery UUID `40110d3c-3dfa-4587-991f-c6628f26ad98`**, 78.5 MB), build 56 attached to the v1.7
 record, review submission created + submitted. **The 40 new city hero images landed and were
@@ -156,7 +175,7 @@ de-DE What's New set, App Review notes set (`aa-1.1.x/app-review-notes-1.7.0.txt
 block, 3980 chars), Game Center per-version checkbox enabled. Review submission id
 `92dd48c8-b6a5-49fa-8f89-f375d5a29ef3`, submitted 2026-09-03T22:41Z. Commits `901bb53` (build) +
 `2a5e5d3` (docs) pushed to `main`. **Next new build = 57+.** Watch review state:
-`cd ~/Architect\ Universe/PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`.
+`cd ~/Architect\ Universe/~PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`.
 What's IN 1.7 (all verified, driven live):
 - **MX MAINTENANCE PROGRAM** (was on `mx-program`, now merged) — player-driven SCHEDULED A/C/D
   checks (B obsolete) distinct from AOG, in a new **OPS ▸ MX** section, cycle+calendar-driven
