@@ -7,6 +7,38 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 8 September 2026._
 
+**► ⭐⭐ THE 1.7 HANG FIXES — branch `hang-fixes-1.7.1`, NOT yet merged. This is the next build.**
+TelemetryDeck on the LIVE app: `hang.under3s` ×43, a first-ever `hang.3to10s` ×1, and
+`crash.sig9…rbsterminatecontext-domain-10` ×3 (a RunningBoard **watchdog SIGKILL** — launch/resume
+took too long, so the crash and the hangs are ONE defect at two severities). A five-lens hunt with
+adversarial verification produced 9 confirmed findings; all fixed. Full detail in CLAUDE.md
+"Decided — The 1.7 hang fixes". **The root cause is a PAIR and 1.7 shipped both halves:**
+(1) `run()`'s catch-up drain was capped in TICKS not TIME — unreachable below 100×, but at the 100×
+1.7 added, 50 ticks is only 125ms of SIM time, UNDER the 250ms input clamp, so once per-tick cost
+passed ~2.34ms the loop **pinned at the cap forever** (a permanent ~125–250ms non-yielding block).
+Now a 6ms wall-clock budget + `accumulatorMs = min(accumulatorMs, intervalMs)`.
+(2) `assignSpareToPendingRoutes()` ran an O(routes × fleet) scan EVERY tick behind the wrong guard
+(*a spare exists*, not *a route is pending*) — and 1.7's MX program creates idle spares by design, so
+on a big fleet it was permanently on. **Measured A/B: 250 routes/285 aircraft 0.575 → 0.291 ms/tick
+(49%); growth for a ×178 routes×fleet increase ×11.0 → ×5.3.** ⚠️ At ≤120 routes the win is inside
+the noise — measure at 250+ or you'll wrongly conclude the fix does nothing.
+Also fixed: **`closedPlayerRoutes` was UNBOUNDED** (same class as the build-27 save crash — 13.2KB
+per closed route crossed the 900KB iCloud limit at ~68 routes and silently killed cross-device sync);
+`loadSlot()` was the last sync full-save decode on main; `AirportPhoto` was the only uncached image
+loader (a 1456×816 JPEG re-decoded per layout pass); the splash decoded a 2.3MB PNG behind an opaque
+cover; selecting an aircraft subscribed all of NetworkView to raw `tick` (**4th instance** of the
+documented churn bug); OpsView had no `LazyVStack`.
+⚠️ **ONE VISIBLE PRODUCT CHANGE NEEDING YOUR NOD:** `maxClosedRoutes = 40` means beyond 40 closures
+the OLDEST leave the Routes panel — CLAUDE.md says routes are "archived, not deleted" so a route that
+never recouped stays reviewable. One constant to raise.
+⚠️ **AND A REAL SCARE: two harnesses were SILENTLY NO-OPING in the repo.** `RotationVerify` and
+`MXCoverageVerify` never called `main()`, so they compiled to binaries that printed NOTHING — which
+reads like a pass if you grep for "FAIL". `SaveCompatVerify` was separately DEAD on a compile error
+(`GameSnapshot.crewTrainingDue`, removed by the crew-training pipeline), so the regression net for the
+SAVE-LOSS bug class had been dark. All three repaired at the source: **55/55 · 81/81 · 12/12**.
+Verified: RoundTrip 13/13 · SaveCompat 12/12 · Rotation 55/55 · MXCoverage 81/81 · Park 28/28 ·
+SubFleet 15/15 · HubChart 38/38 · OpsTweaks 43/43 · TickCostProbe 5/5 · full Debug build.
+
 **► ⭐ ON `main`, NOT YET IN A BUILD (8 Sep session — all verified, all pushed):**
 - **CREW TRAINING — Phases 1 AND 2 MERGED** (`162b865`, `8383f2c`; design + the designer's 5
   decisions in `aa-1.1.x/CREW_TRAINING_SCOPE.md`, which also records how the BUILT Phase 2 differs

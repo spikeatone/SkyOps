@@ -284,7 +284,7 @@ struct NetworkView: View {
                 if isRouteConfirm {
                     routeFlowPanel
                 } else if let ac = selected {
-                    AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { withAnimation(Motion.glide) { selectedID = nil } }
+                    LiveTooltip(sim: sim, aircraft: ac) { withAnimation(Motion.glide) { selectedID = nil } }
                 } else if let ap = selectedAirport {
                     AirportInfoCard(airport: ap, sim: sim)
                 }
@@ -304,13 +304,7 @@ struct NetworkView: View {
                     .font(.karla(15, .semibold))
                     .foregroundStyle(isDark ? .white : .black)
                     .lineLimit(1).fixedSize()
-                Text(cashString)
-                    .font(.karla(15, .semibold))
-                    .foregroundStyle(sim.playerBalance < 0 ? Sky.red : Sky.coreGreen)
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                    // Rolling counter — the money ticks up/down instead of snapping.
-                    .contentTransition(.numericText())
-                    .animation(.snappy(duration: 0.35), value: sim.playerBalance)
+                LiveCash(sim: sim)
                 // Stock ticker — appears the moment the airline lists (designer:
                 // "display on top next to the CASH figure").
                 if let pc = sim.publicCompany { stockTicker(pc) }
@@ -339,7 +333,8 @@ struct NetworkView: View {
     }
 
 
-    private var cashString: String { cashLabel(sim.playerBalance) }
+    // (cashString removed — reading `sim.playerBalance` here is exactly the
+    // whole-body invalidation LiveCash exists to prevent.)
 
     /// Live stock ticker chip: SYMBOL + share price, coloured vs the IPO price
     /// (green = shareholders are up on the listing, red = under water).
@@ -475,7 +470,7 @@ struct NetworkView: View {
         VStack(spacing: 8) {
             routeFlowPanel
             if let ac = selected {
-                AircraftTooltip(aircraft: ac, sim: sim, tick: sim.tick) { withAnimation(Motion.glide) { selectedID = nil } }
+                LiveTooltip(sim: sim, aircraft: ac) { withAnimation(Motion.glide) { selectedID = nil } }
                     .transition(rise)
             } else if let ap = selectedAirport {
                 AirportInfoCard(airport: ap, sim: sim).transition(rise)
@@ -1186,6 +1181,46 @@ struct FuelHedgePanel: View {
 /// (control bar, route/Acquire panels) stay put unless their own inputs change.
 /// The map still needs `tick` as a real value input (the Phase-1 freeze bug),
 /// which it gets here.
+/// Leaf that reads the HOT tick in its OWN body, so selecting an aircraft does
+/// not subscribe the entire NetworkView body to `sim.tick`. Before this, tapping
+/// a plane made the whole Network screen — control bar, panels, iPad side rail —
+/// re-render at sim-tick rate instead of the 5Hz house rule, which at 25×/100×
+/// is display-rate churn on the main thread.
+///
+/// ⚠️ `AircraftTooltip` MUST keep receiving a CHANGING value input. Dropping the
+/// `tick:` param or passing a constant reintroduces the documented Canvas/child
+/// freeze (a child whose only inputs are stable references never re-renders) and
+/// status / crew legal hours / cycles / leg economics would freeze at selection.
+/// `displayTick` changes ~5×/s, which satisfies it; CLAUDE.md names the live
+/// tooltip as the one legitimate raw-tick consumer, so swap to `sim.tick` only if
+/// a per-second readout ever demands it — the ISOLATION is the point, not the rate.
+/// The cash figure is the OTHER hot read on this header, and it invalidated the
+/// whole NetworkView body on every settled leg — for a 200-aircraft player that is
+/// several times a tick, regardless of whether anything is selected. Reading
+/// `sim.playerBalance` in its own leaf keeps that churn off the control bar,
+/// panels and iPad rail. The rolling-counter animation must stay INSIDE the leaf
+/// or the money snaps instead of ticking.
+private struct LiveCash: View {
+    let sim: Simulation
+    var body: some View {
+        Text(cashLabel(sim.playerBalance))
+            .font(.karla(15, .semibold))
+            .foregroundStyle(sim.playerBalance < 0 ? Sky.red : Sky.coreGreen)
+            .lineLimit(1).minimumScaleFactor(0.7)
+            .contentTransition(.numericText())
+            .animation(.snappy(duration: 0.35), value: sim.playerBalance)
+    }
+}
+
+private struct LiveTooltip: View {
+    let sim: Simulation
+    let aircraft: Aircraft
+    let onClose: () -> Void
+    var body: some View {
+        AircraftTooltip(aircraft: aircraft, sim: sim, tick: sim.displayTick, onClose: onClose)
+    }
+}
+
 private struct LiveMap: View {
     let sim: Simulation
     let selectedID: UUID?

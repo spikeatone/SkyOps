@@ -40,6 +40,8 @@ struct OpsView: View {
     /// due row opens the cost/downtime/grounding breakdown + the Service action; a
     /// C/D check on a routed aircraft shows the spare-coverage picker inside it.
     @State private var expandedMXTail: String? = nil
+    /// Reveals the full MX list past `mxRowCap` (see `maintenanceGroup`).
+    @State private var mxShowAll = false
     /// A just-completed auto-cover (from acquiring a replacement) — shown as a banner
     /// at the top of Ops, then auto-dismissed. Copied from sim.mxCoverConfirm on entry.
     @State private var coverBanner: (sub: String, covered: String, route: String, days: Int)? = nil
@@ -276,11 +278,53 @@ struct OpsView: View {
         }) {
             Text("Scheduled A/C/D checks. Service due aircraft to stay airworthy — flying past a check raises breakdown risk. Emergencies (AOG) appear in Needs Attention.")
                 .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
-            ForEach(Array(fleet.enumerated()), id: \.element.id) { idx, ac in
+            // ⚠️ BOUNDED (8 Sep 2026). OpsView has no LazyVStack anywhere, so this
+            // ForEach eagerly built ONE ROW PER OWNED AIRCRAFT — and the whole
+            // drawer rebuilds at the 5Hz displayTick heartbeat. At 200 aircraft
+            // that is 200 rows of layout + per-row sim helpers, five times a second,
+            // on a screen players sit on. Capping is preferred over LazyVStack here
+            // because this stack is two VStacks deep inside `drawer`, not a direct
+            // descendant of the ScrollView along the scroll axis, so laziness is
+            // not guaranteed without on-device confirmation.
+            // Safe ONLY because `mxFleet` sorts nearest-date-first (due/overdue →
+            // soonest upcoming → in shop last), so the actionable aircraft are at
+            // the head. Never truncate a differently-sorted list here.
+            // The alert chip above deliberately still counts the FULL fleet.
+            let shown = mxVisible(fleet)
+            ForEach(Array(shown.enumerated()), id: \.element.id) { idx, ac in
                 if idx > 0 { Divider().overlay(cardBorder.opacity(0.4)) }
                 mxRow(ac)
             }
+            if fleet.count > shown.count {
+                Button { withAnimation(.easeInOut(duration: 0.2)) { mxShowAll = true } } label: {
+                    Text("Show all \(fleet.count)")
+                        .font(.karla(13, .semibold)).foregroundStyle(Sky.brightBlue)
+                }
+                .padding(.top, 4)
+            } else if mxShowAll && fleet.count > Self.mxRowCap {
+                Button { withAnimation(.easeInOut(duration: 0.2)) { mxShowAll = false } } label: {
+                    Text("Show fewer")
+                        .font(.karla(13, .semibold)).foregroundStyle(Sky.brightBlue)
+                }
+                .padding(.top, 4)
+            }
         }
+    }
+
+    /// How many MX rows render before the "Show all" toggle.
+    private static let mxRowCap = 12
+
+    /// The head of the (nearest-date-first) MX list, ALWAYS including the row the
+    /// player currently has expanded — otherwise an aircraft whose Details are open
+    /// would vanish mid-interaction if it sorted past the cap.
+    private func mxVisible(_ fleet: [Aircraft]) -> [Aircraft] {
+        guard !mxShowAll, fleet.count > Self.mxRowCap else { return fleet }
+        var shown = Array(fleet.prefix(Self.mxRowCap))
+        if let tail = expandedMXTail, !shown.contains(where: { $0.tail == tail }),
+           let open = fleet.first(where: { $0.tail == tail }) {
+            shown.append(open)
+        }
+        return shown
     }
 
     @ViewBuilder private func mxRow(_ ac: Aircraft) -> some View {

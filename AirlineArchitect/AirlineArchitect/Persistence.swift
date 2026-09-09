@@ -697,6 +697,26 @@ enum GameStore {
         }
     }
 
+    /// Decode a save OFF the main thread, then deliver on the main actor.
+    /// The DECODE-side twin of `saveInBackground`, and the last one that was
+    /// missing: `load` does a full `GameSnapshot` decode — exactly the work
+    /// `slotInfosAsync` exists to keep off main — and it ran synchronously from
+    /// the load menu's tap handler. It is also the one decode path with NO
+    /// `maxDecodeBytes` guard, deliberately: an oversized legacy save is decoded
+    /// in full here ON PURPOSE so that loading it re-saves it capped and small
+    /// (the documented self-heal). Refusing it would strand it forever — moving
+    /// it off main fixes the mainline AND the unbounded case in one change.
+    /// Uses the EXISTING `saveQueue`, not a new one: `load` calls
+    /// `migrateLegacyIfNeeded()`, which moves files, and `slotInfos()` calls the
+    /// same thing from that queue — a second queue would add a file-move race
+    /// that does not exist today.
+    static func loadAsync(slot: Int, completion: @escaping @MainActor (GameSnapshot?) -> Void) {
+        saveQueue.async {
+            let snap = load(slot: slot)
+            Task { @MainActor in completion(snap) }
+        }
+    }
+
     static func slotInfos() -> [SlotInfo?] {
         migrateLegacyIfNeeded()
         return (0..<slotCount).map { slot in

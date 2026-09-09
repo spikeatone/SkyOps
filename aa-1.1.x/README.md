@@ -197,8 +197,30 @@ group never compiles them into the build.
   full price; with a bay the cap IS `simBayCapacity`) — and the finding that a crew-STRETCHED
   family books LESS total time value than a deeply-covered one.
 
+- **`TickCostProbe.swift`** — the MAIN-THREAD cost of one `advanceTick()` vs. fleet
+  and route count, and the speed at which `run()`'s drain budget starts to bite.
+  Built 8 Sep 2026 to verify the fixes for the shipping `hang.under3s` signal.
+  A MEASUREMENT tool (absolute ms are machine-specific); it asserts only what holds
+  on any machine — that cost grows SUB-quadratically with the routes×fleet product,
+  and that holding idle spares on a fully-staffed network is ~free. **Both assertions
+  encode the actual bug**: `assignSpareToPendingRoutes` used to run an O(routes×fleet)
+  scan every tick whenever a spare existed. Measured A/B (same machine, `git show main`
+  vs. the fix) — 20 routes: noise · 60: 11% · 120: 22% · **250 routes/285 aircraft:
+  0.575 → 0.291 ms, 49%** · 250/365 with 80 spares: 53%. Growth for a ×178 product
+  increase went **×11.0 → ×5.3**. ⚠️ **Scale matters when reading this**: at ≤120
+  routes the win is inside the noise, which is why an early run of this probe appeared
+  to refute the fix. It builds MULTI-ORIGIN because a single hub runs out of airport
+  SLOTS at ~113 routes.
+
 ## How to run
-The entry file must be named `main.swift` (top-level `MainActor.assumeIsolated {…}`).
+⚠️ **The entry file must be named `main.swift` AND the file must actually CALL `main()`.**
+A harness that defines `@MainActor func main()` with no top-level
+`MainActor.assumeIsolated { main() }` compiles to a binary that runs and prints
+NOTHING — and an empty run reads exactly like a pass if you only grep for "FAIL".
+`RotationVerify` and `MXCoverageVerify` were both silently no-oping in the repo for
+this reason (each session kept re-adding the line to its `/tmp` copy instead of the
+source); fixed 8 Sep 2026 — they really do run 55/55 and 81/81 now. If a harness
+prints nothing, suspect this before suspecting the code.
 From the repo root:
 
 ```sh
