@@ -1,916 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "Course fees alone repay it above ~%lld aircraft; crew time saved counts on top": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Allein die Kursgebühren amortisieren ihn ab ca. %lld Flugzeugen; die gesparte Crew-Zeit kommt obendrauf"
-          }
-        }
-      }
-    },
-    "Course savings vs. contract": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kursersparnis ggü. Vertrag"
-          }
-        }
-      }
-    },
-    "Crew time is valued at what a crew-day is worth to the families you fly — and only while crew is actually your binding constraint. Deep cover, little value; stretched, a lot.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crew-Zeit wird mit dem Wert eines Crew-Tages für deine geflogenen Familien bewertet – und nur, solange die Crew tatsächlich dein Engpass ist. Bei guter Reserve wenig wert, bei Knappheit viel."
-          }
-        }
-      }
-    },
-    "Crew time returned to the line": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zurückgewonnene Crew-Zeit im Einsatz"
-          }
-        }
-      }
-    },
-    "Facility + sim bays": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anlage + Simulatorplätze"
-          }
-        }
-      }
-    },
-    "Running costs to date": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bisherige Betriebskosten"
-          }
-        }
-      }
-    },
-    "AT ACQUISITION": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BEIM ERWERB"
-          }
-        }
-      }
-    },
-    "Average load": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Durchschnittliche Auslastung"
-          }
-        }
-      }
-    },
-    "CURRENT PERFORMANCE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AKTUELLE LEISTUNG"
-          }
-        }
-      }
-    },
-    "Flights flown": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geflogene Flüge"
-          }
-        }
-      }
-    },
-    "Net": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Netto"
-          }
-        }
-      }
-    },
-    "No flights flown under your flag yet — put its aircraft on routes to start its book.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch keine Flüge unter deiner Flagge – setze die Flugzeuge auf Routen ein, um die Bücher zu eröffnen."
-          }
-        }
-      }
-    },
-    "Opened since the deal": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seit dem Kauf eröffnet"
-          }
-        }
-      }
-    },
-    "under your ownership": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "unter deiner Führung"
-          }
-        }
-      }
-    },
-    "\"Crew levels look healthy across the fleet. Nothing needs you today.\"": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„Die Crew-Situation sieht flottenweit gut aus. Heute ist nichts zu tun.\""
-          }
-        }
-      }
-    },
-    "%lld crews grounded on lapsed currency — requalify to get them back on the line": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Crews wegen abgelaufener Lizenz am Boden – requalifizieren, um sie zurück in den Einsatz zu bringen"
-          }
-        }
-      }
-    },
-    "1 crew grounded on lapsed currency — requalify to get it back on the line": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 Crew wegen abgelaufener Lizenz am Boden – requalifizieren, um sie zurück in den Einsatz zu bringen"
-          }
-        }
-      }
-    },
-    "%lld due": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld fällig"
-          }
-        }
-      }
-    },
-    "· %lld in shop": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· %lld in der Werft"
-          }
-        }
-      }
-    },
-    "%lld families need a look · %lld staffed": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Familien brauchen Aufmerksamkeit · %lld besetzt"
-          }
-        }
-      }
-    },
-    "1 family needs a look · %lld staffed": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 Familie braucht Aufmerksamkeit · %lld besetzt"
-          }
-        }
-      }
-    },
-    "+%lld more families below": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "+%lld weitere Familien unten"
-          }
-        }
-      }
-    },
-    "All %lld crew families staffed for continuous coverage": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle %lld Crew-Familien für durchgehende Abdeckung besetzt"
-          }
-        }
-      }
-    },
-    "CHIEF PILOT": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLUGBETRIEBSLEITER"
-          }
-        }
-      }
-    },
-    "Short %lld crews even after training lands — a permanent shortfall": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auch nach Abschluss des Trainings fehlen %lld Crews – ein dauerhafter Engpass"
-          }
-        }
-      }
-    },
-    "Short 1 crew even after training lands — a permanent shortfall": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auch nach Abschluss des Trainings fehlt 1 Crew – ein dauerhafter Engpass"
-          }
-        }
-      }
-    },
-    "Staffed for continuous coverage": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für durchgehende Abdeckung besetzt"
-          }
-        }
-      }
-    },
-    "Staffed, but %lld due for recurrent within %lld days — expect a dip": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Besetzt, aber %lld in den nächsten %lld Tagen zum Wiederholungstraining fällig – mit einem Einbruch rechnen"
-          }
-        }
-      }
-    },
-    "Thin right now, but %lld in training": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktuell knapp, aber %lld im Training"
-          }
-        }
-      }
-    },
-    "Thin right now, but %lld in training — first one back in %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktuell knapp, aber %lld im Training – die erste ist in %lld Tagen zurück"
-          }
-        }
-      }
-    },
-    "−%@/mo": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "−%@/Mon."
-          }
-        }
-      }
-    },
-    "Course savings repay it above ~%lld aircraft in this family": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Kursersparnis amortisiert ihn ab ca. %lld Flugzeugen in dieser Familie"
-          }
-        }
-      }
-    },
-    "%lld-day course in-house · no class-slot wait": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld-tägiger Kurs intern · kein Warten auf einen Kursplatz"
-          }
-        }
-      }
-    },
-    "%lld-day course with %@ · plus up to %lld days for a class slot": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld-tägiger Kurs bei %@ · plus bis zu %lld Tage Wartezeit auf einen Kursplatz"
-          }
-        }
-      }
-    },
-    "%lld/%lld bay seats in use": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld/%lld Simulatorplätze belegt"
-          }
-        }
-      }
-    },
-    "ADD BAY": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PLATZ HINZUFÜGEN"
-          }
-        }
-      }
-    },
-    "At one of your hubs. Then a sim bay per crew family (%lld+ aircraft) trains it in-house: courses 60%% cheaper, a third shorter, no class-slot wait.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "An einem deiner Drehkreuze. Danach schult ein Simulatorplatz pro Crew-Familie (ab %lld Flugzeugen) intern: Kurse 60 %% günstiger, ein Drittel kürzer, kein Warten auf einen Kursplatz."
-          }
-        }
-      }
-    },
-    "BUILD": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BAUEN"
-          }
-        }
-      }
-    },
-    "Build a training center": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trainingszentrum bauen"
-          }
-        }
-      }
-    },
-    "Build at %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In %@ bauen"
-          }
-        }
-      }
-    },
-    "BUILD · %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BAUEN · %@"
-          }
-        }
-      }
-    },
-    "BUILD ▾": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BAUEN ▾"
-          }
-        }
-      }
-    },
-    "Needs %lld aircraft in the family (have %lld)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Benötigt %lld Flugzeuge in der Familie (vorhanden: %lld)"
-          }
-        }
-      }
-    },
-    "Needs an operating hub. Then a sim bay per crew family (%lld+ aircraft) trains it in-house: courses 60%% cheaper, a third shorter, no class-slot wait.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Benötigt ein aktives Drehkreuz. Danach schult ein Simulatorplatz pro Crew-Familie (ab %lld Flugzeugen) intern: Kurse 60 %% günstiger, ein Drittel kürzer, kein Warten auf einen Kursplatz."
-          }
-        }
-      }
-    },
-    "No sim bays yet — add one on a crew family's card (%lld+ aircraft) to train that family in-house. Everyone else still trains with %@.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch keine Simulatorplätze – füge auf der Karte einer Crew-Familie (ab %lld Flugzeugen) einen hinzu, um diese Familie intern zu schulen. Alle anderen trainieren weiterhin bei %@."
-          }
-        }
-      }
-    },
-    "saved vs. contract prices − facility − opex": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "gespart ggü. Vertragspreisen − Anlage − Betriebskosten"
-          }
-        }
-      }
-    },
-    "Sim bay": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Simulatorplatz"
-          }
-        }
-      }
-    },
-    "Train this family in-house · %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diese Familie intern schulen · %@"
-          }
-        }
-      }
-    },
-    "Training center built": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trainingszentrum gebaut"
-          }
-        }
-      }
-    },
-    "Training Center · %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trainingszentrum · %@"
-          }
-        }
-      }
-    },
-    "TRAINING P&L": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TRAINING-BILANZ"
-          }
-        }
-      }
-    },
-    "Trains in-house · %lld/%lld bay seats in use": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Schult intern · %lld/%lld Simulatorplätze belegt"
-          }
-        }
-      }
-    },
-    "· in-house": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· intern"
-          }
-        }
-      }
-    },
-    "%lld %@ crews can't fly — currency lapsed": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld %@-Crews dürfen nicht fliegen – Lizenz abgelaufen"
-          }
-        }
-      }
-    },
-    "%lld crew · %lld aircraft": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Crew · %lld Flugzeuge"
-          }
-        }
-      }
-    },
-    "%lld crews lapsed — can't fly until requalified": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Crews mit abgelaufener Lizenz – flugunfähig bis zur Requalifizierung"
-          }
-        }
-      }
-    },
-    "%lld line-ready for %lld aircraft · %@ per aircraft": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld einsatzbereit für %lld Flugzeuge · %@ pro Flugzeug"
-          }
-        }
-      }
-    },
-    "%lld-day course with %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld-tägiger Kurs bei %@"
-          }
-        }
-      }
-    },
-    "1 %@ crew can't fly — currency lapsed": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 %@-Crew darf nicht fliegen – Lizenz abgelaufen"
-          }
-        }
-      }
-    },
-    "1 crew lapsed — can't fly until requalified": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 Crew mit abgelaufener Lizenz – flugunfähig bis zur Requalifizierung"
-          }
-        }
-      }
-    },
-    "a crew's currency has lapsed — requalify": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "die Lizenz einer Crew ist abgelaufen – requalifizieren"
-          }
-        }
-      }
-    },
-    "Already type-rated · line-ready in %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bereits typengeprüft · einsatzbereit in %lld Tagen"
-          }
-        }
-      }
-    },
-    "Auto-scheduled · %lld crews due within %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatisch geplant · %lld Crews in den nächsten %lld Tagen fällig"
-          }
-        }
-      }
-    },
-    "Auto-scheduled · 1 crew due within %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatisch geplant · 1 Crew in den nächsten %lld Tagen fällig"
-          }
-        }
-      }
-    },
-    "Auto-scheduled · none due within %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatisch geplant · keine in den nächsten %lld Tagen fällig"
-          }
-        }
-      }
-    },
-    "Continuous coverage": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Durchgehende Abdeckung"
-          }
-        }
-      }
-    },
-    "Crew currency lapsed": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crew-Lizenz abgelaufen"
-          }
-        }
-      }
-    },
-    "New %@ crew hired — in the type-rating course, line-ready in %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue %@-Crew eingestellt – im Type-Rating-Kurs, einsatzbereit in %lld Tagen"
-          }
-        }
-      }
-    },
-    "New %@ crew hired — line-ready in %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue %@-Crew eingestellt – einsatzbereit in %lld Tagen"
-          }
-        }
-      }
-    },
-    "New crew in training · line-ready in %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Crew im Training · einsatzbereit in %lld Tagen"
-          }
-        }
-      }
-    },
-    "New crew in training · line-ready tomorrow": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neue Crew im Training · morgen einsatzbereit"
-          }
-        }
-      }
-    },
-    "New hire + type rating": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neueinstellung + Type Rating"
-          }
-        }
-      }
-    },
-    "NEW · %lldd": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NEU · %lld T"
-          }
-        }
-      }
-    },
-    "No aircraft": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kein Flugzeug"
-          }
-        }
-      }
-    },
-    "OFF — crews lapse when their currency runs out": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AUS – Crews verlieren ihre Lizenz, wenn sie abläuft"
-          }
-        }
-      }
-    },
-    "Rated hire": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Typengeprüfte Einstellung"
-          }
-        }
-      }
-    },
-    "Rated hire line-ready in %lld days · type-rating course %lld days · recurrent %lld days, every %lld days (auto-scheduled a few crews at a time)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Typengeprüfte Einstellung einsatzbereit in %lld Tagen · Type-Rating-Kurs %lld Tage · wiederkehrendes Training %lld Tage, alle %lld Tage (automatisch geplant, jeweils wenige Crews)"
-          }
-        }
-      }
-    },
-    "RATED · %lldd": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TYPENGEPRÜFT · %lld T"
-          }
-        }
-      }
-    },
-    "Recurrent training": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wiederkehrendes Training"
-          }
-        }
-      }
-    },
-    "Recurrent training · back in %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wiederkehrendes Training · zurück in %lld Tagen"
-          }
-        }
-      }
-    },
-    "Recurrent training · back tomorrow": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wiederkehrendes Training · morgen zurück"
-          }
-        }
-      }
-    },
-    "REQUALIFY %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "REQUALIFIZIEREN %@"
-          }
-        }
-      }
-    },
-    "Requalify with %@ (~%lld days, at the expedited rate). Auto-scheduled recurrent training on the Crews tab avoids this.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Requalifizierung bei %@ (~%lld Tage, zum Eiltarif). Automatisch geplantes wiederkehrendes Training im Crews-Tab verhindert das."
-          }
-        }
-      }
-    },
-    "Requalify · %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Requalifizieren · %@"
-          }
-        }
-      }
-    },
-    "Requalifying · back in %lld days": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Requalifizierung · zurück in %lld Tagen"
-          }
-        }
-      }
-    },
-    "Requalifying · back tomorrow": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Requalifizierung · morgen zurück"
-          }
-        }
-      }
-    },
-    "Thin — expect occasional crew holds": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Knapp – gelegentliche Crew-Wartezeiten zu erwarten"
-          }
-        }
-      }
-    },
-    "TRAINING": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TRAINING"
-          }
-        }
-      }
-    },
-    "TRAINING PIPELINE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TRAININGS-PIPELINE"
-          }
-        }
-      }
-    },
-    "Under-crewed — holds likely": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unterbesetzt – Wartezeiten wahrscheinlich"
-          }
-        }
-      }
-    },
-    "· contract provider": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· Vertragsanbieter"
-          }
-        }
-      }
-    },
     "  →  ↺": {
       "localizations": {
         "de": {
@@ -921,252 +11,12 @@
         }
       }
     },
-    "%@ nm": {
+    "\"Crew levels look healthy across the fleet. Nothing needs you today.\"": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ nm"
-          }
-        }
-      }
-    },
-    "%@ → %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        }
-      }
-    },
-    "%@ → … · tap the next city (it loops back to %@)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → … · tippe die nächste Stadt an (die Schleife führt zurück nach %@)"
-          }
-        }
-      }
-    },
-    "%@ → ↺ · tap another, or Done": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → ↺ · tippe eine weitere an oder Fertig"
-          }
-        }
-      }
-    },
-    "%@: %@ offered": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@: %@ geboten"
-          }
-        }
-      }
-    },
-    "%lld seats": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Sitze"
-          }
-        }
-      }
-    },
-    "Abandon": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abbrechen"
-          }
-        }
-      }
-    },
-    "Done": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fertig"
-          }
-        }
-      }
-    },
-    "Edit": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bearbeiten"
-          }
-        }
-      }
-    },
-    "No idle aircraft — acquire one to fly a new route.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kein freies Flugzeug – erwirb eines, um eine neue Route zu fliegen."
-          }
-        }
-      }
-    },
-    "Open route": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Route eröffnen"
-          }
-        }
-      }
-    },
-    "Pick the aircraft, then tap the cities it will fly in order.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wähle das Flugzeug und tippe dann der Reihe nach die Städte an, die es anfliegen soll."
-          }
-        }
-      }
-    },
-    "Tap the cities %@ will fly, in order": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tippe der Reihe nach die Städte an, die %@ anfliegen soll"
-          }
-        }
-      }
-    },
-    "the route": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "die Route"
-          }
-        }
-      }
-    },
-    "Total loop": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gesamte Schleife"
-          }
-        }
-      }
-    },
-    "Undo stop": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stopp zurücknehmen"
-          }
-        }
-      }
-    },
-    "WHICH AIRCRAFT?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "WELCHES FLUGZEUG?"
-          }
-        }
-      }
-    },
-    "· %@ rwy": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· %@ Startbahn"
-          }
-        }
-      }
-    },
-    "· OK": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· OK"
-          }
-        }
-      }
-    },
-    "· too far": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· zu weit"
-          }
-        }
-      }
-    },
-    "%lld contested": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld umkämpft"
-          }
-        }
-      }
-    },
-    "1 hub": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 Drehkreuz"
-          }
-        }
-      }
-    },
-    "%lld hubs": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Drehkreuze"
-          }
-        }
-      }
-    },
-    "1 route": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 Route"
-          }
-        }
-      }
-    },
-    "%lld routes": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld Routen"
+            "value": "„Die Crew-Situation sieht flottenweit gut aus. Heute ist nichts zu tun.\""
           }
         }
       }
@@ -1381,6 +231,16 @@
         }
       }
     },
+    "%@ nm": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ nm"
+          }
+        }
+      }
+    },
     "%@ nm · ": {
       "localizations": {
         "de": {
@@ -1521,6 +381,16 @@
         }
       }
     },
+    "%@ · closes after this leg": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · schließt nach diesem Flug"
+          }
+        }
+      }
+    },
     "%@ · concedes some share to rivals. Pays when the aircraft is full anyway.": {
       "localizations": {
         "de": {
@@ -1537,6 +407,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ · verteidigt den Marktanteil gegen Konkurrenten."
+          }
+        }
+      }
+    },
+    "%@ · that route closes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · diese Route wird geschlossen"
           }
         }
       }
@@ -1567,6 +447,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ — keine legale Crew in %@"
+          }
+        }
+      }
+    },
+    "%@ → %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        }
+      }
+    },
+    "%@ → … · tap the next city (it loops back to %@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → … · tippe die nächste Stadt an (die Schleife führt zurück nach %@)"
+          }
+        }
+      }
+    },
+    "%@ → ↺ · tap another, or Done": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → ↺ · tippe eine weitere an oder Fertig"
           }
         }
       }
@@ -1671,6 +581,16 @@
         }
       }
     },
+    "%@: %@ offered": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@ geboten"
+          }
+        }
+      }
+    },
     "%@: %lld/%lld (%lld%%) · net %@%@": {
       "localizations": {
         "de": {
@@ -1707,6 +627,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld"
+          }
+        }
+      }
+    },
+    "%lld %@ crews can't fly — currency lapsed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %@-Crews dürfen nicht fliegen – Lizenz abgelaufen"
           }
         }
       }
@@ -1751,12 +681,32 @@
         }
       }
     },
+    "%lld contested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld umkämpft"
+          }
+        }
+      }
+    },
     "%lld contesting your routes": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld umkämpfen deine Routen"
+          }
+        }
+      }
+    },
+    "%lld crew · %lld aircraft": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Crew · %lld Flugzeuge"
           }
         }
       }
@@ -1771,12 +721,42 @@
         }
       }
     },
+    "%lld crews grounded on lapsed currency — requalify to get them back on the line": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Crews wegen abgelaufener Lizenz am Boden – requalifizieren, um sie zurück in den Einsatz zu bringen"
+          }
+        }
+      }
+    },
+    "%lld crews lapsed — can't fly until requalified": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Crews mit abgelaufener Lizenz – flugunfähig bis zur Requalifizierung"
+          }
+        }
+      }
+    },
     "%lld currently contest one of your routes.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld umkämpfen derzeit eine deiner Routen."
+          }
+        }
+      }
+    },
+    "%lld due": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fällig"
           }
         }
       }
@@ -1791,12 +771,42 @@
         }
       }
     },
+    "%lld families need a look · %lld staffed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Familien brauchen Aufmerksamkeit · %lld besetzt"
+          }
+        }
+      }
+    },
     "%lld flights · avg %@/flight": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld Flüge · Ø %@/Flug"
+          }
+        }
+      }
+    },
+    "%lld hubs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Drehkreuze"
+          }
+        }
+      }
+    },
+    "%lld line-ready for %lld aircraft · %@ per aircraft": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld einsatzbereit für %lld Flugzeuge · %@ pro Flugzeug"
           }
         }
       }
@@ -1817,6 +827,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld Konkurrenten"
+          }
+        }
+      }
+    },
+    "%lld routes": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Routen"
+          }
+        }
+      }
+    },
+    "%lld seats": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Sitze"
           }
         }
       }
@@ -1921,6 +951,36 @@
         }
       }
     },
+    "%lld-day course in-house · no class-slot wait": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld-tägiger Kurs intern · kein Warten auf einen Kursplatz"
+          }
+        }
+      }
+    },
+    "%lld-day course with %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld-tägiger Kurs bei %@"
+          }
+        }
+      }
+    },
+    "%lld-day course with %@ · plus up to %lld days for a class slot": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld-tägiger Kurs bei %@ · plus bis zu %lld Tage Wartezeit auf einen Kursplatz"
+          }
+        }
+      }
+    },
     "%lld-day hedge:": {
       "localizations": {
         "de": {
@@ -1947,6 +1007,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld/%lld Flugzeuge · %lld/%lld Routen"
+          }
+        }
+      }
+    },
+    "%lld/%lld bay seats in use": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld/%lld Simulatorplätze belegt"
           }
         }
       }
@@ -2011,6 +1081,27 @@
         }
       }
     },
+    "+%lld more families": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld weitere Familien"
+          }
+        }
+      }
+    },
+    "+%lld more families below": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld weitere Familien unten"
+          }
+        }
+      }
+    },
     "+%lld%% (connecting traffic)": {
       "localizations": {
         "de": {
@@ -2027,6 +1118,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "+%lld%% Kosten · %@× Ausfallrisiko"
+          }
+        }
+      }
+    },
+    "1 %@ crew can't fly — currency lapsed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 %@-Crew darf nicht fliegen – Lizenz abgelaufen"
+          }
+        }
+      }
+    },
+    "1 crew grounded on lapsed currency — requalify to get it back on the line": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Crew wegen abgelaufener Lizenz am Boden – requalifizieren, um sie zurück in den Einsatz zu bringen"
+          }
+        }
+      }
+    },
+    "1 crew lapsed — can't fly until requalified": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Crew mit abgelaufener Lizenz – flugunfähig bis zur Requalifizierung"
+          }
+        }
+      }
+    },
+    "1 family needs a look · %lld staffed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Familie braucht Aufmerksamkeit · %lld besetzt"
+          }
+        }
+      }
+    },
+    "1 hub": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Drehkreuz"
+          }
+        }
+      }
+    },
+    "1 route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Route"
           }
         }
       }
@@ -2061,42 +1212,152 @@
         }
       }
     },
-    "a rival offered to buy a hub": {
+    "ACQUISITION": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "ein Rivale bietet an, ein Drehkreuz zu kaufen"
+            "value": "ERWERB"
           }
         }
       }
     },
-    "a route": {
+    "ACTIVE ROUTES": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "eine Route"
+            "value": "AKTIVE ROUTEN"
           }
         }
       }
     },
-    "a scheduled maintenance check is due": {
+    "ADD BAY": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "ein geplanter Wartungs-Check ist fällig"
+            "value": "PLATZ HINZUFÜGEN"
           }
         }
       }
     },
-    "a/c not assigned": {
+    "AIRCRAFT": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "kein Flugzeug zugewiesen"
+            "value": "FLUGZEUG"
+          }
+        }
+      }
+    },
+    "AIRCRAFT DETAIL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLUGZEUGDETAILS"
+          }
+        }
+      }
+    },
+    "AIRLINE NAME": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NAME DER AIRLINE"
+          }
+        }
+      }
+    },
+    "AOG": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AOG"
+          }
+        }
+      }
+    },
+    "AOG — grounded at %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AOG — am Boden in %@"
+          }
+        }
+      }
+    },
+    "APPROACH": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ANFLUG"
+          }
+        }
+      }
+    },
+    "ASSIGN": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZUWEISEN"
+          }
+        }
+      }
+    },
+    "ASSIGN FROM FLEET": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AUS FLOTTE ZUWEISEN"
+          }
+        }
+      }
+    },
+    "ASSIGN TO NEW ROUTE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NEUER ROUTE ZUWEISEN"
+          }
+        }
+      }
+    },
+    "ASSIGN TO ROUTE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ROUTE ZUWEISEN"
+          }
+        }
+      }
+    },
+    "AT ACQUISITION": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BEIM ERWERB"
+          }
+        }
+      }
+    },
+    "Abandon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
           }
         }
       }
@@ -2121,22 +1382,22 @@
         }
       }
     },
-    "Acquire a replacement": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ersatz erwerben"
-          }
-        }
-      }
-    },
     "Acquire A/C": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Erwerben"
+          }
+        }
+      }
+    },
+    "Acquire a replacement": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ersatz erwerben"
           }
         }
       }
@@ -2157,26 +1418,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Trotzdem erwerben"
-          }
-        }
-      }
-    },
-    "ACQUISITION": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ERWERB"
-          }
-        }
-      }
-    },
-    "ACTIVE ROUTES": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AKTIVE ROUTEN"
           }
         }
       }
@@ -2301,22 +1542,22 @@
         }
       }
     },
-    "AIRCRAFT": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLUGZEUG"
-          }
-        }
-      }
-    },
     "Aircraft": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Flugzeuge"
+          }
+        }
+      }
+    },
+    "Aircraft Types Assigned": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugewiesene Flugzeugtypen"
           }
         }
       }
@@ -2337,16 +1578,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flugzeug-Prüfung"
-          }
-        }
-      }
-    },
-    "AIRCRAFT DETAIL": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLUGZEUGDETAILS"
           }
         }
       }
@@ -2401,16 +1632,6 @@
         }
       }
     },
-    "Aircraft Types Assigned": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zugewiesene Flugzeugtypen"
-          }
-        }
-      }
-    },
     "Airframe Life": {
       "localizations": {
         "de": {
@@ -2441,27 +1662,7 @@
         }
       }
     },
-    "AIRLINE NAME": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NAME DER AIRLINE"
-          }
-        }
-      }
-    },
     "Airport Fees": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Flughafengebühren"
-          }
-        }
-      }
-    },
-    "Airport fees": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -2477,6 +1678,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flughafen-Anreize"
+          }
+        }
+      }
+    },
+    "Airport fees": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flughafengebühren"
           }
         }
       }
@@ -2501,6 +1712,16 @@
         }
       }
     },
+    "All %lld crew families staffed for continuous coverage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle %lld Crew-Familien für durchgehende Abdeckung besetzt"
+          }
+        }
+      }
+    },
     "All aircraft": {
       "localizations": {
         "de": {
@@ -2521,6 +1742,16 @@
         }
       }
     },
+    "Already type-rated · line-ready in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereits typengeprüft · einsatzbereit in %lld Tagen"
+          }
+        }
+      }
+    },
     "An activist holds %lld%% and wants change": {
       "localizations": {
         "de": {
@@ -2531,72 +1762,12 @@
         }
       }
     },
-    "an activist investor is demanding change": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ein aktivistischer Investor fordert Veränderung"
-          }
-        }
-      }
-    },
-    "an aircraft has no legal crew": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ein Flugzeug hat keine legale Crew"
-          }
-        }
-      }
-    },
-    "an aircraft is grounded (AOG)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ein Flugzeug ist stillgelegt (AOG)"
-          }
-        }
-      }
-    },
-    "an aircraft is nearing end of service": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ein Flugzeug nähert sich dem Dienstende"
-          }
-        }
-      }
-    },
     "An airport is already courting you — tap the bell (top right) to see their offer: opening fees waived plus a signing bonus. Accept it, then buy an aircraft that can fly the route. Match the plane to the market — a small turboprop or regional jet fills up; a big jet flies half-empty. Or skip it and open any route you like with Open Route.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Ein Flughafen umwirbt dich bereits — tippe oben rechts auf die Glocke, um das Angebot zu sehen: erlassene Eröffnungsgebühren plus einen Willkommensbonus. Nimm es an und kaufe dann ein Flugzeug, das die Route fliegen kann. Passe das Flugzeug zum Markt — ein kleiner Turboprop oder Regionaljet wird voll; ein großer Jet fliegt halb leer. Oder überspringe es und eröffne über „Route eröffnen“ eine beliebige Route."
-          }
-        }
-      }
-    },
-    "an airport is offering you a route": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ein Flughafen bietet dir eine Route an"
-          }
-        }
-      }
-    },
-    "an airport offered to buy a slot back": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ein Flughafen bietet an, einen Slot zurückzukaufen"
           }
         }
       }
@@ -2617,36 +1788,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jahresumsatz"
-          }
-        }
-      }
-    },
-    "AOG": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AOG"
-          }
-        }
-      }
-    },
-    "AOG — grounded at %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AOG — am Boden in %@"
-          }
-        }
-      }
-    },
-    "APPROACH": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ANFLUG"
           }
         }
       }
@@ -2681,52 +1822,12 @@
         }
       }
     },
-    "ASSIGN": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ZUWEISEN"
-          }
-        }
-      }
-    },
-    "ASSIGN FROM FLEET": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AUS FLOTTE ZUWEISEN"
-          }
-        }
-      }
-    },
     "Assign one from your fleet": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Eines aus deiner Flotte zuweisen"
-          }
-        }
-      }
-    },
-    "ASSIGN TO NEW ROUTE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NEUER ROUTE ZUWEISEN"
-          }
-        }
-      }
-    },
-    "ASSIGN TO ROUTE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ROUTE ZUWEISEN"
           }
         }
       }
@@ -2771,12 +1872,52 @@
         }
       }
     },
+    "At one of your hubs. Then a sim bay per crew family (%lld+ aircraft) trains it in-house: courses 60%% cheaper, a third shorter, no class-slot wait.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An einem deiner Drehkreuze. Danach schult ein Simulatorplatz pro Crew-Familie (ab %lld Flugzeugen) intern: Kurse 60 %% günstiger, ein Drittel kürzer, kein Warten auf einen Kursplatz."
+          }
+        }
+      }
+    },
     "Australia / New Zealand": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Australien / Neuseeland"
+          }
+        }
+      }
+    },
+    "Auto-scheduled · %lld crews due within %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch geplant · %lld Crews in den nächsten %lld Tagen fällig"
+          }
+        }
+      }
+    },
+    "Auto-scheduled · 1 crew due within %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch geplant · 1 Crew in den nächsten %lld Tagen fällig"
+          }
+        }
+      }
+    },
+    "Auto-scheduled · none due within %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch geplant · keine in den nächsten %lld Tagen fällig"
           }
         }
       }
@@ -2807,6 +1948,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Durchschnittsalter"
+          }
+        }
+      }
+    },
+    "Average load": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durchschnittliche Auslastung"
           }
         }
       }
@@ -2871,6 +2022,96 @@
         }
       }
     },
+    "BOARDING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "EINSTIEG"
+          }
+        }
+      }
+    },
+    "BORROW": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KREDIT AUFNEHMEN"
+          }
+        }
+      }
+    },
+    "BUILD": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BAUEN"
+          }
+        }
+      }
+    },
+    "BUILD %@ — %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ BAUEN — %@"
+          }
+        }
+      }
+    },
+    "BUILD · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BAUEN · %@"
+          }
+        }
+      }
+    },
+    "BUILD ▾": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BAUEN ▾"
+          }
+        }
+      }
+    },
+    "BUY": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KAUFEN"
+          }
+        }
+      }
+    },
+    "BUY BACK STOCK": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AKTIEN ZURÜCKKAUFEN"
+          }
+        }
+      }
+    },
+    "BY HUB": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NACH DREHKREUZ"
+          }
+        }
+      }
+    },
     "Base cost": {
       "localizations": {
         "de": {
@@ -2907,16 +2148,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Geduld des Vorstands"
-          }
-        }
-      }
-    },
-    "BOARDING": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "EINSTIEG"
           }
         }
       }
@@ -2981,22 +2212,22 @@
         }
       }
     },
-    "BORROW": {
+    "Build a training center": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "KREDIT AUFNEHMEN"
+            "value": "Trainingszentrum bauen"
           }
         }
       }
     },
-    "BUILD %@ — %@": {
+    "Build at %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ BAUEN — %@"
+            "value": "In %@ bauen"
           }
         }
       }
@@ -3007,16 +2238,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bau den Himmel."
-          }
-        }
-      }
-    },
-    "building": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "im Aufbau"
           }
         }
       }
@@ -3037,26 +2258,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wächst durch pünktliche Flüge; leidet unter Flugausfällen und Crew-Wartezeiten."
-          }
-        }
-      }
-    },
-    "BUY": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "KAUFEN"
-          }
-        }
-      }
-    },
-    "BUY BACK STOCK": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AKTIEN ZURÜCKKAUFEN"
           }
         }
       }
@@ -3141,22 +2342,122 @@
         }
       }
     },
-    "BY HUB": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NACH DREHKREUZ"
-          }
-        }
-      }
-    },
     "C check": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "C-Check"
+          }
+        }
+      }
+    },
+    "CARRIER PROFILE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AIRLINE-PROFIL"
+          }
+        }
+      }
+    },
+    "CASH FLOW": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CASHFLOW"
+          }
+        }
+      }
+    },
+    "CHIEF PILOT": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLUGBETRIEBSLEITER"
+          }
+        }
+      }
+    },
+    "CHOOSE YOUR FOUNDING REGION": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WÄHLE DEINE HEIMATREGION"
+          }
+        }
+      }
+    },
+    "CLOSED ROUTES": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GESCHLOSSENE ROUTEN"
+          }
+        }
+      }
+    },
+    "COLOR PALETTE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FARBPALETTE"
+          }
+        }
+      }
+    },
+    "CONTESTING YOU": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KONKURRIERT"
+          }
+        }
+      }
+    },
+    "CREATE A HUB — %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DREHKREUZ ERSTELLEN — %@"
+          }
+        }
+      }
+    },
+    "CREWS HOME": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CREW-ZENTRALE"
+          }
+        }
+      }
+    },
+    "CRUISE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "REISEFLUG"
+          }
+        }
+      }
+    },
+    "CURRENT PERFORMANCE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AKTUELLE LEISTUNG"
           }
         }
       }
@@ -3191,32 +2492,12 @@
         }
       }
     },
-    "CARRIER PROFILE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AIRLINE-PROFIL"
-          }
-        }
-      }
-    },
     "Cash after listing": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Barmittel nach Börsengang"
-          }
-        }
-      }
-    },
-    "CASH FLOW": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CASHFLOW"
           }
         }
       }
@@ -3301,16 +2582,6 @@
         }
       }
     },
-    "CHOOSE YOUR FOUNDING REGION": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "WÄHLE DEINE HEIMATREGION"
-          }
-        }
-      }
-    },
     "Cities served": {
       "localizations": {
         "de": {
@@ -3337,6 +2608,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ schließen und %@ parken?"
+          }
+        }
+      }
+    },
+    "Close %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ schließen?"
           }
         }
       }
@@ -3391,16 +2672,6 @@
         }
       }
     },
-    "CLOSED ROUTES": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GESCHLOSSENE ROUTEN"
-          }
-        }
-      }
-    },
     "Closed · %@": {
       "localizations": {
         "de": {
@@ -3417,16 +2688,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lounge-Miete"
-          }
-        }
-      }
-    },
-    "COLOR PALETTE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FARBPALETTE"
           }
         }
       }
@@ -3481,16 +2742,6 @@
         }
       }
     },
-    "CONTESTING YOU": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "KONKURRIERT"
-          }
-        }
-      }
-    },
     "Continue": {
       "localizations": {
         "de": {
@@ -3501,12 +2752,52 @@
         }
       }
     },
+    "Continuous coverage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durchgehende Abdeckung"
+          }
+        }
+      }
+    },
     "Cost": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Kosten"
+          }
+        }
+      }
+    },
+    "Course fees alone repay it above ~%lld aircraft; crew time saved counts on top": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allein die Kursgebühren amortisieren ihn ab ca. %lld Flugzeugen; die gesparte Crew-Zeit kommt obendrauf"
+          }
+        }
+      }
+    },
+    "Course savings repay it above ~%lld aircraft in this family": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Kursersparnis amortisiert ihn ab ca. %lld Flugzeugen in dieser Familie"
+          }
+        }
+      }
+    },
+    "Course savings vs. contract": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kursersparnis ggü. Vertrag"
           }
         }
       }
@@ -3711,22 +3002,22 @@
         }
       }
     },
-    "CREATE A HUB — %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DREHKREUZ ERSTELLEN — %@"
-          }
-        }
-      }
-    },
     "Crew": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Crew"
+          }
+        }
+      }
+    },
+    "Crew currency lapsed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crew-Lizenz abgelaufen"
           }
         }
       }
@@ -3741,12 +3032,22 @@
         }
       }
     },
-    "crew recurrent training is due": {
+    "Crew time is valued at what a crew-day is worth to the families you fly — and only while crew is actually your binding constraint. Deep cover, little value; stretched, a lot.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "eine Crew-Auffrischungsschulung ist fällig"
+            "value": "Crew-Zeit wird mit dem Wert eines Crew-Tages für deine geflogenen Familien bewertet – und nur, solange die Crew tatsächlich dein Engpass ist. Bei guter Reserve wenig wert, bei Knappheit viel."
+          }
+        }
+      }
+    },
+    "Crew time returned to the line": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurückgewonnene Crew-Zeit im Einsatz"
           }
         }
       }
@@ -3771,26 +3072,6 @@
         }
       }
     },
-    "CREWS HOME": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CREW-ZENTRALE"
-          }
-        }
-      }
-    },
-    "CRUISE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "REISEFLUG"
-          }
-        }
-      }
-    },
     "Cumulative net": {
       "localizations": {
         "de": {
@@ -3801,22 +3082,22 @@
         }
       }
     },
-    "Current route": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktuelle Route"
-          }
-        }
-      }
-    },
     "Current Status": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Aktueller Status"
+          }
+        }
+      }
+    },
+    "Current route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelle Route"
           }
         }
       }
@@ -3857,6 +3138,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "D-Check"
+          }
+        }
+      }
+    },
+    "DISRUPTIONS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STÖRUNGEN"
+          }
+        }
+      }
+    },
+    "DIVIDEND": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DIVIDENDE"
+          }
+        }
+      }
+    },
+    "DUE DILIGENCE — FULL BOOKS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DUE DILIGENCE — VOLLE BÜCHER"
+          }
+        }
+      }
+    },
+    "DUE DILIGENCE — PRELIMINARY": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DUE DILIGENCE — VORLÄUFIG"
           }
         }
       }
@@ -4041,32 +3362,12 @@
         }
       }
     },
-    "DISRUPTIONS": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "STÖRUNGEN"
-          }
-        }
-      }
-    },
     "Distance": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Distanz"
-          }
-        }
-      }
-    },
-    "DIVIDEND": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DIVIDENDE"
           }
         }
       }
@@ -4081,6 +3382,16 @@
         }
       }
     },
+    "Done": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        }
+      }
+    },
     "Downtime": {
       "localizations": {
         "de": {
@@ -4091,52 +3402,32 @@
         }
       }
     },
-    "DUE DILIGENCE — FULL BOOKS": {
+    "ESTIMATE": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "DUE DILIGENCE — VOLLE BÜCHER"
+            "value": "SCHÄTZUNG"
           }
         }
       }
     },
-    "DUE DILIGENCE — PRELIMINARY": {
+    "ESTIMATED VALUE": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "DUE DILIGENCE — VORLÄUFIG"
+            "value": "GESCHÄTZTER WERT"
           }
         }
       }
     },
-    "due now": {
+    "ETA": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "jetzt fällig"
-          }
-        }
-      }
-    },
-    "e.g. ASTR": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "z. B. ASTR"
-          }
-        }
-      }
-    },
-    "e.g. ZQ": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "z. B. ZQ"
+            "value": "Ankunft"
           }
         }
       }
@@ -4157,6 +3448,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vorzeitiges Beenden gibt den Jet zurück und kostet %@ Strafe (≈3 Monatsraten). Die Crew geht zurück in den Pool."
+          }
+        }
+      }
+    },
+    "Edit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeiten"
           }
         }
       }
@@ -4281,36 +3582,6 @@
         }
       }
     },
-    "ESTIMATE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SCHÄTZUNG"
-          }
-        }
-      }
-    },
-    "ESTIMATED VALUE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GESCHÄTZTER WERT"
-          }
-        }
-      }
-    },
-    "ETA": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ankunft"
-          }
-        }
-      }
-    },
     "Europe": {
       "localizations": {
         "de": {
@@ -4371,16 +3642,6 @@
         }
       }
     },
-    "Fair": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mäßig"
-          }
-        }
-      }
-    },
     "FALLING": {
       "localizations": {
         "de": {
@@ -4397,6 +3658,136 @@
           "stringUnit": {
             "state": "translated",
             "value": "FLUGPREIS"
+          }
+        }
+      }
+    },
+    "FINANCE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FINANZEN"
+          }
+        }
+      }
+    },
+    "FINANCING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FINANZIERUNG"
+          }
+        }
+      }
+    },
+    "FLEET": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLOTTE"
+          }
+        }
+      }
+    },
+    "FLEET HOME": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLOTTE"
+          }
+        }
+      }
+    },
+    "FLEET TAIL CODE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KENNUNG DER FLOTTE"
+          }
+        }
+      }
+    },
+    "FLIGHT OPERATIONS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLUGBETRIEB"
+          }
+        }
+      }
+    },
+    "FLYING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IM FLUG"
+          }
+        }
+      }
+    },
+    "FOUNDING PLAYER": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GRÜNDUNGSSPIELER"
+          }
+        }
+      }
+    },
+    "FREE PLAN": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GRATIS-VERSION"
+          }
+        }
+      }
+    },
+    "FUNDING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FINANZIERUNG"
+          }
+        }
+      }
+    },
+    "FUSELAGE TEXT": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RUMPFBESCHRIFTUNG"
+          }
+        }
+      }
+    },
+    "Facility + sim bays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anlage + Simulatorplätze"
+          }
+        }
+      }
+    },
+    "Fair": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mäßig"
           }
         }
       }
@@ -4441,42 +3832,12 @@
         }
       }
     },
-    "FINANCE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FINANZEN"
-          }
-        }
-      }
-    },
     "Finance": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Finanzen"
-          }
-        }
-      }
-    },
-    "FINANCING": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FINANZIERUNG"
-          }
-        }
-      }
-    },
-    "FLEET": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLOTTE"
           }
         }
       }
@@ -4491,32 +3852,12 @@
         }
       }
     },
-    "FLEET HOME": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLOTTE"
-          }
-        }
-      }
-    },
     "Fleet loan": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Flottenkredit"
-          }
-        }
-      }
-    },
-    "FLEET TAIL CODE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "KENNUNG DER FLOTTE"
           }
         }
       }
@@ -4561,16 +3902,6 @@
         }
       }
     },
-    "FLIGHT OPERATIONS": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLUGBETRIEB"
-          }
-        }
-      }
-    },
     "Flights": {
       "localizations": {
         "de": {
@@ -4591,12 +3922,12 @@
         }
       }
     },
-    "FLYING": {
+    "Flights flown": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "IM FLUG"
+            "value": "Geflogene Flüge"
           }
         }
       }
@@ -4611,42 +3942,12 @@
         }
       }
     },
-    "flying": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "im Flug"
-          }
-        }
-      }
-    },
     "Forced grounding": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Zwangsstilllegung"
-          }
-        }
-      }
-    },
-    "FOUNDING PLAYER": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GRÜNDUNGSSPIELER"
-          }
-        }
-      }
-    },
-    "FREE PLAN": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GRATIS-VERSION"
           }
         }
       }
@@ -4701,32 +4002,22 @@
         }
       }
     },
-    "FUNDING": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FINANZIERUNG"
-          }
-        }
-      }
-    },
-    "FUSELAGE TEXT": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "RUMPFBESCHRIFTUNG"
-          }
-        }
-      }
-    },
     "GO PUBLIC": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "BÖRSENGANG"
+          }
+        }
+      }
+    },
+    "GROUNDED": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AM BODEN"
           }
         }
       }
@@ -4771,16 +4062,6 @@
         }
       }
     },
-    "GROUNDED": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AM BODEN"
-          }
-        }
-      }
-    },
     "Grounded": {
       "localizations": {
         "de": {
@@ -4791,32 +4072,12 @@
         }
       }
     },
-    "grounded": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "am Boden"
-          }
-        }
-      }
-    },
     "Grow from a handful of legs to a global network, widebodies and all.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Wachse von wenigen Strecken zu einem weltweiten Netzwerk — mit Großraumjets und allem."
-          }
-        }
-      }
-    },
-    "Hedge active · %lld days left": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hedge aktiv · noch %lld Tage"
           }
         }
       }
@@ -4851,22 +4112,52 @@
         }
       }
     },
-    "High to low": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Absteigend"
-          }
-        }
-      }
-    },
     "HIRE": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "EINSTELLEN"
+          }
+        }
+      }
+    },
+    "HOW MUCH TO SELL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WIE VIEL VERKAUFEN"
+          }
+        }
+      }
+    },
+    "HUB P&L": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DREHKREUZ-GUV"
+          }
+        }
+      }
+    },
+    "Hedge active · %lld days left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hedge aktiv · noch %lld Tage"
+          }
+        }
+      }
+    },
+    "High to low": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Absteigend"
           }
         }
       }
@@ -4887,16 +4178,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Crew einstellen"
-          }
-        }
-      }
-    },
-    "HOW MUCH TO SELL": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "WIE VIEL VERKAUFEN"
           }
         }
       }
@@ -4961,16 +4242,6 @@
         }
       }
     },
-    "HUB P&L": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DREHKREUZ-GUV"
-          }
-        }
-      }
-    },
     "Hubs": {
       "localizations": {
         "de": {
@@ -5031,16 +4302,6 @@
         }
       }
     },
-    "idle": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ungenutzt"
-          }
-        }
-      }
-    },
     "Idle — no route": {
       "localizations": {
         "de": {
@@ -5051,62 +4312,12 @@
         }
       }
     },
-    "in range · runway OK": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "in Reichweite · Startbahn OK"
-          }
-        }
-      }
-    },
     "In service": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Im Einsatz"
-          }
-        }
-      }
-    },
-    "in shop · ~%lldd": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "in Werkstatt · ~%lld T"
-          }
-        }
-      }
-    },
-    "in ~%lld cyc": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "in ~%lld Zyklen"
-          }
-        }
-      }
-    },
-    "in ~%lld days if deferred": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "in ~%lld Tagen bei Aufschub"
-          }
-        }
-      }
-    },
-    "in ~%lldd": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "in ~%lld T"
           }
         }
       }
@@ -5171,6 +4382,46 @@
         }
       }
     },
+    "LAST MONTH": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LETZTER MONAT"
+          }
+        }
+      }
+    },
+    "LEASE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LEASEN"
+          }
+        }
+      }
+    },
+    "LEASED": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GELEAST"
+          }
+        }
+      }
+    },
+    "LIVERY UPDATE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LACKIERUNG AKTUALISIEREN"
+          }
+        }
+      }
+    },
     "Landing": {
       "localizations": {
         "de": {
@@ -5201,32 +4452,12 @@
         }
       }
     },
-    "LAST MONTH": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LETZTER MONAT"
-          }
-        }
-      }
-    },
     "Last month": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Letzter Monat"
-          }
-        }
-      }
-    },
-    "last month": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "letzten Monat"
           }
         }
       }
@@ -5271,16 +4502,6 @@
         }
       }
     },
-    "LEASE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LEASEN"
-          }
-        }
-      }
-    },
     "Lease cost": {
       "localizations": {
         "de": {
@@ -5317,16 +4538,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Leasingraten"
-          }
-        }
-      }
-    },
-    "LEASED": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GELEAST"
           }
         }
       }
@@ -5401,16 +4612,6 @@
         }
       }
     },
-    "LIVERY UPDATE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LACKIERUNG AKTUALISIEREN"
-          }
-        }
-      }
-    },
     "Load": {
       "localizations": {
         "de": {
@@ -5481,6 +4682,47 @@
         }
       }
     },
+    "MAINTENANCE": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WARTUNG"
+          }
+        }
+      }
+    },
+    "MARKET": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MARKT"
+          }
+        }
+      }
+    },
+    "MARKET INTELLIGENCE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MARKTANALYSE"
+          }
+        }
+      }
+    },
+    "MARKETPLACE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MARKTPLATZ"
+          }
+        }
+      }
+    },
     "Maintenance": {
       "localizations": {
         "de": {
@@ -5491,22 +4733,22 @@
         }
       }
     },
-    "Maintenance & crew": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wartung & Crew"
-          }
-        }
-      }
-    },
     "Maintenance & Value": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Wartung & Wert"
+          }
+        }
+      }
+    },
+    "Maintenance & crew": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wartung & Crew"
           }
         }
       }
@@ -5541,12 +4783,12 @@
         }
       }
     },
-    "MARKET": {
+    "Market Value": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "MARKT"
+            "value": "Marktwert"
           }
         }
       }
@@ -5561,32 +4803,12 @@
         }
       }
     },
-    "MARKET INTELLIGENCE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MARKTANALYSE"
-          }
-        }
-      }
-    },
     "Market valuation": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Marktbewertung"
-          }
-        }
-      }
-    },
-    "Market Value": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Marktwert"
           }
         }
       }
@@ -5631,16 +4853,6 @@
         }
       }
     },
-    "MARKETPLACE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "MARKTPLATZ"
-          }
-        }
-      }
-    },
     "Marketplace": {
       "localizations": {
         "de": {
@@ -5681,16 +4893,6 @@
         }
       }
     },
-    "Monthly debt service": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monatlicher Schuldendienst"
-          }
-        }
-      }
-    },
     "Monthly Lease": {
       "localizations": {
         "de": {
@@ -5701,12 +4903,32 @@
         }
       }
     },
+    "Monthly debt service": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monatlicher Schuldendienst"
+          }
+        }
+      }
+    },
     "Move this aircraft to a different route with ASSIGN TO NEW ROUTE (a small route fee applies), or free it up as a spare with PARK. No need to close the route by hand — a route it leaves closes automatically.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Verschiebe dieses Flugzeug mit NEUER ROUTE ZUWEISEN auf eine andere Route (es fällt eine kleine Routengebühr an) oder stelle es mit PARKEN als Reserve frei. Du musst die Route nicht von Hand schließen – eine verlassene Route wird automatisch geschlossen."
+          }
+        }
+      }
+    },
+    "Moves to %@ after landing at %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wechselt nach der Landung in %@ auf %@"
           }
         }
       }
@@ -5727,6 +4949,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Meine Flotte"
+          }
+        }
+      }
+    },
+    "NET WORTH": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NETTOVERMÖGEN"
+          }
+        }
+      }
+    },
+    "NET WORTH TREND": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NETTOVERMÖGEN-VERLAUF"
+          }
+        }
+      }
+    },
+    "NETWORK": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NETZWERK"
+          }
+        }
+      }
+    },
+    "NEW · %lldd": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NEU · %lld T"
           }
         }
       }
@@ -5771,6 +5033,16 @@
         }
       }
     },
+    "Needs %lld aircraft in the family (have %lld)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benötigt %lld Flugzeuge in der Familie (vorhanden: %lld)"
+          }
+        }
+      }
+    },
     "Needs Attention": {
       "localizations": {
         "de": {
@@ -5781,12 +5053,22 @@
         }
       }
     },
-    "Net for this leg": {
+    "Needs an operating hub. Then a sim bay per crew family (%lld+ aircraft) trains it in-house: courses 60%% cheaper, a third shorter, no class-slot wait.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Netto für diesen Flug"
+            "value": "Benötigt ein aktives Drehkreuz. Danach schult ein Simulatorplatz pro Crew-Familie (ab %lld Flugzeugen) intern: Kurse 60 %% günstiger, ein Drittel kürzer, kein Warten auf einen Kursplatz."
+          }
+        }
+      }
+    },
+    "Net": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Netto"
           }
         }
       }
@@ -5811,32 +5093,12 @@
         }
       }
     },
-    "NET WORTH": {
+    "Net for this leg": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "NETTOVERMÖGEN"
-          }
-        }
-      }
-    },
-    "NET WORTH TREND": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NETTOVERMÖGEN-VERLAUF"
-          }
-        }
-      }
-    },
-    "NETWORK": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "NETZWERK"
+            "value": "Netto für diesen Flug"
           }
         }
       }
@@ -5847,6 +5109,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Netzwerk"
+          }
+        }
+      }
+    },
+    "New %@ crew hired — in the type-rating course, line-ready in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue %@-Crew eingestellt – im Type-Rating-Kurs, einsatzbereit in %lld Tagen"
+          }
+        }
+      }
+    },
+    "New %@ crew hired — line-ready in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue %@-Crew eingestellt – einsatzbereit in %lld Tagen"
           }
         }
       }
@@ -5877,6 +5159,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Neue Crew"
+          }
+        }
+      }
+    },
+    "New crew in training · line-ready in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Crew im Training · einsatzbereit in %lld Tagen"
+          }
+        }
+      }
+    },
+    "New crew in training · line-ready tomorrow": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Crew im Training · morgen einsatzbereit"
+          }
+        }
+      }
+    },
+    "New hire + type rating": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neueinstellung + Type Rating"
           }
         }
       }
@@ -5917,6 +5229,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Keine aktiven Kredite. Nimm einen Kredit auf, um schneller zu wachsen, als es dein Cashflow erlaubt – dafür zahlst du Zinsen und eine feste Monatsrate."
+          }
+        }
+      }
+    },
+    "No aircraft": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Flugzeug"
           }
         }
       }
@@ -5981,6 +5303,17 @@
         }
       }
     },
+    "No aircraft yet. Checks appear here once you own a fleet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Flugzeuge. Checks erscheinen hier, sobald du eine Flotte besitzt."
+          }
+        }
+      }
+    },
     "No comparable idle aircraft (a substitute needs similar seats and range). Acquire one to cover the route, or suspend the route below.": {
       "localizations": {
         "de": {
@@ -6041,6 +5374,16 @@
         }
       }
     },
+    "No flights flown under your flag yet — put its aircraft on routes to start its book.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Flüge unter deiner Flagge – setze die Flugzeuge auf Routen ein, um die Bücher zu eröffnen."
+          }
+        }
+      }
+    },
     "No flights flown yet.": {
       "localizations": {
         "de": {
@@ -6077,6 +5420,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noch keine Drehkreuze. Errichte ein Drehkreuz an einem Flughafen mit 5+ Routen."
+          }
+        }
+      }
+    },
+    "No idle aircraft — acquire one to fly a new route.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein freies Flugzeug – erwirb eines, um eine neue Route zu fliegen."
           }
         }
       }
@@ -6141,12 +5494,12 @@
         }
       }
     },
-    "none — awaiting legal crew": {
+    "No sim bays yet — add one on a crew family's card (%lld+ aircraft) to train that family in-house. Everyone else still trains with %@.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "keine — wartet auf legale Crew"
+            "value": "Noch keine Simulatorplätze – füge auf der Karte einer Crew-Familie (ab %lld Flugzeugen) einen hinzu, um diese Familie intern zu schulen. Alle anderen trainieren weiterhin bei %@."
           }
         }
       }
@@ -6221,16 +5574,6 @@
         }
       }
     },
-    "now — un-airworthy": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "jetzt — nicht flugtauglich"
-          }
-        }
-      }
-    },
     "OFF": {
       "localizations": {
         "de": {
@@ -6241,12 +5584,12 @@
         }
       }
     },
-    "Offer": {
+    "OFF — crews lapse when their currency runs out": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Angebot"
+            "value": "AUS – Crews verlieren ihre Lizenz, wenn sie abläuft"
           }
         }
       }
@@ -6257,6 +5600,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "AN"
+          }
+        }
+      }
+    },
+    "OPERATING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IN BETRIEB"
+          }
+        }
+      }
+    },
+    "OPS BRIEFING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BETRIEBS-BRIEFING"
+          }
+        }
+      }
+    },
+    "OPS HOME": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BETRIEBS-ZENTRALE"
+          }
+        }
+      }
+    },
+    "OVERDUE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ÜBERFÄLLIG"
+          }
+        }
+      }
+    },
+    "OVERDUE — grounding risk rising · ~%lldd in shop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ÜBERFÄLLIG — steigendes Ausfallrisiko · ~%lld T in Werkstatt"
+          }
+        }
+      }
+    },
+    "OVERHEAD & CAPITAL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GEMEINKOSTEN & KAPITAL"
+          }
+        }
+      }
+    },
+    "OWNED": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IM EIGENTUM"
+          }
+        }
+      }
+    },
+    "Offer": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angebot"
           }
         }
       }
@@ -6331,12 +5754,32 @@
         }
       }
     },
+    "Open route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Route eröffnen"
+          }
+        }
+      }
+    },
     "Open their books · %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Bücher öffnen · %@"
+          }
+        }
+      }
+    },
+    "Opened since the deal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seit dem Kauf eröffnet"
           }
         }
       }
@@ -6351,32 +5794,12 @@
         }
       }
     },
-    "opening waived (%@)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eröffnung erlassen (%@)"
-          }
-        }
-      }
-    },
     "Operated by %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Betrieben von %@"
-          }
-        }
-      }
-    },
-    "OPERATING": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IN BETRIEB"
           }
         }
       }
@@ -6471,26 +5894,6 @@
         }
       }
     },
-    "OPS BRIEFING": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BETRIEBS-BRIEFING"
-          }
-        }
-      }
-    },
-    "OPS HOME": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BETRIEBS-ZENTRALE"
-          }
-        }
-      }
-    },
     "Ops logs events — weather, fuel spikes, strikes — and Finance shows your bottom line. Keep cash positive, or the airline goes bankrupt. Now go build it — good luck, boss!": {
       "localizations": {
         "de": {
@@ -6511,42 +5914,12 @@
         }
       }
     },
-    "out of range (%@ nm max)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "außer Reichweite (max. %@ nm)"
-          }
-        }
-      }
-    },
-    "OVERDUE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ÜBERFÄLLIG"
-          }
-        }
-      }
-    },
     "Overdue surcharge": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Zuschlag bei Überfälligkeit"
-          }
-        }
-      }
-    },
-    "OVERDUE — grounding risk rising · ~%lldd in shop": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ÜBERFÄLLIG — steigendes Ausfallrisiko · ~%lld T in Werkstatt"
           }
         }
       }
@@ -6561,42 +5934,12 @@
         }
       }
     },
-    "OVERHEAD & CAPITAL": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GEMEINKOSTEN & KAPITAL"
-          }
-        }
-      }
-    },
-    "OWNED": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "IM EIGENTUM"
-          }
-        }
-      }
-    },
     "Owned": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Im Eigentum"
-          }
-        }
-      }
-    },
-    "Paint %@ onto the fleet.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bringe %@ auf die Flotte."
           }
         }
       }
@@ -6611,32 +5954,12 @@
         }
       }
     },
-    "Paint cost": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lackierkosten"
-          }
-        }
-      }
-    },
     "PAINT YOUR FLEET": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "LACKIERE DEINE FLOTTE"
-          }
-        }
-      }
-    },
-    "Park %@?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ parken?"
           }
         }
       }
@@ -6657,6 +5980,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "GEPARKT"
+          }
+        }
+      }
+    },
+    "PAY OFF": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TILGEN"
+          }
+        }
+      }
+    },
+    "PROFITABILITY": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RENTABILITÄT"
+          }
+        }
+      }
+    },
+    "PROFITABLE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PROFITABEL"
+          }
+        }
+      }
+    },
+    "PUBLIC COMPANY": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BÖRSENNOTIERT"
+          }
+        }
+      }
+    },
+    "Paint %@ onto the fleet.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bringe %@ auf die Flotte."
+          }
+        }
+      }
+    },
+    "Paint cost": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lackierkosten"
+          }
+        }
+      }
+    },
+    "Park %@?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ parken?"
           }
         }
       }
@@ -6691,16 +6084,6 @@
         }
       }
     },
-    "PAY OFF": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TILGEN"
-          }
-        }
-      }
-    },
     "Pay shareholders — lifts sentiment, costs cash": {
       "localizations": {
         "de": {
@@ -6717,6 +6100,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Phase"
+          }
+        }
+      }
+    },
+    "Pick the aircraft, then tap the cities it will fly in order.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wähle das Flugzeug und tippe dann der Reihe nach die Städte an, die es anfliegen soll."
           }
         }
       }
@@ -6791,36 +6184,6 @@
         }
       }
     },
-    "PROFITABILITY": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "RENTABILITÄT"
-          }
-        }
-      }
-    },
-    "PROFITABLE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "PROFITABEL"
-          }
-        }
-      }
-    },
-    "profitable": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "profitabel"
-          }
-        }
-      }
-    },
     "Program length": {
       "localizations": {
         "de": {
@@ -6851,16 +6214,6 @@
         }
       }
     },
-    "PUBLIC COMPANY": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BÖRSENNOTIERT"
-          }
-        }
-      }
-    },
     "Public filings only — the same thin picture a buyer has before an NDA. Ranges are wide because the fleet's age SPREAD isn't disclosed.": {
       "localizations": {
         "de": {
@@ -6881,32 +6234,12 @@
         }
       }
     },
-    "Raised (IPO + secondary)": {
+    "RATED · %lldd": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eingeworben (Börsengang + Erhöhung)"
-          }
-        }
-      }
-    },
-    "Range": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reichweite"
-          }
-        }
-      }
-    },
-    "Real cost of the deal": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reale Kosten des Deals"
+            "value": "TYPENGEPRÜFT · %lld T"
           }
         }
       }
@@ -6931,6 +6264,146 @@
         }
       }
     },
+    "RECOUPING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AMORTISIERT SICH"
+          }
+        }
+      }
+    },
+    "REPAINT FLEET": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLOTTE NEU LACKIEREN"
+          }
+        }
+      }
+    },
+    "REPORTS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BERICHTE"
+          }
+        }
+      }
+    },
+    "REQUALIFY %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "REQUALIFIZIEREN %@"
+          }
+        }
+      }
+    },
+    "REVENUE LOST WHILE GROUNDED": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UMSATZVERLUST AM BODEN"
+          }
+        }
+      }
+    },
+    "RISING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STEIGEND"
+          }
+        }
+      }
+    },
+    "RJ": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RJ"
+          }
+        }
+      }
+    },
+    "ROUTE OPPORTUNITIES": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ROUTEN-CHANCEN"
+          }
+        }
+      }
+    },
+    "RUNNING THIN": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KNAPP BESETZT"
+          }
+        }
+      }
+    },
+    "Raised (IPO + secondary)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingeworben (Börsengang + Erhöhung)"
+          }
+        }
+      }
+    },
+    "Range": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reichweite"
+          }
+        }
+      }
+    },
+    "Rated hire": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typengeprüfte Einstellung"
+          }
+        }
+      }
+    },
+    "Rated hire line-ready in %lld days · type-rating course %lld days · recurrent %lld days, every %lld days (auto-scheduled a few crews at a time)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typengeprüfte Einstellung einsatzbereit in %lld Tagen · Type-Rating-Kurs %lld Tage · wiederkehrendes Training %lld Tage, alle %lld Tage (automatisch geplant, jeweils wenige Crews)"
+          }
+        }
+      }
+    },
+    "Real cost of the deal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reale Kosten des Deals"
+          }
+        }
+      }
+    },
     "Recouped by flight %lld · %@": {
       "localizations": {
         "de": {
@@ -6951,22 +6424,32 @@
         }
       }
     },
-    "recouped its %@ opening cost, +%@": {
+    "Recurrent training": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "hat die %@ Eröffnungskosten amortisiert, +%@"
+            "value": "Wiederkehrendes Training"
           }
         }
       }
     },
-    "RECOUPING": {
+    "Recurrent training · back in %lld days": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "AMORTISIERT SICH"
+            "value": "Wiederkehrendes Training · zurück in %lld Tagen"
+          }
+        }
+      }
+    },
+    "Recurrent training · back tomorrow": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederkehrendes Training · morgen zurück"
           }
         }
       }
@@ -7011,16 +6494,6 @@
         }
       }
     },
-    "REPAINT FLEET": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLOTTE NEU LACKIEREN"
-          }
-        }
-      }
-    },
     "Repaint Fleet": {
       "localizations": {
         "de": {
@@ -7041,22 +6514,52 @@
         }
       }
     },
-    "REPORTS": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BERICHTE"
-          }
-        }
-      }
-    },
     "Reputation": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Reputation"
+          }
+        }
+      }
+    },
+    "Requalify with %@ (~%lld days, at the expedited rate). Auto-scheduled recurrent training on the Crews tab avoids this.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requalifizierung bei %@ (~%lld Tage, zum Eiltarif). Automatisch geplantes wiederkehrendes Training im Crews-Tab verhindert das."
+          }
+        }
+      }
+    },
+    "Requalify · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requalifizieren · %@"
+          }
+        }
+      }
+    },
+    "Requalifying · back in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requalifizierung · zurück in %lld Tagen"
+          }
+        }
+      }
+    },
+    "Requalifying · back tomorrow": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requalifizierung · morgen zurück"
           }
         }
       }
@@ -7141,16 +6644,6 @@
         }
       }
     },
-    "REVENUE LOST WHILE GROUNDED": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UMSATZVERLUST AM BODEN"
-          }
-        }
-      }
-    },
     "Revenue lost while grounded": {
       "localizations": {
         "de": {
@@ -7161,32 +6654,22 @@
         }
       }
     },
-    "RISING": {
+    "Route Opportunities": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "STEIGEND"
+            "value": "Routen-Chancen"
           }
         }
       }
     },
-    "RJ": {
+    "Route P&L": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "RJ"
-          }
-        }
-      }
-    },
-    "route": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Route"
+            "value": "Routen-G&V"
           }
         }
       }
@@ -7221,36 +6704,6 @@
         }
       }
     },
-    "ROUTE OPPORTUNITIES": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ROUTEN-CHANCEN"
-          }
-        }
-      }
-    },
-    "Route Opportunities": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Routen-Chancen"
-          }
-        }
-      }
-    },
-    "Route P&L": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Routen-G&V"
-          }
-        }
-      }
-    },
     "Route:": {
       "localizations": {
         "de": {
@@ -7281,22 +6734,12 @@
         }
       }
     },
-    "routes through %@ − hub & club costs": {
+    "Running costs to date": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Routen über %@ − Drehkreuz- & Lounge-Kosten"
-          }
-        }
-      }
-    },
-    "RUNNING THIN": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "KNAPP BESETZT"
+            "value": "Bisherige Betriebskosten"
           }
         }
       }
@@ -7307,6 +6750,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start-/Landebahnen"
+          }
+        }
+      }
+    },
+    "SCENARIOS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SZENARIEN"
+          }
+        }
+      }
+    },
+    "SECONDARY OFFERING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KAPITALERHÖHUNG"
+          }
+        }
+      }
+    },
+    "SELL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VERKAUFEN"
+          }
+        }
+      }
+    },
+    "SELL AIRCRAFT": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLUGZEUG VERKAUFEN"
+          }
+        }
+      }
+    },
+    "SPARE · at %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ERSATZ · in %@"
+          }
+        }
+      }
+    },
+    "STABLE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STABIL"
+          }
+        }
+      }
+    },
+    "STRUCTURAL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STRUKTUR"
           }
         }
       }
@@ -7351,22 +6864,23 @@
         }
       }
     },
-    "SCENARIOS": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SZENARIEN"
-          }
-        }
-      }
-    },
     "Scheduled A/C/D checks. Service due aircraft to stay airworthy — flying past a check raises breakdown risk. Emergencies (AOG) appear in Needs Attention.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Geplante A-/C-/D-Checks. Warte fällige Flugzeuge, um sie flugtauglich zu halten — einen Check zu überfliegen erhöht das Ausfallrisiko. Notfälle (AOG) erscheinen unter „Erfordert Aufmerksamkeit“."
+          }
+        }
+      }
+    },
+    "Scheduled A/C/D checks. Service due aircraft to stay airworthy — flying past a check raises breakdown risk. Emergencies (AOG) appear in Ops.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplante A-/C-/D-Checks. Warte fällige Flugzeuge, um sie flugtauglich zu halten — einen Check zu überfliegen erhöht das Ausfallrisiko. Notfälle (AOG) erscheinen unter „Betrieb“."
           }
         }
       }
@@ -7411,26 +6925,6 @@
         }
       }
     },
-    "SECONDARY OFFERING": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "KAPITALERHÖHUNG"
-          }
-        }
-      }
-    },
-    "SELL": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "VERKAUFEN"
-          }
-        }
-      }
-    },
     "Sell %@": {
       "localizations": {
         "de": {
@@ -7457,16 +6951,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verkaufen & Route schließen"
-          }
-        }
-      }
-    },
-    "SELL AIRCRAFT": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "FLUGZEUG VERKAUFEN"
           }
         }
       }
@@ -7561,6 +7045,26 @@
         }
       }
     },
+    "Short %lld crews even after training lands — a permanent shortfall": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch nach Abschluss des Trainings fehlen %lld Crews – ein dauerhafter Engpass"
+          }
+        }
+      }
+    },
+    "Short 1 crew even after training lands — a permanent shortfall": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch nach Abschluss des Trainings fehlt 1 Crew – ein dauerhafter Engpass"
+          }
+        }
+      }
+    },
     "Short-term line": {
       "localizations": {
         "de": {
@@ -7577,6 +7081,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zeigen"
+          }
+        }
+      }
+    },
+    "Show all %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle %lld anzeigen"
+          }
+        }
+      }
+    },
+    "Show fewer": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weniger anzeigen"
           }
         }
       }
@@ -7601,12 +7127,12 @@
         }
       }
     },
-    "since launch": {
+    "Sim bay": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "seit dem Start"
+            "value": "Simulatorplatz"
           }
         }
       }
@@ -7661,16 +7187,6 @@
         }
       }
     },
-    "sold to %@ — their fortress now": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "an %@ verkauft — jetzt deren Festung"
-          }
-        }
-      }
-    },
     "Sort": {
       "localizations": {
         "de": {
@@ -7701,32 +7217,32 @@
         }
       }
     },
-    "SPARE · at %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ERSATZ · in %@"
-          }
-        }
-      }
-    },
-    "STABLE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "STABIL"
-          }
-        }
-      }
-    },
     "Staff your crews": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Besetze deine Crews"
+          }
+        }
+      }
+    },
+    "Staffed for continuous coverage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für durchgehende Abdeckung besetzt"
+          }
+        }
+      }
+    },
+    "Staffed, but %lld due for recurrent within %lld days — expect a dip": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besetzt, aber %lld in den nächsten %lld Tagen zum Wiederholungstraining fällig – mit einem Einbruch rechnen"
           }
         }
       }
@@ -7811,16 +7327,6 @@
         }
       }
     },
-    "STRUCTURAL": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "STRUKTUR"
-          }
-        }
-      }
-    },
     "Study their fleets, networks, and books": {
       "localizations": {
         "de": {
@@ -7841,22 +7347,22 @@
         }
       }
     },
+    "Suspending pauses %@ for ~%lld days (no flights, no revenue), then %@ resumes it. Covering keeps the route earning.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausieren stoppt %@ für ~%lld Tage (keine Flüge, keine Einnahmen), dann nimmt %@ sie wieder auf. Abdecken hält die Route am Verdienen."
+          }
+        }
+      }
+    },
     "Suspending pauses %@ ↔︎ %@ for ~%lld days (no flights, no revenue), then %@ resumes it. Covering keeps the route earning.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Pausieren stoppt %@ ↔︎ %@ für ~%lld Tage (keine Flüge, kein Umsatz), danach nimmt %@ sie wieder auf. Abdecken hält die Route am Verdienen."
-          }
-        }
-      }
-    },
-    "Tail": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kennung"
           }
         }
       }
@@ -7871,52 +7377,12 @@
         }
       }
     },
-    "Take it all the way": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geh den ganzen Weg"
-          }
-        }
-      }
-    },
-    "Take over %@–%@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@–%@ übernehmen"
-          }
-        }
-      }
-    },
-    "Take the controls": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Übernimm die Kontrolle"
-          }
-        }
-      }
-    },
     "TAKEOFF": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "START"
-          }
-        }
-      }
-    },
-    "Takeoff / climb": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Start / Steigflug"
           }
         }
       }
@@ -7941,6 +7407,176 @@
         }
       }
     },
+    "TERMINATE LEASE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LEASING BEENDEN"
+          }
+        }
+      }
+    },
+    "THE DEAL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DER DEAL"
+          }
+        }
+      }
+    },
+    "TICKER SYMBOL": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TICKER-SYMBOL"
+          }
+        }
+      }
+    },
+    "TITLE FONT": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SCHRIFTART"
+          }
+        }
+      }
+    },
+    "TOPLINE PERFORMANCE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ECKDATEN"
+          }
+        }
+      }
+    },
+    "TRAINING": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAINING"
+          }
+        }
+      }
+    },
+    "TRAINING P&L": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAINING-BILANZ"
+          }
+        }
+      }
+    },
+    "TRAINING PIPELINE": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TRAININGS-PIPELINE"
+          }
+        }
+      }
+    },
+    "TRANSFER WITHIN GROUP": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "INNERHALB DER GRUPPE ÜBERTRAGEN"
+          }
+        }
+      }
+    },
+    "TURNAROUND": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ABFERTIGUNG"
+          }
+        }
+      }
+    },
+    "Tail": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kennung"
+          }
+        }
+      }
+    },
+    "Take it all the way": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geh den ganzen Weg"
+          }
+        }
+      }
+    },
+    "Take over %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ übernehmen"
+          }
+        }
+      }
+    },
+    "Take over %@–%@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@–%@ übernehmen"
+          }
+        }
+      }
+    },
+    "Take the controls": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übernimm die Kontrolle"
+          }
+        }
+      }
+    },
+    "Takeoff / climb": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start / Steigflug"
+          }
+        }
+      }
+    },
+    "Tap the cities %@ will fly, in order": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe der Reihe nach die Städte an, die %@ anfliegen soll"
+          }
+        }
+      }
+    },
     "Taxiing in": {
       "localizations": {
         "de": {
@@ -7957,16 +7593,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rollt zum Start"
-          }
-        }
-      }
-    },
-    "TERMINATE LEASE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LEASING BEENDEN"
           }
         }
       }
@@ -8021,32 +7647,22 @@
         }
       }
     },
-    "The aircraft is kept and becomes an idle spare you can reassign anytime. If it's mid-flight, it parks after the current leg.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das Flugzeug bleibt und wird zur ungenutzten Reserve, die du jederzeit neu zuweisen kannst. Ist es im Flug, parkt es nach dem aktuellen Flug."
-          }
-        }
-      }
-    },
-    "THE DEAL": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DER DEAL"
-          }
-        }
-      }
-    },
     "The Fleet tab tracks every aircraft — its status, age, and resale value. Older airframes cost more to run and break down more often, so plan when to sell.": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Der Flotte-Tab zeigt jedes Flugzeug — Status, Alter und Wiederverkaufswert. Ältere Zellen sind teurer im Betrieb und fallen häufiger aus, plane also, wann du verkaufst."
+          }
+        }
+      }
+    },
+    "The aircraft is kept and becomes an idle spare you can reassign anytime. If it's mid-flight, it parks after the current leg.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Flugzeug bleibt und wird zur ungenutzten Reserve, die du jederzeit neu zuweisen kannst. Ist es im Flug, parkt es nach dem aktuellen Flug."
           }
         }
       }
@@ -8181,6 +7797,46 @@
         }
       }
     },
+    "Thin right now, but %lld in training": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuell knapp, aber %lld im Training"
+          }
+        }
+      }
+    },
+    "Thin right now, but %lld in training — first one back in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuell knapp, aber %lld im Training – die erste ist in %lld Tagen zurück"
+          }
+        }
+      }
+    },
+    "Thin — expect occasional crew holds": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Knapp – gelegentliche Crew-Wartezeiten zu erwarten"
+          }
+        }
+      }
+    },
+    "This is a long check. Cover %@ with a comparable idle aircraft (it flies the route until %@ returns, then goes back to your spares), or suspend the route while %@ is in the shop.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist ein langer Check. Decke %@ mit einem vergleichbaren freien Flugzeug ab (es fliegt die Route, bis %@ zurückkehrt, und geht dann zurück zu deinen Reserven), oder pausiere die Route, während %@ in der Werkstatt ist."
+          }
+        }
+      }
+    },
     "This is a long check. Cover %@ ↔︎ %@ with a comparable idle aircraft (it flies the route until %@ returns, then goes back to your spares), or suspend the route while %@ is in the shop.": {
       "localizations": {
         "de": {
@@ -8211,16 +7867,6 @@
         }
       }
     },
-    "this month": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "diesen Monat"
-          }
-        }
-      }
-    },
     "Ticker": {
       "localizations": {
         "de": {
@@ -8231,42 +7877,12 @@
         }
       }
     },
-    "TICKER SYMBOL": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TICKER-SYMBOL"
-          }
-        }
-      }
-    },
     "Ticket revenue": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Ticketeinnahmen"
-          }
-        }
-      }
-    },
-    "TITLE FONT": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "SCHRIFTART"
-          }
-        }
-      }
-    },
-    "TOPLINE PERFORMANCE": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ECKDATEN"
           }
         }
       }
@@ -8291,6 +7907,16 @@
         }
       }
     },
+    "Total loop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamte Schleife"
+          }
+        }
+      }
+    },
     "Train now (some crews off-line ~4 days) or defer 30 days for more": {
       "localizations": {
         "de": {
@@ -8311,6 +7937,36 @@
         }
       }
     },
+    "Train this family in-house · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Familie intern schulen · %@"
+          }
+        }
+      }
+    },
+    "Training Center · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trainingszentrum · %@"
+          }
+        }
+      }
+    },
+    "Training center built": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trainingszentrum gebaut"
+          }
+        }
+      }
+    },
     "Training due": {
       "localizations": {
         "de": {
@@ -8321,12 +7977,12 @@
         }
       }
     },
-    "TRANSFER WITHIN GROUP": {
+    "Trains in-house · %lld/%lld bay seats in use": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "INNERHALB DER GRUPPE ÜBERTRAGEN"
+            "value": "Schult intern · %lld/%lld Simulatorplätze belegt"
           }
         }
       }
@@ -8361,16 +8017,6 @@
         }
       }
     },
-    "TURNAROUND": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ABFERTIGUNG"
-          }
-        }
-      }
-    },
     "Turnaround": {
       "localizations": {
         "de": {
@@ -8401,16 +8047,6 @@
         }
       }
     },
-    "Underserved markets you don't fly yet — tap one to preview it on the map.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unterversorgte Märkte, die du noch nicht bedienst — tippe einen an, um ihn auf der Karte zu sehen."
-          }
-        }
-      }
-    },
     "UNDERSTAFFED": {
       "localizations": {
         "de": {
@@ -8427,6 +8063,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "UNTERBESETZT — %lld/%lld Routen (Vorteile ausgesetzt, Kosten laufen weiter)"
+          }
+        }
+      }
+    },
+    "Under-crewed — holds likely": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterbesetzt – Wartezeiten wahrscheinlich"
+          }
+        }
+      }
+    },
+    "Underserved markets you don't fly yet — tap one to preview it on the map.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unterversorgte Märkte, die du noch nicht bedienst — tippe einen an, um ihn auf der Karte zu sehen."
+          }
+        }
+      }
+    },
+    "Undo stop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopp zurücknehmen"
           }
         }
       }
@@ -8501,12 +8167,12 @@
         }
       }
     },
-    "vs %@": {
+    "WHICH AIRCRAFT?": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "gegen %@"
+            "value": "WELCHES FLUGZEUG?"
           }
         }
       }
@@ -8611,6 +8277,26 @@
         }
       }
     },
+    "YOUR SUBSIDIARY": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DEINE TOCHTER"
+          }
+        }
+      }
+    },
+    "YOURS": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DEINS"
+          }
+        }
+      }
+    },
     "You barely own your airline": {
       "localizations": {
         "de": {
@@ -8681,16 +8367,6 @@
         }
       }
     },
-    "your airline": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "deine Airline"
-          }
-        }
-      }
-    },
     "Your airline's badge on the market — up to 4 letters.": {
       "localizations": {
         "de": {
@@ -8731,22 +8407,22 @@
         }
       }
     },
-    "Your hub — operating": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dein Drehkreuz — in Betrieb"
-          }
-        }
-      }
-    },
     "Your hub — UNDERSTAFFED (%lld/%lld routes)": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Dein Drehkreuz — UNTERBESETZT (%lld/%lld Routen)"
+          }
+        }
+      }
+    },
+    "Your hub — operating": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Drehkreuz — in Betrieb"
           }
         }
       }
@@ -8781,22 +8457,412 @@
         }
       }
     },
-    "YOUR SUBSIDIARY": {
+    "a crew's currency has lapsed — requalify": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "DEINE TOCHTER"
+            "value": "die Lizenz einer Crew ist abgelaufen – requalifizieren"
           }
         }
       }
     },
-    "YOURS": {
+    "a rival offered to buy a hub": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "DEINS"
+            "value": "ein Rivale bietet an, ein Drehkreuz zu kaufen"
+          }
+        }
+      }
+    },
+    "a route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eine Route"
+          }
+        }
+      }
+    },
+    "a scheduled maintenance check is due": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein geplanter Wartungs-Check ist fällig"
+          }
+        }
+      }
+    },
+    "a/c not assigned": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kein Flugzeug zugewiesen"
+          }
+        }
+      }
+    },
+    "an activist investor is demanding change": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein aktivistischer Investor fordert Veränderung"
+          }
+        }
+      }
+    },
+    "an aircraft has no legal crew": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flugzeug hat keine legale Crew"
+          }
+        }
+      }
+    },
+    "an aircraft is grounded (AOG)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flugzeug ist stillgelegt (AOG)"
+          }
+        }
+      }
+    },
+    "an aircraft is nearing end of service": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flugzeug nähert sich dem Dienstende"
+          }
+        }
+      }
+    },
+    "an airport is offering you a route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flughafen bietet dir eine Route an"
+          }
+        }
+      }
+    },
+    "an airport offered to buy a slot back": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ein Flughafen bietet an, einen Slot zurückzukaufen"
+          }
+        }
+      }
+    },
+    "building": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "im Aufbau"
+          }
+        }
+      }
+    },
+    "crew recurrent training is due": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eine Crew-Auffrischungsschulung ist fällig"
+          }
+        }
+      }
+    },
+    "due now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jetzt fällig"
+          }
+        }
+      }
+    },
+    "e.g. ASTR": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. ASTR"
+          }
+        }
+      }
+    },
+    "e.g. ZQ": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z. B. ZQ"
+          }
+        }
+      }
+    },
+    "flying": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "im Flug"
+          }
+        }
+      }
+    },
+    "grounded": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "am Boden"
+          }
+        }
+      }
+    },
+    "idle": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ungenutzt"
+          }
+        }
+      }
+    },
+    "in range · runway OK": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in Reichweite · Startbahn OK"
+          }
+        }
+      }
+    },
+    "in shop · ~%lldd": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in Werkstatt · ~%lld T"
+          }
+        }
+      }
+    },
+    "in ~%lld cyc": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in ~%lld Zyklen"
+          }
+        }
+      }
+    },
+    "in ~%lld days if deferred": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in ~%lld Tagen bei Aufschub"
+          }
+        }
+      }
+    },
+    "in ~%lldd": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in ~%lld T"
+          }
+        }
+      }
+    },
+    "last month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "letzten Monat"
+          }
+        }
+      }
+    },
+    "none — awaiting legal crew": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "keine — wartet auf legale Crew"
+          }
+        }
+      }
+    },
+    "now — un-airworthy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jetzt — nicht flugtauglich"
+          }
+        }
+      }
+    },
+    "opening waived (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eröffnung erlassen (%@)"
+          }
+        }
+      }
+    },
+    "out of range (%@ nm max)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "außer Reichweite (max. %@ nm)"
+          }
+        }
+      }
+    },
+    "profitable": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "profitabel"
+          }
+        }
+      }
+    },
+    "recouped its %@ opening cost, +%@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hat die %@ Eröffnungskosten amortisiert, +%@"
+          }
+        }
+      }
+    },
+    "route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Route"
+          }
+        }
+      }
+    },
+    "routes through %@ − hub & club costs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Routen über %@ − Drehkreuz- & Lounge-Kosten"
+          }
+        }
+      }
+    },
+    "saved vs. contract prices − facility − opex": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gespart ggü. Vertragspreisen − Anlage − Betriebskosten"
+          }
+        }
+      }
+    },
+    "since launch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "seit dem Start"
+          }
+        }
+      }
+    },
+    "sold to %@ — their fortress now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "an %@ verkauft — jetzt deren Festung"
+          }
+        }
+      }
+    },
+    "the route": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "die Route"
+          }
+        }
+      }
+    },
+    "this month": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diesen Monat"
+          }
+        }
+      }
+    },
+    "under your ownership": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unter deiner Führung"
+          }
+        }
+      }
+    },
+    "vs %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gegen %@"
+          }
+        }
+      }
+    },
+    "your airline": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "deine Airline"
           }
         }
       }
@@ -8851,6 +8917,16 @@
         }
       }
     },
+    "· %@ rwy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %@ Startbahn"
+          }
+        }
+      }
+    },
     "· %lld flt%@": {
       "localizations": {
         "de": {
@@ -8861,12 +8937,72 @@
         }
       }
     },
+    "· %lld in shop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld in der Werft"
+          }
+        }
+      }
+    },
     "· %lld/100": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "· %lld/100"
+          }
+        }
+      }
+    },
+    "· OK": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· OK"
+          }
+        }
+      }
+    },
+    "· contract provider": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· Vertragsanbieter"
+          }
+        }
+      }
+    },
+    "· in-house": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· intern"
+          }
+        }
+      }
+    },
+    "· too far": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· zu weit"
+          }
+        }
+      }
+    },
+    "−%@/mo": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "−%@/Mon."
           }
         }
       }
@@ -8907,76 +9043,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "⚠︎ Außerhalb deiner Regionen. Ihre Drehkreuze und Routen sind nicht mit deinem Netzwerk verbunden — keine Überschneidung zum Optimieren, kein Umsteigeverkehr. Das zahlt sich selten aus."
-          }
-        }
-      }
-    },
-    "This is a long check. Cover %@ with a comparable idle aircraft (it flies the route until %@ returns, then goes back to your spares), or suspend the route while %@ is in the shop.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das ist ein langer Check. Decke %@ mit einem vergleichbaren freien Flugzeug ab (es fliegt die Route, bis %@ zurückkehrt, und geht dann zurück zu deinen Reserven), oder pausiere die Route, während %@ in der Werkstatt ist."
-          }
-        }
-      }
-    },
-    "Suspending pauses %@ for ~%lld days (no flights, no revenue), then %@ resumes it. Covering keeps the route earning.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pausieren stoppt %@ für ~%lld Tage (keine Flüge, keine Einnahmen), dann nimmt %@ sie wieder auf. Abdecken hält die Route am Verdienen."
-          }
-        }
-      }
-    },
-    "%@ · closes after this leg": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · schließt nach diesem Flug"
-          }
-        }
-      }
-    },
-    "%@ · that route closes": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · diese Route wird geschlossen"
-          }
-        }
-      }
-    },
-    "Close %@?": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ schließen?"
-          }
-        }
-      }
-    },
-    "Moves to %@ after landing at %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wechselt nach der Landung in %@ auf %@"
-          }
-        }
-      }
-    },
-    "Take over %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ übernehmen"
           }
         }
       }

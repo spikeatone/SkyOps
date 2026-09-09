@@ -1,0 +1,23 @@
+Studio context (please read before evaluating under Guideline 4.3):
+
+This app, Airline Architect, has been LIVE and approved on this account continuously through versions 1.0 to 1.7.0. This submission (1.8.0) is a feature update to that same app — crew training, multi-city routing, and a relocated maintenance section. No new purchase; the app's identity, pricing, and business model are unchanged.
+
+Airline Architect is part of the Architect series by Postmark Digital, a catalog of individually designed simulation games, each modeling a different real-world domain. The series shares a deliberate studio design language (our house UI style and typography), as any established studio's titles share a recognizable visual identity. Each title is an independent game with its own domain simulation, mechanics, content, and data — none is a reskin or a template.
+
+Approved titles under this same account (verifiable): Airline Architect — App ID 6790569697 (this app); FC Architect — App ID 6798026159 (football club management); Vineyard Architect (winegrowing).
+
+What is unique to THIS app: an original airline-operations simulation with no counterpart among our titles — a gravity-based passenger-demand model across ~385 real-world airports (real coordinates, runway lengths, traffic); 37 real aircraft types with individual range, capacity, and economics; distance-based fares and per-type fuel-intensity operating costs; a hub-and-spoke network effect; real FAA Part 117 crew duty/rest limits now extended into a full training pipeline with type ratings, recurrent currency and a player-built simulator facility (new this version); multi-city aircraft rotations (new this version); cycle-based airframe aging with a scheduled A/C/D maintenance program carrying real deferral penalties; seasonal disruptions with real airport night curfews and a day/night terminator; region-aware competitor airlines flying real fleets from their real hubs; and a late-game capital layer — loans, going public (a live share price with activist investors and a board that can vote you out), and acquiring rivals. None of these appears in any sibling title. We share a studio codebase and design system across our own titles — studio infrastructure, not a third-party template — and every simulation system is our original work.
+
+- - -
+
+Single-player airline-management simulation. No account or login — the app opens directly into the game, so no demo credentials are needed.
+
+IN-APP PURCHASE (ONE-TIME UNLOCK): Free to play with the full feature set; the free tier limits network SIZE (max 6 aircraft, max 5 open routes), not features. A single NON-CONSUMABLE purchase ("Full Game Unlock", $9.99 founding, regular $19.99) removes both limits permanently — one-time, not a subscription. The purchase screen shows the price, "Restore Purchase", and functional Terms of Use and Privacy Policy links. (Two legacy auto-renewable subscriptions remain active for existing subscribers only, not offered for sale here.) Reach it from the Finance tab's "FREE PLAN" card, or when a limit is hit.
+
+GAME CENTER: 29 achievements + 2 leaderboards. Sign-in is optional. Achievements report as milestones are earned and are viewable in Apple's Games app; there is deliberately no in-app Game Center browser UI (intentional, not incomplete).
+
+TESTING NOTES: The sim runs continuously — use the speed control at the bottom of the Network tab (up to 100x) to advance time. Aircraft need crew, and in 1.8 crew must be TRAINED before they can fly: in the Crews tab, "Rated hire" is line-ready in about 10 sim-days and "New hire + type rating" takes about 45, so a newly hired crew will not appear as available immediately — this is intended, not a hang. The Chief Pilot card at the top of that tab summarises whether a shortage is real or just training in progress. Multi-city routes: Network tab, "Open Route", choose an aircraft, then tap two to five airports in order. Maintenance moved this version from the Ops tab to its own segment under Fleet (My Fleet / Marketplace / Maintenance); the Ops tab keeps a one-line summary that links there. Real airports, aircraft types, and airline names appear as text-only reference data (no logos, liveries, or branding; no affiliation implied).
+
+PRIVACY: no personal data, no ad SDKs, no tracking. Anonymous aggregate analytics via TelemetryDeck (no identifiers); RevenueCat verifies purchase status only. Saves sync across the user's own devices via iCloud; no game data reaches us and there is no server.
+
+Thank you for reviewing. postmarkdigitalco@gmail.com
