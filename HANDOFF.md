@@ -7,7 +7,25 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 8 September 2026._
 
-**► ⭐⭐ THE 1.7 HANG FIXES — branch `hang-fixes-1.7.1`, NOT yet merged. This is the next build.**
+**► ⭐⭐⭐ 1.8.0 (build 57) IS SUBMITTED — `WAITING_FOR_REVIEW` (9 Sep 23:42 UTC), auto-releases on
+approval. Next new build = 58+.** The whole chain ran from the CLI: bumped 1.7.0→1.8.0 / 56→57
+(6 configs), archived → exported → validated (VERIFY SUCCEEDED) → uploaded (UPLOAD SUCCEEDED,
+**Delivery UUID `01c7b045-faea-4722-b178-9f5a942c9e44`**, 76 MB), build 57 attached, en-US + de-DE
+What's New set, App Review notes set, Game Center enabled, submitted. ASC ids — version
+`a6e6c4d1-d2bb-41e9-804b-131fcd0730a8`, review submission `dc118de8-0b52-49a3-8f1e-697fa1ea4587`.
+⚠️ **1.8 is a FEATURE release, not the 1.7.1 patch it started as.** Build 56 was cut 3 Sep; everything
+merged to `main` after that date goes in this build — the designer confirmed shipping it all together.
+Contents: **multi-city rotations** · **crew training pipeline + Training Centre + Chief Pilot** ·
+**MX moved to its own Fleet ▸ Maintenance segment** · the four gameplay fixes (real carrier hubs,
+acquisition MX seeding, buyback repricing, live subsidiary P&L) · transpacific routing fix · Ops
+drawers/red chips/auto-slow restore · **the eight hang fixes** below. Drafts kept at
+`aa-1.1.x/whats-new-1.8.0.md` and `aa-1.1.x/app-review-notes-1.8.0.txt` (3975 chars — ⚠️ ASC caps
+that field at 4000 and the first draft was 4571, which would have truncated the 4.3(a) argument
+mid-sentence). German re-scanned against a fresh build: clean but for the 2 known DEBUG-only livery
+strings. **4.3(a) note: Vineyard Architect is now APPROVED**, so the verifiable-titles line names
+three independently-approved titles rather than two.
+
+**► THE 1.7 HANG FIXES — merged to `main`, shipping IN 1.8.0.**
 TelemetryDeck on the LIVE app: `hang.under3s` ×43, a first-ever `hang.3to10s` ×1, and
 `crash.sig9…rbsterminatecontext-domain-10` ×3 (a RunningBoard **watchdog SIGKILL** — launch/resume
 took too long, so the crash and the hangs are ONE defect at two severities). A five-lens hunt with
