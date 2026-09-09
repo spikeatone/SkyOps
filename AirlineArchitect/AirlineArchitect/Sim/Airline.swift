@@ -23,24 +23,32 @@ struct Airline {
     let weight: Int
     /// AircraftType ids this airline actually operates in this game.
     let types: Set<String>
+    /// REAL hub/base airports (IATA), most important first, filtered to airports
+    /// that exist in this game. Researched + adversarially fact-checked per carrier
+    /// (8 Sep 2026) — before this, competitor hubs were computed as the region's
+    /// BUSIEST airports, so every European carrier "hubbed" at LHR/IST/CDG and Air
+    /// France could never hub at CDG in any seed. Empty only where a carrier's real
+    /// hub isn't in the game's airport list (e.g. ASKY at LFW) or for the generic
+    /// Independent Operator fallback; those fall back to the old region rule.
+    var hubs: [String] = []
 
     static let roster: [Airline] = [
-        .init(name: "American Airlines", code: "AA", weight: 21, types: ["A319","A320","A321","A321NEO","B737800","MAX8","B773","B788","B789"]),
-        .init(name: "Delta Air Lines",   code: "DL", weight: 19, types: ["A319","A320","A321","A321NEO","B737800","B739","A220300","A220100","A339","A359"]),
-        .init(name: "Southwest Airlines", code: "WN", weight: 18, types: ["B737700","B737800","MAX8"]),
-        .init(name: "United Airlines",   code: "UA", weight: 17, types: ["A319","A320","A321NEO","B737700","B737800","B739","MAX8","MAX9","B773","B788","B789","B78J"]),
-        .init(name: "Alaska Airlines",   code: "AS", weight: 6,  types: ["B737700","B737800","B739","MAX8","MAX9","B789","E175"]),
-        .init(name: "JetBlue Airways",   code: "B6", weight: 5,  types: ["A320","A321","A321NEO","A220300"]),
+        .init(name: "American Airlines", code: "AA", weight: 21, types: ["A319","A320","A321","A321NEO","B737800","MAX8","B773","B788","B789"], hubs: ["DFW", "CLT", "ORD", "MIA", "PHX", "PHL", "LAX", "JFK", "LGA"]),
+        .init(name: "Delta Air Lines",   code: "DL", weight: 19, types: ["A319","A320","A321","A321NEO","B737800","B739","A220300","A220100","A339","A359"], hubs: ["ATL", "DTW", "MSP", "SLC", "JFK", "LGA", "LAX", "SEA", "BOS"]),
+        .init(name: "Southwest Airlines", code: "WN", weight: 18, types: ["B737700","B737800","MAX8"], hubs: ["DEN", "LAS", "MDW", "BWI", "DAL", "PHX", "BNA", "HOU", "MCO", "ATL", "LAX", "OAK", "AUS"]),
+        .init(name: "United Airlines",   code: "UA", weight: 17, types: ["A319","A320","A321NEO","B737700","B737800","B739","MAX8","MAX9","B773","B788","B789","B78J"], hubs: ["ORD", "DEN", "IAH", "EWR", "SFO", "IAD", "LAX", "GUM"]),
+        .init(name: "Alaska Airlines",   code: "AS", weight: 6,  types: ["B737700","B737800","B739","MAX8","MAX9","B789","E175"], hubs: ["SEA", "HNL", "PDX", "ANC", "SAN", "LAX"]),
+        .init(name: "JetBlue Airways",   code: "B6", weight: 5,  types: ["A320","A321","A321NEO","A220300"], hubs: ["JFK", "BOS", "FLL", "MCO", "SJU", "LAX"]),
         .init(name: "Spirit Airlines",   code: "NK", weight: 3,  types: ["A319","A320","A320NEO","A321","A321NEO"]),
-        .init(name: "Frontier Airlines", code: "F9", weight: 3,  types: ["A319","A320","A320NEO","A321","A321NEO"]),
-        .init(name: "Allegiant Air",     code: "G4", weight: 2,  types: ["A319","A320","MAX8"]),
+        .init(name: "Frontier Airlines", code: "F9", weight: 3,  types: ["A319","A320","A320NEO","A321","A321NEO"], hubs: ["DEN", "LAS", "MCO", "PHL", "ATL", "TPA", "PHX", "MIA", "DFW", "CLE", "CVG", "MDW", "ORD", "SJU"]),
+        .init(name: "Allegiant Air",     code: "G4", weight: 2,  types: ["A319","A320","MAX8"], hubs: ["LAS", "FLL", "CVG", "BNA", "IND", "PIT", "GRR", "DSM"]),
         // Regional-brand liveries (American Eagle / Delta Connection / United Express)
-        .init(name: "SkyWest Airlines",  code: "OO", weight: 4, types: ["CRJ900","CRJ1000","E170","E175","ERJ145"]),
-        .init(name: "Republic Airways",  code: "YX", weight: 3, types: ["E170","E175"]),
-        .init(name: "Envoy Air",         code: "MQ", weight: 3, types: ["CRJ900","CRJ1000","E170","E175"]),
-        .init(name: "Endeavor Air",      code: "9E", weight: 3, types: ["CRJ900","CRJ1000"]),
-        .init(name: "Horizon Air",       code: "QX", weight: 2, types: ["E175"]),
-        .init(name: "PSA Airlines",      code: "OH", weight: 2, types: ["CRJ900","CRJ1000","E175"]),
+        .init(name: "SkyWest Airlines",  code: "OO", weight: 4, types: ["CRJ900","CRJ1000","E170","E175","ERJ145"], hubs: ["SLC", "DEN", "ORD", "DTW", "MSP", "LAX", "SFO", "PHX", "IAH", "PDX", "SEA", "DFW", "ATL"]),
+        .init(name: "Republic Airways",  code: "YX", weight: 3, types: ["E170","E175"], hubs: ["IND", "LGA", "CMH", "EWR", "ORD", "PHL", "PIT", "BOS", "SDF"]),
+        .init(name: "Envoy Air",         code: "MQ", weight: 3, types: ["CRJ900","CRJ1000","E170","E175"], hubs: ["DFW", "ORD", "MIA", "PHX"]),
+        .init(name: "Endeavor Air",      code: "9E", weight: 3, types: ["CRJ900","CRJ1000"], hubs: ["MSP", "DTW", "JFK", "LGA", "ATL", "CVG", "RDU"]),
+        .init(name: "Horizon Air",       code: "QX", weight: 2, types: ["E175"], hubs: ["SEA", "PDX", "GEG", "BOI", "ANC"]),
+        .init(name: "PSA Airlines",      code: "OH", weight: 2, types: ["CRJ900","CRJ1000","E175"], hubs: ["CLT", "PHL", "DFW", "CVG"]),
         // Fallback for real-world orphaned types (rare variants / China-only / retired-from-US-feed)
         .init(name: "Independent Operator", code: "", weight: 1, types: ["A319NEO","E190","E195","ERJ135","ERJ140"]),
     ]
@@ -107,26 +115,26 @@ struct Airline {
     /// limited to the game's types. Air Canada also appears in the US roster
     /// (transborder widebody); that overlap is intentional.
     static let canadaRoster: [Airline] = [
-        .init(name: "Air Canada",      code: "AC", weight: 20, types: ["A220300","A319","A320","A321","MAX8","MAX9","B788","B789","A339","B773"]),
-        .init(name: "WestJet",         code: "WS", weight: 15, types: ["B737700","B737800","MAX8","B789"]),
-        .init(name: "Jazz",            code: "QK", weight: 8,  types: ["CRJ900","E175"]),
-        .init(name: "Porter Airlines", code: "PD", weight: 7,  types: ["E195"]),
-        .init(name: "Air Transat",     code: "TS", weight: 5,  types: ["A321NEO","A339"]),
-        .init(name: "Flair Airlines",  code: "F8", weight: 4,  types: ["B737800","MAX8"]),
+        .init(name: "Air Canada",      code: "AC", weight: 20, types: ["A220300","A319","A320","A321","MAX8","MAX9","B788","B789","A339","B773"], hubs: ["YYZ", "YUL", "YVR", "YYC", "YOW", "YHZ"]),
+        .init(name: "WestJet",         code: "WS", weight: 15, types: ["B737700","B737800","MAX8","B789"], hubs: ["YYC", "YYZ", "YVR", "YEG", "YWG", "YHZ"]),
+        .init(name: "Jazz",            code: "QK", weight: 8,  types: ["CRJ900","E175"], hubs: ["YYZ", "YUL", "YVR", "YYC", "YHZ"]),
+        .init(name: "Porter Airlines", code: "PD", weight: 7,  types: ["E195"], hubs: ["YYZ", "YTZ", "YOW", "YUL", "YHZ"]),
+        .init(name: "Air Transat",     code: "TS", weight: 5,  types: ["A321NEO","A339"], hubs: ["YUL", "YYZ", "YOW"]),
+        .init(name: "Flair Airlines",  code: "F8", weight: 4,  types: ["B737800","MAX8"], hubs: ["YEG", "YYZ", "YVR", "YYC", "YWG"]),
     ]
 
     /// Real Mexican carriers.
     static let mexicoRoster: [Airline] = [
-        .init(name: "Aeroméxico",   code: "AM", weight: 12, types: ["B737800","MAX8","MAX9","B788","B789","E190"]),
-        .init(name: "Volaris",      code: "Y4", weight: 12, types: ["A319","A320","A321","A320NEO","A321NEO"]),
-        .init(name: "Viva Aerobus", code: "VB", weight: 9,  types: ["A320","A321","A320NEO","A321NEO"]),
+        .init(name: "Aeroméxico",   code: "AM", weight: 12, types: ["B737800","MAX8","MAX9","B788","B789","E190"], hubs: ["MEX", "GDL", "MTY", "NLU"]),
+        .init(name: "Volaris",      code: "Y4", weight: 12, types: ["A319","A320","A321","A320NEO","A321NEO"], hubs: ["GDL", "TIJ", "MEX", "CUN", "MTY", "CUL", "BJX"]),
+        .init(name: "Viva Aerobus", code: "VB", weight: 9,  types: ["A320","A321","A320NEO","A321NEO"], hubs: ["MTY", "NLU", "MEX", "GDL", "CUN", "TIJ"]),
     ]
 
     /// Real Central American carriers (Copa Panama hub, Avianca's regional feed).
     static let centralAmericaRoster: [Airline] = [
-        .init(name: "Copa Airlines", code: "CM", weight: 12, types: ["B737700","B737800","MAX8","MAX9"]),
-        .init(name: "Avianca",       code: "AV", weight: 8,  types: ["A319","A320","A321","A320NEO","A321NEO","B788"]),
-        .init(name: "Volaris",       code: "Y4", weight: 6,  types: ["A319","A320","A321","A320NEO","A321NEO"]),
+        .init(name: "Copa Airlines", code: "CM", weight: 12, types: ["B737700","B737800","MAX8","MAX9"], hubs: ["PTY"]),
+        .init(name: "Avianca",       code: "AV", weight: 8,  types: ["A319","A320","A321","A320NEO","A321NEO","B788"], hubs: ["BOG", "SAL", "MDE"]),
+        .init(name: "Volaris",       code: "Y4", weight: 6,  types: ["A319","A320","A321","A320NEO","A321NEO"], hubs: ["GDL", "TIJ", "MEX", "CUN", "MTY", "CUL", "BJX"]),
     ]
 
     /// Real Caribbean carriers — the islands were split out of the Central America
@@ -139,22 +147,22 @@ struct Airline {
     /// combine), so the mainland hubs' real Caribbean reach is preserved.
     static let caribbeanRoster: [Airline] = [
         .init(name: "Caribbean Airlines",     code: "BW", weight: 12, types: ["B737800","MAX8","AT46"]),   // Trinidad & Tobago flag carrier, largest
-        .init(name: "Bahamasair",             code: "UP", weight: 8,  types: ["B737700","B737800","AT46","DH8B"]),
-        .init(name: "Cayman Airways",         code: "KX", weight: 7,  types: ["B737800","MAX8","DH8B"]),
+        .init(name: "Bahamasair",             code: "UP", weight: 8,  types: ["B737700","B737800","AT46","DH8B"], hubs: ["NAS"]),
+        .init(name: "Cayman Airways",         code: "KX", weight: 7,  types: ["B737800","MAX8","DH8B"], hubs: ["GCM"]),
         .init(name: "interCaribbean Airways", code: "JY", weight: 7,  types: ["ERJ145","AT46","DH8B"]),   // Turks & Caicos regional feeder
-        .init(name: "Winair",                 code: "WM", weight: 5,  types: ["DH8B","AT46"]),             // St. Maarten; short-field islands (SBH/SXM)
+        .init(name: "Winair",                 code: "WM", weight: 5,  types: ["DH8B","AT46"]),             // St. Maarten; short-field islands (SBH/SXM, hubs: ["SXM"])
         .init(name: "Sunrise Airways",        code: "S6", weight: 4,  types: ["ERJ145","ERJ135"]),          // Haiti-based regional
     ]
 
     /// Real South American carriers.
     static let southAmericaRoster: [Airline] = [
-        .init(name: "LATAM Airlines",        code: "LA", weight: 20, types: ["A319","A320","A321","A321NEO","B788","B789","B773"]),
-        .init(name: "GOL Linhas Aéreas",     code: "G3", weight: 11, types: ["B737700","B737800","MAX8"]),
-        .init(name: "Azul",                  code: "AD", weight: 10, types: ["A320NEO","A321NEO","E195","A339"]),
-        .init(name: "Avianca",               code: "AV", weight: 9,  types: ["A319","A320","A321","A320NEO","A321NEO","B788"]),
-        .init(name: "Aerolíneas Argentinas", code: "AR", weight: 6,  types: ["B737700","B737800","MAX8","A339"]),
-        .init(name: "SKY Airline",           code: "H2", weight: 4,  types: ["A320NEO","A321NEO"]),
-        .init(name: "JetSMART",              code: "JA", weight: 4,  types: ["A320","A320NEO","A321NEO"]),
+        .init(name: "LATAM Airlines",        code: "LA", weight: 20, types: ["A319","A320","A321","A321NEO","B788","B789","B773"], hubs: ["SCL", "GRU", "LIM", "BOG", "CGH", "BSB", "FOR", "GIG", "UIO", "GYE"]),
+        .init(name: "GOL Linhas Aéreas",     code: "G3", weight: 11, types: ["B737700","B737800","MAX8"], hubs: ["GIG", "GRU", "CGH", "BSB", "SSA", "SDU", "FOR"]),
+        .init(name: "Azul",                  code: "AD", weight: 10, types: ["A320NEO","A321NEO","E195","A339"], hubs: ["VCP", "CNF", "REC"]),
+        .init(name: "Avianca",               code: "AV", weight: 9,  types: ["A319","A320","A321","A320NEO","A321NEO","B788"], hubs: ["BOG", "SAL", "MDE"]),
+        .init(name: "Aerolíneas Argentinas", code: "AR", weight: 6,  types: ["B737700","B737800","MAX8","A339"], hubs: ["AEP", "EZE"]),
+        .init(name: "SKY Airline",           code: "H2", weight: 4,  types: ["A320NEO","A321NEO"], hubs: ["SCL", "LIM"]),
+        .init(name: "JetSMART",              code: "JA", weight: 4,  types: ["A320","A320NEO","A321NEO"], hubs: ["SCL", "AEP", "EZE", "LIM", "MDE"]),
     ]
 
     /// Real European carriers, per-type eligibility researched per carrier (limited
@@ -164,43 +172,43 @@ struct Airline {
     /// into Europe. Regional-brand liveries (CityLine/Cityhopper/Air Nostrum)
     /// cover the E-Jet/CRJ feed so European regional legs aren't all "Independent".
     static let europeRoster: [Airline] = [
-        .init(name: "Ryanair",           code: "FR", weight: 20, types: ["B737800","MAX8"]),
-        .init(name: "easyJet",           code: "U2", weight: 14, types: ["A319","A320","A320NEO","A321NEO"]),
-        .init(name: "Lufthansa",         code: "LH", weight: 11, types: ["A319","A320","A320NEO","A321","A321NEO","A340","A359","B747","B789"]),
-        .init(name: "Turkish Airlines",  code: "TK", weight: 11, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","MAX8","MAX9","B773","B789","A339","A359"]),
-        .init(name: "British Airways",   code: "BA", weight: 10, types: ["A319","A320","A320NEO","A321","A321NEO","B773","B788","B789","B78J","A359"]),
-        .init(name: "Air France",        code: "AF", weight: 9,  types: ["A220300","A319","A320","A321","A339","A359","B773","B789"]),
-        .init(name: "Wizz Air",          code: "W6", weight: 8,  types: ["A320","A320NEO","A321NEO"]),
-        .init(name: "KLM",               code: "KL", weight: 7,  types: ["B737700","B737800","B739","A321NEO","B773","B789","B78J","A339"]),
-        .init(name: "Pegasus Airlines",  code: "PC", weight: 6,  types: ["B737800","A320NEO","A321NEO"]),
-        .init(name: "Aeroflot",          code: "SU", weight: 6,  types: ["A319","A320","A320NEO","A321","B737800","B773","A339"]),
-        .init(name: "Iberia",            code: "IB", weight: 6,  types: ["A319","A320","A320NEO","A321","A321NEO","A339","A359"]),
-        .init(name: "Vueling",           code: "VY", weight: 6,  types: ["A319","A320","A321"]),
-        .init(name: "SAS",               code: "SK", weight: 5,  types: ["A319","A320","A320NEO","A321NEO","A339","A359"]),
-        .init(name: "TAP Air Portugal",  code: "TP", weight: 5,  types: ["A319","A320","A320NEO","A321","A321NEO","A339"]),
-        .init(name: "Norwegian",         code: "DY", weight: 5,  types: ["B737800","MAX8"]),
-        .init(name: "ITA Airways",       code: "AZ", weight: 4,  types: ["A319","A320","A320NEO","A321NEO","A339","A359"]),
-        .init(name: "Swiss",             code: "LX", weight: 4,  types: ["A319","A320","A320NEO","A321","A340","B773","A339"]),
-        .init(name: "Aer Lingus",        code: "EI", weight: 4,  types: ["A320","A321NEO","A339"]),
-        .init(name: "Finnair",           code: "AY", weight: 4,  types: ["A319","A320","A321","A339","A359"]),
-        .init(name: "Aegean Airlines",   code: "A3", weight: 4,  types: ["A319","A320","A320NEO","A321NEO"]),
-        .init(name: "Austrian Airlines", code: "OS", weight: 3,  types: ["A319","A320","A320NEO","A321","B773","B789"]),
-        .init(name: "airBaltic",         code: "BT", weight: 3,  types: ["A220300"]),
+        .init(name: "Ryanair",           code: "FR", weight: 20, types: ["B737800","MAX8"], hubs: ["STN", "DUB", "BGY", "FCO", "MAD", "BCN", "MAN", "MXP", "NAP", "ATH", "BUD", "OTP", "ALC", "AGP", "PMI"]),
+        .init(name: "easyJet",           code: "U2", weight: 14, types: ["A319","A320","A320NEO","A321NEO"], hubs: ["LGW", "MAN", "BRS", "EDI", "GLA", "MXP", "CDG", "ORY", "BER", "GVA", "NCE", "AMS", "FCO", "BCN", "LIS", "PMI", "AGP"]),
+        .init(name: "Lufthansa",         code: "LH", weight: 11, types: ["A319","A320","A320NEO","A321","A321NEO","A340","A359","B747","B789"], hubs: ["FRA", "MUC"]),
+        .init(name: "Turkish Airlines",  code: "TK", weight: 11, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","MAX8","MAX9","B773","B789","A339","A359"], hubs: ["IST"]),
+        .init(name: "British Airways",   code: "BA", weight: 10, types: ["A319","A320","A320NEO","A321","A321NEO","B773","B788","B789","B78J","A359"], hubs: ["LHR", "LGW"]),
+        .init(name: "Air France",        code: "AF", weight: 9,  types: ["A220300","A319","A320","A321","A339","A359","B773","B789"], hubs: ["CDG", "NCE"]),
+        .init(name: "Wizz Air",          code: "W6", weight: 8,  types: ["A320","A320NEO","A321NEO"], hubs: ["BUD", "OTP", "WAW", "MAD", "FCO", "MXP", "NAP", "VCE", "SOF", "BEG", "VNO", "BTS", "LGW"]),
+        .init(name: "KLM",               code: "KL", weight: 7,  types: ["B737700","B737800","B739","A321NEO","B773","B789","B78J","A339"], hubs: ["AMS"]),
+        .init(name: "Pegasus Airlines",  code: "PC", weight: 6,  types: ["B737800","A320NEO","A321NEO"], hubs: ["SAW", "AYT", "IST"]),
+        .init(name: "Aeroflot",          code: "SU", weight: 6,  types: ["A319","A320","A320NEO","A321","B737800","B773","A339"], hubs: ["SVO", "LED"]),
+        .init(name: "Iberia",            code: "IB", weight: 6,  types: ["A319","A320","A320NEO","A321","A321NEO","A339","A359"], hubs: ["MAD"]),
+        .init(name: "Vueling",           code: "VY", weight: 6,  types: ["A319","A320","A321"], hubs: ["BCN", "ORY", "FCO", "PMI", "ALC"]),
+        .init(name: "SAS",               code: "SK", weight: 5,  types: ["A319","A320","A320NEO","A321NEO","A339","A359"], hubs: ["CPH", "OSL", "ARN"]),
+        .init(name: "TAP Air Portugal",  code: "TP", weight: 5,  types: ["A319","A320","A320NEO","A321","A321NEO","A339"], hubs: ["LIS", "OPO"]),
+        .init(name: "Norwegian",         code: "DY", weight: 5,  types: ["B737800","MAX8"], hubs: ["OSL", "CPH", "ARN", "HEL", "ALC", "AGP", "LPA", "PMI"]),
+        .init(name: "ITA Airways",       code: "AZ", weight: 4,  types: ["A319","A320","A320NEO","A321NEO","A339","A359"], hubs: ["FCO"]),
+        .init(name: "Swiss",             code: "LX", weight: 4,  types: ["A319","A320","A320NEO","A321","A340","B773","A339"], hubs: ["ZRH", "GVA"]),
+        .init(name: "Aer Lingus",        code: "EI", weight: 4,  types: ["A320","A321NEO","A339"], hubs: ["DUB"]),
+        .init(name: "Finnair",           code: "AY", weight: 4,  types: ["A319","A320","A321","A339","A359"], hubs: ["HEL"]),
+        .init(name: "Aegean Airlines",   code: "A3", weight: 4,  types: ["A319","A320","A320NEO","A321NEO"], hubs: ["ATH"]),
+        .init(name: "Austrian Airlines", code: "OS", weight: 3,  types: ["A319","A320","A320NEO","A321","B773","B789"], hubs: ["VIE"]),
+        .init(name: "airBaltic",         code: "BT", weight: 3,  types: ["A220300"], hubs: ["RIX", "VNO", "TLL"]),
         // Central & Eastern Europe (Warsaw/Budapest/Bucharest/Belgrade/Kyiv/Minsk
         // hubs). Wizz Air (above) already covers the CEE low-cost A320/A321 feed.
-        .init(name: "LOT Polish Airlines", code: "LO", weight: 5, types: ["B737800","MAX8","B788","B789","E170","E175","E190","E195"]),
-        .init(name: "TAROM",             code: "RO", weight: 3,  types: ["B737800","A319","A320"]),
-        .init(name: "Air Serbia",        code: "JU", weight: 3,  types: ["A319","A320","A321","A339"]),
-        .init(name: "Ukraine Int'l",     code: "PS", weight: 3,  types: ["B737800","B739"]),
-        .init(name: "Belavia",           code: "B2", weight: 3,  types: ["B737800","E195"]),
-        .init(name: "Croatia Airlines",  code: "OU", weight: 3,  types: ["A319","A320","A320NEO"]),
-        .init(name: "Bulgaria Air",      code: "FB", weight: 3,  types: ["A319","A320","A320NEO","E190"]),
+        .init(name: "LOT Polish Airlines", code: "LO", weight: 5, types: ["B737800","MAX8","B788","B789","E170","E175","E190","E195"], hubs: ["WAW"]),
+        .init(name: "TAROM",             code: "RO", weight: 3,  types: ["B737800","A319","A320"], hubs: ["OTP"]),
+        .init(name: "Air Serbia",        code: "JU", weight: 3,  types: ["A319","A320","A321","A339"], hubs: ["BEG"]),
+        .init(name: "Ukraine Int'l",     code: "PS", weight: 3,  types: ["B737800","B739"], hubs: ["KBP"]),
+        .init(name: "Belavia",           code: "B2", weight: 3,  types: ["B737800","E195"], hubs: ["MSQ"]),
+        .init(name: "Croatia Airlines",  code: "OU", weight: 3,  types: ["A319","A320","A320NEO"], hubs: ["ZAG"]),
+        .init(name: "Bulgaria Air",      code: "FB", weight: 3,  types: ["A319","A320","A320NEO","E190"], hubs: ["SOF"]),
         // Azores (PDL) stays in the Europe region — Portuguese Atlantic islands.
-        .init(name: "Azores Airlines",   code: "S4", weight: 2,  types: ["A320","A320NEO","A321NEO"]),
+        .init(name: "Azores Airlines",   code: "S4", weight: 2,  types: ["A320","A320NEO","A321NEO"], hubs: ["PDL", "LIS"]),
         // Regional-brand liveries (E-Jet / CRJ feed)
-        .init(name: "Lufthansa CityLine", code: "CL", weight: 4, types: ["E190","E195","CRJ900"]),
-        .init(name: "KLM Cityhopper",     code: "WA", weight: 3, types: ["E175","E190","E195"]),
-        .init(name: "Air Nostrum",        code: "YW", weight: 3, types: ["CRJ900","CRJ1000","ERJ145","ERJ140"]),
+        .init(name: "Lufthansa CityLine", code: "CL", weight: 4, types: ["E190","E195","CRJ900"], hubs: ["MUC", "FRA"]),
+        .init(name: "KLM Cityhopper",     code: "WA", weight: 3, types: ["E175","E190","E195"], hubs: ["AMS"]),
+        .init(name: "Air Nostrum",        code: "YW", weight: 3, types: ["CRJ900","CRJ1000","ERJ145","ERJ140"], hubs: ["MAD", "BCN"]),
     ]
 
     /// Real African carriers, per-type eligibility researched per carrier. Ethiopian
@@ -209,24 +217,24 @@ struct Airline {
     /// the cross-region pick. No African 747/A380 passenger operators, so those types
     /// fall to Independent Operator on African legs — realistic.
     static let africaRoster: [Airline] = [
-        .init(name: "Ethiopian Airlines",  code: "ET", weight: 14, types: ["B737700","B737800","MAX8","B773","B788","B789","A359"]),
-        .init(name: "EgyptAir",            code: "MS", weight: 11, types: ["B737800","A220300","A320","A320NEO","A321NEO","B773","B789","A339"]),
-        .init(name: "Royal Air Maroc",     code: "AT", weight: 10, types: ["B737700","B737800","MAX8","B788","B789","A320"]),
-        .init(name: "South African Airways", code: "SA", weight: 8, types: ["A319","A320","A339","A340"]),
-        .init(name: "Kenya Airways",       code: "KQ", weight: 7,  types: ["B737800","B788","E190"]),
-        .init(name: "Air Algérie",         code: "AH", weight: 6,  types: ["B737700","B737800","MAX8","A339","A359"]),
-        .init(name: "Air Peace",           code: "P4", weight: 6,  types: ["B737800","E195","B773"]),
-        .init(name: "FlySafair",           code: "FA", weight: 6,  types: ["B737700","B737800"]),
-        .init(name: "Tunisair",            code: "TU", weight: 5,  types: ["A319","A320","A321","A339"]),
-        .init(name: "RwandAir",            code: "WB", weight: 4,  types: ["B737800","A339","CRJ900"]),
-        .init(name: "Air Côte d'Ivoire",   code: "HF", weight: 4,  types: ["A319","A320","A339"]),
-        .init(name: "Air Senegal",         code: "HC", weight: 3,  types: ["A319","A320","A339"]),
+        .init(name: "Ethiopian Airlines",  code: "ET", weight: 14, types: ["B737700","B737800","MAX8","B773","B788","B789","A359"], hubs: ["ADD"]),
+        .init(name: "EgyptAir",            code: "MS", weight: 11, types: ["B737800","A220300","A320","A320NEO","A321NEO","B773","B789","A339"], hubs: ["CAI"]),
+        .init(name: "Royal Air Maroc",     code: "AT", weight: 10, types: ["B737700","B737800","MAX8","B788","B789","A320"], hubs: ["CMN", "RAK", "TNG"]),
+        .init(name: "South African Airways", code: "SA", weight: 8, types: ["A319","A320","A339","A340"], hubs: ["JNB", "CPT"]),
+        .init(name: "Kenya Airways",       code: "KQ", weight: 7,  types: ["B737800","B788","E190"], hubs: ["NBO"]),
+        .init(name: "Air Algérie",         code: "AH", weight: 6,  types: ["B737700","B737800","MAX8","A339","A359"], hubs: ["ALG"]),
+        .init(name: "Air Peace",           code: "P4", weight: 6,  types: ["B737800","E195","B773"], hubs: ["LOS", "ABV"]),
+        .init(name: "FlySafair",           code: "FA", weight: 6,  types: ["B737700","B737800"], hubs: ["JNB", "CPT", "DUR"]),
+        .init(name: "Tunisair",            code: "TU", weight: 5,  types: ["A319","A320","A321","A339"], hubs: ["TUN"]),
+        .init(name: "RwandAir",            code: "WB", weight: 4,  types: ["B737800","A339","CRJ900"], hubs: ["KGL"]),
+        .init(name: "Air Côte d'Ivoire",   code: "HF", weight: 4,  types: ["A319","A320","A339"], hubs: ["ABJ"]),
+        .init(name: "Air Senegal",         code: "HC", weight: 3,  types: ["A319","A320","A339"], hubs: ["DSS"]),
         .init(name: "TAAG Angola Airlines", code: "DT", weight: 3, types: ["B737700","B773"]),
         .init(name: "ASKY Airlines",       code: "KP", weight: 3,  types: ["B737700","B737800"]),
-        .init(name: "Air Tanzania",        code: "TC", weight: 3,  types: ["A220300","B788"]),
+        .init(name: "Air Tanzania",        code: "TC", weight: 3,  types: ["A220300","B788"], hubs: ["DAR", "ZNZ"]),
         // Binter Canarias serves the Canary Islands (LPA) — off the Moroccan
         // coast, in the Africa carrier region (moved here with LPA).
-        .init(name: "Binter Canarias",     code: "NT", weight: 3,  types: ["E195"]),
+        .init(name: "Binter Canarias",     code: "NT", weight: 3,  types: ["E195"], hubs: ["LPA", "MAD"]),
     ]
 
     // Asia = East + Southeast + South Asia. The Middle East is a SEPARATE region
@@ -234,73 +242,73 @@ struct Airline {
     // intra-China or intra-Japan leg won't paint Emirates, and an Asia↔Gulf leg
     // correctly mixes both. Per-type eligibility researched per carrier.
     static let asiaRoster: [Airline] = [
-        .init(name: "Air China",           code: "CA", weight: 12, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","B773","B789","A359","A339"]),
-        .init(name: "China Eastern",       code: "MU", weight: 12, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","B773","B789","A359","A339"]),
-        .init(name: "China Southern",      code: "CZ", weight: 12, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","B773","B788","B789","A359","A339"]),
-        .init(name: "IndiGo",              code: "6E", weight: 12, types: ["A320","A320NEO","A321","A321NEO"]),
-        .init(name: "Air India",           code: "AI", weight: 9,  types: ["A319","A320","A320NEO","A321","A321NEO","B773","B788","B789","A359"]),
-        .init(name: "All Nippon Airways",  code: "NH", weight: 9,  types: ["B737800","B773","B788","B789","B78J","A320NEO","A321NEO","A380"]),
-        .init(name: "Japan Airlines",      code: "JL", weight: 8,  types: ["B737800","B773","B788","B789","A359","A321NEO"]),
-        .init(name: "AirAsia",             code: "AK", weight: 8,  types: ["A320","A320NEO","A321NEO"]),
-        .init(name: "Cathay Pacific",      code: "CX", weight: 7,  types: ["B773","A339","A359","A321NEO"]),
-        .init(name: "Hainan Airlines",     code: "HU", weight: 7,  types: ["B737800","MAX8","B788","B789","A339","A359"]),
-        .init(name: "Korean Air",          code: "KE", weight: 7,  types: ["B737800","MAX8","B773","B789","B78J","A339","A380"]),
-        .init(name: "Singapore Airlines",  code: "SQ", weight: 7,  types: ["B773","B78J","A359","A380","A339"]),
-        .init(name: "Xiamen Airlines",     code: "MF", weight: 6,  types: ["B737700","B737800","MAX8","B788","B789"]),
-        .init(name: "Lion Air",            code: "JT", weight: 6,  types: ["B737800","B739","MAX8","A339"]),
-        .init(name: "Thai Airways",        code: "TG", weight: 6,  types: ["B773","B788","B789","A359","A320"]),
-        .init(name: "VietJet Air",         code: "VJ", weight: 6,  types: ["A320","A320NEO","A321NEO"]),
-        .init(name: "Vietnam Airlines",    code: "VN", weight: 5,  types: ["A320","A321","A321NEO","B789","B78J","A359"]),
-        .init(name: "Cebu Pacific",        code: "5J", weight: 5,  types: ["A320","A320NEO","A321NEO","A339"]),
-        .init(name: "Philippine Airlines", code: "PR", weight: 5,  types: ["A320","A321","A321NEO","A339","A359","B773"]),
-        .init(name: "Garuda Indonesia",    code: "GA", weight: 5,  types: ["B737800","MAX8","B773","A339","A320"]),
-        .init(name: "Malaysia Airlines",   code: "MH", weight: 5,  types: ["B737800","MAX8","A339","A359","A380"]),
-        .init(name: "Sichuan Airlines",    code: "3U", weight: 5,  types: ["A319","A320","A321","A339","A359"]),
-        .init(name: "Shenzhen Airlines",   code: "ZH", weight: 5,  types: ["A319","A320","A321","B737800"]),
-        .init(name: "Spring Airlines",     code: "9C", weight: 5,  types: ["A320","A320NEO","A321NEO"]),
-        .init(name: "Asiana Airlines",     code: "OZ", weight: 5,  types: ["A320","A321","B773","A339","A359","A380"]),
-        .init(name: "China Airlines",      code: "CI", weight: 5,  types: ["B737800","B773","A339","A359"]),
-        .init(name: "EVA Air",             code: "BR", weight: 5,  types: ["B773","B789","B78J","A339","A321NEO"]),
-        .init(name: "SpiceJet",            code: "SG", weight: 5,  types: ["B737800","MAX8"]),
-        .init(name: "Vistara",             code: "UK", weight: 5,  types: ["A320","A320NEO","A321NEO","B789"]),
-        .init(name: "Scoot",               code: "TR", weight: 4,  types: ["A320","A320NEO","A321NEO","B788","B789"]),
-        .init(name: "Akasa Air",           code: "QP", weight: 4,  types: ["MAX8"]),
-        .init(name: "Pakistan Int'l",      code: "PK", weight: 4,  types: ["A320","A320NEO","B773"]),
-        .init(name: "AirBlue",             code: "PA", weight: 2,  types: ["A320","A321"]),
-        .init(name: "Royal Brunei",        code: "BI", weight: 2,  types: ["A320NEO","B788"]),
-        .init(name: "Cambodia Angkor Air", code: "K6", weight: 2,  types: ["A320","A321"]),
-        .init(name: "Myanmar National",    code: "UB", weight: 2,  types: ["B737800","E190"]),
+        .init(name: "Air China",           code: "CA", weight: 12, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","B773","B789","A359","A339"], hubs: ["PEK", "CTU", "PVG", "SZX", "HGH", "CKG"]),
+        .init(name: "China Eastern",       code: "MU", weight: 12, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","B773","B789","A359","A339"], hubs: ["PVG", "KMG", "XIY", "HGH", "WUH"]),
+        .init(name: "China Southern",      code: "CZ", weight: 12, types: ["A319","A320","A320NEO","A321","A321NEO","B737800","B773","B788","B789","A359","A339"], hubs: ["CAN", "SZX", "PVG", "WUH", "CKG"]),
+        .init(name: "IndiGo",              code: "6E", weight: 12, types: ["A320","A320NEO","A321","A321NEO"], hubs: ["DEL", "BOM", "BLR", "HYD", "CCU", "MAA"]),
+        .init(name: "Air India",           code: "AI", weight: 9,  types: ["A319","A320","A320NEO","A321","A321NEO","B773","B788","B789","A359"], hubs: ["DEL", "BOM", "BLR", "COK"]),
+        .init(name: "All Nippon Airways",  code: "NH", weight: 9,  types: ["B737800","B773","B788","B789","B78J","A320NEO","A321NEO","A380"], hubs: ["HND", "NRT", "ITM", "KIX", "CTS", "OKA", "NGO", "FUK"]),
+        .init(name: "Japan Airlines",      code: "JL", weight: 8,  types: ["B737800","B773","B788","B789","A359","A321NEO"], hubs: ["HND", "NRT", "ITM", "KIX", "CTS", "FUK", "OKA", "NGO"]),
+        .init(name: "AirAsia",             code: "AK", weight: 8,  types: ["A320","A320NEO","A321NEO"], hubs: ["KUL"]),
+        .init(name: "Cathay Pacific",      code: "CX", weight: 7,  types: ["B773","A339","A359","A321NEO"], hubs: ["HKG", "TPE"]),
+        .init(name: "Hainan Airlines",     code: "HU", weight: 7,  types: ["B737800","MAX8","B788","B789","A339","A359"], hubs: ["PEK", "XIY", "SZX", "CKG", "CAN", "HGH"]),
+        .init(name: "Korean Air",          code: "KE", weight: 7,  types: ["B737800","MAX8","B773","B789","B78J","A339","A380"], hubs: ["ICN"]),
+        .init(name: "Singapore Airlines",  code: "SQ", weight: 7,  types: ["B773","B78J","A359","A380","A339"], hubs: ["SIN"]),
+        .init(name: "Xiamen Airlines",     code: "MF", weight: 6,  types: ["B737700","B737800","MAX8","B788","B789"], hubs: ["HGH"]),
+        .init(name: "Lion Air",            code: "JT", weight: 6,  types: ["B737800","B739","MAX8","A339"], hubs: ["CGK", "SUB"]),
+        .init(name: "Thai Airways",        code: "TG", weight: 6,  types: ["B773","B788","B789","A359","A320"], hubs: ["BKK"]),
+        .init(name: "VietJet Air",         code: "VJ", weight: 6,  types: ["A320","A320NEO","A321NEO"], hubs: ["SGN", "HAN"]),
+        .init(name: "Vietnam Airlines",    code: "VN", weight: 5,  types: ["A320","A321","A321NEO","B789","B78J","A359"], hubs: ["HAN", "SGN"]),
+        .init(name: "Cebu Pacific",        code: "5J", weight: 5,  types: ["A320","A320NEO","A321NEO","A339"], hubs: ["MNL"]),
+        .init(name: "Philippine Airlines", code: "PR", weight: 5,  types: ["A320","A321","A321NEO","A339","A359","B773"], hubs: ["MNL"]),
+        .init(name: "Garuda Indonesia",    code: "GA", weight: 5,  types: ["B737800","MAX8","B773","A339","A320"], hubs: ["CGK", "SUB"]),
+        .init(name: "Malaysia Airlines",   code: "MH", weight: 5,  types: ["B737800","MAX8","A339","A359","A380"], hubs: ["KUL"]),
+        .init(name: "Sichuan Airlines",    code: "3U", weight: 5,  types: ["A319","A320","A321","A339","A359"], hubs: ["CTU", "CKG", "KMG", "HGH", "XIY"]),
+        .init(name: "Shenzhen Airlines",   code: "ZH", weight: 5,  types: ["A319","A320","A321","B737800"], hubs: ["SZX", "CAN", "PEK"]),
+        .init(name: "Spring Airlines",     code: "9C", weight: 5,  types: ["A320","A320NEO","A321NEO"], hubs: ["PVG", "SZX", "XIY", "CTU"]),
+        .init(name: "Asiana Airlines",     code: "OZ", weight: 5,  types: ["A320","A321","B773","A339","A359","A380"], hubs: ["ICN"]),
+        .init(name: "China Airlines",      code: "CI", weight: 5,  types: ["B737800","B773","A339","A359"], hubs: ["TPE"]),
+        .init(name: "EVA Air",             code: "BR", weight: 5,  types: ["B773","B789","B78J","A339","A321NEO"], hubs: ["TPE"]),
+        .init(name: "SpiceJet",            code: "SG", weight: 5,  types: ["B737800","MAX8"], hubs: ["DEL", "HYD"]),
+        .init(name: "Vistara",             code: "UK", weight: 5,  types: ["A320","A320NEO","A321NEO","B789"], hubs: ["DEL", "BOM"]),
+        .init(name: "Scoot",               code: "TR", weight: 4,  types: ["A320","A320NEO","A321NEO","B788","B789"], hubs: ["SIN"]),
+        .init(name: "Akasa Air",           code: "QP", weight: 4,  types: ["MAX8"], hubs: ["BOM", "BLR", "DEL"]),
+        .init(name: "Pakistan Int'l",      code: "PK", weight: 4,  types: ["A320","A320NEO","B773"], hubs: ["KHI", "ISB", "LHE"]),
+        .init(name: "AirBlue",             code: "PA", weight: 2,  types: ["A320","A321"], hubs: ["KHI", "ISB", "LHE"]),
+        .init(name: "Royal Brunei",        code: "BI", weight: 2,  types: ["A320NEO","B788"], hubs: ["BWN"]),
+        .init(name: "Cambodia Angkor Air", code: "K6", weight: 2,  types: ["A320","A321"], hubs: ["PNH", "SGN"]),
+        .init(name: "Myanmar National",    code: "UB", weight: 2,  types: ["B737800","E190"], hubs: ["RGN"]),
     ]
 
     static let middleEastRoster: [Airline] = [
-        .init(name: "Emirates",            code: "EK", weight: 12, types: ["B773","A380"]),
-        .init(name: "Qatar Airways",       code: "QR", weight: 11, types: ["A320","A321","B773","B788","B789","A359","A339"]),
-        .init(name: "Saudia",              code: "SV", weight: 8,  types: ["A320","A321","A321NEO","B773","B789","B78J","A339"]),
-        .init(name: "Etihad Airways",      code: "EY", weight: 7,  types: ["A320","A321","A321NEO","B773","B789","B78J","A359","A380"]),
-        .init(name: "flydubai",            code: "FZ", weight: 6,  types: ["B737800","MAX8","MAX9"]),
-        .init(name: "Air Arabia",          code: "G9", weight: 5,  types: ["A320","A320NEO","A321NEO"]),
-        .init(name: "Oman Air",            code: "WY", weight: 4,  types: ["B737800","MAX8","B788","B789","A339"]),
-        .init(name: "Kuwait Airways",      code: "KU", weight: 4,  types: ["A320","A321","A321NEO","B773","A339"]),
-        .init(name: "Gulf Air",            code: "GF", weight: 4,  types: ["A320","A321","A321NEO","B789"]),
-        .init(name: "Royal Jordanian",     code: "RJ", weight: 4,  types: ["A319","A320","A321","B788","B789"]),
-        .init(name: "El Al",               code: "LY", weight: 4,  types: ["B737800","B739","B788","B789","B773"]),
-        .init(name: "Iran Air",            code: "IR", weight: 4,  types: ["A319","A320","A321","A339"]),
-        .init(name: "Mahan Air",           code: "W5", weight: 3,  types: ["A319","A320","A321","A340"]),
+        .init(name: "Emirates",            code: "EK", weight: 12, types: ["B773","A380"], hubs: ["DXB"]),
+        .init(name: "Qatar Airways",       code: "QR", weight: 11, types: ["A320","A321","B773","B788","B789","A359","A339"], hubs: ["DOH"]),
+        .init(name: "Saudia",              code: "SV", weight: 8,  types: ["A320","A321","A321NEO","B773","B789","B78J","A339"], hubs: ["JED", "RUH", "DMM", "MED"]),
+        .init(name: "Etihad Airways",      code: "EY", weight: 7,  types: ["A320","A321","A321NEO","B773","B789","B78J","A359","A380"], hubs: ["AUH"]),
+        .init(name: "flydubai",            code: "FZ", weight: 6,  types: ["B737800","MAX8","MAX9"], hubs: ["DXB"]),
+        .init(name: "Air Arabia",          code: "G9", weight: 5,  types: ["A320","A320NEO","A321NEO"], hubs: ["SHJ", "AUH", "CMN"]),
+        .init(name: "Oman Air",            code: "WY", weight: 4,  types: ["B737800","MAX8","B788","B789","A339"], hubs: ["MCT"]),
+        .init(name: "Kuwait Airways",      code: "KU", weight: 4,  types: ["A320","A321","A321NEO","B773","A339"], hubs: ["KWI"]),
+        .init(name: "Gulf Air",            code: "GF", weight: 4,  types: ["A320","A321","A321NEO","B789"], hubs: ["BAH"]),
+        .init(name: "Royal Jordanian",     code: "RJ", weight: 4,  types: ["A319","A320","A321","B788","B789"], hubs: ["AMM"]),
+        .init(name: "El Al",               code: "LY", weight: 4,  types: ["B737800","B739","B788","B789","B773"], hubs: ["TLV"]),
+        .init(name: "Iran Air",            code: "IR", weight: 4,  types: ["A319","A320","A321","A339"], hubs: ["THR", "IKA", "MHD"]),
+        .init(name: "Mahan Air",           code: "W5", weight: 3,  types: ["A319","A320","A321","A340"], hubs: ["IKA", "THR", "MHD"]),
     ]
 
     // Oceania & South Pacific — Australia / New Zealand / Fiji / Tahiti / New
     // Caledonia / PNG. Per-type researched. (GUM is US-region, not here — see the
     // note in Airport.all — so United carries Guam's Pacific traffic.)
     static let oceaniaRoster: [Airline] = [
-        .init(name: "Qantas",             code: "QF", weight: 14, types: ["B737800","A339","B789","A380"]),
-        .init(name: "Air New Zealand",    code: "NZ", weight: 10, types: ["A320","A321NEO","B789","B773"]),
-        .init(name: "Virgin Australia",   code: "VA", weight: 10, types: ["B737800","MAX8"]),
-        .init(name: "Jetstar",            code: "JQ", weight: 9,  types: ["A320","A321","A321NEO","B788"]),
-        .init(name: "Fiji Airways",       code: "FJ", weight: 5,  types: ["B737800","MAX8","A339","A359"]),
-        .init(name: "Rex Airlines",       code: "ZL", weight: 4,  types: ["B737800"]),
-        .init(name: "Air Tahiti Nui",     code: "TN", weight: 3,  types: ["B789"]),
-        .init(name: "Aircalin",           code: "SB", weight: 3,  types: ["A320NEO","A339"]),
-        .init(name: "Air Niugini",        code: "PX", weight: 3,  types: ["B737800","A320"]),
+        .init(name: "Qantas",             code: "QF", weight: 14, types: ["B737800","A339","B789","A380"], hubs: ["SYD", "MEL", "BNE", "PER", "ADL"]),
+        .init(name: "Air New Zealand",    code: "NZ", weight: 10, types: ["A320","A321NEO","B789","B773"], hubs: ["AKL", "CHC", "WLG"]),
+        .init(name: "Virgin Australia",   code: "VA", weight: 10, types: ["B737800","MAX8"], hubs: ["BNE", "SYD", "MEL", "PER", "ADL"]),
+        .init(name: "Jetstar",            code: "JQ", weight: 9,  types: ["A320","A321","A321NEO","B788"], hubs: ["MEL", "BNE", "SYD", "OOL", "CNS", "ADL", "PER", "AKL", "CHC"]),
+        .init(name: "Fiji Airways",       code: "FJ", weight: 5,  types: ["B737800","MAX8","A339","A359"], hubs: ["NAN"]),
+        .init(name: "Rex Airlines",       code: "ZL", weight: 4,  types: ["B737800"], hubs: ["SYD", "ADL", "MEL", "PER", "CNS", "TSV", "BNE"]),
+        .init(name: "Air Tahiti Nui",     code: "TN", weight: 3,  types: ["B789"], hubs: ["PPT"]),
+        .init(name: "Aircalin",           code: "SB", weight: 3,  types: ["A320NEO","A339"], hubs: ["NOU"]),
+        .init(name: "Air Niugini",        code: "PX", weight: 3,  types: ["B737800","A320"], hubs: ["POM"]),
     ]
 
     // Airport-code → region membership (US is the default / everything else).

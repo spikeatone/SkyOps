@@ -16,6 +16,19 @@
 
 import SwiftUI
 
+/// The Chief Pilot's bundled portrait. Loaded by PATH, not `UIImage(named:)` —
+/// `Resources/` uses file-system-synchronized groups, so loose files land FLAT in
+/// the bundle root rather than in an asset catalog (the same reason
+/// `ArchitectArt` loads its backdrops this way). Loaded once; nil if absent, and
+/// the card falls back to a monogram.
+enum ChiefPilotArt {
+    static let portrait: Image? = {
+        guard let path = Bundle.main.path(forResource: "ChiefPilot", ofType: "png"),
+              let ui = UIImage(contentsOfFile: path) else { return nil }
+        return Image(uiImage: ui)
+    }()
+}
+
 struct CrewsView: View {
     let sim: Simulation
     var onBell: () -> Void = {}
@@ -159,8 +172,8 @@ struct CrewsView: View {
     /// the card looks deliberate either way.
     @ViewBuilder private var chiefPilotPortrait: some View {
         let side: CGFloat = 52
-        if UIImage(named: "chief_pilot") != nil {
-            Image("chief_pilot").resizable().aspectRatio(contentMode: .fill)
+        if let art = ChiefPilotArt.portrait {
+            art.resizable().aspectRatio(contentMode: .fill)
                 .frame(width: side, height: side).clipShape(Circle())
                 .overlay(Circle().stroke(cardBorder, lineWidth: 1))
         } else {

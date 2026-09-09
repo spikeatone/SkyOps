@@ -485,7 +485,9 @@ final class Simulation {
             let pct = hubUnderstaffed(code) ? Simulation.hubSalePctUnderstaffed
                                             : Simulation.hubSalePctHealthy
             let price = Int((Double(hubEstablishCost(ap)) * pct).rounded())
-            let rival = competitorName(excluding: [])
+            // The buyer must plausibly operate where the hub IS — this name becomes a
+            // permanent rival hub on the map.
+            let rival = competitorName(excluding: [], near: [code])
             decisionQueue.append(Decision(id: "hubOffer_\(code)_\(tick)", kind: .hubOffer, aircraft: nil,
                                           hubOffer: HubOffer(airportCode: code, rival: rival, price: price)))
             break
@@ -588,7 +590,8 @@ final class Simulation {
                 // so taking a competitor out of the market doesn't quiet it.
                 entryRate *= consolidationEntryMultiplier
                 if Double.random(in: 0..<1) < entryRate {
-                    let name = competitorName(excluding: r.competitors)
+                    // A rival entering YOUR route should be one that flies where it goes.
+                    let name = competitorName(excluding: r.competitors, near: r.stops)
                     r.competitionLevel += 1
                     r.competitors.append(name)
                     opsAutoOpen(.competition)   // a rival landed on a route → surface the box
@@ -613,11 +616,26 @@ final class Simulation {
     /// A plausible rival carrier (avoids duplicating one already on the route,
     /// and never names a carrier the player now OWNS — a subsidiary can't enter
     /// as your competitor).
-    private func competitorName(excluding used: [String]) -> String {
+    /// `near` anchors the rival to the airports in play: a carrier that actually
+    /// operates in that region, preferring one that really hubs there. Previously
+    /// this was a hardcoded US-only pool used everywhere on the globe, so a CDG
+    /// hub could be bought — permanently, and shown on the map — by "Southwest
+    /// Airlines", and an AKL↔SYD route was contested by JetBlue (player-reported,
+    /// 8 Sep 2026). Falls back to the regional roster, then to any carrier.
+    private func competitorName(excluding used: [String], near codes: [String] = []) -> String {
         let owned = Set(subsidiaries.map(\.name))
-        let pool = ["American Airlines", "Delta Air Lines", "United Airlines", "Southwest Airlines",
-                    "JetBlue", "Alaska Airlines", "Spirit", "Frontier"]
-        return pool.filter { !used.contains($0) && !owned.contains($0) }.randomElement() ?? "A new entrant"
+        func pick(_ pool: [Airline]) -> String? {
+            pool.map(\.name).filter { !used.contains($0) && !owned.contains($0) }.randomElement()
+        }
+        let regions = Set(codes.map { Airline.region($0) })
+        let regional = regions.flatMap { Airline.roster(for: $0) }
+        // 1. A carrier that genuinely hubs at one of these airports…
+        let hubbed = regional.filter { a in a.hubs.contains { codes.contains($0) } }
+        if let n = pick(hubbed) { return n }
+        // 2. …else any carrier operating in that region…
+        if let n = pick(regional) { return n }
+        // 3. …else anyone (a region with no roster of its own).
+        return pick(Airline.roster) ?? L("A new entrant")
     }
 
     // MARK: - Player route promotions (fare war / ad campaign / loyalty push)

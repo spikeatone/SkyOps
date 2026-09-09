@@ -161,12 +161,22 @@ enum CompetitorIntel {
                                     max(2, regionAirports.count * 2)))
         let citiesServed = max(2, min(regionAirports.count,
                                       Int(Double(routeCount) * Double.random(in: 0.55...0.85, using: &rng))))
-        // Hubs = its region's busiest airports, so a carrier's stated hubs are
-        // somewhere the player recognises from their own map.
+        // Hubs = the carrier's REAL hubs (researched + fact-checked per carrier),
+        // trimmed to how many a fleet this size would realistically concentrate at.
+        // This USED to be "the region's busiest airports", which meant every carrier
+        // in a region shared one ordered list — Air France deterministically hubbed
+        // at LHR in every seed and could never reach CDG (player-reported, 8 Sep
+        // 2026). These hubs are not cosmetic: they base an acquired fleet, anchor
+        // its inherited routes, and become real player hubs on acquisition.
         let hubCount = fleetSize > 30 ? 3 : (fleetSize > 12 ? 2 : 1)
-        let hubCodes = regionAirports
-            .sorted { ($0.info?.annualPassengers ?? 0) > ($1.info?.annualPassengers ?? 0) }
-            .prefix(hubCount).map(\.code)
+        let realHubs = airline.hubs.filter { code in regionAirports.contains { $0.code == code } }
+        let hubCodes = realHubs.isEmpty
+            // Fallback ONLY for a carrier whose real hubs aren't in the game's
+            // airport list (e.g. ASKY at LFW) — better a plausible regional airport
+            // than a wrong one.
+            ? regionAirports.sorted { ($0.info?.annualPassengers ?? 0) > ($1.info?.annualPassengers ?? 0) }
+                            .prefix(hubCount).map(\.code)
+            : Array(realHubs.prefix(hubCount))
 
         // --- Operations --------------------------------------------------
         let loadFactor = Double.random(in: 0.72...0.88, using: &rng)
