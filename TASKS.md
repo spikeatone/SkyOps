@@ -28,6 +28,37 @@ only, and update it in the same session as the work.
 
 ## In flight
 
+### ⏭️ NEXT SESSION — MX + TRAINING AUTOMATION AT SCALE (designer issue #4, deferred on purpose)
+Designer, 8 Sep: *"For my 200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and
+near all-time at anything faster. This really needs to be automated via maintenance bases or
+something as it's very tedious. Same with training."* Half of it already landed this session (the
+auto-slow exemption stopped MX pinning the sim at 1×; the Chief Pilot answers "shortfall vs.
+in-training"), but the CARD VOLUME itself is untouched.
+- [ ] Build `aa-1.1.x/MX_BASES_SCOPE.md` — all 5 decisions already confirmed: auto A checks (no
+      cards, Ops event only, toggle on Fleet ▸ Maintenance) · MRO +25% and a 0–7-day C/D slot wait
+      as the default provider · line stations ($4M) + hangar bases ($18–45M) at an operating hub OR
+      any airport with ≥3 of your routes, 2-aircraft C/D capacity per hangar line · overnight at a
+      base/hub line station = zero lost legs (existing 1-day downtime elsewhere) · MX moves to a
+      third Fleet segment (My Fleet · Marketplace · Maintenance), Ops keeping only alert cards + a
+      one-line summary drawer.
+- [ ] ⚠️ **Fix the MX day-conversion bug in the same pass** — four sites in `Sim/Simulation.swift`
+      (~3715 / 3773 / 3827 / 3879, each commented "~2 cycles/sim-day") convert cycles→days at a
+      hardcoded 2 when the engine flies ~3.52, so **every MX date the player sees is ~76% too far
+      out**. Make it one shared constant; re-run `MXCoverageVerify`.
+
+### ⚠️ DESIGNER CALL PENDING — the training centre never pays back at real simulator prices
+Repricing the centre to the designer's real-world figures ($35M facility, $12–22M bays) made it
+economically irrational at game scale: the best measured arm (45 A320s, 5 years) returns $19M
+against $67M. Table + the four options in `aa-1.1.x/CREW_TRAINING_SCOPE.md` ("OPEN BALANCE
+QUESTION"). `TrainingCenterABProbe` is now a measurement tool, not a gate.
+- [ ] Designer picks: accept-as-prestige (and say so in the UI) · raise crew-day value or days
+      saved · walk prices back toward game scale · or give the centre a non-fee, non-time benefit.
+
+### Spirit Airlines is still in the US roster
+Flagged 8 Sep while fact-checking carrier hubs: Spirit ceased all passenger operations in May 2026.
+Same class as the Air France A380 correction — the roster has no mechanism to notice.
+- [ ] Designer call: remove Spirit, or keep it as a period-accurate carrier.
+
 ### German localization — SCOPED (28 Aug); a MARKET-ENTRY bet, not a demand response
 TelemetryDeck shows German = 16% of preferred language (#2 after English 76%, 10× Spanish). Full
 scoping in `aa-1.1.x/LOCALIZATION_SCOPING.md`. **Framing (designer): this is an ACQUISITION /

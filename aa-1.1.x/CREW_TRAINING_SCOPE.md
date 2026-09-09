@@ -1,18 +1,28 @@
 # Crew Training — re-imagined (scope + recommendations)
 
-**Status: Phase 1 MERGED to `main` (8 Sep 2026, `162b865`) · Phase 2 BUILT on branch
-`training-center` (8 Sep 2026). All 5 decisions confirmed (decision 4 = ratio + verdict; provider =
-"Global Aviation Training"). Verified `CrewPipelineVerify` 63/63 + `TrainingCenterVerify` 69/69 +
-`TrainingCenterABProbe` 5/5 + regressions + full build + German clean.**
+**Status: Phases 1 AND 2 MERGED to `main` (8 Sep 2026 — `162b865`, `8383f2c`), then REPRICED to
+real simulator cost (`1faf20e`) and given a crew-TIME payback term (`3bcaa10`). All 5 decisions
+confirmed (decision 4 = ratio + verdict; provider = "Global Aviation Training"). Verified
+`CrewPipelineVerify` 63/63 + `TrainingCenterVerify` 75/75 + regressions + full build + German clean.
+⚠️ `TrainingCenterABProbe` is no longer a pass/fail gate — see "OPEN BALANCE QUESTION" below.**
 
 ## Phase 2 as BUILT (differs from the §3.5 draft — read this before touching the numbers)
 
-- **Costs are GAME-SCALED, not real-world-scaled.** The draft priced a real Level D simulator
-  (facility $6M + bays $6–16M, $270k/mo). The game's training VOLUME can't amortize that: a
-  crew sits 2 recurrents a year, so a whole 16-aircraft narrowbody family only generates ~$1.3M
-  of course fees a year. Shipped: **facility $750k** + **bay $2.5M widebody / $1.25M narrowbody /
-  $800k turboprop**, opex **$4k/mo facility + $8k/mo per bay**. In-house course = **0.4×** the
+- **⚠️ COSTS ARE REAL-WORLD-SCALED — this REVERSES the earlier "game-scaled" call, on designer
+  direction (8 Sep).** The first cut deliberately shrank the facility to $750k and bays to
+  $1.25–2.5M, reasoning that the game's training VOLUME can't amortize real prices (a 16-aircraft
+  narrowbody family only generates ~$1.3M of course fees a year). The designer overrode it with
+  real figures — *"an airline training center equipped with 10 commercial jet simulators will cost
+  between $160 million and $260 million… because airline-grade simulators cost as much as real
+  airplanes, the massive capital required goes primarily into procuring the devices themselves
+  rather than the building"* (sourced breakdown: Level D FFS $12–22M each, $120–220M for ten;
+  facility construction $400–600/sq ft ≈ $30–40M; initial spares + testing $10M; total $160–270M
+  excluding land). Shipped: **facility $35M** + **bay $22M widebody / $18M narrowbody / $12M
+  turboprop-RJ**, opex **$150k/mo facility + $85k/mo per bay**. In-house course = **0.4×** the
   contract price, **30d** initial (vs 45), **2d** recurrent (vs 4).
+- **The bay gate went 6 → 20 aircraft** (`simBayMinAircraft`) in the same pass. The 6-aircraft gate
+  had been calibrated against $750k facility costs and was simply incoherent at real prices; it was
+  raised and FLAGGED rather than left silently inconsistent.
 - **The contract provider now has a LEAD TIME** (0–10 days for a class slot on a new hire), which
   the center removes — the scope's §3.3 wait, pulled forward into Phase 2 because it's most of
   what makes in-house feel different.
@@ -24,30 +34,57 @@
   capacity, scheduled training all runs in-house (2-day courses inside a 30-day window churn 4 seats
   far faster than crews come due); urgent about-to-lapse crews still bypass the cap to the
   contractor, which is the safety valve.
-- **BALANCE GATE PASSED** (`TrainingCenterABProbe`, 6 arms × 5 sim-years, payback = savings vs
-  contract − facility − opex):
+- **PAYBACK COUNTS CREW TIME, NOT JUST COURSE FEES** (designer: *"value the time. i think this will
+  be a good teaching item to those interested."*). At real prices the fee saving alone can never
+  repay a bay — ~92 A320s in one family, ~1,006 Dash-8s — so measuring only fees made the payback
+  line read "never" even when owning the sim was plainly right. Airlines buy simulators for
+  THROUGHPUT and CONTROL. The ledger now also books the crew-DAYS an in-house course returns to the
+  line: `(45 − 30) + 10/2` on a type rating (the shortened course plus the avoided class-slot wait),
+  `4 − 2` on a requal, `4 − 2` on every recurrent. Two properties keep it honest:
+  1. **A crew-day is DERIVED, not assumed** — `crewDayValue(family:)` = the family's own
+     `dailyNet` per FLYING aircraft (the same helper MX uses for forgone revenue) ÷
+     `coverageContinuousRatio`. Zero for a family that isn't flying or isn't profitable.
+  2. **It is scaled by whether crew is the BINDING constraint** — `crewShortfallFactor(family:)`,
+     0 with deep cover → 1 with nothing line-ready.
+  Bookkeeping only: no cash moves, the invariant is untouched (asserted). The Crews card shows the
+  four-line SPLIT (course savings · crew time returned · facility + bays · running costs) because
+  that asymmetry is the teaching point, and the bay row reads "Course fees alone repay it above ~N
+  aircraft; crew time saved counts on top."
+- **⚠️ OPEN BALANCE QUESTION — AT REAL PRICES THE CENTER NEVER PAYS BACK AT GAME SCALE.** Measured
+  after the repricing (`TrainingCenterABProbe`, 5 sim-years, DEN hub, auto-recurrent on, center +
+  one bay on day 0):
 
-  | family | 24 mo | 36 mo | 48 mo | 60 mo |
-  |---|---|---|---|---|
-  | 6 × A320 (the build gate) | −$1.70M | −$1.53M | −$1.39M | **−$1.26M — never** |
-  | 12 × A320 | −$1.27M | −$828k | −$622k | −$766k |
-  | 16 × A320 | −$744k | −$32k | **+$596k** | +$1.16M |
-  | 24 × A320 | −$117k | **+$812k** | +$1.32M | +$1.28M |
-  | 8 × B788 | −$1.05M | **+$350k** | +$1.47M | +$2.47M |
+  | arm | fees | crew time | opex | facility | payback @ 60 mo |
+  |---|---|---|---|---|---|
+  | 20 × A320 (the gate) | +$4.6M | +$2.3M | −$14.1M | −$53.0M | **−$60.3M** |
+  | 45 × A320 | +$8.2M | +$10.8M | −$14.1M | −$53.0M | **−$48.1M** |
+  | 45 × A320, crewed thin (1.4/ac) | +$494k | +$1.6M | −$14.1M | −$53.0M | **−$65.0M** |
+  | 20 × B788 | +$14.2M | +$18k | −$14.1M | −$57.0M | **−$56.9M** |
 
-  Value-sink for a small family, pays back for a large one — the Hubs-lesson threshold, never
-  dominant. **Re-run this probe after touching ANY center/course constant.**
-- **KNOWN TENSION worth a designer look: the build gate (6 aircraft) sits well below break-even
-  (~14 narrowbodies, ~7 widebodies).** The gate is the confirmed decision, so it stands; the trap is
-  defused in the UI instead — the bay row reads "Course savings repay it above ~N aircraft in this
-  family" (`simBayPaybackAircraft`, derived from the course fee and the 2.1-crews-per-aircraft ratio,
-  not hardcoded). Raise `simBayMinAircraft` to ~12 if you'd rather the game refuse the bad build
-  outright.
+  Payback does improve with fleet size (−$60.3M → −$48.1M), but nothing comes close: five years of
+  a 45-aircraft narrowbody family returns $19M against $67M of capital + opex. **This is a designer
+  call, not a bug to tune away** — the real-world pricing was an explicit instruction, and the
+  honest options are (a) accept the center as a prestige/realism purchase that never repays, and
+  say so in the UI; (b) raise the value of a crew-day or the days saved; (c) lower the real prices
+  toward game scale (i.e. re-open the reversed decision); or (d) give the center a benefit that
+  isn't fee-or-time — e.g. capacity the contractor simply won't sell you.
+- **⚠️ A REAL FINDING inside the time-value model: a crew-STRETCHED family books LESS time value
+  than a deeply-covered one** ($1.6M vs $10.8M for the same 45 aircraft), the opposite of the naive
+  reading. The scarcity premium is real — `TrainingCenterVerify` test 9 proves it in isolation — but
+  on a live fleet understaffing has two larger, opposite effects: aircraft sit in rest holds so the
+  `dailyNet` a crew-day is valued against falls, and fewer crews means fewer courses to shorten.
+  **Do not "fix" this by removing the shortfall factor** — it's what stops a deeply-covered airline
+  booking value for crew it never needed.
+- **`TrainingCenterABProbe` was rewritten from a GATE into a MEASUREMENT tool** in the same pass.
+  Its old arms (6/8/12/16 aircraft) can't even build a bay now, and its old thresholds were set
+  against $750k facility costs. It asserts only what must hold regardless of tuning — the ledger
+  identity and payback improving with fleet size — and prints the table above. Re-run it after
+  touching ANY center/course constant.
 - **The ledger IS the A/B** (methodology worth reusing): every in-house course books
-  `savings = contract price − in-house price`, so `payback = savings − facility − opex` is exactly
-  the delta against a contract-only twin with the same course volume. Economic events, AOG and
-  weather all cancel because they never touch the ledger — no two-sim A/B, no event poisoning
-  (the FareVerify lesson).
+  `savings = contract price − in-house price` and every shortened course books its crew-days, so
+  `payback` is exactly the delta against a contract-only twin with the same course volume. Economic
+  events, AOG and weather all cancel because they never touch the ledger — no two-sim A/B, no event
+  poisoning (the FareVerify lesson).
 - **Harness lesson (cost me two false failures):** on a FLYING fleet, a graduated crew goes straight
   `.onDuty`, so asserting `.available` is wrong (assert `isLineReady`); and a cash-delta assertion
   also contains a day of flight revenue plus the monthly opex, so measure a training charge via

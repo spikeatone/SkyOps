@@ -1114,6 +1114,31 @@ one contradicts the design thesis.)
     40/40 (+ a label test) + full Debug build. **The feature is now complete** (balance + labels
     done, designer-confirmed on device). The only residual is a nice-to-have live re-drive of the
     exact pick→sequence→confirm gesture chain in a session where the Simulator input isn't wedged.
+  - **⚠️ A ROTATION SERVES EVERY STOP — the standing completeness RULE (8 Sep, player-reported "my
+    new multi-leg route doesn't show the dotted green lines").** `Route.originCode`/`destCode` are
+    only the FIRST and LAST stop, so every consumer that keyed off that PAIR was silently partial on
+    a rotation: the map drew ONE arc, and intermediate cities counted toward NOTHING — not hub
+    eligibility (`routesAt`, `hubRoutes`), not `hubSpokeNet`, not `hubDemandMultiplier`, not the
+    competition fortress / rival-hub factors. All now read the whole loop (`rotationLegs` /
+    `stops.contains(code)`). **RULE: any new code keyed off a route's endpoint pair must ask whether
+    a rotation makes it partial.** Aircraft-based calls (the CURRENT leg) are correct as-is.
+    Two lessons from the review that caught my own incomplete first pass:
+    (a) **A PARTIAL sweep is worse than none** — making `routesAt` stops-aware newly ALLOWED a hub
+    on an intermediate stop, which then earned a +0% bonus and an unrecoupable payback chart,
+    because `hubSpokeNet`/`hubDemandMultiplier` were still endpoint-only. Sweep every consumer in
+    one pass, or none.
+    (b) **`rotationLegs` closes the loop, so a 2-stop route emits BOTH A→B and B→A** — and
+    CoreGraphics restarts a dash phase per subpath, so drawing both rendered every classic shuttle
+    as a near-SOLID line. Dedupe on the unordered pair when drawing. My commit message had claimed
+    "visually unchanged"; it wasn't. RotationVerify **55/55** (tests 12–13 are the guard).
+  - **TRANSPACIFIC LEGS TAKE THE SHORT WAY (8 Sep, designer-reported: transpacific routes routed
+    across the ATLANTIC).** On the wrap-around map the destination has infinitely many copies; the
+    path was drawn to the stored one, so LAX→NRT went the long way round. `FlightPath.nearestCopy`
+    now snaps every leg to the copy of its destination NEAREST the origin, keyed off a shared
+    `FlightPath.wrapWidth` set once in `projectAirports()`. **Fixed at the shared level ON PURPOSE**
+    — route arcs, the route suggestion, the rotation preview, aircraft motion and the weather rejoin
+    all consume it, so they're fixed together and can't regress one at a time. `.taxiIn`/`.turnaround`
+    return `path.end`, not the raw dest. `PathWrapVerify` 16/16; designer-confirmed on device.
 
 - **The foundational shift this session: aircraft you own no longer fly
   randomly.** Before this work, EVERY aircraft (purchased or background)
@@ -5623,6 +5648,151 @@ a real leak (Vineyard shipped that once) — AA has none.
   (both `game-center-1.4.1` and `tech-ops-modernization` merged; build 50, the GC-only cut, is
   superseded — attach build 51). Test Store path is LIVE-VERIFIED (the designer pasted the real
   `test_` key; a `-useTestStore` Debug launch logged RevenueCat's "Using a Test Store API key").
+
+## Decided — Crew training pipeline + the Training Center (8 Sep 2026; on `main`, unreleased)
+
+Full design + the designer's 5 answers: `aa-1.1.x/CREW_TRAINING_SCOPE.md`. Designer ask: make
+training real-world in TIMELINES; an acquired aircraft comes with ONE crew and the next must be
+HIRED AND TRAINED; mid-game, build your own training center (early game = contracting out to a
+FlightSafety/CAE-style third party); expand CREWS with real detail on how crews are trained,
+scheduled and deployed — **without** "assign every crew to every flight" tedium.
+
+- **Two hiring doors per family** (`hireCrew(family:mode:)`): a **RATED hire** (already
+  type-rated — 10 days of IOE, 2× the course price) or a **NEW HIRE** (45 days of initial type
+  training at 1.25×, plus a 0–10-day class-slot wait at the contractor). A crew in training is
+  NOT assignable. The bundled crew that arrives with an aircraft stays line-ready — the ask was
+  that the SECOND crew costs you time, not that the first one strands the aircraft.
+- **Currency is per-crew and rolling, not a family-wide card.** `Crew.currencyDays = 180`; a
+  rolling auto-recurrent policy (**default ON**) books each crew a 4-day course inside a 30-day
+  window before expiry, at 15% of the hire basis. Off (or unaffordable) → the crew goes
+  **`.lapsed`** and must REQUALIFY at 1.6×. This replaced the old family-wide `.training`
+  decision card, and those cards moved OFF Ops onto the Crews tab.
+- **Coverage readout** (designer decision 4, chosen from three options): a RATIO plus a plain
+  verdict, against `coverageContinuousRatio = 1.9` crews per aircraft for continuous cover
+  (1.5 = thin). Provider is named **"Global Aviation Training"** (decision 5).
+- **THE TRAINING CENTER** — one facility at an operating hub, one full-flight **sim bay** per crew
+  family. In-house courses are **0.4×** the contract price and **30d/2d** instead of 45d/4d, with
+  no class-slot wait; a bay seats **4** and the contractor takes the overflow, so an under-built
+  center never dead-ends. `totalTrainingCenterSpend` is a NEW cash-invariant capital term (it
+  joins the invariant expression, `FinanceSnapshot`, `FinanceSave` and `PeriodFigures.capitalOut`).
+- ⚠️ **THE RECURRENT CONCURRENCY CAP *IS* THE BAY CAPACITY for a family with a bay — do not
+  restore a pool-fraction cap there.** The A/B probe caught the first version making a BIGGER
+  fleet save LESS: the cap scaled with pool size (20%) while a bay seats 4, so every wave pushed
+  its surplus to the contractor at FULL price and 16 aircraft paid back worse than 12. Urgent
+  about-to-lapse crews still bypass the cap to the contractor — that's the safety valve.
+- **⚠️ REPRICED TO REAL SIMULATOR COST — this REVERSES the original "costs are GAME-SCALED"
+  call.** The draft deliberately shrank the facility to $750k and bays to $1.25–2.5M because the
+  game's training VOLUME can't amortize real prices (a 16-aircraft narrowbody family only
+  generates ~$1.3M of course fees a year). The designer overrode that with real figures — *"an
+  airline training center equipped with 10 commercial jet simulators will cost between $160
+  million and $260 million… because airline-grade simulators cost as much as real airplanes, the
+  massive capital goes into the devices, not the building"* — so: **facility $35M**, **bay $22M
+  widebody / $18M narrowbody / $12M turboprop-RJ**, opex **$150k/mo facility + $85k/mo per bay**.
+  The bay gate went **6 → 20 aircraft** (`simBayMinAircraft`) in the same pass; the old gate was
+  incoherent at real prices.
+- **PAYBACK COUNTS CREW TIME, NOT JUST COURSE FEES** (the designer's "value the time. i think
+  this will be a good teaching item"). At real prices the fee saving alone can NEVER repay a bay
+  (~92 A320s, ~1,006 Dash-8s), which made the payback line read "never" even when owning the sim
+  was obviously right — it was measuring the wrong thing. Airlines buy simulators for THROUGHPUT
+  and CONTROL. So the ledger also books the crew-DAYS an in-house course returns to the line
+  (20 on a type rating incl. the avoided class-slot wait, 2 on every recurrent), valued by two
+  properties that keep it honest rather than invented:
+  1. **A crew-day is DERIVED**: the family's own `dailyNet` per flying aircraft (the same helper
+     MX uses for forgone revenue) ÷ `coverageContinuousRatio`. Zero for a family that isn't
+     flying or isn't profitable — you can't lose revenue you were never earning.
+  2. **It is scaled by whether crew is the BINDING constraint** (`crewShortfallFactor`, 0 with
+     deep cover → 1 with nothing line-ready). A returning crew that flies nothing it wasn't
+     already flying is worth nothing, and the ledger says so.
+  The Crews card shows the SPLIT (course savings · crew time returned · facility + bays · running
+  costs) because that asymmetry IS the teaching point. Bookkeeping only — no cash moves, invariant
+  untouched (asserted).
+- **⚠️ OPEN BALANCE QUESTION — the repriced center does NOT pay back at game scale, and the old
+  pass/fail gate is GONE.** `TrainingCenterABProbe` was rewritten from a gate into a MEASUREMENT
+  tool (its old arms — 6/8/12/16 aircraft — can't even build a bay now, and its old thresholds
+  were set against $750k facility costs). It now asserts only what must hold regardless of tuning
+  (the ledger identity, payback improving with fleet size, and a stretched family booking more
+  time value than a deeply-covered one) and PRINTS the payback table for the designer. Read the
+  numbers in `CREW_TRAINING_SCOPE.md` before tuning anything here.
+- **THE LEDGER IS THE A/B** (methodology worth reusing): every in-house course books
+  `contract price − in-house price`, so `payback` is exactly the delta vs. a contract-only twin
+  with the same course volume. Economic events, AOG and weather all cancel because they never
+  touch the ledger — no two-sim A/B, no event poisoning (the FareVerify lesson).
+- **Harness traps that cost two false failures:** on a FLYING fleet a graduated crew goes straight
+  `.onDuty`, so assert `isLineReady`, not `.available`; and a cash-delta assertion also contains a
+  day of flight revenue plus the monthly opex, so measure a training charge via `maintenanceSpend`
+  minus the ledger's opex delta (or park the fleet, as test 5 does).
+- **THE CHIEF PILOT — a persona atop CREWS** (designer asked "is that too much of a crutch?" and
+  then said build him). **Capt. Morgan Ellis** reads the pipeline that already exists and says what
+  it MEANS: per-family outlooks (`crewOutlook(family:)` → shortfall / in-training block / lapse
+  risk / healthy). He exists because the designer couldn't tell a PERMANENT crew shortfall from a
+  block merely sitting in training. **He advises; he never acts** — that's the line that keeps him
+  from being a crutch. Portrait: `Resources/Brand/ChiefPilot.png` (512×512, MJ v8).
+- Verified: `CrewPipelineVerify` 63/63, `TrainingCenterVerify` **75/75** (test 9 covers the crew-time
+  value), regressions + free-tier probe + full build + German clean.
+
+## Decided — Acquisition, competitor-hub and buyback repairs (8 Sep 2026; on `main`, unreleased)
+
+Four gameplay issues the designer hit in one acquisition playthrough. Three fixed here; the fourth
+(MX/training automation at a 200-plane scale) is deliberately deferred to its own session.
+
+- **Real carriers hub where they REALLY hub** (*"Air France hubbing out of LHR is very odd"*). Root
+  cause was NOT missing data — competitor hubs were DERIVED from "busiest airport in the region",
+  so any European carrier could hub anywhere in Europe. `Airline.hubs` is now a real, fact-checked
+  field on **all 141 roster entries** (Air France CDG/NCE, Lufthansa FRA/MUC, Copa PTY…), and
+  `Competitor.profile(for:region:…)` uses the carrier's own hubs filtered to the region, falling
+  back to region's-busiest ONLY when a carrier has none there. `CarrierHubVerify` **650/650**.
+  Same standing caveat as the rest of the roster: real hubs change and nothing here detects it.
+- **⚠️ ACQUIRED FLEETS ARRIVED GROUNDED — `inheritFleet` was the ONE owned-aircraft path that never
+  called `seedMXState`.** The designer bought open books that said no renewal or capex was needed,
+  and at close every aircraft was grounded needing a D check. Every tail defaulted to "due at 0
+  cycles". Measured before the fix: 8/8 grounded, **$83.5M of forced MX = 24% of the purchase
+  price**. **RULE: any code path that creates an OWNED aircraft must seed its MX state** — buy,
+  lease, used, inherit, and anything added later.
+- **A subsidiary now shows its LIVE numbers.** The reported "the finance report keeps showing
+  pre-acquisition numbers forever" is half true by design — that panel is the SCOUTING topline,
+  which never moves. Fixed by adding, for owned subsidiaries only, a **CURRENT PERFORMANCE** box
+  computed live (`subsidiaryFinancials`) and relabelling the old topline **"AT ACQUISITION"**.
+  Attribution needed an operator of record, so `assign` stamps `r.subsidiaryCode` from the
+  aircraft the first time a route is staffed (`flights == 0`), and `openBooks` now refuses a
+  carrier you already own. `AcquisitionMXVerify` **33/33**.
+- **Buyback offers price off EARNING POWER, not sunk cost** (*"why would I ever sell a highly
+  profitable hub at 30% of my cost, or give back a slot for less than a month's profit?"*). A
+  healthy hub now fetches **0.90–1.40× establish cost** (the 0.35× vulture price survives, but only
+  when the hub is UNDERSTAFFED), and a slot offer is **3–8× that route's trailing monthly net**
+  (`trailingMonthlyNet`). **The gate that matters is the exploit check, not the price:** a
+  shared-snapshot A/B (both arms restored from ONE `GameSnapshot` so events cancel) has accept-every-
+  offer finishing **$210M BEHIND** decline-every-offer. `BuybackPricingProbe` 7/7.
+- **Routine MX no longer pins the sim at 1×.** `.mxCheck` is now the one decision kind exempt from
+  auto-slow (`Decision.Kind.warrantsAutoSlow`). Measured on a 200-plane fleet before the fix: **34%
+  of wall-clock at 5× and 91% at 100×** spent snapped back to 1× — exactly matching the designer's
+  report. Scheduled maintenance is planned work; it should not interrupt the clock the way an AOG
+  or an activist does.
+- ⏭️ **NOT FIXED — issue 4, MX + training automation at scale.** The card VOLUME is untouched.
+  Build `aa-1.1.x/MX_BASES_SCOPE.md` (all 5 decisions already confirmed) in its own session, and fix
+  the day-conversion bug found while measuring: four sites in Simulation.swift convert cycles→days
+  at a hardcoded **2 cycles/sim-day** when the engine flies **~3.52**, so every MX date the player
+  sees is ~76% too far out.
+
+## Decided — Ops drawers, alert chips and centring (8 Sep 2026; on `main`, unreleased)
+
+- **Every Ops box is a collapsible DRAWER** so a player can scroll fast. State lives on the sim
+  (`opsCollapsedSections`, `Sim/OpsSection.swift`), is PERSISTED, and legacy saves restore all-open.
+  **An alert auto-opens its own box** (`Decision.Kind.opsSection` maps `.mxCheck` → maintenance,
+  `.hubOffer` → hubs, etc.) so the player never hunts for what's shouting at them.
+- **A red CHIP carries the count on any drawer holding something that needs attention** — a
+  collapsed drawer must never hide an alert. (Designer: *"put attention-needing alerts in a red
+  chip so they aren't lost."*)
+- **The auto-slow gives the player's SPEED BACK** once every card that arrived while slowed has
+  cleared (`autoSlowRestoreSpeed` / `autoSlowPendingIDs`). A speed the player picks themselves, or
+  a card that pre-dated the slow, never fights it.
+- **The MX list sorts NEAREST DATE (most urgent) FIRST**, and the row's displayed check is the same
+  check the sort used (`mxNearestCheck`). `OpsTweaksVerify` 43/43.
+- **Modals centre in the CONTENT COLUMN, not the whole window.** On iPad the sidebar rail made the
+  Alerts modal, the auto-slow banner and the milestone toast all read off-centre.
+  `.centredInContentColumn(isPadLayout)` (SkySidebar.swift) is the shared helper — use it for any
+  future centred overlay.
+- **The graduation-cap icon is the designer's Figma art app-wide** (node 158:862, via
+  `MilestoneIconArt`), keeping the existing light/dark tints.
 
 ## Release status — see `HANDOFF.md`
 

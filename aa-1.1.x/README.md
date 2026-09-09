@@ -145,20 +145,57 @@ group never compiles them into the build.
   AOG grounds the aircraft for good and reads as a crew failure.
 
 - **`TrainingCenterVerify.swift`** — the Training Center, crew-training Phase 2 (8 Sep 2026;
-  scope §3.5), 69/69: the operating-hub gate, one facility, the 6-aircraft bay gate + cost by
-  class, exact charges into the `totalTrainingCenterSpend` capital term, in-house pricing
+  scope §3.5), **75/75**: the operating-hub gate, one facility, the **20-aircraft** bay gate +
+  cost by class, exact charges into the `totalTrainingCenterSpend` capital term, in-house pricing
   (0.65× new hire / 0.4× recurrent) + timelines (30d / 2d, no class-slot wait), the 4-seat bay
   capacity with contractor overflow, 2× recurrent concurrency, monthly opex + the ledger
   payback point, persistence round-trip + a pre-center save, and the contract 0–10-day
-  class-slot lottery.
+  class-slot lottery. **Test 9 covers the CREW-TIME value** (a deeply-crewed family books ~zero,
+  a stretched one books real value, stretched > deep, `payback == savings + timeValue − facility
+  − opex`, and the cash invariant is untouched since it's bookkeeping only). Two assertion traps
+  worth knowing: crews graduate straight to `.onDuty` on a flying fleet (assert `isLineReady`, not
+  `.available`), and course COST can't be measured by cash delta while flights are settling — read
+  `maintenanceSpend` minus the ledger's opex, or park the fleet.
+- **`AcquisitionMXVerify.swift`** — the acquisition bugs from the designer's playthrough (8 Sep
+  2026), **33/33**. The headline: `inheritFleet` was the ONE owned-aircraft path that never called
+  `seedMXState`, so every inherited tail defaulted to "due at 0 cycles" and the whole fleet arrived
+  GROUNDED needing D checks the open books had said weren't coming (measured 8/8 grounded, $83.5M =
+  24% of the purchase price in forced MX at close). Also covers the live subsidiary P&L
+  (`subsidiaryFinancials` over routes stamped with an operator of record), `openBooks` refusing a
+  carrier you already own, and the cash invariant through a full acquisition.
+- **`CarrierHubVerify.swift`** — real-world hub accuracy (8 Sep 2026), **650/650**. Asserts every
+  one of the 141 roster carriers has at least one hub, that each hub is a real airport code, and —
+  the actual fix — that `Competitor.profile` reports the carrier's OWN hubs when any lie in the
+  region being generated, falling back to region's-busiest only when none do. The bug it guards
+  against was Air France hubbing at LHR: hubs used to be DERIVED from regional traffic, so a
+  carrier could hub anywhere on its continent.
+- **`BuybackPricingProbe.swift`** — the buyback repricing (8 Sep 2026), 7/7 + an exploit A/B. A
+  healthy hub fetches 0.90–1.40× establish cost (0.35× only when UNDERSTAFFED — the vulture case)
+  and a slot offer is 3–8× that route's `trailingMonthlyNet`. The important half is the SHARED-
+  SNAPSHOT A/B: both arms restore from one `GameSnapshot` (so economic events cancel), one accepts
+  every offer and one declines every offer — accept-all must finish BEHIND (measured $210M behind),
+  which is what proves the new, much richer offers still aren't an exploit.
+- **`RotationVerify.swift`** — multi-city rotations, **55/55**. Tests 12 and 13 are the
+  stops-aware guard added 8 Sep: every consumer that used to key off a route's endpoint PAIR
+  (`routesAt`, `hubRoutes`, `hubSpokeNet`, `hubDemandMultiplier`, the competition fortress and
+  rival-hub factors) must read the whole loop, and a 2-stop route must draw each city pair ONCE
+  (`rotationLegs` emits both A→B and B→A, which CoreGraphics rendered as a near-solid line).
 - **`TrainingCenterABProbe.swift`** — the Training Center's BALANCE GATE. The center's own
   ledger IS the A/B (every in-house course books `contract price − in-house price`, so
   `payback = savings − facility − opex` is exactly the delta vs a contract-only twin with the
   same course volume — events cancel because they never touch the ledger). One family per
-  arm on a DEN hub, crewed to ~2.1/aircraft, auto-recurrent on, center + bay on day 0;
-  prints payback at 12/24/36/48/60 months for 6/8/12/16/24 A320s and 8 787s, and asserts
-  the threshold shape (a value-sink at the 6-aircraft gate, payback for 16+ narrowbodies
-  and 8 widebodies). Re-run after touching any center/course constant.
+  arm on a DEN hub, auto-recurrent on, center + bay on day 0; prints payback at 12/24/36/48/60
+  months across fleet sizes. **⚠️ REWRITTEN 8 Sep from a GATE into a MEASUREMENT tool** — the
+  real-simulator repricing (`1faf20e`) moved every constant it was calibrated against, its old
+  arms (6/8/12/16 aircraft) can't even build a bay at the new 20 gate, and asserting a target
+  nobody has set would be inventing one. It now asserts only what must hold regardless of tuning
+  (the ledger identity; payback improving with fleet size) and leaves the balance verdict to the
+  designer — **at real prices nothing pays back; the table and the four options are in
+  `CREW_TRAINING_SCOPE.md`**. Re-run after touching any center/course constant. It was this probe
+  that caught the version where a BIGGER fleet paid back WORSE (the recurrent concurrency cap
+  scaled with pool size while a bay only seats 4, so the surplus overflowed to the contractor at
+  full price; with a bay the cap IS `simBayCapacity`) — and the finding that a crew-STRETCHED
+  family books LESS total time value than a deeply-covered one.
 
 ## How to run
 The entry file must be named `main.swift` (top-level `MainActor.assumeIsolated {…}`).

@@ -14,38 +14,124 @@ _Snapshot: 8 September 2026._
   1.25×), the bundled crew stays line-ready, per-crew 180-day currency with rolling auto-recurrent
   (default ON) and LAPSED + requalify at 1.6× when it's off/unaffordable, a coverage readout (ratio
   + verdict), Crews tab v2, provider "Global Aviation Training"; training cards moved off Ops.
-  **Phase 2 — the TRAINING CENTER:** a facility at an operating hub + one sim bay per crew family
-  (gate 6+ aircraft); in-house courses 0.4× price, 30d/2d instead of 45d/4d, no class-slot wait;
-  4 seats per bay with contractor overflow; `totalTrainingCenterSpend` is a new cash-invariant
-  capital term; TRAINING P&L payback line on the Crews tab.
+  **Phase 2 — the TRAINING CENTER:** a facility at an operating hub + one sim bay per crew family;
+  in-house courses 0.4× price, 30d/2d instead of 45d/4d, no class-slot wait; 4 seats per bay with
+  contractor overflow; `totalTrainingCenterSpend` is a new cash-invariant capital term; TRAINING P&L
+  payback card on the Crews tab.
   ⚠️ **The recurrent concurrency cap IS the bay capacity for a family with a bay — do not restore a
   pool-fraction cap there.** The A/B probe caught the first version making a BIGGER fleet save LESS
   (surplus overflowed to the contractor at full price; 16 aircraft paid back worse than 12).
-  Balance gate passed (`TrainingCenterABProbe` 5/5): 6×A320 never pays back, 16 crosses ~month 36,
-  24 ~month 30, 8×B788 ~month 33. **Open designer question:** the build gate (6 aircraft) sits below
-  break-even (~14 NB / ~7 WB) — the bay row now says so outright; raise `simBayMinAircraft` to ~12
-  if the game should refuse the losing build instead. Verified `TrainingCenterVerify` 69/69 +
-  `CrewPipelineVerify` 63/63 + regressions + free-tier probe.
-- **ROTATION ROUTES SERVE EVERY STOP** (`5dd73f9`; player-reported "my multi-leg route doesn't show
-  the dotted lines"). A rotation's `originCode`/`destCode` are only its FIRST and LAST stop, so the
-  map drew one arc AND intermediate cities didn't count toward hub eligibility (`routesAt`,
-  `hubRoutes`) or the competition fortress/rival-hub factors. All now read the full loop
-  (`rotationLegs` / `stops.contains`). RotationVerify 47/47. **If you add code keyed off a route's
-  endpoint pair, ask whether a rotation makes it partial** — aircraft-based calls (the CURRENT leg)
-  are correct as-is.
-- **iPad Alerts modal centred in the content column** (`9b9805d`), not the whole window — the
-  sidebar rail made it read off-centre.
+  **REPRICED TO REAL SIMULATOR COST + CREW TIME (`1faf20e`, `3bcaa10`) — this supersedes the
+  original $8M-ish draft and its 6-aircraft gate.** The designer supplied real figures ($160–260M
+  for a 10-bay centre; a Level D full-flight sim costs as much as an airplane), so the facility is
+  **$35M** and a bay is **$22M WB / $18M NB / $12M TP-RJ**, opex $150k/mo + $85k/bay/mo, and the
+  gate is now **20 aircraft in the family** (`simBayMinAircraft`, raised from 6 — the old gate was
+  incoherent at real prices). At those prices the FEE saving alone can never repay a bay (~92 A320s,
+  ~1,006 Dash-8s), so the ledger also books the **crew-DAYS an in-house course returns to the line**
+  — a crew-day valued at the family's own `dailyNet` per flying aircraft ÷ `coverageContinuousRatio`,
+  scaled 0→1 by whether crew is actually the BINDING constraint. Deep cover books ~nothing; stretched
+  books real value. That split is the teaching point, so the card shows four lines (course savings ·
+  crew time returned · facility + bays · running costs) plus the explainer. Bookkeeping only — no
+  cash moves, invariant untouched. Verified `TrainingCenterVerify` **75/75** (test 9 covers the time
+  value) + `CrewPipelineVerify` 63/63 + regressions + free-tier probe.
+  ⚠️ **OPEN DESIGNER CALL — AT REAL PRICES THE CENTRE NEVER PAYS BACK, and the old balance GATE is
+  gone.** Re-measured after the repricing (table in `CREW_TRAINING_SCOPE.md`): 45 A320s over 5 years
+  return $8.2M of fees + $10.8M of crew time against $53M facility + $14.1M opex — **still $48.1M
+  short**, and that's the BEST arm. Payback does improve with fleet size, but nothing repays.
+  `TrainingCenterABProbe` was therefore rewritten from a pass/fail gate into a MEASUREMENT tool (its
+  old 6/8/12/16-aircraft arms can't even build a bay at the new 20 gate, and its thresholds were set
+  against $750k facility costs); it now asserts only the ledger identity + payback-improves-with-
+  scale and prints the table. **Four honest options, designer's pick:** (a) accept it as a
+  prestige/realism purchase that never repays and SAY so in the UI; (b) raise the crew-day value or
+  the days saved; (c) walk the real prices back toward game scale (re-opening the instruction);
+  (d) give the centre a benefit that is neither fee nor time — capacity the contractor won't sell.
+  Second finding worth knowing: a crew-STRETCHED family books LESS time value than a deeply-covered
+  one ($1.6M vs $10.8M at 45 aircraft) — the scarcity premium is real in isolation but is swamped
+  because understaffing collapses both the `dailyNet` a crew-day is priced against and the number of
+  courses to shorten. **Don't remove the shortfall factor to "fix" that** — it's what stops a
+  deeply-covered airline booking value for crew it never needed.
+- **THE CHIEF PILOT — a persona atop CREWS** (`dd41c23`; designer asked first "is that too much of a
+  crutch?", then said build him). **Capt. Morgan Ellis** reads the crew pipeline you already have and
+  says what it means: per-family outlooks (`crewOutlook(family:)` → shortfall / training block /
+  lapse risk / healthy), so a player can finally tell a PERMANENT crew shortfall from a block that's
+  merely IN TRAINING — the exact confusion the designer reported. He advises; he never acts. Portrait
+  is `Resources/Brand/ChiefPilot.png` (512×512, designer-supplied via the MJ v8 prompt).
+- **FOUR GAMEPLAY ISSUES from the designer's acquisition playthrough — 1, 2 and 3 FIXED; 4 DEFERRED
+  to its own session (that's the next session's job):**
+  1. **Real carriers hub where they really hub** (`a19f140`; "Air France out of LHR is very odd").
+     Root cause was NOT missing data — competitor hubs were DERIVED from "busiest airport in the
+     region", so a European carrier could hub anywhere in Europe. `Airline.hubs` is now a real,
+     fact-checked field on all **141** roster entries (Air France CDG/NCE, Lufthansa FRA/MUC, Copa
+     PTY…), and `Competitor.profile` uses it, falling back to region's-busiest ONLY when a carrier
+     has no hub in the region being generated. `CarrierHubVerify` **650/650**.
+  2. **Acquisition bugs** (`4484c5d`, `1faf20e`). (a) **Every inherited aircraft arrived grounded
+     needing a D check** even though the open books said no capex — `inheritFleet` was the ONE
+     owned-aircraft path that never called `seedMXState`, so every tail defaulted to "due at
+     0 cycles". Measured 8/8 grounded and $83.5M (24% of the purchase price) in forced MX at close.
+     (b) **The subsidiary's finance report showed pre-acquisition numbers forever** — that panel is
+     the SCOUTING topline, which by design never moves. Owned subsidiaries now get a **CURRENT
+     PERFORMANCE** box computed live (`subsidiaryFinancials`), and the old topline is relabelled
+     "AT ACQUISITION". Routes are stamped with an operator of record at first assignment so a
+     sub's P&L is attributable. (c) The "no open routes" half was expected — inherited routes are
+     capped at the aircraft inherited — but the sub now shows its real live numbers either way.
+     `AcquisitionMXVerify` **33/33**.
+  3. **Buyback offers price off EARNING POWER, not sunk cost** (`09e49ee`; "why would I ever sell a
+     highly profitable hub at 30% of my cost, or give back a slot for less than a month's profit?").
+     A healthy hub now fetches **0.90–1.40× establish cost** (vulture 0.35× only when UNDERSTAFFED)
+     and a slot offer is **3–8× that route's trailing monthly net** (`trailingMonthlyNet`). Verified
+     non-exploitable by a shared-snapshot A/B: accept-every-offer finishes **$210M BEHIND**
+     decline-every-offer. `BuybackPricingProbe` 7/7.
+  4. ⏭️ **MX + training automation for a 200-plane fleet — NOT STARTED, deliberately deferred.**
+     See "NEXT SESSION" below.
+- **ROTATION ROUTES SERVE EVERY STOP** (`5dd73f9`, completed in `df49188`; player-reported "my
+  multi-leg route doesn't show the dotted lines"). A rotation's `originCode`/`destCode` are only its
+  FIRST and LAST stop, so the map drew one arc AND intermediate cities didn't count toward hub
+  eligibility (`routesAt`, `hubRoutes`) or the competition fortress/rival-hub factors. All now read
+  the full loop (`rotationLegs` / `stops.contains`). **The adversarial review caught that my first
+  sweep was INCOMPLETE** — `hubSpokeNet` and `hubDemandMultiplier` were still endpoint-only, so a hub
+  newly ALLOWED on an intermediate stop got a +0% bonus and an unrecoupable payback chart; and
+  `rotationLegs` emits both A→B and B→A for a 2-stop route, which CoreGraphics drew as a near-solid
+  line (my commit message had wrongly claimed "visually unchanged"). Both fixed; RotationVerify
+  **55/55**. **If you add code keyed off a route's endpoint pair, ask whether a rotation makes it
+  partial** — aircraft-based calls (the CURRENT leg) are correct as-is.
+- **Ops tweaks** (`5a36c40`, `dd41c23`, `4484c5d`): every Ops box is a collapsible DRAWER (state on
+  the sim, persisted, alerts auto-open their box) with a **red chip** carrying the count when a
+  drawer holds something needing attention (so a collapsed drawer can't hide an alert); the auto-slow
+  gives the player's SPEED BACK once the cards that arrived while slowed clear; the MX list sorts
+  NEAREST DATE FIRST. **`.mxCheck` is EXEMPT from auto-slow** — measured 34% of wall-clock at 5× and
+  91% at 100× spent pinned at 1× on a 200-plane fleet, exactly matching the designer's report.
+  `OpsTweaksVerify` 43/43.
+- **Alerts always centre in the CONTENT column, not the whole window** (`9b9805d`, `09e49ee`) — the
+  iPad sidebar rail made the Alerts modal, the auto-slow banner and the milestone toast all read
+  off-centre. `.centredInContentColumn(isPadLayout)` in SkySidebar.swift is the shared helper.
+- **Graduation-cap icon replaced app-wide** with the designer's Figma art (`09e49ee`, node 158:862)
+  via `MilestoneIconArt`, keeping the existing light/dark tints.
+- **Transpacific routing fix** (`788fc10`): legs cross the antimeridian seam the short way
+  (`FlightPath.nearestCopy`, fixed once at the shared `FlightPath.wrapWidth` level so every caller —
+  arcs, suggestion, rotation preview, aircraft motion, weather rejoin — is fixed together and can't
+  regress individually); `PathWrapVerify` 16/16; designer-confirmed on device.
 - **MX re-imagining SCOPED + DECIDED** (`aa-1.1.x/MX_BASES_SCOPE.md`, all 5 decisions confirmed):
   auto A checks (no cards), MRO +25% / 0–7d slot wait, line stations + hangar bases at hubs or
-  ≥3-route airports, MX moves to a Fleet ▸ Maintenance segment. NOT built yet — build after crew
-  Phase 2 (or first, designer's call).
-- **Ops tweaks** (`5a36c40`): every Ops box is a collapsible DRAWER (state on the sim, persisted,
-  alerts auto-open their box); the auto-slow gives the player's SPEED BACK once the cards that
-  arrived while slowed clear; the MX list sorts NEAREST DATE FIRST. `OpsTweaksVerify` 43/43.
-- **Transpacific routing fix** (`788fc10`): legs cross the antimeridian seam the short way
-  (`FlightPath.nearestCopy`); `PathWrapVerify` 16/16; designer-confirmed on device.
-- **German**: the rotation UI's 21 missing strings added (`21c7def`); `de-findgaps` is clean but for
-  the 2 known DEBUG-only livery strings — run it against the DerivedData you actually built into.
+  ≥3-route airports, MX moves to a Fleet ▸ Maintenance segment. **NOT built — this is issue 4 above
+  and the next session's work.**
+- **German**: the rotation UI's 21 missing strings (`21c7def`) plus every new string this session
+  (crew pipeline, training centre, Chief Pilot, subsidiary P&L, buyback copy). `de-findgaps` is clean
+  but for the 2 known DEBUG-only livery strings — run it against the DerivedData you actually built
+  into.
+
+**► ⏭️ NEXT SESSION — issue 4: MX + TRAINING AUTOMATION AT SCALE.** The designer's words: *"For my
+200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and near all-time at anything
+faster. This really needs to be automated via maintenance bases or something as it's very tedious.
+Same with training."* Half of it is already addressed — the auto-slow exemption stopped MX pinning
+the sim at 1×, and the Chief Pilot answers "shortfall vs. in-training" — but the CARD VOLUME itself
+is untouched. Build `aa-1.1.x/MX_BASES_SCOPE.md` (all 5 decisions already confirmed): auto A checks
+with no cards, MRO +25% / 0–7d slot wait as the default provider, line stations ($4M) + hangar bases
+($18–45M) at hubs or ≥3-route airports with 2-aircraft C/D capacity per hangar line, and MX moving to
+a **Fleet ▸ Maintenance** segment with Ops keeping only alert cards + a one-line summary drawer.
+⚠️ **A REAL BUG TO FIX IN THAT PASS, found while measuring:** four sites in Simulation.swift
+(~lines 3715 / 3773 / 3827 / 3879, each commented "~2 cycles/sim-day") convert cycles→days at
+**2 cycles/day** when the engine actually flies **~3.52**, so every maintenance date the player sees
+is ~76% too far out. Make it one shared constant, and re-check `MXCoverageVerify`.
 
 **► ⭐ MULTI-CITY ROTATIONS — MERGED to `main` (Phases 1–2), NOT yet in a build (4 Sep).** A route is
 now an ordered rotation loop of 2–5 stops flown by an aircraft you pick FIRST (Open Route → WHICH
