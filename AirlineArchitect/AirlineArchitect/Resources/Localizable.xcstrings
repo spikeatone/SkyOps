@@ -1,6 +1,166 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "\"Crew levels look healthy across the fleet. Nothing needs you today.\"": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Die Crew-Situation sieht flottenweit gut aus. Heute ist nichts zu tun.\""
+          }
+        }
+      }
+    },
+    "%lld crews grounded on lapsed currency — requalify to get them back on the line": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Crews wegen abgelaufener Lizenz am Boden – requalifizieren, um sie zurück in den Einsatz zu bringen"
+          }
+        }
+      }
+    },
+    "1 crew grounded on lapsed currency — requalify to get it back on the line": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Crew wegen abgelaufener Lizenz am Boden – requalifizieren, um sie zurück in den Einsatz zu bringen"
+          }
+        }
+      }
+    },
+    "%lld due": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fällig"
+          }
+        }
+      }
+    },
+    "· %lld in shop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld in der Werft"
+          }
+        }
+      }
+    },
+    "%lld families need a look · %lld staffed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Familien brauchen Aufmerksamkeit · %lld besetzt"
+          }
+        }
+      }
+    },
+    "1 family needs a look · %lld staffed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Familie braucht Aufmerksamkeit · %lld besetzt"
+          }
+        }
+      }
+    },
+    "+%lld more families below": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld weitere Familien unten"
+          }
+        }
+      }
+    },
+    "All %lld crew families staffed for continuous coverage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle %lld Crew-Familien für durchgehende Abdeckung besetzt"
+          }
+        }
+      }
+    },
+    "CHIEF PILOT": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FLUGBETRIEBSLEITER"
+          }
+        }
+      }
+    },
+    "Short %lld crews even after training lands — a permanent shortfall": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch nach Abschluss des Trainings fehlen %lld Crews – ein dauerhafter Engpass"
+          }
+        }
+      }
+    },
+    "Short 1 crew even after training lands — a permanent shortfall": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch nach Abschluss des Trainings fehlt 1 Crew – ein dauerhafter Engpass"
+          }
+        }
+      }
+    },
+    "Staffed for continuous coverage": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für durchgehende Abdeckung besetzt"
+          }
+        }
+      }
+    },
+    "Staffed, but %lld due for recurrent within %lld days — expect a dip": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besetzt, aber %lld in den nächsten %lld Tagen zum Wiederholungstraining fällig – mit einem Einbruch rechnen"
+          }
+        }
+      }
+    },
+    "Thin right now, but %lld in training": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuell knapp, aber %lld im Training"
+          }
+        }
+      }
+    },
+    "Thin right now, but %lld in training — first one back in %lld days": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuell knapp, aber %lld im Training – die erste ist in %lld Tagen zurück"
+          }
+        }
+      }
+    },
     "−%@/mo": {
       "localizations": {
         "de": {

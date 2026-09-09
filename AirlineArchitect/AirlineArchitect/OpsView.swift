@@ -266,8 +266,13 @@ struct OpsView: View {
         let due = sim.mxDueAircraft.count
         let inShop = sim.mxInShopCount
         return drawer(.maintenance, "Maintenance", trailing: {
-            Text("\(due) due · \(inShop) in shop").font(.karla(13, .semibold))
-                .foregroundStyle(due > 0 ? Sky.red : secondary)
+            // Only the DUE count is an alert; "in shop" is just status.
+            if due > 0 {
+                alertChip("\(due) due")
+                Text("· \(inShop) in shop").font(.karla(13, .semibold)).foregroundStyle(secondary)
+            } else {
+                Text("\(due) due · \(inShop) in shop").font(.karla(13, .semibold)).foregroundStyle(secondary)
+            }
         }) {
             Text("Scheduled A/C/D checks. Service due aircraft to stay airworthy — flying past a check raises breakdown risk. Emergencies (AOG) appear in Needs Attention.")
                 .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
@@ -532,9 +537,7 @@ struct OpsView: View {
     private var competitionGroup: some View {
         let contested = sim.contestedRoutes
         return drawer(.competition, "Competition", trailing: {
-            if !contested.isEmpty {
-                Text("\(contested.count) contested").font(.karla(13, .semibold)).foregroundStyle(Sky.red)
-            }
+            if !contested.isEmpty { alertChip("\(contested.count) contested") }
         }) {
             if contested.isEmpty {
                 Text("No rival carriers on your routes. Profitable routes attract competitors — your reputation helps keep them out.")
@@ -697,6 +700,18 @@ struct OpsView: View {
         }
     }
 
+    /// A filled red chip for a drawer's attention-needing count. Plain red TEXT got
+    /// lost against a column of collapsed grey summaries (designer, 8 Sep 2026) —
+    /// a solid badge reads as "act on me" at a glance, especially when the drawer
+    /// is closed and the chip is the only thing showing.
+    private func alertChip(_ text: LocalizedStringKey) -> some View {
+        Text(text)
+            .font(.karla(12, .bold)).foregroundStyle(.white)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Sky.red)
+            .clipShape(Capsule())
+    }
+
     // MARK: Drawers (collapsible section boxes)
     /// A collapsible section box (designer request: with a big airline, Ops is a long
     /// scroll). The header — title, optional trailing summary, chevron — always shows;
@@ -762,7 +777,7 @@ struct OpsView: View {
 
     private var needsAttentionGroup: some View {
         drawer(.needsAttention, "Needs Attention", trailing: {
-            Text("\(opsDecisions.count)").font(.karla(14, .bold)).foregroundStyle(Sky.red)
+            alertChip("\(opsDecisions.count)")
         }) {
             ForEach(opsDecisions) { NeedsAttentionCard(sim: sim, decision: $0) }
         }

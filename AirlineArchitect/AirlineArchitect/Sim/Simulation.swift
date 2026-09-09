@@ -4284,6 +4284,82 @@ final class Simulation {
         return CrewCoverage(lineReady: ready, aircraft: n, ratio: ratio, verdict: verdict)
     }
 
+    // MARK: Chief Pilot (the crew read-out that answers "structural or transient?")
+    //
+    // Designer request, 8 Sep 2026: at ~10 crew families and 200 aircraft the
+    // per-family cards hold the answer but not legibly — "do I have a PERMANENT
+    // shortfall, or is a block just in training?" takes scrolling and mental
+    // arithmetic. The Chief Pilot REPORTS and FORECASTS; he never acts. No fix-it
+    // button: he tells you the weather, you fly the plane. (Same call as the
+    // coverage readout — automating arithmetic is a UI, automating judgement is a
+    // crutch.)
+    static let chiefPilotName = "Capt. Morgan Ellis"
+
+    enum CrewOutlookKind { case lapsed, structural, transient, wave, healthy }
+    struct CrewOutlook {
+        let family: String
+        let kind: CrewOutlookKind
+        /// Crews to hire to reach continuous coverage even after training lands. 0 unless .structural.
+        let hireNeeded: Int
+        /// Crews currently away in a course.
+        let inTraining: Int
+        /// Sim-days until the soonest in-training crew is line-ready (nil if none).
+        let backInDays: Int?
+        /// Crews whose currency lapsed — grounded until requalified.
+        let lapsed: Int
+        /// Line-ready crews due for recurrent inside the scheduling window.
+        let dueSoon: Int
+    }
+
+    /// Per-family outlook. The distinction that matters: `owned` counts EVERY crew
+    /// (including those in a course), so a family with enough crews on the books but
+    /// a block away training is TRANSIENT, while one that is short even once every
+    /// course lands is STRUCTURAL — the only case where hiring is the answer.
+    func crewOutlook(family: String) -> CrewOutlook {
+        let pool = crewPoolsByFamily[family] ?? []
+        let aircraft = ownedCount(family: family)
+        let owned = pool.count
+        let lineReady = pool.filter { $0.isLineReady }.count
+        let training = pool.filter { $0.status == .training }
+        let lapsed = pool.filter { $0.status == .lapsed }.count
+        let dueSoon = pool.filter { $0.isLineReady && $0.currencyExpiresTick - tick <= Simulation.recurrentWindowDays * 1440 }.count
+        let backIn = training.compactMap { $0.readyTick }.min().map { max(1, ($0 - tick + 1439) / 1440) }
+        guard aircraft > 0 else {
+            return CrewOutlook(family: family, kind: .healthy, hireNeeded: 0, inTraining: training.count,
+                               backInDays: backIn, lapsed: lapsed, dueSoon: dueSoon)
+        }
+        let target = Int((Double(aircraft) * Simulation.coverageContinuousRatio).rounded(.up))
+        let kind: CrewOutlookKind
+        var hire = 0
+        if lapsed > 0 {
+            kind = .lapsed
+        } else if owned < target {
+            kind = .structural; hire = target - owned      // short even once training lands
+        } else if lineReady < target {
+            kind = .transient                              // enough on the books, a block is away
+        } else if dueSoon > 0 && lineReady - dueSoon < target {
+            kind = .wave                                   // fine now, a recurrent wave will dip it
+        } else {
+            kind = .healthy
+        }
+        return CrewOutlook(family: family, kind: kind, hireNeeded: hire, inTraining: training.count,
+                           backInDays: backIn, lapsed: lapsed, dueSoon: dueSoon)
+    }
+
+    /// Every owned family's outlook, most urgent first — the Chief Pilot's briefing.
+    /// Healthy families are included last so the box can say "the rest are fine".
+    func crewOutlooks() -> [CrewOutlook] {
+        func rank(_ k: CrewOutlookKind) -> Int {
+            switch k { case .lapsed: return 0; case .structural: return 1; case .transient: return 2
+                       case .wave: return 3; case .healthy: return 4 }
+        }
+        return ownedFamilies.map { crewOutlook(family: $0) }
+            .sorted { a, b in
+                rank(a.kind) != rank(b.kind) ? rank(a.kind) < rank(b.kind)
+                                             : (a.hireNeeded + a.lapsed) > (b.hireNeeded + b.lapsed)
+            }
+    }
+
     /// Duty/rest clock. Ported from tickCrewPool(): on-duty accrues duty time;
     /// a completed rest period is the ONLY place dutyTicks resets (Part 117).
     private func tickCrewPool() {

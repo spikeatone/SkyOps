@@ -64,6 +64,7 @@ struct CrewsView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
+                            chiefPilotCard
                             providerCard
                             ForEach(fams, id: \.self) { crewCard($0) }
                         }
@@ -109,6 +110,128 @@ struct CrewsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(skyHex: 0x87ED7A), lineWidth: 1))
         .transition(.opacity)
+    }
+
+    // MARK: Chief Pilot — the crew read-out that answers "structural or transient?"
+    //
+    // He REPORTS and FORECASTS; he never acts. There is deliberately no hire button
+    // here — the arithmetic across ~10 family cards is what's hard to see, not the
+    // decision. Portrait is optional: a bundled photo if present, else a monogram.
+    private var chiefPilotCard: some View {
+        let outlooks = sim.crewOutlooks()
+        let flagged = outlooks.filter { $0.kind != .healthy }
+        let healthy = outlooks.count - flagged.count
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                chiefPilotPortrait
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("CHIEF PILOT").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
+                    Text(Simulation.chiefPilotName).font(.karla(17, .heavy)).foregroundStyle(primary)
+                    Text(headline(flagged: flagged.count, healthy: healthy))
+                        .font(.karla(12)).foregroundStyle(secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            if flagged.isEmpty {
+                Text("\"Crew levels look healthy across the fleet. Nothing needs you today.\"")
+                    .font(.karla(13)).foregroundStyle(secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                // Cap the list — at ~10 families a wall of rows is the problem, not the fix.
+                ForEach(Array(flagged.prefix(4).enumerated()), id: \.offset) { _, o in
+                    adviceRow(o)
+                }
+                if flagged.count > 4 {
+                    Text("+\(flagged.count - 4) more families below")
+                        .font(.karla(11)).foregroundStyle(secondary)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    /// Bundled portrait if the designer has dropped one in; a monogram otherwise, so
+    /// the card looks deliberate either way.
+    @ViewBuilder private var chiefPilotPortrait: some View {
+        let side: CGFloat = 52
+        if UIImage(named: "chief_pilot") != nil {
+            Image("chief_pilot").resizable().aspectRatio(contentMode: .fill)
+                .frame(width: side, height: side).clipShape(Circle())
+                .overlay(Circle().stroke(cardBorder, lineWidth: 1))
+        } else {
+            ZStack {
+                Circle().fill(hireBlue.opacity(0.18))
+                Image(systemName: "person.fill").font(.system(size: 22)).foregroundStyle(hireBlue)
+            }
+            .frame(width: side, height: side)
+            .overlay(Circle().stroke(cardBorder, lineWidth: 1))
+        }
+    }
+
+    private func headline(flagged: Int, healthy: Int) -> LocalizedStringKey {
+        if flagged == 0 { return "All \(healthy) crew families staffed for continuous coverage" }
+        if flagged == 1 { return "1 family needs a look · \(healthy) staffed" }
+        return "\(flagged) families need a look · \(healthy) staffed"
+    }
+
+    /// One line of advice. States what IS and what's coming — never what to click.
+    @ViewBuilder private func adviceRow(_ o: Simulation.CrewOutlook) -> some View {
+        let name = CREW_FAMILY_INFO[o.family]?.name ?? FAMILY_LABELS[o.family] ?? o.family
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: adviceIcon(o.kind)).font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(adviceColor(o.kind)).frame(width: 14)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(LocalizedStringKey(name)).font(.karla(13, .bold)).foregroundStyle(primary)
+                Text(adviceText(o)).font(.karla(12)).foregroundStyle(adviceColor(o.kind))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+    private func adviceIcon(_ k: Simulation.CrewOutlookKind) -> String {
+        switch k {
+        case .lapsed:     return "exclamationmark.triangle.fill"
+        case .structural: return "person.badge.plus"
+        case .transient:  return "graduationcap.fill"
+        case .wave:       return "calendar"
+        case .healthy:    return "checkmark.circle"
+        }
+    }
+    private func adviceColor(_ k: Simulation.CrewOutlookKind) -> Color {
+        switch k {
+        case .lapsed:     return red
+        case .structural: return amber
+        case .transient:  return hireBlue
+        case .wave:       return secondary
+        case .healthy:    return available
+        }
+    }
+    private func adviceText(_ o: Simulation.CrewOutlook) -> LocalizedStringKey {
+        switch o.kind {
+        case .lapsed:
+            return o.lapsed == 1
+                ? "1 crew grounded on lapsed currency — requalify to get it back on the line"
+                : "\(o.lapsed) crews grounded on lapsed currency — requalify to get them back on the line"
+        case .structural:
+            // The one case where hiring is genuinely the answer — say so, don't do it.
+            return o.hireNeeded == 1
+                ? "Short 1 crew even after training lands — a permanent shortfall"
+                : "Short \(o.hireNeeded) crews even after training lands — a permanent shortfall"
+        case .transient:
+            if let d = o.backInDays {
+                return "Thin right now, but \(o.inTraining) in training — first one back in \(d) days"
+            }
+            return "Thin right now, but \(o.inTraining) in training"
+        case .wave:
+            return "Staffed, but \(o.dueSoon) due for recurrent within \(Simulation.recurrentWindowDays) days — expect a dip"
+        case .healthy:
+            return "Staffed for continuous coverage"
+        }
     }
 
     // MARK: Provider card — the contract trainer, or the player's own Training Center (Phase 2)
