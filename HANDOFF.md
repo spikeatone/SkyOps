@@ -37,7 +37,20 @@ reads like a pass if you grep for "FAIL". `SaveCompatVerify` was separately DEAD
 (`GameSnapshot.crewTrainingDue`, removed by the crew-training pipeline), so the regression net for the
 SAVE-LOSS bug class had been dark. All three repaired at the source: **55/55 · 81/81 · 12/12**.
 Verified: RoundTrip 13/13 · SaveCompat 12/12 · Rotation 55/55 · MXCoverage 81/81 · Park 28/28 ·
-SubFleet 15/15 · HubChart 38/38 · OpsTweaks 43/43 · TickCostProbe 5/5 · full Debug build.
+SubFleet 15/15 · HubChart 38/38 · OpsTweaks 43/43 · TickCostProbe 5/5 · soak 6/6 seeds × 4 sim-years ·
+Debug AND Release builds.
+**DRIVEN LIVE on the iPad Pro 11" sim (9 Sep) — all five view-layer fixes, which no harness can see:**
+the MX drawer caps at exactly 12 rows then "Show all 17" → expands to 17 → "Show fewer" (chip still
+counts the FULL fleet, sort still nearest-date-first, the 4 actionable checks at the head); the
+aircraft TOOLTIP updates live with the selected tail (route flipped SEA→SFO / SFO→SEA, status
+TURNAROUND → HELD, revenue $13,730 → $14,407, clock 14:49 → 15:52) — **the Canvas/child freeze bug did
+NOT recur**, `displayTick` is a sufficient changing input; airport HEROES still resolve in precedence
+order (ABQ fell through to its desert archetype, top-bias crop intact); the launch BACKDROP is skipped
+under the splash and renders correctly on the naming + livery screens afterwards; and the async
+`loadSlot` round-trips (Quit → load menu → tap slot → game on screen at $20.0M, no hang, no empty
+frame). Incidentally re-confirmed while driving: the auto-slow banner centres in the CONTENT COLUMN,
+auto-slow restore gave 5× back once the cards cleared, red alert chips + drawer auto-open work, and
+the map stayed smooth with the traffic slider at 150 background aircraft.
 
 **► ⭐ ON `main`, NOT YET IN A BUILD (8 Sep session — all verified, all pushed):**
 - **CREW TRAINING — Phases 1 AND 2 MERGED** (`162b865`, `8383f2c`; design + the designer's 5
