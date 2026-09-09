@@ -8,13 +8,33 @@ CLAUDE.md, CLAUDE.md wins.
 _Snapshot: 8 September 2026._
 
 **► ⭐ ON `main`, NOT YET IN A BUILD (8 Sep session — all verified, all pushed):**
-- **CREW TRAINING PIPELINE, Phase 1** (merged `162b865`; design + the designer's 5 decisions in
-  `aa-1.1.x/CREW_TRAINING_SCOPE.md`). Hiring takes time (rated hire 10d at 2× course / new hire
-  45d at 1.25×), the bundled crew stays line-ready, per-crew 180-day currency with rolling
-  auto-recurrent (default ON) and LAPSED + requalify at 1.6× when it's off/unaffordable, a coverage
-  readout (ratio + verdict), Crews tab v2, provider "Global Aviation Training"; training cards moved
-  off Ops. `CrewPipelineVerify` 63/63 + regressions + free-tier probe. **Phase 2 (Training Center
-  at a hub) is next** — gate/shape already decided in the scope doc.
+- **CREW TRAINING — Phases 1 AND 2 MERGED** (`162b865`, `8383f2c`; design + the designer's 5
+  decisions in `aa-1.1.x/CREW_TRAINING_SCOPE.md`, which also records how the BUILT Phase 2 differs
+  from its draft). **Phase 1:** hiring takes time (rated hire 10d at 2× course / new hire 45d at
+  1.25×), the bundled crew stays line-ready, per-crew 180-day currency with rolling auto-recurrent
+  (default ON) and LAPSED + requalify at 1.6× when it's off/unaffordable, a coverage readout (ratio
+  + verdict), Crews tab v2, provider "Global Aviation Training"; training cards moved off Ops.
+  **Phase 2 — the TRAINING CENTER:** a facility at an operating hub + one sim bay per crew family
+  (gate 6+ aircraft); in-house courses 0.4× price, 30d/2d instead of 45d/4d, no class-slot wait;
+  4 seats per bay with contractor overflow; `totalTrainingCenterSpend` is a new cash-invariant
+  capital term; TRAINING P&L payback line on the Crews tab.
+  ⚠️ **The recurrent concurrency cap IS the bay capacity for a family with a bay — do not restore a
+  pool-fraction cap there.** The A/B probe caught the first version making a BIGGER fleet save LESS
+  (surplus overflowed to the contractor at full price; 16 aircraft paid back worse than 12).
+  Balance gate passed (`TrainingCenterABProbe` 5/5): 6×A320 never pays back, 16 crosses ~month 36,
+  24 ~month 30, 8×B788 ~month 33. **Open designer question:** the build gate (6 aircraft) sits below
+  break-even (~14 NB / ~7 WB) — the bay row now says so outright; raise `simBayMinAircraft` to ~12
+  if the game should refuse the losing build instead. Verified `TrainingCenterVerify` 69/69 +
+  `CrewPipelineVerify` 63/63 + regressions + free-tier probe.
+- **ROTATION ROUTES SERVE EVERY STOP** (`5dd73f9`; player-reported "my multi-leg route doesn't show
+  the dotted lines"). A rotation's `originCode`/`destCode` are only its FIRST and LAST stop, so the
+  map drew one arc AND intermediate cities didn't count toward hub eligibility (`routesAt`,
+  `hubRoutes`) or the competition fortress/rival-hub factors. All now read the full loop
+  (`rotationLegs` / `stops.contains`). RotationVerify 47/47. **If you add code keyed off a route's
+  endpoint pair, ask whether a rotation makes it partial** — aircraft-based calls (the CURRENT leg)
+  are correct as-is.
+- **iPad Alerts modal centred in the content column** (`9b9805d`), not the whole window — the
+  sidebar rail made it read off-centre.
 - **MX re-imagining SCOPED + DECIDED** (`aa-1.1.x/MX_BASES_SCOPE.md`, all 5 decisions confirmed):
   auto A checks (no cards), MRO +25% / 0–7d slot wait, line stations + hangar bases at hubs or
   ≥3-route airports, MX moves to a Fleet ▸ Maintenance segment. NOT built yet — build after crew
