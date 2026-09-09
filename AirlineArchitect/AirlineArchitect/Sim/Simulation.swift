@@ -2036,6 +2036,19 @@ final class Simulation {
                                   purchased: true)
                 ac.subsidiaryCode = p.id
                 ac.airlineName = p.name
+                // SEED THE MX CLOCKS — the acquired carrier kept its fleet airworthy,
+                // exactly as the books the player paid to open said it did. Without
+                // this the airframe carries its real accrued cycles against
+                // lastCycle/lastTick of ZERO, so mxProgress reads its ENTIRE life as
+                // time-since-service: every A/C/D check is instantly past the hard
+                // legal window and the whole inherited fleet is force-grounded on day
+                // one, at the 2.5x OVERDUE surcharge, for neglect the player never
+                // committed. (Measured before this fix: 8/8 aircraft grounded, $83.5M
+                // of forced MX — 24% of the purchase price — on a fleet diligence had
+                // just reported as needing no near-term capital.) This was the ONLY
+                // owned-aircraft path missing the call that makePurchasedAircraft and
+                // restore() both make.
+                seedMXState(ac)
                 rollRevenue(for: ac)
                 aircraft.append(ac)
                 made.append(ac)
@@ -4467,6 +4480,17 @@ final class Simulation {
                 case .mxCheck:      return String(localized: "a scheduled maintenance check is due")
                 }
             }
+            /// Should this card SNAP the sim to 1× (see the decisionQueue observer)?
+            /// True for anything that is bleeding money, blocking an aircraft, or on a
+            /// clock the player can miss. FALSE for a scheduled MX check: it has a
+            /// 25–60 day grace, and at a large fleet one comes due every few sim-hours,
+            /// so treating it as an interrupt pins the sim at 1× and eats the session.
+            var warrantsAutoSlow: Bool {
+                switch self {
+                case .mxCheck: return false
+                default:       return true
+                }
+            }
         }
         let id: String
         let kind: Kind
@@ -4530,13 +4554,27 @@ final class Simulation {
             // (the sim never PAUSES, but it shouldn't fast-forward past a decision).
             // Only on growth — removals/resolutions must not touch speed. Set speed
             // directly (not requestSpeed) so it never spends a ¼× use.
-            if decisionQueue.count > oldValue.count {
+            // ...but ONLY for a card that is genuinely time-critical. A scheduled MX
+            // check has a 25–60 day grace and cannot be made worse by a few more sim-
+            // minutes, yet at 200 aircraft one comes due every ~4.5 sim-hours — so
+            // treating it as an interrupt pinned the sim at 1× permanently (player-
+            // reported: "maintenance takes 1/3 of my time at 5×, nearly all of it
+            // faster"; measured 34% of wall-clock at 5× and 91% at 100×). Scheduled
+            // work belongs in a LIST, not an interrupt; urgent work still stops you.
+            let urgent = added.filter { $0.kind.warrantsAutoSlow }
+            if !added.isEmpty {
+                // OPS DRAWERS open for EVERY new card (including routine MX) so the
+                // player never has to hunt for the box a card belongs to.
+                opsAutoOpen(.needsAttention)
+                for d in added { if let s = d.kind.opsSection { opsAutoOpen(s) } }
+            }
+            if !urgent.isEmpty {
                 if speed > 1 {
                     // Also raise an alert so the player knows WHY the sim slowed — at ≥5×
                     // a new card is easy to miss. Carries the new decision so the banner
                     // can name it; shown by ContentView, stays until tapped. Only fires
                     // when speed was actually high (at 1×/½× the player is already watching).
-                    if let newDec = added.first {
+                    if let newDec = urgent.first {
                         autoSlowAlert = (kind: newDec.kind, tail: newDec.aircraft?.tail, fromSpeed: speed)
                     }
                     // Remember the player's setting so it can be given BACK once every
@@ -4544,15 +4582,13 @@ final class Simulation {
                     autoSlowRestoreSpeed = speed
                     speed = 1
                 }
-                // Every card that arrives while slowed must clear before the restore —
-                // a card that PRE-DATES the slow (say, a lingering offer) never holds
-                // the player's speed hostage.
-                if autoSlowRestoreSpeed != nil { autoSlowPendingIDs.formUnion(added.map(\.id)) }
-                // OPS DRAWERS: an alert about a box auto-opens that drawer so the player
-                // doesn't have to hunt for it (designer request).
-                opsAutoOpen(.needsAttention)
-                for d in added { if let s = d.kind.opsSection { opsAutoOpen(s) } }
-            } else if decisionQueue.count < oldValue.count {
+                // Every URGENT card that arrives while slowed must clear before the
+                // restore — a card that PRE-DATES the slow (say, a lingering offer)
+                // never holds the player's speed hostage, and neither does a routine
+                // scheduled check that arrives during it.
+                if autoSlowRestoreSpeed != nil { autoSlowPendingIDs.formUnion(urgent.map(\.id)) }
+            }
+            if decisionQueue.count < oldValue.count {
                 if let a = autoSlowAlert,
                    !decisionQueue.contains(where: { $0.kind == a.kind && $0.aircraft?.tail == a.tail }) {
                     // The alerted decision was resolved (possibly via a path OTHER than the
