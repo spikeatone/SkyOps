@@ -344,14 +344,21 @@ struct CrewsView: View {
             // (a counterfactual, labelled as such), minus the facility + opex.
             Divider().overlay(cardBorder.opacity(0.5))
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("TRAINING P&L").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
-                    Text("saved vs. contract prices − facility − opex").font(.karla(11)).foregroundStyle(secondary)
-                }
+                Text("TRAINING P&L").font(.karla(11, .bold)).foregroundStyle(secondary).tracking(0.5)
                 Spacer(minLength: 6)
                 Text(verbatim: payback >= 0 ? "+" + compact(payback) : "−" + compact(-payback))
                     .font(.karla(16, .heavy)).foregroundStyle(payback >= 0 ? available : red)
             }
+            // The two halves, split on purpose: at real simulator prices the course
+            // FEE saving alone can never repay a bay — throughput is the actual
+            // reason airlines own simulators, so the chart shows both.
+            ledgerLine("Course savings vs. contract", center.ledger.savings, available)
+            ledgerLine("Crew time returned to the line", center.ledger.timeValue ?? 0, available)
+            ledgerLine("Facility + sim bays", -center.ledger.facilitySpend, red)
+            ledgerLine("Running costs to date", -center.ledger.opexPaid, red)
+            Text("Crew time is valued at what a crew-day is worth to the families you fly — and only while crew is actually your binding constraint. Deep cover, little value; stretched, a lot.")
+                .font(.karla(11)).foregroundStyle(secondary)
+                .fixedSize(horizontal: false, vertical: true)
             PaybackSparkline(values: center.ledger.monthly.map { Double($0.payback) } + [Double(payback)],
                              mint: available, red: red, frame: cardBorder)
                 .frame(height: 44)
@@ -361,6 +368,16 @@ struct CrewsView: View {
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    /// One line of the Training P&L breakdown.
+    private func ledgerLine(_ label: LocalizedStringKey, _ amount: Int, _ tint: Color) -> some View {
+        HStack {
+            Text(label).font(.karla(12)).foregroundStyle(secondary)
+            Spacer(minLength: 6)
+            Text(verbatim: (amount < 0 ? "−" : "+") + compact(abs(amount)))
+                .font(.karla(12, .bold)).foregroundStyle(amount < 0 ? red : tint)
+        }
     }
 
     /// The family's sim-bay status once a center exists: an IN-HOUSE line with the
@@ -386,7 +403,9 @@ struct CrewsView: View {
                     // The build gate is well below break-even, so say where that is
                     // rather than letting the player buy a bay that never repays.
                     if enough && owned < payback {
-                        Text("Course savings repay it above ~\(payback) aircraft in this family")
+                        // Fee savings alone — crew-time value counts on top, and is
+                        // what actually carries a bay at real simulator prices.
+                        Text("Course fees alone repay it above ~\(payback) aircraft; crew time saved counts on top")
                             .font(.karla(11)).foregroundStyle(amber).fixedSize(horizontal: false, vertical: true)
                     }
                 }

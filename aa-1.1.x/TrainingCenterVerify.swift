@@ -159,7 +159,7 @@ func main() {
         check(sim.trainingCenter!.ledger.opexPaid - opexBefore == opex, "6: one month of opex billed (facility + 1 bay)")
         check(sim.maintenanceSpend - maintBefore >= opex, "6: opex flows through the maintenance-&-crew line")
         check(sim.trainingCenter!.ledger.monthly.count == monthsBefore + 1, "6: a monthly payback point appended")
-        check(sim.trainingCenter!.ledger.payback == sim.trainingCenter!.ledger.savings - sim.trainingCenter!.ledger.facilitySpend - sim.trainingCenter!.ledger.opexPaid, "6: payback = savings − facility − opex")
+        check(sim.trainingCenter!.ledger.payback == sim.trainingCenter!.ledger.savings + (sim.trainingCenter!.ledger.timeValue ?? 0) - sim.trainingCenter!.ledger.facilitySpend - sim.trainingCenter!.ledger.opexPaid, "6: payback = fee savings + time value − facility − opex")
         check(sim.trainingCenterMonthlyOpex == opex, "6: monthly opex readout")
         check((sim.financeSnapshots.last?.trainingCenterSpend ?? -1) == Simulation.trainingCenterFacilityCost + 18_000_000, "6: the finance snapshot carries the capital term")
         check(sim.cashInvariantResidual() == 0, "6: cash invariant after billing")
@@ -195,6 +195,43 @@ func main() {
         check(leads.allSatisfy { $0 >= 0 && $0 <= Simulation.contractLeadDaysMax }, "8: every contract new hire waits 0–10 days (\(leads))")
         check(Set(leads).count > 1, "8: the wait varies (a real class-slot lottery)")
     }
+    // ── 9. CREW-TIME VALUE (designer, 8 Sep 2026) ───────────────────────────────
+    // At real simulator prices the course FEE saving alone can never repay a bay, so
+    // the ledger also books the crew-DAYS a shorter in-house course returns to the
+    // line — the actual reason airlines own simulators. Valued from the sim's own
+    // dailyNet, and only while crew is the BINDING constraint.
+    do {
+        let sim = newSim()
+        guard hubSetup(sim, "A320", n: Simulation.simBayMinAircraft) else { check(false, "setup 9"); printResult(); return }
+        guard sim.buildTrainingCenter(at: "DEN"), sim.addSimBay(family: FAM) else { check(false, "setup 9 bay"); printResult(); return }
+        // Crew the family DEEPLY: with plenty of cover a returning crew flies nothing
+        // it wasn't already flying, so the time value must be ~zero.
+        while sim.crewCount(family: FAM) < Simulation.simBayMinAircraft * 3 {
+            if sim.hireCrew(family: FAM, mode: .rated) == nil { break }
+        }
+        days(sim, 12)   // let the rated hires reach the line
+        let deepValue0 = sim.trainingCenter!.ledger.timeValue ?? 0
+        _ = sim.hireCrew(family: FAM, mode: .newHire)
+        let deepBooked = (sim.trainingCenter!.ledger.timeValue ?? 0) - deepValue0
+        check(sim.crewDayValue(family: FAM) > 0, "9: a crew-day has a derived value while the family flies (\(sim.crewDayValue(family: FAM)))")
+        check(deepBooked == 0, "9: deep cover books ~no time value (got \(deepBooked))")
+
+        // Now make the family GENUINELY short: park most crews into lapsed state so
+        // line-ready falls well under the continuous target.
+        let pool = sim.crewPoolsByFamily[FAM] ?? []
+        for c in pool.prefix(pool.count - 2) where c.isLineReady { c.status = .lapsed }
+        let thinBefore = sim.trainingCenter!.ledger.timeValue ?? 0
+        _ = sim.hireCrew(family: FAM, mode: .newHire)
+        let thinBooked = (sim.trainingCenter!.ledger.timeValue ?? 0) - thinBefore
+        check(thinBooked > 0, "9: a stretched family books real time value (got \(thinBooked))")
+        check(thinBooked > deepBooked, "9: time value is worth MORE when short than when deep")
+        // And it must show up in payback, alongside the fee savings.
+        let l = sim.trainingCenter!.ledger
+        check(l.payback == l.savings + (l.timeValue ?? 0) - l.facilitySpend - l.opexPaid,
+              "9: payback = fee savings + time value − facility − opex")
+        check(sim.cashInvariantResidual() == 0, "9: time value is BOOKKEEPING ONLY — no cash moved")
+    }
+
     printResult()
 }
 MainActor.assumeIsolated { main() }

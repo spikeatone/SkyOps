@@ -4198,6 +4198,11 @@ final class Simulation {
         case .newHire where provider == .center:
             startCourse(crew, .initial, days: Simulation.centerNewHireCourseDays, provider: .center)
             recordTrainingSavings(crewHireCost(family: family, mode: .newHire, provider: .contract) - cost)
+            // Days the sim bay bought back: the shorter course PLUS the class-slot
+            // wait it avoids entirely (the contract mean, since that roll never happened).
+            recordTrainingTimeValue(family: family,
+                daysSaved: (Simulation.newHireCourseDays - Simulation.centerNewHireCourseDays)
+                           + Simulation.contractLeadDaysMax / 2)
             logOps(.structural, L("Crew hired"), L("%@: new hire in the type-rating course in-house · line-ready in %@ days", name, Simulation.centerNewHireCourseDays))
         case .newHire:
             // The contractor's next class isn't tomorrow: 0–10 days for a slot (real).
@@ -4235,7 +4240,10 @@ final class Simulation {
         chargeDecisionCost(plan.total)
         for (c, p) in zip(lapsed, plan.providers) {
             startCourse(c, .requal, days: recurrentDays(p), provider: p)
-            if p == .center { recordTrainingSavings(crewRequalCost(family: family, provider: .contract) - crewRequalCost(family: family, provider: .center)) }
+            if p == .center {
+                recordTrainingSavings(crewRequalCost(family: family, provider: .contract) - crewRequalCost(family: family, provider: .center))
+                recordTrainingTimeValue(family: family, daysSaved: Simulation.recurrentDays - Simulation.centerRecurrentDays)
+            }
         }
         decisionQueue.removeAll { $0.kind == .training && $0.trainingFamily == family }
         let inHouse = plan.providers.filter { $0 == .center }.count
@@ -4296,6 +4304,7 @@ final class Simulation {
                     if provider == .center {
                         inHouse += 1
                         recordTrainingSavings(crewRecurrentCost(family: fam, provider: .contract) - cost)
+                        recordTrainingTimeValue(family: fam, daysSaved: Simulation.recurrentDays - Simulation.centerRecurrentDays)
                     }
                     slots -= 1; sent += 1
                 }
@@ -4668,6 +4677,44 @@ final class Simulation {
     private func recordTrainingSavings(_ amount: Int) {
         guard amount > 0, trainingCenter != nil else { return }
         trainingCenter!.ledger.savings += amount
+    }
+
+    /// What one crew-day is worth to this family, DERIVED rather than assumed: the
+    /// net a flying aircraft in the family contributes per day (the same `dailyNet`
+    /// the MX system uses for forgone revenue), divided across the crews it takes to
+    /// keep that aircraft flying continuously. So a crew-day is the slice of an
+    /// aircraft-day it enables. Zero for a family that isn't flying or isn't
+    /// profitable — you can't lose revenue you weren't earning.
+    func crewDayValue(family: String) -> Int {
+        let flying = aircraft.filter { $0.purchased && $0.type.family == family && $0.assignedRouteId != nil }
+        guard !flying.isEmpty else { return 0 }
+        let perAircraftDay = flying.reduce(0) { $0 + dailyNet(for: $1) } / flying.count
+        guard perAircraftDay > 0 else { return 0 }
+        return Int((Double(perAircraftDay) / Simulation.coverageContinuousRatio).rounded())
+    }
+
+    /// How much a crew-day is ACTUALLY worth to this family right now. A crew-day is
+    /// only worth anything when crew is the BINDING constraint: with deep cover an
+    /// extra crew back early flies nothing it wasn't already flying, so this scales
+    /// from 0 (comfortably staffed) to 1 (no line-ready crew at all). That is also
+    /// the honest lesson the payback chart teaches — owning the simulator pays most
+    /// exactly when you are stretched.
+    private func crewShortfallFactor(family: String) -> Double {
+        let n = ownedCount(family: family)
+        guard n > 0 else { return 0 }
+        let ready = Double((crewPoolsByFamily[family] ?? []).filter { $0.isLineReady }.count)
+        let target = Double(n) * Simulation.coverageContinuousRatio
+        guard target > 0 else { return 0 }
+        return min(1, max(0, (target - ready) / target))
+    }
+
+    /// Book the value of the days an in-house course saves against the contract
+    /// timeline, valued at what those crew-days are worth to this family TODAY.
+    private func recordTrainingTimeValue(family: String, daysSaved: Int) {
+        guard daysSaved > 0, trainingCenter != nil else { return }
+        let value = Double(daysSaved) * Double(crewDayValue(family: family)) * crewShortfallFactor(family: family)
+        guard value >= 1 else { return }
+        trainingCenter!.ledger.timeValue = (trainingCenter!.ledger.timeValue ?? 0) + Int(value.rounded())
     }
     var trainingCenterMonthlyOpex: Int {
         guard let c = trainingCenter else { return 0 }

@@ -1,6 +1,66 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Course fees alone repay it above ~%lld aircraft; crew time saved counts on top": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allein die Kursgebühren amortisieren ihn ab ca. %lld Flugzeugen; die gesparte Crew-Zeit kommt obendrauf"
+          }
+        }
+      }
+    },
+    "Course savings vs. contract": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kursersparnis ggü. Vertrag"
+          }
+        }
+      }
+    },
+    "Crew time is valued at what a crew-day is worth to the families you fly — and only while crew is actually your binding constraint. Deep cover, little value; stretched, a lot.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crew-Zeit wird mit dem Wert eines Crew-Tages für deine geflogenen Familien bewertet – und nur, solange die Crew tatsächlich dein Engpass ist. Bei guter Reserve wenig wert, bei Knappheit viel."
+          }
+        }
+      }
+    },
+    "Crew time returned to the line": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurückgewonnene Crew-Zeit im Einsatz"
+          }
+        }
+      }
+    },
+    "Facility + sim bays": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anlage + Simulatorplätze"
+          }
+        }
+      }
+    },
+    "Running costs to date": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bisherige Betriebskosten"
+          }
+        }
+      }
+    },
     "AT ACQUISITION": {
       "localizations": {
         "de": {

@@ -36,8 +36,15 @@ struct TrainingCenter: Codable {
         var facilitySpend = 0     // build + bays (capital-out)
         var opexPaid = 0          // monthly facility + bay opex (overhead)
         var savings = 0           // Σ (contract price − in-house price) per course delivered
+        /// Σ value of CREW-DAYS returned to the line by finishing courses sooner.
+        /// This is the real reason airlines own simulators — throughput and control,
+        /// not the course fee. At real simulator prices the fee saving alone can
+        /// never repay a bay, so counting only that made the payback line read
+        /// "never" even when owning the sim was plainly right. nil in ledgers
+        /// written before this existed.
+        var timeValue: Int? = nil
         var monthly: [TrainingSnapshot] = []
-        var payback: Int { savings - facilitySpend - opexPaid }
+        var payback: Int { savings + (timeValue ?? 0) - facilitySpend - opexPaid }
     }
     struct TrainingSnapshot: Codable {
         var tick: Int
