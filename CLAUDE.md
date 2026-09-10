@@ -5828,6 +5828,38 @@ Four gameplay issues the designer hit in one acquisition playthrough. Three fixe
 - **The graduation-cap icon is the designer's Figma art app-wide** (node 158:862, via
   `MilestoneIconArt`), keeping the existing light/dark tints.
 
+## Decided — MX lives on FLEET, not Ops (9 Sep 2026; shipped in 1.8.0)
+
+- **The MX program moved from an Ops drawer to a third Fleet segment: My Fleet · Marketplace ·
+  Maintenance.** This is the placement confirmed in `aa-1.1.x/MX_BASES_SCOPE.md` §3.4. WHY: Ops is
+  the ALERTS screen, and on a 200-plane fleet a per-aircraft due list becomes most of that page —
+  which is the designer's original complaint that maintenance ate a third of their time at 5× and
+  nearly all of it faster. Maintenance is fleet ADMINISTRATION, not a disruption; it belongs beside
+  the fleet you already go there to think about.
+- **`MaintenanceView.swift` owns the whole flow** — due list, row cap, Details (cost with the
+  overdue surcharge broken out, downtime, forced-grounding clock), the C/D like-size coverage
+  picker, suspend-route, and the cover-confirm banner. It moved VERBATIM; only the chrome changed
+  (a section card instead of a collapsible drawer), and "Acquire a replacement" now switches to the
+  sibling Marketplace SEGMENT rather than jumping tabs.
+- **Ops keeps only what is an ALERT**: the C/D and overdue `.mxCheck` cards already in Needs
+  Attention, plus ONE tappable summary row — "Maintenance · N due · M in shop · Fleet ›" — keeping
+  the red count chip so a player scanning Ops still sees the state. The Ops Maintenance box is gone.
+- **The jump uses a `pendingMaintenance` intent adopted in FleetView's `.onAppear`**, a sibling of
+  `pendingMarketplace`. This follows the standing rule: an intent set BEFORE a tab switch cannot
+  rely on `.onChange`, because the switch RECREATES the view — the exact bug that made
+  ASSIGN-TO-NEW-ROUTE silently no-op once.
+- **NOT built, and still the rest of that scope:** the auto-A-check policy toggle, maintenance
+  BASES (line stations / hangar bases), and the contract-MRO provider line. All five decisions are
+  confirmed — this move was only the placement. **The move cut the screen real estate; it did NOT
+  cut the CARD VOLUME**, which is what the designer actually asked for. That's the auto-A work.
+- Driven on the iPad simulator: the segment renders nearest-date-first with the actionable checks at
+  the head, Ops shows the one-line row with its chip, and tapping it lands on Fleet with Maintenance
+  already selected.
+- Same session, unrelated: the Chief Pilot's **"+N more families below" was a dead `Text`** — a
+  player tapped it and nothing happened, fairly, since it named a destination. It is now a real
+  button that scrolls to the first family that didn't fit in the top four (ScrollViewReader +
+  per-family `.id`).
+
 ## Decided — The 1.7 hang fixes (8 Sep 2026; branch `hang-fixes-1.7.1`)
 
 TelemetryDeck reported **`hang.under3s` ×43**, a first-ever **`hang.3to10s` ×1**, and
@@ -5951,7 +5983,25 @@ twin, load-menu off main) · 1.5.0 (54, A350-1000 + 747-8i + map-render throttle
 (`READY_FOR_SALE`). 1.6.0 (55, German localization + 43 new city hero images/framing fix + GC
 per-achievement icons) is now ALSO LIVE (`READY_FOR_SALE`, approved 31 Aug — cleared 4.3(a); the
 city artwork made it a content update, not localization-only). Next new build = 56+.**
-⚠️ **1.7.0 (build 56) IS LIVE — `READY_FOR_SALE` (confirmed via the ASC API 8 Sep; submitted 3 Sep,
+⚠️⚠️ **1.8.0 (build 57) IS SUBMITTED — `WAITING_FOR_REVIEW` (9 Sep 23:42 UTC), auto-releases on
+approval. NEXT NEW BUILD = 58+.** ASC ids: version `a6e6c4d1-d2bb-41e9-804b-131fcd0730a8`, review
+submission `dc118de8-0b52-49a3-8f1e-697fa1ea4587`, delivery `01c7b045-faea-4722-b178-9f5a942c9e44`
+(76 MB). The whole chain ran from the CLI (bump 6 configs → archive → export → validate → upload →
+attach build → What's New both locales → review notes → Game Center → submit).
+**⚠️ 1.8 STARTED AS A 1.7.1 PATCH AND IS NOT ONE — know this before reading its diff.** Build 56 was
+cut on 3 Sep, so EVERYTHING merged to `main` after that date shipped in this build: multi-city
+rotations (Phases 1–2) · the crew training pipeline + Training Centre + Chief Pilot · MX moved to its
+own **Fleet ▸ Maintenance** segment · the four gameplay fixes (real carrier hubs, acquisition MX
+seeding, buyback repricing, live subsidiary P&L) · the transpacific routing fix · Ops drawers/red
+chips/auto-slow restore · and the eight hang fixes. The designer confirmed shipping it all together
+rather than splitting a linear history to isolate the fixes.
+Copy kept at `aa-1.1.x/whats-new-1.8.0.md` + `aa-1.1.x/app-review-notes-1.8.0.txt`.
+⚠️ **ASC CAPS App Review notes at 4000 CHARACTERS** — the first 1.8 draft was 4571 and would have
+silently truncated the 4.3(a) argument mid-sentence. Check the length before pasting; 1.8's final is
+3975. **4.3(a) is now easier: Vineyard Architect is APPROVED**, so the verifiable-titles line names
+three independently-approved titles (Airline, FC, Vineyard) instead of two.
+
+**1.7.0 (build 56) went LIVE — `READY_FOR_SALE` (confirmed via the ASC API 8 Sep; submitted 3 Sep,
 approved since). Next new build = 57+.** Two live consequences: it is the first build whose MetricKit
 reports carry **build-at-occurrence tagging** (so the TelemetryDeck Errors dashboard can finally
 separate stale hangs from live ones — group by MESSAGE, not by error id, since the tag rides in the

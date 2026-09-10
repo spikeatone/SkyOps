@@ -88,7 +88,15 @@ premium), and **all MX moves to a new section under the FLEET tab.**
 - **Balance gate (mandatory, the Hubs lesson)**: A/B at 6 / 20 / 60 aircraft must show a base is a
   value-sink for a small fleet and pays back for a big one — a threshold, never dominant.
 
-### 3.4 FLEET ▸ MAINTENANCE — the new home (Phase 1)
+### 3.4 FLEET ▸ MAINTENANCE — the new home (Phase 1) ✅ SHIPPED in 1.8.0 (9 Sep 2026)
+
+> **DONE — do not rebuild.** The segment exists (My Fleet · Marketplace · Maintenance),
+> `MaintenanceView.swift` owns the due list / Details / coverage flow, and Ops is reduced to the
+> one-line summary row that links here. What is still OUTSTANDING from this section is the POLICY
+> TOGGLE (auto A checks) and, from Phase 2, the Bases card and the Provider line — the placement is
+> settled, the automation is not. See CLAUDE.md "Decided — MX lives on FLEET, not Ops".
+> ⚠️ Moving it cut the SCREEN REAL ESTATE, not the CARD VOLUME. The card volume is the auto-A work
+> below, and it is the thing the designer actually asked for.
 
 The Fleet tab's segmented control grows a third segment: **My Fleet · Marketplace · Maintenance**.
 It holds, top to bottom: the **policy** toggle (auto A checks); the **due list** (nearest date first

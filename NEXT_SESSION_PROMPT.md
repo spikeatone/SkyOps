@@ -7,14 +7,13 @@ cold, with no memory of this conversation.
 **Read first:** `HANDOFF.md` (one-read orientation) → `CLAUDE.md` (the persistent
 design/technical record; it wins on any disagreement).
 
-_Written 3 September 2026, at the end of the session that built the rest of 1.7 and MERGED
-everything to `main`: the MX expanded-Details view + like-size route-coverage flow (Details →
-cover with a comparable spare / acquire one / suspend the route; C/D forced-grounding fixed to a
-sane calendar grace), the auto-slow alert banner (persists until tapped), the on-brand Figma
-milestone/banner icons, real-launch-date game start, German for all the new strings, and the
-next-75 airport-hero prompt table. The MX program itself + the 3 player-feedback fixes were
-already on `main`. **1.7 is fully built + merged; the next session SHIPS it (version bump →
-archive → upload → submit).**_
+_Written 9 September 2026, at the end of the session that: diagnosed the live
+TelemetryDeck `hang.under3s` signal down to two compounding root causes and fixed
+nine findings; repaired three harnesses that turned out not to be running at all;
+repriced the training centre to real simulator cost and then proved it still
+doesn't pay back; moved MX from Ops to its own Fleet segment; and shipped ALL of it
+plus the previously-unreleased 8 Sep work as **1.8.0 (build 57)**, submitted for
+review. **The release is done; the next session builds issue #4.**_
 
 ---
 
@@ -25,80 +24,97 @@ archive → upload → submit).**_
 >
 > **RELEASE STATE (verify, don't trust this snapshot):**
 > `cd ~/Architect\ Universe/~PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
-> - **1.6.0 (build 55) is LIVE** (`READY_FOR_SALE`) — German localization + 43 city hero
->   images + per-achievement Game Center icons. Cleared 4.3(a) (the artwork made it a real
->   content update, not localization-only). Next new build = **56+**.
-> - ⚠️ **App Review 4.3(a) is account-wide** — every submission leads its App Review notes with
->   the §1 studio-context block. Reuse `aa-1.1.x/app-review-notes-1.5.0.txt` (or `-1.4.3`), bump
->   the version line. Playbook: `PostmarkOps/APP_REVIEW_NOTES.md`.
+> - **1.7.0 (build 56) is LIVE.** **1.8.0 (build 57) was SUBMITTED 9 Sep** and auto-releases on
+>   approval. Next new build = **58+**.
+> - 1.8 is a big feature release: multi-city rotations · crew training + Training Centre + Chief
+>   Pilot · MX moved to Fleet ▸ Maintenance · four gameplay fixes · eight hang fixes.
+> - ⚠️ **App Review 4.3(a) is account-wide** — every submission leads its notes with the §1
+>   studio-context block. Reuse `aa-1.1.x/app-review-notes-1.8.0.txt` and bump the version line.
+>   **ASC caps that field at 4000 characters** — check before pasting (1.8's is 3975; the first
+>   draft was 4571 and would have truncated the argument mid-sentence). Vineyard Architect is now
+>   approved, so the verifiable-titles line names three titles.
 >
-> **YOUR JOB: SHIP 1.7. Everything is built + merged to `main`, tree clean, all pushed.** The
-> task is the release chain — no new features unless the designer asks. Order:
+> **YOUR JOB: ISSUE #4 — MX AND TRAINING AUTOMATION AT SCALE.** The designer's words:
+> *"For my 200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and near all-time at
+> anything faster. This really needs to be automated via maintenance bases or something as it's very
+> tedious. Same with training."*
 >
-> 1. **(optional, ~10 min) A quick confidence drive** — the 1.7 feature set was driven live piece
->    by piece with the designer, but not as one final pass on the merged `main` build. If you want
->    one: `xcodebuild` Debug, launch `-devScenario mx`, and glance at OPS ▸ MX (Details → cover /
->    acquire / suspend), set 100× and let an event fire (auto-slow banner + gauge icon), and open a
->    couple of milestone toasts if you can trigger them (on-brand icons). All harness-verified, so
->    this is a look-not-verify pass. Skip if you're confident.
+> Part of it already landed and part of it hasn't — know the difference before you start:
+> - ✅ DONE: routine MX no longer pins the sim at 1× (`.mxCheck` is exempt from auto-slow); the
+>   Chief Pilot distinguishes a real crew shortfall from a block sitting in training; and MX moved
+>   OFF the alerts screen into **Fleet ▸ Maintenance** (`MaintenanceView.swift`).
+> - ❌ NOT DONE, and this is the actual ask: **the CARD VOLUME.** Moving MX cut the screen real
+>   estate, not the number of decisions.
 >
-> 2. **⭐ CUT THE BUILD — bump to 1.7.0 / build 56 and upload.** Real content release (MX +
->    coverage + new-game date + icons = user-facing), so it's a MINOR bump (1.6.0 → **1.7.0**), not
->    a patch. Steps (the release chain is scriptable end-to-end — see CLAUDE.md "upload is
->    SCRIPTABLE" + `PostmarkOps/ARCHITECT_FAMILY.md` §4):
->    - Bump `MARKETING_VERSION` 1.6.0 → **1.7.0** AND `CURRENT_PROJECT_VERSION` 55 → **56** in the
->      pbxproj (**6 configs each** — grep to confirm you got all).
->    - `xcodebuild archive` → `-exportArchive` (method=app-store-connect, teamID=D2PVU8X5Q7,
->      signingStyle=automatic, `-allowProvisioningUpdates`, ASC key `25FXKWL48U` /issuer
->      `55d522ad-1376-4704-a13d-3961750a4327`, key staged at
->      `~/.appstoreconnect/private_keys/AuthKey_25FXKWL48U.p8`) → `altool --validate-app` →
->      `altool --upload-app`. A build takes ~5 min to appear in `asc.py builds 6790569697`.
->    - Then the ASC record (designer-side steps, but you can do the API parts): create the **1.7**
->      version record, attach build 56, set What's New (lead with MX maintenance + the coverage
->      flow), and paste the **§1 4.3(a) studio-context block** into App Review notes — reuse
->      `aa-1.1.x/app-review-notes-1.5.0.txt` (or `-1.6.0`), just bump the version line. Submit.
->    - ⚠️ **Game Center per-version checkbox:** ASC refuses to submit a GC-entitlement build until
->      the version's Game Center checkbox is enabled — `POST /v1/gameCenterAppVersions` (relationship
->      appStoreVersion). Do it for 1.7 like every prior GC build.
+> Build the rest of `aa-1.1.x/MX_BASES_SCOPE.md` — **all five decisions are already confirmed, so
+> don't re-litigate them:**
+> 1. **Auto A checks default ON** — no cards, an Ops event only; toggle lives on Fleet ▸ Maintenance.
+>    This is the single biggest cut to card volume; do it first.
+> 2. **Contract MRO as the default provider** — +25% cost and a 0–7-day C/D slot wait.
+> 3. **Maintenance bases** — line stations ($4M) and hangar bases ($18–45M) at an operating hub OR
+>    any airport with ≥3 of your routes; 2-aircraft C/D capacity per hangar line.
+> 4. **Overnight at a base/hub line station = zero lost legs** (the existing 1-day downtime applies
+>    elsewhere).
+> 5. Placement — already shipped in 1.8.
 >
-> 3. **IF the designer's 50 new hero images landed** (`aa-1.1.x/HERO-PROMPTS-75.md` is the list;
->    they stage them in `Resources/Airport Photos/<City>.jpg`) — **bundle them BEFORE cutting the
->    build**: copy each to `AirlineArchitect/AirlineArchitect/Resources/AirportPhotos/airport_<CODE>.jpg`
->    (synchronized group auto-bundles on next build), then re-run `aa-1.1.x/archetype-audit` (add each
->    new CODE to `bundled`) to confirm. +50 heroes ≈ +20 MB → ~88 MB download, still fine (JPGs are
->    ~45% of the download and don't thin further). If they DIDN'T land, ship 1.7 without them; they
->    become a fast follow-up content update.
+> ⚠️ **FIX THIS BUG IN THE SAME PASS.** Four sites in `Sim/Simulation.swift` (~lines 3715 / 3773 /
+> 3827 / 3879, each commented "~2 cycles/sim-day") convert cycles→days at a hardcoded **2** when the
+> engine actually flies **~3.52**, so **every maintenance date the player sees is ~76% too far out.**
+> Make it one shared constant and re-run `MXCoverageVerify`.
 >
-> **DON'T:** ship anything standalone-trivial during the account-wide 4.3(a) cascade — 1.7 is a real
-> content release so it's safe, but the §1 studio block is still mandatory. Don't revive the SHELVED
-> PM budget (`maint-budget-t22`) — MX supersedes it.
+> ⚠️ **The bases need the mandatory balance A/B** (the Hubs lesson, and the Training Centre lesson
+> right after it): a base must be a value-sink for a small fleet and pay back for a big one — a
+> threshold, never dominant. `aa-1.1.x/TrainingCenterABProbe.swift` is the closest template, and
+> `MX_BASES_SCOPE.md` §3.5 notes bases and the Training Centre are the same shape and should share
+> one `Facility` model and one probe.
 >
-> **After 1.7 is live — monetization signals** (give ~2 weeks): RevenueCat trial→paid conversion +
-> TelemetryDeck `Paywall.shown ÷ Game.started` (production view = Test Mode OFF) + the `hang.under3s`
-> count trend (the 1.4.2/1.4.3 + build-at-occurrence-tag fixes should show in it now).
+> **ALSO OPEN, smaller (ask the designer which they want):**
+> - **The Training Centre still never pays back**, at any fleet size. Two price corrections already
+>   landed (the facility was pricing a TEN-bay campus; bay opex was the heavy-utilization rate) and
+>   took the shortfall from $48.1M to $16.9M, but the remaining gap is **throughput, not price**: the
+>   probe's capture-rate diagnostic shows only **32%** of available course-fee savings are realised
+>   (10% on a crew-thin family). Root cause is one line — the auto-recurrent scheduler filters
+>   `status == .available`, so it only ever sees crews idle at that instant; a crew that is flying
+>   when its currency window closes is never scheduled and **lapses instead of training**. That also
+>   means crews lapse more than intended in EVERY game. Fixing it (queue on-duty/resting crews for
+>   their next release) should move payback to ~9 years, the same timescale as buying an aircraft
+>   here. **Do NOT cut prices again** — the next cut goes below real device cost, which the designer
+>   ruled out.
+> - **Spirit Airlines ceased all passenger operations in May 2026** but is still in the US roster.
+>   Designer call: remove, or keep as period-accurate.
 >
-> **THE STANDING CONCERN:** the UI/"does it feel right" half no harness reaches. It found the
-> ASSIGN-TO-NEW-ROUTE no-op + the SLC-artwork bug in past sessions; it keeps paying. Drive the
-> app.
+> **AFTER 1.8 GOES LIVE — the telemetry that judges the hang work.** Re-read the TelemetryDeck
+> Errors dashboard **grouped by MESSAGE, not error id.** Since 1.7 every MetricKit report carries
+> build-at-occurrence tagging (`b57 · 18.5`), and the dashboard row groups by error id, so the build
+> tag only shows if you group by message. `b57` events are the ones that judge the fixes; anything
+> tagged b39–b56 is stale drainage. Baseline before the fixes: `hang.under3s` ×43, `hang.3to10s` ×1,
+> `crash.sig9…rbsterminatecontext-domain-10` ×3.
+>
+> **THE STANDING CONCERN:** the UI/"does it feel right" half that no harness reaches. It found the
+> ASSIGN-TO-NEW-ROUTE no-op, the SLC artwork bug, and — this session — a Chief Pilot control that
+> looked tappable and did nothing. It keeps paying. Drive the app.
 >
 > **HOW THIS CODEBASE VERIFIES (don't skip):** every sim change gets a headless harness in
 > `aa-1.1.x/` (compile the real `Sim/*.swift` with `swiftc`, excluding AircraftIcon/SVGPath and
-> adding `RepaintVerifyStubs.swift`; entry file MUST be `main.swift`) + the soak
-> (`SoakMain.swift`, ~6–8 min) + `RoundTripVerify.swift` (save-path) + a Debug `xcodebuild` + a
-> live Simulator drive of any new UI. **German:** the app ships `de` on `main` — any NEW
-> user-facing string needs a translation; the ONLY reliable gap check is
-> `DD=<derivedDataRoot> python3 aa-1.1.x/de-findgaps.py` after a Debug build (scans ALL
-> stringsdata; a `de.lproj` `de==en` diff and a hand-picked file list both MISS category-2
-> gaps — a String reaching `Text` via a var/param/concatenation bypasses the catalog).
+> adding `RepaintVerifyStubs.swift`; entry file MUST be `main.swift`) + the soak (`SoakMain.swift`,
+> ~7 min for 6 seeds) + `RoundTripVerify.swift` (save path) + a Debug `xcodebuild` + a live
+> Simulator drive of any new UI.
+> ⚠️ **A HARNESS THAT PRINTS NOTHING IS NOT A PASS.** `RotationVerify` and `MXCoverageVerify` both
+> defined `main()` and never called it, so they compiled to binaries that ran silently — which reads
+> exactly like a clean run if you only grep for "FAIL". `SaveCompatVerify` was separately dead on a
+> compile error, so the regression net for the SAVE-LOSS bug class was dark for a week. All three
+> are fixed; if a harness prints nothing, suspect this before suspecting the code.
+> **German:** the app ships `de` — any NEW user-facing string needs a translation, and the ONLY
+> reliable gap check is `DD=<derivedDataRoot> python3 aa-1.1.x/de-findgaps.py` **after a Debug build
+> that actually contains your change** (a stale DerivedData once reported 21 missing strings as
+> clean). Expected residue: 2 DEBUG-only livery-gallery strings.
 >
-> **Simulator warnings:** tap coordinates are in POINTS (402×874 iPhone 17 Pro / 440×956 Pro Max),
-> not screenshot pixels; the input channel degrades mid-session — re-screenshot before concluding
-> a control is broken, a fresh `simctl launch` (or killing CoreSimulator + rebooting one device)
-> clears a wedge, and terminate sibling Architect apps that steal focus; LANDSCAPE captures come
-> out rotated (`sips -r 90`/`-r 270`). The `-devScenario` harness
+> **Simulator warnings:** tap coordinates are in POINTS, not screenshot pixels — the attach call
+> reports the coordinate space. Small text targets (a bare `Text` button) are easy to miss; if two
+> taps do nothing, re-screenshot before concluding the control is broken. Sibling Architect apps
+> steal focus; LANDSCAPE captures come out rotated (`sips -r 90`/`-r 270`). `-devScenario`
 > (`publicGate|listed|activist|ouster|fleet|bigfleet|legacyPlayer|subfleet|mx`) seeds otherwise-
-> unreachable states (`mx` = a routed fleet staged at distinct MX due-states — A due, A overdue,
-> C due, D due — with idle spares + a widebody D-check to exercise the C/D coverage flow).
+> unreachable states — `mx` is a routed fleet staged at distinct MX due-states.
 
 ---
 
@@ -108,15 +124,20 @@ archive → upload → submit).**_
 # review status
 cd ~/Architect\ Universe/~PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"
 
-# headless harness pattern (entry file MUST be main.swift; ~30s compile under -O)
+# headless harness pattern (entry file MUST be main.swift AND must call main())
 cd AirlineArchitect/AirlineArchitect
-cp ../../aa-1.1.x/MXProbe.swift /tmp/main.swift      # or RoundTripVerify / SoakMain / AutoSlowVerify
+mkdir -p /tmp/h && cp ../../aa-1.1.x/MXCoverageVerify.swift /tmp/h/main.swift
 swiftc -O -DDEBUG $(ls Sim/*.swift | grep -vE 'AircraftIcon.swift|SVGPath.swift') \
-  Persistence.swift ../../aa-1.1.x/RepaintVerifyStubs.swift /tmp/main.swift -o /tmp/run && /tmp/run
+  Persistence.swift ../../aa-1.1.x/RepaintVerifyStubs.swift /tmp/h/main.swift -o /tmp/h/run && /tmp/h/run
 
-# German gap scan (the ONLY reliable category-2 check — after a Debug build)
+# per-tick main-thread cost vs fleet/route count (the hang-fix guard).
+# ⚠️ measure at 250+ routes — below ~120 the effect is inside the noise.
+cp ../../aa-1.1.x/TickCostProbe.swift /tmp/h/main.swift   # then compile as above
+
+# German gap scan (the ONLY reliable check — after a Debug build containing your change)
 DD=<your -derivedDataPath root> python3 aa-1.1.x/de-findgaps.py
 
-# release chain is scriptable end-to-end (see CLAUDE.md "upload is SCRIPTABLE"):
+# release chain, scriptable end-to-end (see CLAUDE.md "upload is SCRIPTABLE"):
 #   xcodebuild archive → -exportArchive → altool --validate-app → altool --upload-app
+#   → create version record → attach build → What's New → review notes → Game Center → submit
 ```

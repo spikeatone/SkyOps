@@ -28,7 +28,7 @@ only, and update it in the same session as the work.
 
 ## In flight
 
-### ⭐ 1.7.1 HANG FIXES — branch `hang-fixes-1.7.1`, built + verified, NOT merged
+### ✅ SHIPPED IN 1.8.0 (build 57, submitted 9 Sep) — hang fixes + the MX move
 Nine confirmed findings behind the live `hang.under3s` ×43 / watchdog-SIGKILL ×3 signal. Detail in
 CLAUDE.md "Decided — The 1.7 hang fixes"; measured A/B in `aa-1.1.x/TickCostProbe.swift`.
 - [x] Time-box `run()`'s catch-up drain (the 50-TICK cap is unreachable below 100×, and at 100× it
@@ -42,9 +42,13 @@ CLAUDE.md "Decided — The 1.7 hang fixes"; measured A/B in `aa-1.1.x/TickCostPr
       Beyond 40 closures the oldest leave the Routes panel; a deliberate, approved partial reversal
       of "archived, not deleted", taken because an unbounded list silently kills iCloud sync at ~68.
 - [x] Driven on the iPad sim 9 Sep — all five view-layer fixes confirmed, no freeze recurrence
-- [x] Merged to `main`; bumped to 1.7.1 / **build 57** (6 pbxproj configs each)
-- [ ] After it is live: re-read the TelemetryDeck Errors dashboard **grouped by MESSAGE, not error
-      id** — 1.7+ carries build-at-occurrence tagging, so `b57` events are the ones that judge this fix
+- [x] Merged to `main`; bumped to **1.8.0 / build 57** (6 pbxproj configs each) and shipped —
+      it stopped being a 1.7.1 patch once the designer confirmed sending the whole post-3-Sep
+      backlog (rotations, crew training, Training Centre, Chief Pilot, the MX move) in one release
+- [x] **MX moved to Fleet ▸ Maintenance** + the Chief Pilot's dead "+N more families" control fixed
+- [ ] **After 1.8 is live:** re-read the TelemetryDeck Errors dashboard **grouped by MESSAGE, not
+      error id** — the build tag only appears under message grouping. `b57` events judge the fix;
+      b39–b56 is stale drainage. Baseline: hang.under3s ×43, hang.3to10s ×1, watchdog crash ×3.
 
 ### ⏭️ NEXT SESSION — MX + TRAINING AUTOMATION AT SCALE (designer issue #4, deferred on purpose)
 Designer, 8 Sep: *"For my 200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and
