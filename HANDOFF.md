@@ -222,8 +222,16 @@ different escape from their call sites, so they never matched — German players
 `OpsTweaksVerify` test 3 had been red at HEAD (39/43) while the handoff recorded 43/43, because the
 crew-training pipeline invalidated its setup. Both fixed. **A recorded pass is not a pass.**
 Verified: MXBaseVerify 86/86 · MXBaseABProbe 7/7 · MXCoverage 82/82 · RoundTrip 13/13 · SaveCompat
-12/12 · AcquisitionMX 31/31 · OpsTweaks 43/43 · soak · Debug + Release builds · German clean · and
-driven live on the iPad sim via the committed `-devScenario mxbase`.
+12/12 · AcquisitionMX 35/35 · OpsTweaks 43/43 · Rotation 55/55 · CrewPipeline 63/63 · soak 6/6 seeds
+× 2 sim-years · Debug + Release builds · German clean · and driven live on the iPad sim via the
+committed `-devScenario mxbase`.
+⚠️ **ONE HARNESS IS RED, AND IT WAS ALREADY RED AT HEAD — `MXProbe`'s "SERVICED beats DEFERRED".**
+Run side by side: HEAD gives serviced $4,577M vs deferred $4,610M (FAIL); after this work $4,558M vs
+$4,601M (FAIL). So the finding the 1.7 MX work took four rounds to establish is **already broken in
+1.8.0, currently in review**, and this work did not cause it — the MX-spend delta is exactly the new
+MRO premium ($70.3M × 1.25 = $87.9M). **Its AOG counter reads 5 in BOTH arms in BOTH trees**, so the
+deferral channel the finding rests on measures nothing; fix that counter before retuning. Detail in
+CLAUDE.md and TASKS.md. The 1.7 note recording "MX sweep 6/6" is stale.
 
 **► ⏭️ WHAT'S LEFT of issue 4 — TRAINING automation.** The MX half is done (above). The designer's
 report also said *"Same with training"*, and the throughput bug behind it is still open and still

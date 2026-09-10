@@ -5945,6 +5945,26 @@ run. Full table in `MX_BASES_SCOPE.md` §7.
 - ⏭️ **STILL NOT BUILT** (phase 3, optional): selling hangar capacity to other airlines, subsidiary
   fleets using your bases, engine shop visits.
 
+### ⚠️ `MXProbe`'s central balance check is RED — and it was ALREADY red at HEAD
+
+Run side by side from the same source, 5 runs × 2 sim-years each: **pristine HEAD gives serviced
+$4,577M vs deferred $4,610M (FAIL); after this work, $4,558M vs $4,601M (FAIL).** So "SERVICED beats
+DEFERRED" — the finding the 1.7 MX work took four rounds to establish — is **already broken in
+1.8.0, which is in review**, and the maintenance-automation work did not cause it. The MX-spend
+difference between the two runs is exactly the new MRO premium ($70.3M × 1.25 = $87.9M), which is
+the premium behaving as designed; it widens the margin from −$33M to −$43M because it applies to the
+serviced arm's much larger check volume.
+
+**Do not retune off this probe until its AOG counter is fixed.** It reads **5 in BOTH arms in BOTH
+trees**, so the deferral-coupling channel the whole finding rests on is contributing nothing, and
+the `b.aog >= a.aog` guard passes trivially. It counts 0→>0 edges of "any aircraft in maint", which
+saturates on a 14-aircraft fleet. Two other things belong in the same decision: the C/D grace
+constants are written in DAYS and, now that the conversion is right, they run the full 25/60 real
+days instead of the ~14/36 the broken `2` produced (the constants finally meaning what they say,
+but it does make C/D deferral more tolerable than when they were last tuned), and a 5-run average on
+a ~1% margin is noise-prone. **The 1.7 record of "MX sweep 6/6" is stale** — same class as the
+OpsTweaks 39/43 below.
+
 ### Two harness/localization bugs found in passing — both were silently wrong
 
 - **⚠️ 15 GERMAN KEYS WERE DEAD.** Route-label strings in `simLocalizationTables` were written with

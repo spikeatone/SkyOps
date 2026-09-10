@@ -84,6 +84,26 @@ in-training"), but the CARD VOLUME itself is untouched.
       `MX_BASES_SCOPE.md` §7.
 - [ ] Phase 3 of `MX_BASES_SCOPE.md` (optional, unbuilt): sell hangar capacity to other airlines,
       subsidiary fleets using your bases, engine shop visits.
+- [ ] ⚠️ **`MXProbe`'s "SERVICED beats DEFERRED" is RED — and it is RED AT PRISTINE HEAD TOO, so it
+      is NOT caused by the maintenance-automation work. It is already red in 1.8.0, which is in
+      review.** Same binary, same arms, run side by side:
+      · HEAD: serviced $4,577M vs deferred $4,610M — FAIL (5/6)
+      · after this work: serviced $4,558M vs deferred $4,601M — FAIL (5/6)
+      The MX spend difference is exactly the new MRO premium ($70.3M × 1.25 = $87.9M), so the
+      premium behaves as designed; it widens the margin modestly (−$33M → −$43M) because it applies
+      to the serviced arm's much larger check volume, but it did not flip anything.
+      **The 1.7 record of "MX sweep 6/6" is therefore STALE** — the finding regressed at some point
+      between then and 1.8 and nobody noticed, the same class as the OpsTweaks 39/43 found this
+      session. Before retuning anything, note the probe's own AOG counter reads **5 in BOTH arms in
+      BOTH trees**: the deferral-coupling channel it is built on is contributing nothing, and its
+      `b.aog >= a.aog` check passes trivially. It counts 0→>0 edges of "any aircraft in maint",
+      which saturates on a 14-aircraft fleet. **Fix the counter first — the balance verdict cannot
+      be trusted while its main channel measures nothing.**
+      (Two other things that would change the answer and should be decided together: the C/D grace
+      constants are expressed in DAYS and, now that the cycles→days conversion is correct, they run
+      the full 25/60 real days instead of the ~14/36 the broken constant produced — that is the
+      constants finally meaning what they say, but it does make C/D deferral more tolerable than
+      when they were last tuned. And a 5-run average on a ~1% margin is noise-prone.)
 
 ### ⚠️ DESIGNER CALL PENDING — the training centre never pays back at real simulator prices
 Repricing the centre to the designer's real-world figures ($35M facility, $12–22M bays) made it
