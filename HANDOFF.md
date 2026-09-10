@@ -235,12 +235,16 @@ $4,601M (FAIL). So the finding the 1.7 MX work took four rounds to establish is 
 MRO premium ($70.3M × 1.25 = $87.9M). The 1.7 note recording "MX sweep 6/6" is stale.
 **Its AOG counter WAS broken and is now FIXED** (one fleet-wide edge test collapsed every
 overlapping AOG into a single count — it read 5 in both arms; `countAOGOnsets` counts per-aircraft
-edges now, with four self-checks guarding it). With a working instrument the failure is finally
-diagnosable: **deferring saves $37.4M of MX fees and buys just 3 extra AOGs (+3%)**, and the $41M
-net-worth gap is almost exactly that fee saving — so the deferral penalty is real but negligible.
-**The lever with the right magnitude is `mxOverdueCostSurcharge` (~4.4× vs today's 2.5×), not the
-AOG multiplier** — the deferred arm already pays $50.5M, so forced checks DO fire, just fewer and
-dearer. Not changed: designer's call. Detail in CLAUDE.md and TASKS.md.
+edges now, with four self-checks guarding it). With a working instrument, and **re-measured at 20 runs**, the
+failure is confirmed and quantified: **serviced $912M ± 2M vs deferred $920M ± 2M — −15.3 standard
+errors, serviced lost 0/20 pairings.** So deferring ALL maintenance is strictly better, in every
+run; it is a real defect, not a marginal reading. Per run the deferrer pays $10.1M of MX against the
+servicer's $17.6M and buys ~0.4 extra AOGs — the whole gap is the bill avoided.
+**Recommended lever: `mxOverdueCostSurcharge` 2.5× → ~4.4× (≈5× for a real margin).** The AOG
+multiplier is the wrong knob: the hard-grounding window already fires, so a deferrer does pay, just
+for fewer and dearer checks. Not changed — designer's call, and the 1.7 note says this took four
+rounds. **Re-measure with `MXProbe.swift 20`**; 5 runs cannot resolve the effect. Detail in
+CLAUDE.md and TASKS.md.
 
 **► ⏭️ WHAT'S LEFT of issue 4 — TRAINING automation.** The MX half is done (above). The designer's
 report also said *"Same with training"*, and the throughput bug behind it is still open and still

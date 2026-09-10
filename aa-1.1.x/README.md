@@ -222,7 +222,9 @@ group never compiles them into the build.
   sim-years, which made `b.aog >= a.aog` pass while measuring nothing. Four self-checks (test 0) now
   guard the instrument; they all fail on the old counter. The deferred arm also reports its own MX
   spend, so a failing verdict prints the tug-of-war ("deferring saves $X of MX and buys N extra
-  AOGs") instead of leaving you to guess.
+  AOGs") instead of leaving you to guess. **Run count is argv[1], default 20** — it also reports
+  per-run mean ± sd and the gap in standard errors, because the verdict turns on ~1% and 5 runs
+  cannot resolve that. (At 20 runs the current answer is unambiguous: −15.3 SE, serviced 0/20.)
 - ⚠️ **`MXProbe.swift`'s DEFERRED arm must set `mxAutoServiceAChecks = false`.** With the policy on
   (the default now) a "never service" player quietly gets on-time A maintenance for free and only
   defers C/D — which inverted the probe's central finding (DEFERRED beat SERVICED). Any future arm

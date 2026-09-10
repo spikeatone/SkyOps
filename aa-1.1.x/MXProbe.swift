@@ -57,8 +57,9 @@ func main() {
     }
 
     // ---- ARM A: service MX on time. Expect real recurring MX spend, solvency, invariant. ----
-    func runServiced(_ runs: Int) -> (mxSpend: Int, aog: Int, netWorth: Int, invOK: Bool, bankrupt: Bool, checks: Int) {
+    func runServiced(_ runs: Int) -> (mxSpend: Int, aog: Int, netWorth: Int, invOK: Bool, bankrupt: Bool, checks: Int, perRun: [Int]) {
         var mxSpend = 0, aog = 0, nw = 0, checks = 0; var invOK = true, bankrupt = false
+        var perRun: [Int] = []
         for _ in 0..<runs {
             let sim = Simulation(); sim.configure(viewport: CGSize(width: 400, height: 800))
             sim.nameAirline("MX Air", tailCode: "MX"); makeFleet(sim)
@@ -81,15 +82,17 @@ func main() {
                 if sim.cashInvariantResidual() != 0 { invOK = false }
                 if sim.isBankrupt { break }
             }
-            mxSpend += sim.totalMaintenanceCheckSpend; nw += sim.netWorth; if sim.isBankrupt { bankrupt = true }
+            mxSpend += sim.totalMaintenanceCheckSpend; nw += sim.netWorth; perRun.append(sim.netWorth)
+            if sim.isBankrupt { bankrupt = true }
         }
-        return (mxSpend, aog, nw, invOK, bankrupt, checks)
+        return (mxSpend, aog, nw, invOK, bankrupt, checks, perRun)
     }
 
     // ---- ARM B: NEVER service (always defer). Expect MORE AOGs (deferral coupling)
     //      but the invariant still holds and it's not an instant death spiral. ----
-    func runDeferred(_ runs: Int) -> (mxSpend: Int, aog: Int, netWorth: Int, invOK: Bool, bankrupt: Bool) {
+    func runDeferred(_ runs: Int) -> (mxSpend: Int, aog: Int, netWorth: Int, invOK: Bool, bankrupt: Bool, perRun: [Int]) {
         var mxSpend = 0, aog = 0, nw = 0; var invOK = true, bankrupt = false
+        var perRun: [Int] = []
         for _ in 0..<runs {
             let sim = Simulation(); sim.configure(viewport: CGSize(width: 400, height: 800))
             sim.nameAirline("Defer Air", tailCode: "DF"); makeFleet(sim)
@@ -117,9 +120,10 @@ func main() {
                 if sim.isBankrupt { break }
             }
             mxSpend += sim.totalMaintenanceCheckSpend
-            nw += sim.netWorth; if sim.isBankrupt { bankrupt = true }
+            nw += sim.netWorth; perRun.append(sim.netWorth)
+            if sim.isBankrupt { bankrupt = true }
         }
-        return (mxSpend, aog, nw, invOK, bankrupt)
+        return (mxSpend, aog, nw, invOK, bankrupt, perRun)
     }
 
     // ---- 0. SELF-CHECK THE INSTRUMENT before believing anything it measures. ----
@@ -153,7 +157,10 @@ func main() {
         _ = baseline
     }
 
-    let runs = 5
+    // Runs are configurable because the verdict below turns on a ~1% margin, and 5
+    // runs cannot tell a 1% effect from noise. Default raised to 20; pass a count as
+    // argv[1] to go higher (each run is ~1M ticks over 14 aircraft, ~50s).
+    let runs = Int(CommandLine.arguments.dropFirst().first ?? "") ?? 20
     let a = runServiced(runs)
     let b = runDeferred(runs)
 
@@ -169,6 +176,34 @@ func main() {
                  Double(a.mxSpend - b.mxSpend)/1e6, b.aog - a.aog,
                  100.0 * Double(b.aog - a.aog) / Double(max(1, a.aog))))
 
+    // ---- IS THE GAP REAL, OR IS IT NOISE? ----
+    // The verdict below turns on a ~1% difference in net worth, and each run carries
+    // its own economic events, AOG timing and crew luck. Reporting the SPREAD is the
+    // only way to know whether a 1% mean gap means anything — a 5-run sum (which is
+    // all this printed before) cannot distinguish a real effect from a coin flip.
+    func mean(_ xs: [Int]) -> Double { xs.isEmpty ? 0 : Double(xs.reduce(0, +)) / Double(xs.count) }
+    func sd(_ xs: [Int]) -> Double {
+        guard xs.count > 1 else { return 0 }
+        let m = mean(xs)
+        return (xs.reduce(0.0) { $0 + pow(Double($1) - m, 2) } / Double(xs.count - 1)).squareRoot()
+    }
+    let ma = mean(a.perRun), mb = mean(b.perRun)
+    let sa = sd(a.perRun), sb = sd(b.perRun)
+    // Standard error of the difference of two independent means.
+    let se = ((sa*sa + sb*sb) / Double(max(1, runs))).squareRoot()
+    let gap = ma - mb
+    let z = se > 0 ? gap / se : 0
+    print(String(format: "\nPER-RUN net worth over %d runs (mean ± sd):", runs))
+    print(String(format: "  SERVICED $%.0fM ± %.0fM   ·   DEFERRED $%.0fM ± %.0fM",
+                 ma/1e6, sa/1e6, mb/1e6, sb/1e6))
+    print(String(format: "  gap $%+.0fM (%.1f%%) · standard error $%.0fM · %.1f SE",
+                 gap/1e6, 100.0 * gap / max(1, mb), se/1e6, z))
+    let servicedWins = zip(a.perRun, b.perRun).filter { $0 > $1 }.count
+    print("  serviced beat deferred in \(servicedWins)/\(runs) run pairings")
+    print(abs(z) < 2
+          ? "  → INSIDE THE NOISE (|z| < 2): this margin is not a real effect at this run count."
+          : "  → OUTSIDE THE NOISE (|z| ≥ 2): the direction of this gap is a real effect.")
+
     check(a.mxSpend > 0, "MX checks actually fire + cost money (real recurring cost: $\(a.mxSpend/1_000_000)M)")
     check(a.invOK && b.invOK, "cash invariant holds in BOTH arms")
     check(!a.bankrupt, "servicing on time stays solvent")
@@ -181,7 +216,8 @@ func main() {
     // net worth should beat DEFERRED (the extra AOG cost/downtime > the MX spend
     // saved). Was FALSE at 3× overdue / cheap repairs (deferring won); the point of
     // the strengthened penalty.
-    check(a.netWorth > b.netWorth, "SERVICED beats DEFERRED (skipping MX is a losing gamble: $\(a.netWorth/1_000_000)M vs $\(b.netWorth/1_000_000)M)")
+    check(a.netWorth > b.netWorth,
+          "SERVICED beats DEFERRED (skipping MX is a losing gamble: mean $\(Int(ma/1e6))M vs $\(Int(mb/1e6))M, \(String(format: "%.1f", z)) SE, serviced won \(servicedWins)/\(runs))")
 
     // ---- "Sell before D" economics: near end-of-life, is the D cost comparable to
     //      residual value? (A genuine choice, per spec.) ----

@@ -88,19 +88,19 @@ in-training"), but the CARD VOLUME itself is untouched.
       transition, with **four self-checks guarding the instrument** (all four fail on the old
       counter). Real numbers: SERVICED 112 AOGs, DEFERRED 115. The deferred arm also reports its own
       MX spend now, which was the decisive missing figure. 9/10 (was 5/6).
-- [ ] ⚠️ **DESIGNER CALL — "SERVICED beats DEFERRED" is still RED, and now it is diagnosable.**
-      With the counter working: `SERVICED $87.9M MX / 112 AOGs / $4,558M` vs
-      `DEFERRED $50.5M MX / 115 AOGs / $4,599M` → **deferring saves $37.4M of MX fees and buys 3
-      extra AOGs (+3%)**, and the $41M net-worth gap is almost exactly that fee saving. So the
-      deferral penalty is real but negligible; the AOG channel is far too small to carry it (a
-      second run put it at +8% — noisy either way).
-      **Not caused by the maintenance work** — pristine HEAD fails identically ($4,577M vs $4,610M),
-      so it is already broken in 1.8.0, in review. The 1.7 record of "MX sweep 6/6" is stale.
-      **The lever with the right magnitude is `mxOverdueCostSurcharge`, not the AOG multiplier**: the
-      deferred arm already pays $50.5M (forced checks DO fire, just fewer and dearer), so making
-      deferral cost more than $87.9M needs roughly 4.4× rather than today's 2.5×. Not changed — the
-      1.7 note says this took four rounds, and a 5-run average on a ~1% margin wants more runs
-      before anyone retunes.
+- [ ] ⚠️⚠️ **DESIGNER CALL — deferring ALL maintenance is strictly better, CONFIRMED at 20 runs.**
+      Not noise: **serviced $912M ± 2M vs deferred $920M ± 2M, −15.3 standard errors, and serviced
+      lost 0/20 run pairings.** (An earlier 5-run read that called this possibly noise-prone was
+      wrong — the per-run spread is only ±0.2%.) Per run the deferrer pays **$10.1M** of MX against
+      the servicer's **$17.6M** and buys about **0.4 extra AOGs**; the whole $8M gap is just the
+      maintenance bill avoided.
+      **Not caused by the maintenance work** — pristine HEAD fails identically, so it is already
+      in 1.8.0, in review. The 1.7 record of "MX sweep 6/6" is stale.
+      **Recommended lever: `mxOverdueCostSurcharge` 2.5× → ~4.4× (≈5× for a real margin, not a
+      tie).** The AOG multiplier is the wrong knob — the hard-grounding window already fires, so a
+      deferrer does pay, just for fewer and dearer checks; their bill needs to clear $17.6M/run,
+      a ~1.74× rise. Not changed unilaterally: the 1.7 note says this balance took four rounds.
+      **Re-measure at 20 runs after any change** (`MXProbe.swift 20`) — 5 runs cannot resolve it.
 
 ### ⚠️ DESIGNER CALL PENDING — the training centre never pays back at real simulator prices
 Repricing the centre to the designer's real-world figures ($35M facility, $12–22M bays) made it

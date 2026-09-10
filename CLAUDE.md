@@ -5980,12 +5980,28 @@ scale too. This is NOT caused by the maintenance-automation work: pristine HEAD 
 ($4,577M vs $4,610M), so it is already broken in 1.8.0, which is in review, and **the 1.7 record of
 "MX sweep 6/6" is stale** — same class as the OpsTweaks 39/43 below.
 
+**⚠️ RE-MEASURED AT 20 RUNS (10 Sep 2026): THE GAP IS NOT NOISE. It is a confirmed defect —
+deferring all maintenance is strictly better, in EVERY run.**
+
+```
+SERVICED  $912M ± 2M   ·   DEFERRED  $920M ± 2M     (per-run net worth, 20 runs)
+gap −$8M (−0.9%) · standard error $1M · −15.3 SE · serviced won 0/20 pairings
+deferring saves $149.3M of MX and buys 8 extra AOGs (+2%)
+```
+
+The per-run spread is tiny (±$2M on $912M, 0.2%), so a 0.9% gap is enormous against it. **An earlier
+5-run read of this as possibly noise-prone was wrong** — these runs are far more deterministic than
+that assumed, and the correct reading is 15 sigma. Per run: the deferrer pays **$10.1M** of MX
+against the servicer's **$17.6M**, and buys about **0.4 extra AOGs**. The whole $8M gap is the
+maintenance bill avoided.
+
 **The lever with the right magnitude is the OVERDUE COST SURCHARGE, not the AOG multiplier.** The
-deferred arm still pays $50.5M (the hard-grounding window does fire — it just forces fewer, dearer
-checks). For servicing to win, deferring has to cost more than $87.9M, which needs roughly
-`mxOverdueCostSurcharge` ≈ 4.4× rather than today's 2.5×. **NOT changed** — the 1.7 note says this
-balance took four rounds, so it is the designer's call, and a 5-run average on a ~1% net-worth
-margin is noise-prone enough that a retune should be measured over more runs.
+hard-grounding window DOES fire — the deferrer still pays $10.1M/run, just for fewer, dearer checks —
+so the AOG channel is not the thing to strengthen. For deferral to stop winning, a deferrer's bill
+has to clear $17.6M/run, i.e. rise ~**1.74×**, which puts `mxOverdueCostSurcharge` at roughly
+**4.4× (≈5× for a real margin rather than a tie)** instead of today's 2.5×. **NOT changed** — the 1.7
+note says this balance took four rounds, and it is the designer's call; re-measure at 20 runs after
+any change, because 5 runs is not enough resolution to see the effect land.
 
 ### Two harness/localization bugs found in passing — both were silently wrong
 
