@@ -216,6 +216,13 @@ group never compiles them into the build.
   `MX_BASES_SCOPE.md` §7, it's a flagged designer call, not a bug.** ⚠️ A scattered point-to-point
   network can't host a base AT ALL (the eligibility rule needs 3 routes at one airport), so the
   scattered arm gives exactly the minimum and flies everything else elsewhere.
+- ⚠️ **`MXProbe.swift`'s AOG counter counts PER-AIRCRAFT onset edges (`countAOGOnsets`) — never a
+  fleet-wide "is anyone grounded" flag.** The old version was exactly that, so on a 14-aircraft
+  fleet every overlapping AOG collapsed into one count and it read 5 in BOTH arms across two
+  sim-years, which made `b.aog >= a.aog` pass while measuring nothing. Four self-checks (test 0) now
+  guard the instrument; they all fail on the old counter. The deferred arm also reports its own MX
+  spend, so a failing verdict prints the tug-of-war ("deferring saves $X of MX and buys N extra
+  AOGs") instead of leaving you to guess.
 - ⚠️ **`MXProbe.swift`'s DEFERRED arm must set `mxAutoServiceAChecks = false`.** With the policy on
   (the default now) a "never service" player quietly gets on-time A maintenance for free and only
   defers C/D — which inverted the probe's central finding (DEFERRED beat SERVICED). Any future arm

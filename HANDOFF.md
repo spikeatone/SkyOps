@@ -232,9 +232,15 @@ committed `-devScenario mxbase`.
 Run side by side: HEAD gives serviced $4,577M vs deferred $4,610M (FAIL); after this work $4,558M vs
 $4,601M (FAIL). So the finding the 1.7 MX work took four rounds to establish is **already broken in
 1.8.0, currently in review**, and this work did not cause it — the MX-spend delta is exactly the new
-MRO premium ($70.3M × 1.25 = $87.9M). **Its AOG counter reads 5 in BOTH arms in BOTH trees**, so the
-deferral channel the finding rests on measures nothing; fix that counter before retuning. Detail in
-CLAUDE.md and TASKS.md. The 1.7 note recording "MX sweep 6/6" is stale.
+MRO premium ($70.3M × 1.25 = $87.9M). The 1.7 note recording "MX sweep 6/6" is stale.
+**Its AOG counter WAS broken and is now FIXED** (one fleet-wide edge test collapsed every
+overlapping AOG into a single count — it read 5 in both arms; `countAOGOnsets` counts per-aircraft
+edges now, with four self-checks guarding it). With a working instrument the failure is finally
+diagnosable: **deferring saves $37.4M of MX fees and buys just 3 extra AOGs (+3%)**, and the $41M
+net-worth gap is almost exactly that fee saving — so the deferral penalty is real but negligible.
+**The lever with the right magnitude is `mxOverdueCostSurcharge` (~4.4× vs today's 2.5×), not the
+AOG multiplier** — the deferred arm already pays $50.5M, so forced checks DO fire, just fewer and
+dearer. Not changed: designer's call. Detail in CLAUDE.md and TASKS.md.
 
 **► ⏭️ WHAT'S LEFT of issue 4 — TRAINING automation.** The MX half is done (above). The designer's
 report also said *"Same with training"*, and the throughput bug behind it is still open and still

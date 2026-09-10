@@ -5951,25 +5951,41 @@ run. Full table in `MX_BASES_SCOPE.md` §7.
 - ⏭️ **STILL NOT BUILT** (phase 3, optional): selling hangar capacity to other airlines, subsidiary
   fleets using your bases, engine shop visits.
 
-### ⚠️ `MXProbe`'s central balance check is RED — and it was ALREADY red at HEAD
+### ⚠️ `MXProbe`: the AOG counter is FIXED, and the balance check is still RED (pre-existing)
 
-Run side by side from the same source, 5 runs × 2 sim-years each: **pristine HEAD gives serviced
-$4,577M vs deferred $4,610M (FAIL); after this work, $4,558M vs $4,601M (FAIL).** So "SERVICED beats
-DEFERRED" — the finding the 1.7 MX work took four rounds to establish — is **already broken in
-1.8.0, which is in review**, and the maintenance-automation work did not cause it. The MX-spend
-difference between the two runs is exactly the new MRO premium ($70.3M × 1.25 = $87.9M), which is
-the premium behaving as designed; it widens the margin from −$33M to −$43M because it applies to the
-serviced arm's much larger check volume.
+**The counter was broken and is now fixed (10 Sep 2026).** Both arms used a single FLEET-WIDE edge
+test — `if inMaint > 0 && !prevMaint { aog += 1 }` — so on a 14-aircraft fleet, once ANY aircraft was
+grounded the flag stayed true until they were ALL clear and every overlapping AOG collapsed into one
+count. It read **5 in both arms** across two sim-years. `countAOGOnsets` now counts each aircraft's
+OWN false→true transition (an airworthiness directive grounds a whole type at once, and each of
+those IS a separate incident); it allocates nothing and is cheaper than the `filter {}.count` it
+replaced. **Four self-checks now guard the instrument itself** (three simultaneous groundings count
+as three · a still-grounded aircraft isn't re-counted · a repair alone counts nothing · the same
+aircraft grounding again is a new incident) — all four would have failed on the old counter. The
+`aog += 0` no-op in the deferred arm is gone, and that arm now reports its own MX spend, which was
+the decisive missing number.
 
-**Do not retune off this probe until its AOG counter is fixed.** It reads **5 in BOTH arms in BOTH
-trees**, so the deferral-coupling channel the whole finding rests on is contributing nothing, and
-the `b.aog >= a.aog` guard passes trivially. It counts 0→>0 edges of "any aircraft in maint", which
-saturates on a 14-aircraft fleet. Two other things belong in the same decision: the C/D grace
-constants are written in DAYS and, now that the conversion is right, they run the full 25/60 real
-days instead of the ~14/36 the broken `2` produced (the constants finally meaning what they say,
-but it does make C/D deferral more tolerable than when they were last tuned), and a 5-run average on
-a ~1% margin is noise-prone. **The 1.7 record of "MX sweep 6/6" is stale** — same class as the
-OpsTweaks 39/43 below.
+**With a working instrument the verdict still fails, and now you can see exactly why:**
+
+```
+SERVICED: MX spend $87.9M  AOGs 112  netWorth $4558M
+DEFERRED: MX spend $50.5M  AOGs 115  netWorth $4599M
+  → deferring saves $37.4M of MX and buys 3 extra AOGs (+3%)
+```
+
+The net-worth gap ($41M) is almost exactly the MX fees deferring avoids ($37.4M). **So the deferral
+penalty is real but negligible: ~3 extra breakdowns against $37M saved.** The AOG coupling is not
+missing — it is just far too small to matter, and a second run put it at +8%, so it is noisy at that
+scale too. This is NOT caused by the maintenance-automation work: pristine HEAD fails the same check
+($4,577M vs $4,610M), so it is already broken in 1.8.0, which is in review, and **the 1.7 record of
+"MX sweep 6/6" is stale** — same class as the OpsTweaks 39/43 below.
+
+**The lever with the right magnitude is the OVERDUE COST SURCHARGE, not the AOG multiplier.** The
+deferred arm still pays $50.5M (the hard-grounding window does fire — it just forces fewer, dearer
+checks). For servicing to win, deferring has to cost more than $87.9M, which needs roughly
+`mxOverdueCostSurcharge` ≈ 4.4× rather than today's 2.5×. **NOT changed** — the 1.7 note says this
+balance took four rounds, so it is the designer's call, and a 5-run average on a ~1% net-worth
+margin is noise-prone enough that a retune should be measured over more runs.
 
 ### Two harness/localization bugs found in passing — both were silently wrong
 

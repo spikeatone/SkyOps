@@ -30,13 +30,39 @@ func main() {
         }
     }
 
+    /// Count AOG ONSETS — each aircraft's OWN false→true transition of `maint`.
+    ///
+    /// ⚠️ WHAT THIS REPLACED, because it silently invalidated the probe's central
+    /// finding for an unknown number of sessions: both arms used a single FLEET-WIDE
+    /// flag (`if inMaint > 0 && !prevMaint { aog += 1 }`). On a 14-aircraft fleet, once
+    /// ANY aircraft is grounded the flag stays true until they are ALL clear, so every
+    /// overlapping AOG collapsed into ONE count and the counter saturated almost
+    /// immediately — it read 5 in BOTH arms across a 2-sim-year run, which made
+    /// `b.aog >= a.aog` ("deferring never REDUCES AOGs") pass trivially while measuring
+    /// nothing. The deferral-coupling channel the SERVICED-beats-DEFERRED verdict rests
+    /// on was therefore invisible.
+    ///
+    /// Per-aircraft edges are the only honest version: an airworthiness directive
+    /// grounds a whole type at once and each of those IS a separate incident.
+    /// `Set.insert` returns whether it was new, so this is one hash lookup per aircraft
+    /// per tick and allocates nothing — cheaper than the `filter {}.count` it replaces.
+    func countAOGOnsets(_ sim: Simulation, seen: inout Set<String>, into aog: inout Int) {
+        for ac in sim.aircraft where ac.purchased {
+            if ac.maint {
+                if seen.insert(ac.tail).inserted { aog += 1 }
+            } else if !seen.isEmpty {
+                seen.remove(ac.tail)
+            }
+        }
+    }
+
     // ---- ARM A: service MX on time. Expect real recurring MX spend, solvency, invariant. ----
     func runServiced(_ runs: Int) -> (mxSpend: Int, aog: Int, netWorth: Int, invOK: Bool, bankrupt: Bool, checks: Int) {
         var mxSpend = 0, aog = 0, nw = 0, checks = 0; var invOK = true, bankrupt = false
         for _ in 0..<runs {
             let sim = Simulation(); sim.configure(viewport: CGSize(width: 400, height: 800))
             sim.nameAirline("MX Air", tailCode: "MX"); makeFleet(sim)
-            var prevMaint = false
+            var aogNow = Set<String>()      // tails currently AOG'd, reset per run
             for _ in 0..<(720 * 1440) {
                 sim.advanceTick()
                 // Service any due MX immediately (competent play); handle AOG/crew.
@@ -51,9 +77,7 @@ func main() {
                 }
                 // proactively service anything due but not carded yet (the OPS-section path)
                 for ac in sim.mxDueAircraft { sim.sendToMX(ac) }
-                let inMaint = sim.aircraft.filter { $0.purchased && $0.maint }.count
-                if inMaint > 0 && !prevMaint { aog += 1 }
-                prevMaint = inMaint > 0
+                countAOGOnsets(sim, seen: &aogNow, into: &aog)
                 if sim.cashInvariantResidual() != 0 { invOK = false }
                 if sim.isBankrupt { break }
             }
@@ -64,8 +88,8 @@ func main() {
 
     // ---- ARM B: NEVER service (always defer). Expect MORE AOGs (deferral coupling)
     //      but the invariant still holds and it's not an instant death spiral. ----
-    func runDeferred(_ runs: Int) -> (aog: Int, netWorth: Int, invOK: Bool, bankrupt: Bool) {
-        var aog = 0, nw = 0; var invOK = true, bankrupt = false
+    func runDeferred(_ runs: Int) -> (mxSpend: Int, aog: Int, netWorth: Int, invOK: Bool, bankrupt: Bool) {
+        var mxSpend = 0, aog = 0, nw = 0; var invOK = true, bankrupt = false
         for _ in 0..<runs {
             let sim = Simulation(); sim.configure(viewport: CGSize(width: 400, height: 800))
             sim.nameAirline("Defer Air", tailCode: "DF"); makeFleet(sim)
@@ -76,7 +100,7 @@ func main() {
             // which made DEFERRED beat SERVICED, inverting this probe's central finding.
             // The arm has to mean what it says.
             sim.mxAutoServiceAChecks = false
-            var prevMaint = false
+            var aogNow = Set<String>()      // tails currently AOG'd, reset per run
             for _ in 0..<(720 * 1440) {
                 sim.advanceTick()
                 for dec in sim.decisionQueue {
@@ -88,15 +112,45 @@ func main() {
                     default: break
                     }
                 }
-                let inMaint = sim.aircraft.filter { $0.purchased && $0.maint }.count
-                if inMaint > 0 && !prevMaint { aog += 1 }
-                prevMaint = inMaint > 0
+                countAOGOnsets(sim, seen: &aogNow, into: &aog)
                 if sim.cashInvariantResidual() != 0 { invOK = false }
                 if sim.isBankrupt { break }
             }
-            aog += 0; nw += sim.netWorth; if sim.isBankrupt { bankrupt = true }
+            mxSpend += sim.totalMaintenanceCheckSpend
+            nw += sim.netWorth; if sim.isBankrupt { bankrupt = true }
         }
-        return (aog, nw, invOK, bankrupt)
+        return (mxSpend, aog, nw, invOK, bankrupt)
+    }
+
+    // ---- 0. SELF-CHECK THE INSTRUMENT before believing anything it measures. ----
+    // The old fleet-wide counter read 5 in both arms across two sim-years and nobody
+    // noticed, because a saturated counter still produces a number. These four asserts
+    // would all have failed on it.
+    do {
+        let sim = Simulation(); sim.configure(viewport: CGSize(width: 400, height: 800))
+        sim.nameAirline("Count Air", tailCode: "CT"); makeFleet(sim)
+        let owned = sim.aircraft.filter { $0.purchased }
+        guard owned.count >= 3 else { check(false, "0: fleet for the counter self-check"); return }
+        var seen = Set<String>(); var n = 0
+        countAOGOnsets(sim, seen: &seen, into: &n)
+        let baseline = n                     // makeFleet may already have grounded some
+        // Three SIMULTANEOUS onsets must count as three — this is the exact case the
+        // old counter collapsed into one (an airworthiness directive does this).
+        for ac in owned.prefix(3) where !ac.maint { ac.maint = true }
+        let expected = owned.prefix(3).count
+        n = 0; countAOGOnsets(sim, seen: &seen, into: &n)
+        check(n == expected, "0: three simultaneous groundings count as \(expected) (got \(n)) — the saturation bug")
+        // Holding the same state must not re-count.
+        n = 0; countAOGOnsets(sim, seen: &seen, into: &n)
+        check(n == 0, "0: a still-grounded aircraft isn't counted again (got \(n))")
+        // Repair then re-ground the SAME aircraft = a second, real incident.
+        if let ac = owned.first { ac.maint = false }
+        n = 0; countAOGOnsets(sim, seen: &seen, into: &n)
+        check(n == 0, "0: a repair on its own counts nothing (got \(n))")
+        if let ac = owned.first { ac.maint = true }
+        n = 0; countAOGOnsets(sim, seen: &seen, into: &n)
+        check(n == 1, "0: the same aircraft grounding AGAIN is a new incident (got \(n))")
+        _ = baseline
     }
 
     let runs = 5
@@ -106,8 +160,14 @@ func main() {
     print("--- MX SWEEP (\(runs) runs × 2 sim-years) ---")
     print(String(format: "SERVICED: MX spend $%.1fM  AOGs %d  netWorth $%.0fM  inv=%@ bankrupt=%@",
                  Double(a.mxSpend)/1e6, a.aog, Double(a.netWorth)/1e6, a.invOK ? "Y":"N", a.bankrupt ? "Y":"N"))
-    print(String(format: "DEFERRED: AOGs %d  netWorth $%.0fM  inv=%@ bankrupt=%@",
-                 b.aog, Double(b.netWorth)/1e6, b.invOK ? "Y":"N", b.bankrupt ? "Y":"N"))
+    print(String(format: "DEFERRED: MX spend $%.1fM  AOGs %d  netWorth $%.0fM  inv=%@ bankrupt=%@",
+                 Double(b.mxSpend)/1e6, b.aog, Double(b.netWorth)/1e6, b.invOK ? "Y":"N", b.bankrupt ? "Y":"N"))
+    // THE DIAGNOSTIC LINE. The verdict below is a tug-of-war between what deferring
+    // SAVES in MX fees and what it COSTS in extra breakdowns; printing both sides
+    // makes a failing verdict something you can act on rather than stare at.
+    print(String(format: "  → deferring saves $%.1fM of MX and buys %d extra AOGs (%+.0f%%)",
+                 Double(a.mxSpend - b.mxSpend)/1e6, b.aog - a.aog,
+                 100.0 * Double(b.aog - a.aog) / Double(max(1, a.aog))))
 
     check(a.mxSpend > 0, "MX checks actually fire + cost money (real recurring cost: $\(a.mxSpend/1_000_000)M)")
     check(a.invOK && b.invOK, "cash invariant holds in BOTH arms")

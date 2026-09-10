@@ -82,26 +82,25 @@ in-training"), but the CARD VOLUME itself is untouched.
       `MX_BASES_SCOPE.md` §7.
 - [ ] Phase 3 of `MX_BASES_SCOPE.md` (optional, unbuilt): sell hangar capacity to other airlines,
       subsidiary fleets using your bases, engine shop visits.
-- [ ] ⚠️ **`MXProbe`'s "SERVICED beats DEFERRED" is RED — and it is RED AT PRISTINE HEAD TOO, so it
-      is NOT caused by the maintenance-automation work. It is already red in 1.8.0, which is in
-      review.** Same binary, same arms, run side by side:
-      · HEAD: serviced $4,577M vs deferred $4,610M — FAIL (5/6)
-      · after this work: serviced $4,558M vs deferred $4,601M — FAIL (5/6)
-      The MX spend difference is exactly the new MRO premium ($70.3M × 1.25 = $87.9M), so the
-      premium behaves as designed; it widens the margin modestly (−$33M → −$43M) because it applies
-      to the serviced arm's much larger check volume, but it did not flip anything.
-      **The 1.7 record of "MX sweep 6/6" is therefore STALE** — the finding regressed at some point
-      between then and 1.8 and nobody noticed, the same class as the OpsTweaks 39/43 found this
-      session. Before retuning anything, note the probe's own AOG counter reads **5 in BOTH arms in
-      BOTH trees**: the deferral-coupling channel it is built on is contributing nothing, and its
-      `b.aog >= a.aog` check passes trivially. It counts 0→>0 edges of "any aircraft in maint",
-      which saturates on a 14-aircraft fleet. **Fix the counter first — the balance verdict cannot
-      be trusted while its main channel measures nothing.**
-      (Two other things that would change the answer and should be decided together: the C/D grace
-      constants are expressed in DAYS and, now that the cycles→days conversion is correct, they run
-      the full 25/60 real days instead of the ~14/36 the broken constant produced — that is the
-      constants finally meaning what they say, but it does make C/D deferral more tolerable than
-      when they were last tuned. And a 5-run average on a ~1% margin is noise-prone.)
+- [x] **`MXProbe`'s AOG counter FIXED (10 Sep 2026).** Both arms used one FLEET-WIDE edge test, so
+      on a 14-aircraft fleet every overlapping AOG collapsed into a single count — it read 5 in both
+      arms across two sim-years. `countAOGOnsets` now counts each aircraft's own false→true
+      transition, with **four self-checks guarding the instrument** (all four fail on the old
+      counter). Real numbers: SERVICED 112 AOGs, DEFERRED 115. The deferred arm also reports its own
+      MX spend now, which was the decisive missing figure. 9/10 (was 5/6).
+- [ ] ⚠️ **DESIGNER CALL — "SERVICED beats DEFERRED" is still RED, and now it is diagnosable.**
+      With the counter working: `SERVICED $87.9M MX / 112 AOGs / $4,558M` vs
+      `DEFERRED $50.5M MX / 115 AOGs / $4,599M` → **deferring saves $37.4M of MX fees and buys 3
+      extra AOGs (+3%)**, and the $41M net-worth gap is almost exactly that fee saving. So the
+      deferral penalty is real but negligible; the AOG channel is far too small to carry it (a
+      second run put it at +8% — noisy either way).
+      **Not caused by the maintenance work** — pristine HEAD fails identically ($4,577M vs $4,610M),
+      so it is already broken in 1.8.0, in review. The 1.7 record of "MX sweep 6/6" is stale.
+      **The lever with the right magnitude is `mxOverdueCostSurcharge`, not the AOG multiplier**: the
+      deferred arm already pays $50.5M (forced checks DO fire, just fewer and dearer), so making
+      deferral cost more than $87.9M needs roughly 4.4× rather than today's 2.5×. Not changed — the
+      1.7 note says this took four rounds, and a 5-run average on a ~1% margin wants more runs
+      before anyone retunes.
 
 ### ⚠️ DESIGNER CALL PENDING — the training centre never pays back at real simulator prices
 Repricing the centre to the designer's real-world figures ($35M facility, $12–22M bays) made it
