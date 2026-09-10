@@ -5,10 +5,10 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 8 September 2026._
+_Snapshot: 10 September 2026._
 
-**► ⭐⭐⭐ 1.8.0 (build 57) IS SUBMITTED — `WAITING_FOR_REVIEW` (9 Sep 23:42 UTC), auto-releases on
-approval. Next new build = 58+.** The whole chain ran from the CLI: bumped 1.7.0→1.8.0 / 56→57
+**► ⭐⭐⭐ 1.8.0 (build 57) IS LIVE — APPROVED and `READY_FOR_SALE` (confirmed via the ASC API,
+10 Sep 2026). Next new build = 58+.** The whole chain ran from the CLI: bumped 1.7.0→1.8.0 / 56→57
 (6 configs), archived → exported → validated (VERIFY SUCCEEDED) → uploaded (UPLOAD SUCCEEDED,
 **Delivery UUID `01c7b045-faea-4722-b178-9f5a942c9e44`**, 76 MB), build 57 attached, en-US + de-DE
 What's New set, App Review notes set, Game Center enabled, submitted. ASC ids — version
@@ -228,23 +228,16 @@ Verified: MXBaseVerify 86/86 · MXBaseABProbe 7/7 · MXCoverage 82/82 · RoundTr
 12/12 · AcquisitionMX 35/35 · OpsTweaks 43/43 · Rotation 55/55 · CrewPipeline 63/63 · soak 6/6 seeds
 × 2 sim-years · Debug + Release builds · German clean · and driven live on the iPad sim via the
 committed `-devScenario mxbase`.
-⚠️ **ONE HARNESS IS RED, AND IT WAS ALREADY RED AT HEAD — `MXProbe`'s "SERVICED beats DEFERRED".**
-Run side by side: HEAD gives serviced $4,577M vs deferred $4,610M (FAIL); after this work $4,558M vs
-$4,601M (FAIL). So the finding the 1.7 MX work took four rounds to establish is **already broken in
-1.8.0, currently in review**, and this work did not cause it — the MX-spend delta is exactly the new
-MRO premium ($70.3M × 1.25 = $87.9M). The 1.7 note recording "MX sweep 6/6" is stale.
-**Its AOG counter WAS broken and is now FIXED** (one fleet-wide edge test collapsed every
-overlapping AOG into a single count — it read 5 in both arms; `countAOGOnsets` counts per-aircraft
-edges now, with four self-checks guarding it). With a working instrument, and **re-measured at 20 runs**, the
-failure is confirmed and quantified: **serviced $912M ± 2M vs deferred $920M ± 2M — −15.3 standard
-errors, serviced lost 0/20 pairings.** So deferring ALL maintenance is strictly better, in every
-run; it is a real defect, not a marginal reading. Per run the deferrer pays $10.1M of MX against the
-servicer's $17.6M and buys ~0.4 extra AOGs — the whole gap is the bill avoided.
-**Recommended lever: `mxOverdueCostSurcharge` 2.5× → ~4.4× (≈5× for a real margin).** The AOG
-multiplier is the wrong knob: the hard-grounding window already fires, so a deferrer does pay, just
-for fewer and dearer checks. Not changed — designer's call, and the 1.7 note says this took four
-rounds. **Re-measure with `MXProbe.swift 20`**; 5 runs cannot resolve the effect. Detail in
-CLAUDE.md and TASKS.md.
+**`MXProbe` IS GREEN AGAIN (10/10) — a real balance defect was found and fixed here.** Its AOG
+counter was broken (one fleet-wide edge test collapsed every overlapping AOG into a single count —
+it read 5 in both arms; `countAOGOnsets` counts per-aircraft edges now, with four self-checks). With
+a working instrument, and re-measured at **20 runs** (5 could never resolve a ~1% margin), deferring
+ALL maintenance turned out to beat servicing in **20 of 20 runs** — a real defect, already shipping
+in 1.8.0. Fixed by raising **`mxOverdueCostSurcharge` 2.5 → 5.0** (designer direction): serviced now
+wins **20/20** (+8.4 SE), deferring costs MORE maintenance than servicing rather than less, and
+takes +15% more AOGs. Well targeted — with auto-A ON a normal player's A checks never go overdue, so
+it bites the player who ignores a C or D card. ⚠️ **Re-measure with `MXProbe.swift 20` after any
+change to that constant.** Detail in CLAUDE.md and TASKS.md.
 
 **► ⏭️ WHAT'S LEFT of issue 4 — TRAINING automation.** The MX half is done (above). The designer's
 report also said *"Same with training"*, and the throughput bug behind it is still open and still

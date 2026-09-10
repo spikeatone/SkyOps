@@ -3733,7 +3733,19 @@ final class Simulation {
     /// servicing EARLY economically right — deferring until due/overdue/forced no
     /// longer just delays the same bill, it inflates it. (The sweep showed a same-
     /// cost forced check let deferring win on time-value; this is the crossover fix.)
-    static let mxOverdueCostSurcharge = 2.5
+    ///
+    /// **2.5 → 5.0 (10 Sep 2026, designer direction), because at 2.5 IT DID NOT WORK.**
+    /// `MXProbe` re-measured at 20 runs — the resolution 5 runs never had — showed
+    /// deferring ALL maintenance beating servicing in **20 of 20 runs, by 15.3 standard
+    /// errors**: the deferrer paid $10.1M/run of MX against the servicer's $17.6M and
+    /// bought only ~0.4 extra AOGs, so the entire net-worth gap was just the bill they
+    /// skipped. THIS is the lever with the right magnitude, not the AOG multiplier: the
+    /// hard-grounding window already fires, so a deferrer does pay — just for fewer,
+    /// dearer checks — and their bill has to clear the servicer's, a ~1.74× rise, i.e.
+    /// ~4.4× to tie and 5× for a real margin.
+    /// ⚠️ **Re-measure with `MXProbe.swift 20` after ANY change here — five runs cannot
+    /// resolve this effect, which is how it went unnoticed through 1.8.**
+    static let mxOverdueCostSurcharge = 5.0
     /// Overdue AOG multiplier: flying past the mandated band ramps AOG risk up to this.
     /// Strengthened (6×, was 3×) so skipping mandated MX is a real losing gamble — at
     /// 3× the deferral penalty was too weak vs cheap/rare AOG (sweep: deferring beat

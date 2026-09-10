@@ -20,15 +20,20 @@ as the work, not "later."
 
 ### Shipped since (see HANDOFF.md for the current release state)
 
-**This header has gone stale TWICE** — releases are tracked in `HANDOFF.md`, not here.
-As of **21 Aug 2026**: **1.2 (41) · 1.2.1 (43) · 1.3 (44) are all LIVE**; **1.4 (build 48,
-the GAMEPLAY PACK) is SUBMITTED FOR REVIEW** (`WAITING_FOR_REVIEW`). Next new build = **49+**.
-What to do next lives in `NEXT_SESSION_PROMPT.md`. Keep this file for in-flight TASK tracking
-only, and update it in the same session as the work.
+**This header went stale THREE times** (it last claimed build 49 while 57 was live), so the
+version numbers are GONE from it rather than corrected a fourth time. **Releases are tracked in
+`HANDOFF.md`, and the authoritative answer is always the API — don't trust any doc's snapshot:**
+
+```bash
+cd ~/Architect\ Universe/~PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"
+```
+
+What to do next lives in `NEXT_SESSION_PROMPT.md`. Keep this file for in-flight TASK tracking only,
+and update it in the same session as the work.
 
 ## In flight
 
-### ✅ SHIPPED IN 1.8.0 (build 57, submitted 9 Sep) — hang fixes + the MX move
+### ✅ SHIPPED IN 1.8.0 (build 57) — LIVE, approved 10 Sep — hang fixes + the MX move
 Nine confirmed findings behind the live `hang.under3s` ×43 / watchdog-SIGKILL ×3 signal. Detail in
 CLAUDE.md "Decided — The 1.7 hang fixes"; measured A/B in `aa-1.1.x/TickCostProbe.swift`.
 - [x] Time-box `run()`'s catch-up drain (the 50-TICK cap is unreachable below 100×, and at 100× it
@@ -88,19 +93,17 @@ in-training"), but the CARD VOLUME itself is untouched.
       transition, with **four self-checks guarding the instrument** (all four fail on the old
       counter). Real numbers: SERVICED 112 AOGs, DEFERRED 115. The deferred arm also reports its own
       MX spend now, which was the decisive missing figure. 9/10 (was 5/6).
-- [ ] ⚠️⚠️ **DESIGNER CALL — deferring ALL maintenance is strictly better, CONFIRMED at 20 runs.**
-      Not noise: **serviced $912M ± 2M vs deferred $920M ± 2M, −15.3 standard errors, and serviced
-      lost 0/20 run pairings.** (An earlier 5-run read that called this possibly noise-prone was
-      wrong — the per-run spread is only ±0.2%.) Per run the deferrer pays **$10.1M** of MX against
-      the servicer's **$17.6M** and buys about **0.4 extra AOGs**; the whole $8M gap is just the
-      maintenance bill avoided.
-      **Not caused by the maintenance work** — pristine HEAD fails identically, so it is already
-      in 1.8.0, in review. The 1.7 record of "MX sweep 6/6" is stale.
-      **Recommended lever: `mxOverdueCostSurcharge` 2.5× → ~4.4× (≈5× for a real margin, not a
-      tie).** The AOG multiplier is the wrong knob — the hard-grounding window already fires, so a
-      deferrer does pay, just for fewer and dearer checks; their bill needs to clear $17.6M/run,
-      a ~1.74× rise. Not changed unilaterally: the 1.7 note says this balance took four rounds.
-      **Re-measure at 20 runs after any change** (`MXProbe.swift 20`) — 5 runs cannot resolve it.
+- [x] **FIXED — deferring maintenance is a losing gamble again. `mxOverdueCostSurcharge` 2.5 → 5.0
+      (designer direction, 10 Sep 2026), re-measured at 20 runs: `MXProbe` 10/10 ALL GREEN.**
+      Before: serviced lost **0/20** pairings (−15.3 SE). After: serviced wins **20/20** (+8.4 SE,
+      +$3M/run). Deferring now costs MORE maintenance than servicing (−$52.8M of "saving") because
+      the same forced checks bill at double, AND takes **+15% more AOGs** — both channels push the
+      same way. The margin is deliberately modest: deferral should be a losing gamble, not a
+      catastrophe.
+      Well targeted, too: with auto-A ON (the default) a normal player's A checks never go overdue,
+      so the surcharge bites almost only the player who ignores a C or D card.
+      ⚠️ **Re-measure with `MXProbe.swift 20` after ANY change to this constant** — 5 runs cannot
+      resolve it, which is how the breakage went unnoticed all through 1.8.
 
 ### ⚠️ DESIGNER CALL PENDING — the training centre never pays back at real simulator prices
 Repricing the centre to the designer's real-world figures ($35M facility, $12–22M bays) made it

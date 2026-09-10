@@ -5951,7 +5951,7 @@ run. Full table in `MX_BASES_SCOPE.md` §7.
 - ⏭️ **STILL NOT BUILT** (phase 3, optional): selling hangar capacity to other airlines, subsidiary
   fleets using your bases, engine shop visits.
 
-### ⚠️ `MXProbe`: the AOG counter is FIXED, and the balance check is still RED (pre-existing)
+### `MXProbe`: the AOG counter is FIXED, and the balance check is GREEN again (10 Sep 2026)
 
 **The counter was broken and is now fixed (10 Sep 2026).** Both arms used a single FLEET-WIDE edge
 test — `if inMaint > 0 && !prevMaint { aog += 1 }` — so on a 14-aircraft fleet, once ANY aircraft was
@@ -5995,13 +5995,34 @@ that assumed, and the correct reading is 15 sigma. Per run: the deferrer pays **
 against the servicer's **$17.6M**, and buys about **0.4 extra AOGs**. The whole $8M gap is the
 maintenance bill avoided.
 
-**The lever with the right magnitude is the OVERDUE COST SURCHARGE, not the AOG multiplier.** The
-hard-grounding window DOES fire — the deferrer still pays $10.1M/run, just for fewer, dearer checks —
-so the AOG channel is not the thing to strengthen. For deferral to stop winning, a deferrer's bill
-has to clear $17.6M/run, i.e. rise ~**1.74×**, which puts `mxOverdueCostSurcharge` at roughly
-**4.4× (≈5× for a real margin rather than a tie)** instead of today's 2.5×. **NOT changed** — the 1.7
-note says this balance took four rounds, and it is the designer's call; re-measure at 20 runs after
-any change, because 5 runs is not enough resolution to see the effect land.
+**THE LEVER WAS THE OVERDUE COST SURCHARGE, NOT THE AOG MULTIPLIER — and the fix is IN
+(`mxOverdueCostSurcharge` 2.5 → 5.0, designer direction, 10 Sep 2026).** The hard-grounding window
+already fired, so a deferrer did pay, just for fewer and dearer checks; their bill simply had to
+clear the servicer's. Re-measured at 20 runs, and it lands:
+
+```
+              MX spend      AOGs    net worth/run
+SERVICED      $351.6M       452     $912M ± 2M
+DEFERRED      $404.4M       522     $909M ± 1M
+gap +$3M (+0.4%) · 8.4 SE · serviced beat deferred in 20/20 pairings   → 10/10 ALL GREEN
+```
+
+Deferring now costs **MORE** maintenance than servicing, not less (−$52.8M of "saving"), because the
+same forced checks are billed at double, and the deferrer also takes **+15% more AOGs** — so both
+channels now push the same way. The direction is decisively reversed (was 0/20 serviced wins at
+2.5×, now 20/20) and the margin is deliberately modest, which is right: deferral should be a losing
+gamble, not a catastrophe.
+
+**Two things worth knowing about the 5× number.** (1) It is well TARGETED rather than broadly
+punitive: with the auto-A policy ON (the default) a normal player's A checks are serviced at the
+gate and never go overdue at all, so the surcharge bites almost exclusively the player who ignores a
+C or D card — which is exactly the behaviour it exists to price. (2) The +15% AOG rise in the
+deferred arm was not predicted and is not fully explained here; the serviced arm's count barely
+moved (451 → 452), so it is a real difference in the deferring arm rather than global drift. Noted
+rather than rationalised.
+
+⚠️ **Re-measure with `MXProbe.swift 20` after ANY change to this constant** — five runs cannot
+resolve the effect, which is how the original breakage went unnoticed all the way through 1.8.
 
 ### Two harness/localization bugs found in passing — both were silently wrong
 
@@ -6145,8 +6166,8 @@ twin, load-menu off main) · 1.5.0 (54, A350-1000 + 747-8i + map-render throttle
 (`READY_FOR_SALE`). 1.6.0 (55, German localization + 43 new city hero images/framing fix + GC
 per-achievement icons) is now ALSO LIVE (`READY_FOR_SALE`, approved 31 Aug — cleared 4.3(a); the
 city artwork made it a content update, not localization-only). Next new build = 56+.**
-⚠️⚠️ **1.8.0 (build 57) IS SUBMITTED — `WAITING_FOR_REVIEW` (9 Sep 23:42 UTC), auto-releases on
-approval. NEXT NEW BUILD = 58+.** ASC ids: version `a6e6c4d1-d2bb-41e9-804b-131fcd0730a8`, review
+⚠️⚠️ **1.8.0 (build 57) IS LIVE — APPROVED, `READY_FOR_SALE` / `READY_FOR_DISTRIBUTION`
+(confirmed via the ASC API, 10 Sep 2026). NEXT NEW BUILD = 58+.** ASC ids: version `a6e6c4d1-d2bb-41e9-804b-131fcd0730a8`, review
 submission `dc118de8-0b52-49a3-8f1e-697fa1ea4587`, delivery `01c7b045-faea-4722-b178-9f5a942c9e44`
 (76 MB). The whole chain ran from the CLI (bump 6 configs → archive → export → validate → upload →
 attach build → What's New both locales → review notes → Game Center → submit).
