@@ -110,8 +110,17 @@ Repricing the centre to the designer's real-world figures ($35M facility, $12–
 economically irrational at game scale: the best measured arm (45 A320s, 5 years) returns $19M
 against $67M. Table + the four options in `aa-1.1.x/CREW_TRAINING_SCOPE.md` ("OPEN BALANCE
 QUESTION"). `TrainingCenterABProbe` is now a measurement tool, not a gate.
-- [ ] Designer picks: accept-as-prestige (and say so in the UI) · raise crew-day value or days
-      saved · walk prices back toward game scale · or give the centre a non-fee, non-time benefit.
+- [x] **THROUGHPUT FIXED (10 Sep 2026) — this was the real cause, and it is gone.** The
+      auto-recurrent scheduler only ever saw crews idle at that instant, so a crew flying when its
+      currency window closed lapsed instead of training. The daily sweep now also sees RESTING
+      crews, and `releaseCrew` books a landing crew into recurrent before it goes back on the line;
+      both go through one `sendToRecurrent` helper. **Course-fee capture 32% → 101–112%** across all
+      four arms, and in an ordinary game with NO centre, 540 sim-days × 19 crews went from **3
+      lapses + 3 requalifications to ZERO**, flights unchanged. `TrainingCenterVerify` 76/76,
+      `CrewPipelineVerify` 63/63, `TrainingCenterABProbe` 5/5.
+- [ ] Designer picks (PRICE only now — throughput is no longer a candidate): accept-as-prestige
+      (and say so in the UI) · raise crew-day value or days saved · or give the centre a non-fee,
+      non-time benefit. Prices themselves are settled: not below real device cost.
 
 ### Spirit Airlines is still in the US roster
 Flagged 8 Sep while fact-checking carrier hubs: Spirit ceased all passenger operations in May 2026.

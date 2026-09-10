@@ -4698,6 +4698,71 @@ final class Simulation {
     }
     /// Fresh currency from now (the 6-month check).
     private func refreshCurrency(_ crew: Crew) { crew.currencyExpiresTick = tick + Crew.currencyDays * 1440 }
+
+    // MARK: Recurrent scheduling (shared by the daily sweep AND the release hook)
+    //
+    // ⚠️ THE BUG THESE EXIST TO FIX. The daily sweep used to consider only crews whose
+    // status was `.available` AT THAT INSTANT. A crew flies ~55% of the time and rests
+    // besides, so most of a family was never even looked at, and a crew that happened
+    // to be flying when its currency window closed was never scheduled — it just
+    // LAPSED, then had to requalify at 1.6×. That starved the Training Centre's
+    // payback (a capture-rate diagnostic put it at 32% of the available saving, 10%
+    // for a crew-thin family) AND made crews lapse more than the design intends in
+    // every game, bay or no bay.
+    //
+    // The fix is to reach a crew at the moment it is actually reachable: the daily
+    // sweep now also sees RESTING crews (they are on the ground, and a course zeroes
+    // duty/rest anyway), and `releaseCrew` offers a landing crew to recurrent BEFORE
+    // it goes back on the line — the one guaranteed opportunity for a crew that flies
+    // continuously. Both paths book through `sendToRecurrent` so the cap, the pricing
+    // and the ledger can never drift apart.
+
+    /// Is this crew inside the auto-schedule window for its next recurrent?
+    private func recurrentDue(_ c: Crew) -> Bool {
+        c.currencyExpiresTick - tick <= Simulation.recurrentWindowDays * 1440
+    }
+    /// About to lapse — goes regardless of the concurrency cap. A few days' absence
+    /// beats a grounded crew, and the contractor has no capacity limit (the cap is
+    /// about line availability, not shop slots).
+    private func recurrentUrgent(_ c: Crew) -> Bool {
+        c.currencyExpiresTick - tick <= (Simulation.recurrentDays + 1) * 1440
+    }
+    /// Recurrent slots free for a family right now. With a sim bay the cap IS the
+    /// bay's capacity: scheduling past it would push the surplus to the CONTRACTOR at
+    /// full price for no benefit, and a fraction-based cap that GREW with the pool is
+    /// what once made a bigger family save less (the A/B caught 16 aircraft paying
+    /// back worse than 12).
+    private func recurrentSlotsFree(_ fam: String) -> Int {
+        let pool = crewPoolsByFamily[fam] ?? []
+        let inRecurrent = pool.filter { $0.status == .training && $0.trainingKind == .recurrent }.count
+        let cap = hasSimBay(family: fam)
+            ? Simulation.simBayCapacity
+            : max(1, Int(Double(pool.count) * Simulation.recurrentConcurrencyFraction))
+        return cap - inRecurrent
+    }
+    /// Book ONE crew into recurrent. Returns the provider it went with, or nil if it
+    /// couldn't (unaffordable — which is the teeth: it then lapses).
+    @discardableResult
+    private func sendToRecurrent(_ crew: Crew, family fam: String) -> TrainingProvider? {
+        let provider = trainingProvider(for: fam)   // re-evaluated per crew: bay seats fill up
+        let cost = crewRecurrentCost(family: fam, provider: provider)
+        guard playerBalance >= cost else { return nil }
+        chargeDecisionCost(cost)
+        startCourse(crew, .recurrent, days: recurrentDays(provider), provider: provider)
+        if provider == .center {
+            recordTrainingSavings(crewRecurrentCost(family: fam, provider: .contract) - cost)
+            recordTrainingTimeValue(family: fam, daysSaved: Simulation.recurrentDays - Simulation.centerRecurrentDays)
+        }
+        var tally = recurrentBookedSinceLog[fam] ?? (0, 0)
+        tally.total += 1
+        if provider == .center { tally.inHouse += 1 }
+        recurrentBookedSinceLog[fam] = tally
+        return provider
+    }
+    /// Bookings not yet reported in the Ops feed. Both scheduling paths add to it and
+    /// the daily sweep drains it into ONE line, so a crew booked on landing is still
+    /// announced without a log entry per crew. Transient (cosmetic; regenerates).
+    private var recurrentBookedSinceLog: [String: (total: Int, inHouse: Int)] = [:]
     /// Recurrent/requal course length by provider (in-house is half the contract's 4 days).
     private func recurrentDays(_ provider: TrainingProvider) -> Int {
         provider == .center ? Simulation.centerRecurrentDays : Simulation.recurrentDays
@@ -4751,43 +4816,27 @@ final class Simulation {
             //    the soft cap — a 4-day absence beats a grounded crew (the contractor
             //    has no capacity limit; the cap is about availability, not slots).
             if crewAutoRecurrentOn(fam) {
-                let inRecurrent = pool.filter { $0.status == .training && $0.trainingKind == .recurrent }.count
-                // With a sim bay the cap IS the bay's capacity: scheduling more than
-                // the bay holds would push the surplus to the CONTRACTOR at full price
-                // for no benefit — and because the fraction-based cap grows with the
-                // pool, that made a BIGGER family overflow more and saved LESS (the
-                // A/B probe caught 16 aircraft paying back worse than 12). Courses are
-                // 2 days inside a 30-day window, so 4 seats churn far faster than the
-                // fleet comes due; nobody lapses waiting. Urgent crews still bypass the
-                // cap below (going contract if the bay is full — the safety valve).
-                let cap = hasSimBay(family: fam)
-                    ? Simulation.simBayCapacity
-                    : max(1, Int(Double(pool.count) * Simulation.recurrentConcurrencyFraction))
-                var slots = cap - inRecurrent
-                let due = pool.filter { $0.status == .available && $0.currencyExpiresTick - tick <= Simulation.recurrentWindowDays * 1440 }
+                var slots = recurrentSlotsFree(fam)
+                // ⚠️ RESTING crews are candidates too. Filtering to `.available` alone
+                // was the bug: a crew is idle-at-this-instant only a fraction of the
+                // time, so most of the family was never considered. A resting crew is
+                // on the ground and `startCourse` zeroes duty/rest anyway, and a crew
+                // that is FLYING is caught on landing instead (see `releaseCrew`).
+                let due = pool.filter { ($0.status == .available || $0.status == .resting) && recurrentDue($0) }
                               .sorted { $0.currencyExpiresTick < $1.currencyExpiresTick }
-                var sent = 0, inHouse = 0
                 for c in due {
-                    let urgent = c.currencyExpiresTick - tick <= (Simulation.recurrentDays + 1) * 1440
-                    guard slots > 0 || urgent else { break }
-                    let provider = trainingProvider(for: fam)   // re-evaluated per crew: bay seats fill up
-                    let cost = crewRecurrentCost(family: fam, provider: provider)
-                    guard playerBalance >= cost else { break }   // can't pay → it lapses (the teeth)
-                    chargeDecisionCost(cost)
-                    startCourse(c, .recurrent, days: recurrentDays(provider), provider: provider)
-                    if provider == .center {
-                        inHouse += 1
-                        recordTrainingSavings(crewRecurrentCost(family: fam, provider: .contract) - cost)
-                        recordTrainingTimeValue(family: fam, daysSaved: Simulation.recurrentDays - Simulation.centerRecurrentDays)
-                    }
-                    slots -= 1; sent += 1
+                    guard slots > 0 || recurrentUrgent(c) else { break }
+                    guard sendToRecurrent(c, family: fam) != nil else { break }  // can't pay → it lapses (the teeth)
+                    slots -= 1
                 }
-                if sent > 0 {
+                // Report everything booked since the last sweep — including crews the
+                // release hook picked up mid-day — as ONE line, not one per crew.
+                if let tally = recurrentBookedSinceLog.removeValue(forKey: fam), tally.total > 0 {
                     let name = CREW_FAMILY_INFO[fam]?.name ?? fam
                     logOps(.structural, L("Recurrent training"),
-                           inHouse == sent
-                               ? L("%@: %@ crew in recurrent in-house · back in ~%@ days", name, sent, Simulation.centerRecurrentDays)
-                               : L("%@: %@ crew in recurrent with %@ · back in ~%@ days", name, sent, Simulation.crewProviderName, Simulation.recurrentDays))
+                           tally.inHouse == tally.total
+                               ? L("%@: %@ crew in recurrent in-house · back in ~%@ days", name, tally.total, Simulation.centerRecurrentDays)
+                               : L("%@: %@ crew in recurrent with %@ · back in ~%@ days", name, tally.total, Simulation.crewProviderName, Simulation.recurrentDays))
                 }
             }
             // 4. The LAPSED exception card — one per family, on the bell + the Crews
@@ -4990,10 +5039,20 @@ final class Simulation {
     /// duty limit) or back to the pool, and clear the assignment.
     private func releaseCrew(_ ac: Aircraft) {
         if let id = ac.crewId, let crew = crewPoolsByFamily[ac.type.family]?.first(where: { $0.id == id }) {
+            let fam = ac.type.family
             if crew.currencyExpiresTick <= tick {
                 // Currency ran out mid-trip: the crew finishes the trip (real), then
                 // is grounded until requalified.
                 crew.status = .lapsed; crew.dutyTicks = 0; crew.restTicksLeft = 0
+            } else if crewAutoRecurrentOn(fam), recurrentDue(crew),
+                      recurrentSlotsFree(fam) > 0 || recurrentUrgent(crew),
+                      sendToRecurrent(crew, family: fam) != nil {
+                // ⚠️ THE FIX FOR CONTINUOUSLY-FLYING CREWS. Landing is the only moment
+                // a busy crew is reachable, and it is checked BEFORE the rest branch on
+                // purpose: a course zeroes duty/rest and lasts longer than a rest
+                // period, so the downtime is spent productively instead of the crew
+                // going straight back on the line and lapsing later.
+                // (`sendToRecurrent` did the work; nothing more to set here.)
             } else if crew.dutyTicks >= Crew.maxDutyTicks {
                 crew.status = .resting
                 // Crew base: rest at the player's operating hub completes 20%

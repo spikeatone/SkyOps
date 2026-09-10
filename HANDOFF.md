@@ -239,13 +239,23 @@ takes +15% more AOGs. Well targeted — with auto-A ON a normal player's A check
 it bites the player who ignores a C or D card. ⚠️ **Re-measure with `MXProbe.swift 20` after any
 change to that constant.** Detail in CLAUDE.md and TASKS.md.
 
-**► ⏭️ WHAT'S LEFT of issue 4 — TRAINING automation.** The MX half is done (above). The designer's
-report also said *"Same with training"*, and the throughput bug behind it is still open and still
-one line: the auto-recurrent scheduler filters `status == .available`, so it only ever sees crews
-idle at that instant — a crew flying when its currency window closes is never scheduled and LAPSES
-instead of training. That both starves the Training Centre's payback (32% capture) and makes crews
-lapse more than intended in every game, bay or no bay. Fix is to queue on-duty/resting crews for
-their next release; it is a designer call, not taken unilaterally. See CLAUDE.md's training section.
+**► ⭐⭐ ISSUE 4 IS COMPLETE — the TRAINING half is fixed too (10 Sep).** The auto-recurrent
+scheduler filtered `status == .available`, so it only ever saw crews idle at that instant; a crew
+flying when its currency window closed was never scheduled and **LAPSED instead of training**, then
+requalified at 1.6×. Fixed on two paths sharing one booking helper: the daily sweep now also sees
+**RESTING** crews, and **`releaseCrew` offers a landing crew to recurrent before it goes back on the
+line** — the one guaranteed moment a continuously-flying crew is reachable (checked BEFORE the rest
+branch, since a course zeroes duty/rest and outlasts a rest period).
+**Measured: course-fee capture 32% → 101–112% across all four probe arms, and in an ordinary game
+with NO training centre, 540 sim-days × 19 crews went from 3 lapses + 3 requalifications to ZERO —
+with flights unchanged** (14,328 vs 14,370 cycles). The remaining training-centre shortfall is
+PRICE, which the designer already settled (don't cut below real device cost).
+⚠️ **Two more stale harnesses found doing it:** `TrainingCenterVerify` was 71/75 at HEAD (the bay
+prices were walked back to NB $17M / WB $21M / TP $13M and its literals still said 18/22/12) — now
+derived from `simBayCost` so a reprice can't break it again, **76/76**. And `CrewPipelineVerify`
+test 4 has a real flake: nothing there answers the decision queue, so a random AOG parks the
+aircraft and "the aircraft flies again" goes red for reasons unrelated to training. It now drains
+AOG cards, like the labor-action guard beside it.
 
 **► (historical framing of issue 4, kept for the quotes) MX + TRAINING AUTOMATION AT SCALE.** The designer's words: *"For my
 200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and near all-time at anything

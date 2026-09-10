@@ -70,11 +70,21 @@ func main() {
         // Bay gate + cost by class.
         check(sim.canAddSimBay(family: FAM), "2: a bay at the gate-size family is allowed")
         check(!sim.canAddSimBay(family: "B777"), "2: no bay for a family you don't fly")
-        check(sim.simBayCost(family: FAM) == 18_000_000 && sim.simBayCost(family: "B787") == 22_000_000 && sim.simBayCost(family: "DASH8_FAMILY") == 12_000_000, "2: bay cost by class (NB/WB/TP)")
+        // ⚠️ DERIVED, not hardcoded. These were literals (18/22/12M) and went stale the
+        // moment the bay prices were walked back to real device-plus-hall cost
+        // (NB $17M / WB $21M / TP-RJ $13M) — which quietly turned FOUR checks red here
+        // and in tests 2 and 6, while the handoff still recorded 75/75. Assert the
+        // RELATIONSHIP (widebody > narrowbody > turboprop, and every bay inside the
+        // real $12–22M device band plus its hall) so a future reprice can't do it again.
+        let nbBay = sim.simBayCost(family: FAM)
+        let wbBay = sim.simBayCost(family: "B787")
+        let tpBay = sim.simBayCost(family: "DASH8_FAMILY")
+        check(wbBay > nbBay && nbBay > tpBay, "2: bay cost rises by class (TP \(tpBay/1_000_000) < NB \(nbBay/1_000_000) < WB \(wbBay/1_000_000))")
+        check(tpBay >= 12_000_000 && wbBay <= 25_000_000, "2: bay costs sit in the real device+hall band")
         let b2 = sim.playerBalance
         check(sim.addSimBay(family: FAM), "2: bay added")
-        check(b2 - sim.playerBalance == 18_000_000 && sim.hasSimBay(family: FAM), "2: bay charged exactly")
-        check(sim.totalTrainingCenterSpend == Simulation.trainingCenterFacilityCost + 18_000_000, "2: capital term = facility + bay")
+        check(b2 - sim.playerBalance == nbBay && sim.hasSimBay(family: FAM), "2: bay charged exactly")
+        check(sim.totalTrainingCenterSpend == Simulation.trainingCenterFacilityCost + nbBay, "2: capital term = facility + bay")
         check(!sim.addSimBay(family: FAM), "2: a second bay for the same family is refused")
         check(sim.trainingProvider(for: FAM) == .center, "2: the center now delivers this family's courses")
         check(sim.cashInvariantResidual() == 0, "2: cash invariant after the bay")
@@ -161,7 +171,7 @@ func main() {
         check(sim.trainingCenter!.ledger.monthly.count == monthsBefore + 1, "6: a monthly payback point appended")
         check(sim.trainingCenter!.ledger.payback == sim.trainingCenter!.ledger.savings + (sim.trainingCenter!.ledger.timeValue ?? 0) - sim.trainingCenter!.ledger.facilitySpend - sim.trainingCenter!.ledger.opexPaid, "6: payback = fee savings + time value − facility − opex")
         check(sim.trainingCenterMonthlyOpex == opex, "6: monthly opex readout")
-        check((sim.financeSnapshots.last?.trainingCenterSpend ?? -1) == Simulation.trainingCenterFacilityCost + 18_000_000, "6: the finance snapshot carries the capital term")
+        check((sim.financeSnapshots.last?.trainingCenterSpend ?? -1) == Simulation.trainingCenterFacilityCost + sim.simBayCost(family: FAM), "6: the finance snapshot carries the capital term")
         check(sim.cashInvariantResidual() == 0, "6: cash invariant after billing")
 
         // ── 7. Persistence: round-trip + legacy ───────────────────────────────────

@@ -132,7 +132,15 @@ func main() {
         // which would stall the aircraft through no fault of the requal path — so
         // give it room and skip the check outright if one is active. An earlier
         // version asserted a fixed window and failed ~1 run in 4 for that reason.
-        ticks(sim, 6000)
+        // ⚠️ AN AOG DOES THE SAME THING and was NOT guarded: nothing here answers the
+        // decision queue, so a breakdown parks the aircraft for the rest of the window
+        // and "the aircraft flies again" goes red for a reason that has nothing to do
+        // with training. (It cost a real diagnosis once — a clean 63/63 three runs
+        // later.) Answer AOG cards as a player would while the clock runs.
+        for _ in 0..<6000 {
+            sim.advanceTick()
+            for d in Array(sim.decisionQueue) where d.kind == .aog { sim.resolveAOGExpedite(d) }
+        }
         let laborActive = (sim.laborActionExpiryByFamily[FAM] ?? 0) > sim.tick
         if !laborActive {
             check(ac.cyclesAccrued >= 1, "4: the aircraft flies again")

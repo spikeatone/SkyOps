@@ -5726,22 +5726,36 @@ scheduled and deployed — **without** "assign every crew to every flight" tediu
   shortfall. ⚠️ **Run-to-run variance is large** — that same arm's fee savings came out $8.2M / $5.3M
   / $4.1M across three runs of an identical configuration, because course volume rides on random
   events and crew availability. **Never tune off a single run.**
-- **⚠️ THE REMAINING GAP IS THROUGHPUT, NOT PRICE. DO NOT CUT PRICES AGAIN** — the next cut would
-  have to go below real device cost, the one thing the designer ruled out. The probe now prints a
-  **COURSE-FEE CAPTURE** rate (actual fee savings ÷ the ceiling if every crew's every recurrent ran
-  in-house): **59% at the gate, 32% for the best arm, 10% for a crew-thin family, 35% widebody.** At
-  a price of ZERO the centre would still forfeit two-thirds of the available saving. **ROOT CAUSE,
-  line-level:** the auto-recurrent scheduler's eligibility filter is
-  `pool.filter { $0.status == .available && … }`, so it only ever sees crews idle at that instant. A
-  crew flies ~55% of the time, so most of the family is never considered on any daily pass, and a
-  crew that happens to be flying when its currency window closes is never scheduled at all — it
-  **LAPSES instead of training**. The scheduler's own comment ("4 seats churn far faster than the
-  fleet comes due; nobody lapses waiting") assumes crews are REACHABLE; they aren't. **This bites
-  beyond the training centre: crews lapse more than the design intends in every game, bay or not.**
-  The fix (queue an on-duty/resting crew for its next release instead of dropping it from the pass)
-  is a DESIGNER CALL, not taken unilaterally. At ~80% capture the large arm's payback lands near
-  **~9 years** — the same timescale as buying an aircraft here (~8 years), which is the right feel
-  for real infrastructure.
+- **✅ THE THROUGHPUT BUG IS FIXED (10 Sep 2026) — course-fee capture went 32% → 101–112%, and
+  crews stopped lapsing entirely.** The auto-recurrent scheduler's eligibility filter was
+  `pool.filter { $0.status == .available && … }`, so it only ever saw crews idle AT THAT INSTANT. A
+  crew flies ~55% of the time and rests besides, so most of a family was never considered on any
+  daily pass, and one that happened to be flying when its currency window closed was never
+  scheduled at all — it **LAPSED instead of training**, then had to requalify at 1.6×. The
+  scheduler's own comment ("4 seats churn far faster than the fleet comes due; nobody lapses
+  waiting") assumed crews were REACHABLE; they weren't.
+  **The fix reaches a crew at the moment it actually is reachable, on two paths that share one
+  booking helper (`sendToRecurrent`) so the cap, pricing and ledger can't drift apart:**
+  the daily sweep now also sees **RESTING** crews (they're on the ground, and `startCourse` zeroes
+  duty/rest anyway), and **`releaseCrew` offers a landing crew to recurrent BEFORE it goes back on
+  the line** — the one guaranteed opportunity for a crew that flies continuously. The release hook
+  is checked BEFORE the rest branch on purpose: a course zeroes duty/rest and outlasts a rest
+  period, so the downtime is spent productively. Bookings from both paths are tallied and reported
+  as ONE daily Ops line rather than one per crew.
+  **Measured, and it is not just a training-centre matter:**
+  · course-fee capture **32% (best arm) / 10% (crew-thin) → 101%, 101%, 102%, 112%** across all four
+  probe arms — every crew's every recurrent now runs in-house when a bay exists. (Slightly over 100%
+  because the probe's "ceiling" is an estimate of expected recurrent count, not an exact bound —
+  read it as "fully captured", not as a precise ratio.)
+  · in an ORDINARY game with **no** training centre, 540 sim-days × 19 crews: **3 lapse events and 3
+  requalifications → 0 and 0**, with flights unchanged (14,328 vs 14,370 cycles). So a normal
+  player stops paying 1.6× requalification premiums for crews the scheduler simply never looked at.
+  · the "stretched" arm's crew-TIME value finally registers (+$12.5M, +$198k/crew) because crews
+  now complete courses instead of lapsing.
+  **⚠️ THE REMAINING SHORTFALL IS PRICE, AND PRICE IS SETTLED — DO NOT CUT IT.** With throughput
+  fixed the centre still doesn't fully repay (best arm −$7.7M at 5 years), and the next cut would
+  have to go below real device cost, the one thing the designer ruled out. That is now a deliberate
+  "prestige/throughput purchase", not an unexamined gap.
 - **`TrainingCenterABProbe` is a MEASUREMENT tool, not a pass/fail gate** (its old 6/8/12/16-aircraft
   arms can't even build a bay at the 20 gate, and its thresholds were set against $750k facility
   costs). It asserts only what must hold regardless of tuning — the ledger identity and payback

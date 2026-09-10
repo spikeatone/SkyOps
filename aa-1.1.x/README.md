@@ -230,6 +230,15 @@ group never compiles them into the build.
   defers C/D — which inverted the probe's central finding (DEFERRED beat SERVICED). Any future arm
   that means "the player does nothing" has to turn the policy off to still mean it.
 
+- ⚠️ **`TrainingCenterVerify`'s bay-cost asserts are DERIVED from `simBayCost`, never literals.**
+  They were literals (18/22/12M) and went stale the moment the bay prices were walked back to real
+  device-plus-hall cost (NB $17M / WB $21M / TP $13M), which quietly turned FOUR checks red while
+  the handoff still recorded 75/75. It now asserts the RELATIONSHIP (WB > NB > TP, all inside the
+  real device band), so a future reprice can't repeat it. **76/76.**
+- ⚠️ **`CrewPipelineVerify` test 4 drains AOG cards while it runs the clock.** Nothing there answers
+  the decision queue, so a random breakdown parks the aircraft and "the aircraft flies again" goes
+  red for a reason unrelated to training — it cost a real diagnosis once (a clean 63/63 three runs
+  later). The labor-action guard beside it exists for the same class of reason.
 - **`TickCostProbe.swift`** — the MAIN-THREAD cost of one `advanceTick()` vs. fleet
   and route count, and the speed at which `run()`'s drain budget starts to bite.
   Built 8 Sep 2026 to verify the fixes for the shipping `hang.under3s` signal.
