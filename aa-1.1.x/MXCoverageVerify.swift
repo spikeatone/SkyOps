@@ -181,11 +181,11 @@ func main() {
               "7: D forced-grounding is a sane near-term deadline (~\(ground)d, not thousands) — the 3,660-day bug is fixed")
         check(!sim.mxIsOverdue(jet), "7: a JUST-due D check is not yet OVERDUE (grace window)")
         // Push it well past the D overdue grace → OVERDUE, and eventually force-groundable.
-        jet.mxD = Aircraft.MXCheck(lastCycle: jet.cyclesAccrued - (dInt + (Simulation.mxDOverdueGraceDays + 5) * 2), lastTick: sim.tick)
+        jet.mxD = Aircraft.MXCheck(lastCycle: jet.cyclesAccrued - (dInt + Int(Double(Simulation.mxDOverdueGraceDays + 5) * Simulation.mxCyclesPerSimDay)), lastTick: sim.tick)
         check(sim.mxIsOverdue(jet), "7: D check past its calendar grace IS overdue (surcharge applies)")
         check(sim.mxCheckCost(.d, jet) > sim.mxCheckBaseCost(.d, jet), "7: overdue D check costs the surcharge")
         // Past the hard grounding grace → force-groundable.
-        jet.mxD = Aircraft.MXCheck(lastCycle: jet.cyclesAccrued - (dInt + (Simulation.mxDHardGroundingGraceDays + 5) * 2), lastTick: sim.tick)
+        jet.mxD = Aircraft.MXCheck(lastCycle: jet.cyclesAccrued - (dInt + Int(Double(Simulation.mxDHardGroundingGraceDays + 5) * Simulation.mxCyclesPerSimDay)), lastTick: sim.tick)
         check(sim.mxPastHardWindow(jet), "7: D check past the hard grace is force-groundable")
     }
 
@@ -217,11 +217,11 @@ func main() {
               "9: C forced-grounding is near-term (~\(ground)d, not ~265) — the interval-multiple window is gone for C")
         check(!sim.mxIsOverdue(jet), "9: a JUST-due C check is not yet OVERDUE (grace window)")
         // Past the C overdue grace → OVERDUE + surcharge.
-        jet.mxC = Aircraft.MXCheck(lastCycle: jet.cyclesAccrued - (cInt + (Simulation.mxCOverdueGraceDays + 5) * 2), lastTick: sim.tick)
+        jet.mxC = Aircraft.MXCheck(lastCycle: jet.cyclesAccrued - (cInt + Int(Double(Simulation.mxCOverdueGraceDays + 5) * Simulation.mxCyclesPerSimDay)), lastTick: sim.tick)
         check(sim.mxIsOverdue(jet), "9: C past its calendar grace IS overdue")
         check(sim.mxCheckCost(.c, jet) > sim.mxCheckBaseCost(.c, jet), "9: overdue C check costs the surcharge")
         // Past the hard grace → force-groundable.
-        jet.mxC = Aircraft.MXCheck(lastCycle: jet.cyclesAccrued - (cInt + (Simulation.mxCHardGroundingGraceDays + 5) * 2), lastTick: sim.tick)
+        jet.mxC = Aircraft.MXCheck(lastCycle: jet.cyclesAccrued - (cInt + Int(Double(Simulation.mxCHardGroundingGraceDays + 5) * Simulation.mxCyclesPerSimDay)), lastTick: sim.tick)
         check(sim.mxPastHardWindow(jet), "9: C past the hard grace is force-groundable")
     }
 
@@ -259,6 +259,12 @@ func main() {
         forceCheck(sim, jet, .c, over: 60)
         // No coverage — just service (suspend the route).
         check(sim.sendToMX(jet), "11: suspend-service a routed C check works")
+        // With no base of your own the contract MRO may make it wait for a hangar
+        // slot — the aircraft keeps FLYING until then, so let the booking mature.
+        if jet.awaitingMXSlot {
+            check(!jet.inMXShop, "11: still flying while it waits for the MRO slot")
+            for _ in 0..<((Simulation.mxContractSlotWaitMaxDays + 1) * 1440) where !jet.inMXShop { sim.advanceTick() }
+        }
         check(jet.inMXShop, "11: aircraft in shop")
         check(jet.assignedRouteId == rid, "11: route STAYS assigned (it's suspended, not handed off) — resumes on return")
         check(jet.mxReclaimRouteId == nil, "11: no coverage reclaim link (this is a suspend, not a cover)")

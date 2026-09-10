@@ -197,6 +197,30 @@ group never compiles them into the build.
   full price; with a bay the cap IS `simBayCapacity`) — and the finding that a crew-STRETCHED
   family books LESS total time value than a deeply-covered one.
 
+- **`MXBaseVerify.swift`** — the maintenance NETWORK, **86/86**: the auto-A policy (on = no card,
+  off = the old per-aircraft card), C and D still asking, contract-MRO pricing vs. your own base's,
+  the build's cash + its own invariant term, an A check at a base costing ZERO days and never
+  entering the shop, tier capability (a line station can't do heavy work; a narrowbody hangar can't
+  take a widebody), hangar capacity and MRO overflow, the network-coverage rule, the slot-wait
+  BOOKING end to end (charged once, still flying, exempt from the card and force-grounding),
+  persistence incl. a held hangar slot, a legacy save defaulting the policy ON, and 120 sim-days of
+  a flying fleet producing ZERO MX cards. Test 1 pins the cycles→days constant to the flight cycle.
+  ⚠️ Two harness lessons re-learned here: measure a maintenance CHARGE via
+  `totalMaintenanceCheckSpend`, never a balance delta (a flying fleet books revenue in the same
+  window), and after `restore` the invariant residual is EXACTLY `−devInjectedCash` — assert that
+  number rather than relaxing the check.
+- **`MXBaseABProbe.swift`** — the maintenance base's BALANCE GATE. Same method as
+  `TrainingCenterABProbe`: the base's own ledger IS the A/B, so no two-sim comparison and no event
+  poisoning. Arms vary FLEET SIZE and whether the network actually TOUCHES the base. **The hangar
+  base meets the specced size threshold; the line station gates on network shape instead — see
+  `MX_BASES_SCOPE.md` §7, it's a flagged designer call, not a bug.** ⚠️ A scattered point-to-point
+  network can't host a base AT ALL (the eligibility rule needs 3 routes at one airport), so the
+  scattered arm gives exactly the minimum and flies everything else elsewhere.
+- ⚠️ **`MXProbe.swift`'s DEFERRED arm must set `mxAutoServiceAChecks = false`.** With the policy on
+  (the default now) a "never service" player quietly gets on-time A maintenance for free and only
+  defers C/D — which inverted the probe's central finding (DEFERRED beat SERVICED). Any future arm
+  that means "the player does nothing" has to turn the policy off to still mean it.
+
 - **`TickCostProbe.swift`** — the MAIN-THREAD cost of one `advanceTick()` vs. fleet
   and route count, and the speed at which `run()`'s drain budget starts to bite.
   Built 8 Sep 2026 to verify the fixes for the shipping `hang.under3s` signal.

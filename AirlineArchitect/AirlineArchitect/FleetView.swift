@@ -526,7 +526,9 @@ struct FleetView: View {
                     }
                 }
                 Spacer()
-                if ac.inPaintShop { liveryChip } else { statusChip(st) }
+                if ac.inPaintShop { liveryChip }
+                else if ac.inMXShop { maintenanceChip(ac) }
+                else { statusChip(st) }
             }
             // Repaint progress — the four real stages, so a grounded aircraft
             // explains itself instead of just reading GROUNDED.
@@ -580,6 +582,12 @@ struct FleetView: View {
     enum FleetStatus { case flying, idle, grounded }
     private func status(_ ac: Aircraft) -> FleetStatus {
         if ac.inPaintShop { return .grounded }     // in the paint shop = not flying
+        // …and neither is one sitting out a scheduled A/C/D check. It read as FLYING
+        // before, which was always wrong and became easy to notice once auto-serviced
+        // A checks started sending aircraft to the shop with no card to announce it.
+        // It gets the same planned-downtime CHIP treatment as a repaint, so the count
+        // is honest without a routine check reading as a fault.
+        if ac.inMXShop { return .grounded }
         if ac.holdReason == .aog { return .grounded }
         if ac.isIdleSpare { return .idle }
         return .flying
@@ -596,6 +604,24 @@ struct FleetView: View {
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .overlay(RoundedRectangle(cornerRadius: 4)
                 .stroke(isDark ? c : Color(skyHex: 0x6E43A6), lineWidth: 1))
+    }
+
+    /// Blue "A CHECK" / "C CHECK" chip — planned, paid-for downtime like a repaint,
+    /// not a fault, so it doesn't wear the red GROUNDED chip.
+    private func maintenanceChip(_ ac: Aircraft) -> some View {
+        let c = isDark ? Sky.brightBlue : Color(skyHex: 0x0369A1)
+        let days = sim.mxShopDaysLeft(ac) ?? 0
+        // Build the label from ALREADY-LOCALIZED parts. `Text(someString)` does not
+        // localize, and a composed "A CHECK · 3D" could never be a catalog key anyway
+        // — so the check name is looked up on its own (it is in the catalog, via the
+        // Maintenance list) and only the separator is literal.
+        let kindText = ac.mxCheckKind.map { String(localized: .init($0.label)).uppercased() }
+            ?? String(localized: "In the shop").uppercased()
+        return Text("\(kindText) · \(days)D")
+            .font(.karla(10, .bold)).foregroundStyle(c)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(c, lineWidth: 1))
     }
 
     /// Current paint stage + a progress bar, for an aircraft in the shop.

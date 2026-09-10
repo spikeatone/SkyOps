@@ -178,6 +178,26 @@ final class Aircraft: Identifiable {
     var mxReclaimRouteId: Int? = nil
     var coveringForTail: String? = nil
 
+    /// Which of the player's own maintenance bases is doing the CURRENT shop visit
+    /// (nil = the contract MRO). Needed for two things: charging a hangar's finite
+    /// C/D capacity while the aircraft occupies it, and crediting the right base's
+    /// payback ledger when the check completes. Persisted so a save mid-check keeps
+    /// the hangar slot booked.
+    var mxShopBaseCode: String? = nil
+
+    /// CONTRACT-MRO HANGAR SLOT WAIT. A third-party MRO books its heavy-check slots
+    /// out; you commit to the deal now and the aircraft goes in on the slot date.
+    /// Crucially it KEEPS FLYING in the meantime — the wait is a later shop date, not
+    /// dead time — so this is a BOOKING, deliberately not a variant of the shop state:
+    /// `inMXShop` stays false, the state machine runs normally, and the daily tick
+    /// opens the shop when the date arrives. The fee is charged at booking (the price
+    /// the player agreed to), so the shop-entry that follows must not charge again.
+    /// While booked the aircraft is exempt from the MX card and from force-grounding:
+    /// it has done the right thing and is waiting on the shop, not deferring.
+    var mxBookedKind: MXKind? = nil
+    var mxBookedStartTick: Int? = nil
+    var awaitingMXSlot: Bool { mxBookedKind != nil }
+
     /// The four real stages of a strip-and-paint, as fractions of total occupancy:
     /// strip 1–3d · prep + prime 1–3d · paint + livery 1–7d · clear coat + cure 1–3d.
     /// Shown on the fleet card so a grounded aircraft explains itself.
@@ -273,6 +293,7 @@ final class Aircraft: Identifiable {
             case .d: mxD = MXCheck(lastCycle: cyclesAccrued, lastTick: tick)
             }
             mxUntilTick = nil; mxStartTick = nil; mxCheckKind = nil
+            mxShopBaseCode = nil       // frees the hangar slot it was occupying
             event = .mxCheckCompleted
             // A covered aircraft is routeless while in the shop; once the check
             // clears it's a plain idle spare until the Simulation reclaims its

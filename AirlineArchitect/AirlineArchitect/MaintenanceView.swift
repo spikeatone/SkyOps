@@ -19,8 +19,11 @@
 //  collapsible drawer) and `onAcquire` now switches the Fleet segment rather than
 //  the tab, since the Marketplace is a sibling segment now.
 //
-//  NOT here yet (later phases of `MX_BASES_SCOPE.md`, deliberately): the auto-A-check
-//  policy toggle, maintenance BASES, and the contract-MRO provider line.
+//  It ALSO owns the maintenance NETWORK (`MX_BASES_SCOPE.md` phases 1–2): the auto-A
+//  policy toggle, the provider line, and the bases card. Those three answer the part
+//  of the player's complaint that the move alone did not — the CARD VOLUME. A checks
+//  were measured at 100% of the MX card load, so backgrounding them is the fix; the
+//  contract-MRO premium is what makes your own base worth building.
 //
 
 import SwiftUI
@@ -52,16 +55,23 @@ struct MaintenanceSection: View {
         return VStack(alignment: .leading, spacing: 12) {
             if let c = coverBanner { coverConfirmBanner(c) }
 
+            policyCard
+            basesCard
+
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("Maintenance").font(.karla(20, .heavy)).foregroundStyle(primary)
                     Spacer(minLength: 6)
                     // Only the DUE count is an alert; "in shop" is just status.
+                    let booked = sim.mxAwaitingSlotCount
                     if due > 0 {
                         alertChip("\(due) due")
-                        Text("· \(inShop) in shop").font(.karla(13, .semibold)).foregroundStyle(secondary)
+                        Text(booked > 0 ? "· \(inShop) in shop · \(booked) booked" : "· \(inShop) in shop")
+                            .font(.karla(13, .semibold)).foregroundStyle(secondary)
                     } else {
-                        Text("\(due) due · \(inShop) in shop").font(.karla(13, .semibold)).foregroundStyle(secondary)
+                        Text(booked > 0 ? "\(due) due · \(inShop) in shop · \(booked) booked"
+                                        : "\(due) due · \(inShop) in shop")
+                            .font(.karla(13, .semibold)).foregroundStyle(secondary)
                     }
                 }
                 Text("Scheduled A/C/D checks. Service due aircraft to stay airworthy — flying past a check raises breakdown risk. Emergencies (AOG) appear in Ops.")
@@ -129,7 +139,9 @@ struct MaintenanceSection: View {
     }
 
     @ViewBuilder private func mxRow(_ ac: Aircraft) -> some View {
-        let dueNow = sim.mxShopDaysLeft(ac) == nil && sim.mxIsDue(ac)
+        // A booked aircraft is NOT actionable: it's flying toward a hangar slot it
+        // has already been charged for, so it shows its date instead of Details.
+        let dueNow = sim.mxShopDaysLeft(ac) == nil && !ac.awaitingMXSlot && sim.mxIsDue(ac)
         VStack(alignment: .leading, spacing: 0) {
             // The summary line (tail · type · status · Details/in-shop).
             HStack(alignment: .center, spacing: 8) {
@@ -138,7 +150,14 @@ struct MaintenanceSection: View {
                     Text(ac.type.name).font(.karla(11)).foregroundStyle(secondary).lineLimit(1)
                 }
                 Spacer(minLength: 6)
-                if let daysLeft = sim.mxShopDaysLeft(ac), let kind = ac.mxCheckKind {
+                if let slot = sim.mxSlotDaysLeft(ac), let booked = ac.mxBookedKind {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(LocalizedStringKey(booked.label)).font(.karla(12, .bold))
+                            .foregroundStyle(Color(skyHex: 0xFFAB44))
+                        Text(String(localized: "MRO slot in ~\(slot)d · still flying"))
+                            .font(.karla(11)).foregroundStyle(secondary)
+                    }
+                } else if let daysLeft = sim.mxShopDaysLeft(ac), let kind = ac.mxCheckKind {
                     // In the shop (with a coverage tag when a sub is flying its route).
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(LocalizedStringKey(kind.label)).font(.karla(12, .bold)).foregroundStyle(Sky.brightBlue)
@@ -196,7 +215,9 @@ struct MaintenanceSection: View {
         let overdue = sim.mxIsOverdue(ac)
         let cost = sim.mxCheckCost(kind, ac)
         let base = sim.mxCheckBaseCost(kind, ac)
-        let days = sim.mxDowntimeDays(kind)
+        let days = sim.mxDowntimeDays(kind, for: ac)
+        let baseCode = sim.mxBaseCovering(ac, kind: kind)
+        let slotWait = sim.mxSlotWaitDays(ac, kind: kind)
         let ground = sim.mxDaysUntilForcedGrounding(ac)
         let onRoute = ac.assignedRouteId != nil
         let coverReq = sim.mxCoverageRequired(ac)
@@ -205,9 +226,21 @@ struct MaintenanceSection: View {
         // route (a 787 D-check can't be covered by an A320 — designer's call).
         let covers = sim.mxCoverageCandidates(for: ac)
         VStack(alignment: .leading, spacing: 8) {
-            // Downtime.
+            // Who does the work — the line that explains the price and the wait.
+            mxDetailRow(label: String(localized: "Serviced by"),
+                        value: baseCode.map { String(localized: "your \($0) base") }
+                            ?? String(localized: "contract MRO (+\(pct(Simulation.mxContractPremium)))"),
+                        tint: baseCode == nil ? Color(skyHex: 0xFFAB44) : Sky.coreGreen)
+            // Downtime. Zero = overnight on the line, the whole point of a station.
             mxDetailRow(label: String(localized: "Downtime"),
-                        value: String(localized: "~\(days) days in the shop"), tint: primary)
+                        value: days == 0 ? String(localized: "overnight — no legs lost")
+                                         : String(localized: "~\(days) days in the shop"),
+                        tint: days == 0 ? Sky.coreGreen : primary)
+            if slotWait > 0 {
+                mxDetailRow(label: String(localized: "Hangar slot"),
+                            value: String(localized: "in ~\(slotWait) days — it keeps flying until then"),
+                            tint: Color(skyHex: 0xFFAB44))
+            }
             // Cost — break out the overdue surcharge so "service early = cheaper" is visible.
             if overdue {
                 mxDetailRow(label: String(localized: "Base cost"),
@@ -384,4 +417,165 @@ struct MaintenanceSection: View {
         let s = Simulation.mxOverdueCostSurcharge
         return s == s.rounded() ? String(Int(s)) : String(format: "%.1f", s)
     }
+
+    // MARK: - Policy + provider (Phase 1: the card-volume fix)
+
+    /// The auto-A toggle and the "who does the work" line. A checks are frequent and
+    /// have no decision in them — nobody defers one — so with the policy ON they are
+    /// serviced at the gate and rolled into a single daily Ops line instead of a card
+    /// per aircraft. C and D still ask, because they are real planning events.
+    @ViewBuilder private var policyCard: some View {
+        let bases = sim.mxBaseList
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Policy").font(.karla(20, .heavy)).foregroundStyle(primary)
+            Toggle(isOn: Binding(get: { sim.mxAutoServiceAChecks },
+                                 set: { sim.mxAutoServiceAChecks = $0; Feedback.impact(.light) })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Service A checks automatically")
+                        .font(.karla(14, .bold)).foregroundStyle(primary)
+                    Text(sim.mxAutoServiceAChecks
+                         ? "Routine A checks are done at the gate and logged in Ops — no alerts. C and D checks still ask."
+                         : "Every due A check asks first. Expect one alert per aircraft, every few sim-days.")
+                        .font(.karla(11)).foregroundStyle(secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Sky.coreGreen)
+
+            Divider().overlay(cardBorder.opacity(0.4))
+
+            // Who does the work, and what it costs you.
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: bases.isEmpty ? "building.2" : "wrench.and.screwdriver.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(bases.isEmpty ? Color(skyHex: 0xFFAB44) : Sky.coreGreen)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(bases.isEmpty ? "Contract MRO" : "Contract MRO + \(bases.count) of your own")
+                        .font(.karla(13, .bold)).foregroundStyle(primary)
+                    Text(bases.isEmpty
+                         ? "Outsourced: +\(pct(Simulation.mxContractPremium)) on every check, and heavy checks wait up to \(Simulation.mxContractSlotWaitMaxDays) days for a hangar slot. Your own base removes both."
+                         : "Your bases charge \(pct(Simulation.mxBaseCostDiscount)) less than list and skip the slot queue. Anything they can't take still goes to the MRO.")
+                        .font(.karla(11)).foregroundStyle(secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+    }
+
+    // MARK: - Maintenance bases (Phase 2: the mid-game facility)
+
+    @ViewBuilder private var basesCard: some View {
+        let bases = sim.mxBaseList
+        let sites = sim.mxBaseBuildSites()
+        if !bases.isEmpty || !sites.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("Maintenance bases").font(.karla(20, .heavy)).foregroundStyle(primary)
+                    Spacer(minLength: 6)
+                    if !bases.isEmpty {
+                        Text("\(bases.count) open").font(.karla(13, .semibold)).foregroundStyle(secondary)
+                    }
+                }
+                if bases.isEmpty {
+                    Text("Airlines do their own line maintenance where their aircraft already overnight. Build a station at a hub — or anywhere \(Simulation.mxBaseMinRoutes)+ of your routes touch — and A checks run overnight instead of costing a day.")
+                        .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                ForEach(bases, id: \.code) { b in baseRow(b) }
+                if !sites.isEmpty {
+                    if !bases.isEmpty { Divider().overlay(cardBorder.opacity(0.4)) }
+                    Text("Build a base").font(.karla(13, .bold)).foregroundStyle(primary)
+                    ForEach(sites, id: \.self) { code in buildRow(code) }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardBG)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        }
+    }
+
+    /// One open base: what it is, what it covers, and its running payback split.
+    /// The split matters — the fee saving alone would never repay a hangar, and the
+    /// flying days handed back are the real reason to own one.
+    @ViewBuilder private func baseRow(_ b: MaintenanceBase) -> some View {
+        let served = sim.aircraft.filter { $0.purchased && sim.mxBaseServes(b.code, $0) }.count
+        let free = b.tier.handlesHeavyChecks ? sim.mxHangarFreeSlots(b.code) : 0
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(b.code).font(.karla(15, .heavy)).foregroundStyle(Sky.coreGreen)
+                Text(LocalizedStringKey(Simulation.mxBaseTierName(b.tier)))
+                    .font(.karla(12, .semibold)).foregroundStyle(primary)
+                Spacer(minLength: 6)
+                Text("\(compactMoney(Simulation.mxBaseMonthlyOpex(b.tier)))/mo")
+                    .font(.karla(11)).foregroundStyle(secondary)
+            }
+            Text(b.tier.handlesHeavyChecks
+                 ? "Serves \(served) aircraft · \(free) of \(Simulation.mxHangarCapacity) hangar slots free"
+                 : "Serves \(served) aircraft · A checks overnight")
+                .font(.karla(11)).foregroundStyle(secondary)
+            // The payback split, the Training-Centre framing.
+            let l = b.ledger
+            HStack(spacing: 10) {
+                paybackChip(String(localized: "Fees saved"), l.feeSavings, Sky.coreGreen)
+                paybackChip(String(localized: "Time returned"), l.timeValue, Sky.coreGreen)
+                paybackChip(String(localized: "Cost"), -(l.buildSpend + l.opexPaid), Sky.red)
+            }
+            Text(l.payback >= 0
+                 ? String(localized: "Ahead by \(compactMoney(l.payback)) after \(l.checksDone) checks")
+                 : String(localized: "\(compactMoney(-l.payback)) to recoup · \(l.checksDone) checks so far"))
+                .font(.karla(11, .semibold))
+                .foregroundStyle(l.payback >= 0 ? Sky.coreGreen : secondary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder private func paybackChip(_ label: String, _ value: Int, _ tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label).font(.karla(10)).foregroundStyle(secondary)
+            Text(compactMoney(value)).font(.karla(12, .bold)).foregroundStyle(tint)
+        }
+    }
+
+    /// A candidate airport with a tier button each. Affordability gates the button;
+    /// the tier a fleet actually needs is its own decision, so all three are offered.
+    @ViewBuilder private func buildRow(_ code: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(code).font(.karla(14, .heavy)).foregroundStyle(primary)
+                Text(sim.hubOperating(code) ? String(localized: "your hub")
+                                            : String(localized: "\(sim.routesAt(code)) routes"))
+                    .font(.karla(11)).foregroundStyle(secondary)
+            }
+            HStack(spacing: 6) {
+                ForEach(MaintenanceBase.Tier.allCases, id: \.rawValue) { tier in
+                    let cost = Simulation.mxBaseBuildCost(tier)
+                    let ok = sim.playerBalance >= cost
+                    Button {
+                        Feedback.impact(.light)
+                        sim.buildMXBase(at: code, tier: tier)
+                    } label: {
+                        VStack(spacing: 1) {
+                            Text(LocalizedStringKey(Simulation.mxBaseTierName(tier)))
+                                .font(.karla(11, .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                            Text(compactMoney(cost)).font(.karla(11))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 7)
+                        .background(ok ? Sky.brightBlue : Color.gray.opacity(0.4))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }.buttonStyle(.plain).disabled(!ok)
+                }
+            }
+        }
+        .padding(.vertical, 3)
+    }
+
+    private func pct(_ f: Double) -> String { "\(Int((f * 100).rounded()))%" }
+
 }

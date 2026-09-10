@@ -61,15 +61,29 @@ in-training"), but the CARD VOLUME itself is untouched.
       whole due-list / Details / coverage flow; Ops keeps the `.mxCheck` alert cards plus a tappable
       "Maintenance · N due · M in shop · Fleet ›" row (`sim.pendingMaintenance` intent, adopted in
       FleetView's `.onAppear` per the standing pre-switch-intent rule).
-- [ ] The REST of `MX_BASES_SCOPE.md`, all 5 decisions already confirmed: auto A checks (no cards,
-      Ops event only, toggle on Fleet ▸ Maintenance) · MRO +25% and a 0–7-day C/D slot wait as the
-      default provider · line stations ($4M) + hangar bases ($18–45M) at an operating hub OR any
-      airport with ≥3 of your routes, 2-aircraft C/D capacity per hangar line · overnight at a
-      base/hub line station = zero lost legs (existing 1-day downtime elsewhere).
-- [ ] ⚠️ **Fix the MX day-conversion bug in the same pass** — four sites in `Sim/Simulation.swift`
-      (~3715 / 3773 / 3827 / 3879, each commented "~2 cycles/sim-day") convert cycles→days at a
-      hardcoded 2 when the engine flies ~3.52, so **every MX date the player sees is ~76% too far
-      out**. Make it one shared constant; re-run `MXCoverageVerify`.
+- [x] **The REST of `MX_BASES_SCOPE.md` (phases 1 and 2) — done 9 Sep, driven on the iPad sim.**
+      Auto A checks default ON (no cards, one daily Ops roll-up, toggle on Fleet ▸ Maintenance) ·
+      contract MRO +25% with a 0–7-day C/D hangar-slot booking the aircraft keeps flying through ·
+      line stations ($4M) + hangar bases ($18M/$45M) at a hub or any ≥3-route airport, 2-aircraft
+      C/D capacity with MRO overflow, network-coverage rule, per-base payback ledger ·
+      `totalMXBaseSpend` as a new cash-invariant term. **Measured: 243 MX cards → 0 over 180
+      sim-days at 60 aircraft, flights unchanged.** `MXBaseVerify` 86/86, `MXBaseABProbe` 7/7.
+- [x] **MX day-conversion bug fixed** — one derived constant `Simulation.mxCyclesPerSimDay`
+      (1440/`legCycleTicks` ≈ 3.52). It was NOT only cosmetic: `mxDaysPastDue` feeds the C/D
+      calendar grace, so a "25-day" grace really ran ~44 days. `MXCoverageVerify` had the same
+      hardcoded 2 in its own setup and now derives it (82/82).
+- [ ] ⚠️ **DESIGNER CALL — the LINE STATION has no fleet-size threshold.** The balance A/B
+      (`MXBaseABProbe`, 36 months) shows the hangar base behaving exactly as specced (−$8.0M at 6
+      aircraft, +$22.7M at 20), but the $4M line station pays back from ~4 SERVED aircraft — and you
+      cannot build one until 3 routes concentrate at an airport, so it is effectively an unlock
+      rather than a decision. A scattered network never pays one back at any size, which IS the
+      strategic pull the spec wanted, just on a different axis. Shipped at the confirmed $4M rather
+      than retuned silently. Options: leave it (it is the cheap on-ramp; the hangar is the real
+      decision) · raise the build to ~$14M for a ~10-aircraft break-even · or reopen §6 decision 2
+      and make ALL auto-A checks zero-downtime, which removes most of its value. Table in
+      `MX_BASES_SCOPE.md` §7.
+- [ ] Phase 3 of `MX_BASES_SCOPE.md` (optional, unbuilt): sell hangar capacity to other airlines,
+      subsidiary fleets using your bases, engine shop visits.
 
 ### ⚠️ DESIGNER CALL PENDING — the training centre never pays back at real simulator prices
 Repricing the centre to the designer's real-world figures ($35M facility, $12–22M bays) made it

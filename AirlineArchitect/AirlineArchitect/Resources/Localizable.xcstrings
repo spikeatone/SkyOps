@@ -321,6 +321,16 @@
         }
       }
     },
+    "%@ to recoup · %lld checks so far": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ bis zur Amortisierung · %lld Checks bisher"
+          }
+        }
+      }
+    },
     "%@ upfront + %@ / mo": {
       "localizations": {
         "de": {
@@ -377,6 +387,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ · %@ Zyklen (~%lld%%)"
+          }
+        }
+      }
+    },
+    "%@ · %lldD": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %lldT"
           }
         }
       }
@@ -771,6 +791,16 @@
         }
       }
     },
+    "%lld due · %lld in shop · %lld booked": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fällig · %lld in der Werkstatt · %lld eingeplant"
+          }
+        }
+      }
+    },
     "%lld families need a look · %lld staffed": {
       "localizations": {
         "de": {
@@ -807,6 +837,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld einsatzbereit für %lld Flugzeuge · %@ pro Flugzeug"
+          }
+        }
+      }
+    },
+    "%lld open": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld aktiv"
           }
         }
       }
@@ -1482,6 +1522,16 @@
         }
       }
     },
+    "Ahead by %@ after %lld checks": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ im Plus nach %lld Checks"
+          }
+        }
+      }
+    },
     "Airbus A220 family": {
       "localizations": {
         "de": {
@@ -1658,6 +1708,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Airline Architect Pro"
+          }
+        }
+      }
+    },
+    "Airlines do their own line maintenance where their aircraft already overnight. Build a station at a hub — or anywhere %lld+ of your routes touch — and A checks run overnight instead of costing a day.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fluggesellschaften warten selbst dort, wo ihre Flugzeuge ohnehin über Nacht stehen. Baue eine Station an einem Drehkreuz — oder überall dort, wo %lld+ deiner Routen anliegen — und A-Checks laufen über Nacht, statt einen Tag zu kosten."
           }
         }
       }
@@ -2212,6 +2272,16 @@
         }
       }
     },
+    "Build a base": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basis bauen"
+          }
+        }
+      }
+    },
     "Build a training center": {
       "localizations": {
         "de": {
@@ -2758,6 +2828,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Durchgehende Abdeckung"
+          }
+        }
+      }
+    },
+    "Contract MRO": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertrags-MRO"
+          }
+        }
+      }
+    },
+    "Contract MRO + %lld of your own": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertrags-MRO + %lld eigene"
           }
         }
       }
@@ -3612,6 +3702,16 @@
         }
       }
     },
+    "Every due A check asks first. Expect one alert per aircraft, every few sim-days.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder fällige A-Check fragt zuerst nach. Rechne mit einer Meldung pro Flugzeug, alle paar Sim-Tage."
+          }
+        }
+      }
+    },
     "Excellent": {
       "localizations": {
         "de": {
@@ -3828,6 +3928,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gebühren"
+          }
+        }
+      }
+    },
+    "Fees saved": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gebühren gespart"
           }
         }
       }
@@ -4142,6 +4252,26 @@
         }
       }
     },
+    "Hangar base": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hangar-Basis"
+          }
+        }
+      }
+    },
+    "Hangar slot": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hangarplatz"
+          }
+        }
+      }
+    },
     "Hedge active · %lld days left": {
       "localizations": {
         "de": {
@@ -4318,6 +4448,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Im Einsatz"
+          }
+        }
+      }
+    },
+    "In the shop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Werkstatt"
           }
         }
       }
@@ -4572,6 +4712,16 @@
         }
       }
     },
+    "Line station": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Line-Station"
+          }
+        }
+      }
+    },
     "List %@ · raise %@": {
       "localizations": {
         "de": {
@@ -4723,6 +4873,16 @@
         }
       }
     },
+    "MRO slot in ~%lldd · still flying": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MRO-Platz in ~%lld T · fliegt weiter"
+          }
+        }
+      }
+    },
     "Maintenance": {
       "localizations": {
         "de": {
@@ -4749,6 +4909,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wartung & Crew"
+          }
+        }
+      }
+    },
+    "Maintenance bases": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wartungsbasen"
           }
         }
       }
@@ -5914,6 +6084,16 @@
         }
       }
     },
+    "Outsourced: +%@ on every check, and heavy checks wait up to %lld days for a hangar slot. Your own base removes both.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgelagert: +%@ auf jeden Check, und schwere Checks warten bis zu %lld Tage auf einen Hangarplatz. Eine eigene Basis beseitigt beides."
+          }
+        }
+      }
+    },
     "Overdue surcharge": {
       "localizations": {
         "de": {
@@ -6120,6 +6300,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Platzhalter · %@"
+          }
+        }
+      }
+    },
+    "Policy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Richtlinie"
           }
         }
       }
@@ -6734,6 +6924,16 @@
         }
       }
     },
+    "Routine A checks are done at the gate and logged in Ops — no alerts. C and D checks still ask.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Routine-A-Checks werden am Gate erledigt und im Betrieb protokolliert — keine Meldungen. C- und D-Checks fragen weiterhin nach."
+          }
+        }
+      }
+    },
     "Running costs to date": {
       "localizations": {
         "de": {
@@ -6995,12 +7195,42 @@
         }
       }
     },
+    "Serves %lld aircraft · %lld of %lld hangar slots free": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versorgt %lld Flugzeuge · %lld von %lld Hangarplätzen frei"
+          }
+        }
+      }
+    },
+    "Serves %lld aircraft · A checks overnight": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versorgt %lld Flugzeuge · A-Checks über Nacht"
+          }
+        }
+      }
+    },
     "Service": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Warten"
+          }
+        }
+      }
+    },
+    "Service A checks automatically": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A-Checks automatisch durchführen"
           }
         }
       }
@@ -7031,6 +7261,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Warten · %@"
+          }
+        }
+      }
+    },
+    "Serviced by": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gewartet von"
           }
         }
       }
@@ -7887,6 +8127,16 @@
         }
       }
     },
+    "Time returned": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeit zurückgewonnen"
+          }
+        }
+      }
+    },
     "Total": {
       "localizations": {
         "de": {
@@ -8277,6 +8527,16 @@
         }
       }
     },
+    "Widebody hangar": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Großraum-Hangar"
+          }
+        }
+      }
+    },
     "YOUR SUBSIDIARY": {
       "localizations": {
         "de": {
@@ -8373,6 +8633,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Das Kürzel deiner Airline an der Börse — bis zu 4 Buchstaben."
+          }
+        }
+      }
+    },
+    "Your bases charge %@ less than list and skip the slot queue. Anything they can't take still goes to the MRO.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Basen berechnen %@ weniger als Listenpreis und überspringen die Warteliste. Was sie nicht übernehmen können, geht weiter an die MRO."
           }
         }
       }
@@ -8577,6 +8847,16 @@
         }
       }
     },
+    "contract MRO (+%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertrags-MRO (+%@)"
+          }
+        }
+      }
+    },
     "crew recurrent training is due": {
       "localizations": {
         "de": {
@@ -8687,6 +8967,16 @@
         }
       }
     },
+    "in ~%lld days — it keeps flying until then": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in ~%lld Tagen — bis dahin fliegt es weiter"
+          }
+        }
+      }
+    },
     "in ~%lldd": {
       "localizations": {
         "de": {
@@ -8743,6 +9033,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "außer Reichweite (max. %@ nm)"
+          }
+        }
+      }
+    },
+    "overnight — no legs lost": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "über Nacht — kein Flug entfällt"
           }
         }
       }
@@ -8857,12 +9157,32 @@
         }
       }
     },
+    "your %@ base": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "deine Basis %@"
+          }
+        }
+      }
+    },
     "your airline": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "deine Airline"
+          }
+        }
+      }
+    },
+    "your hub": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dein Drehkreuz"
           }
         }
       }
@@ -8943,6 +9263,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "· %lld in der Werft"
+          }
+        }
+      }
+    },
+    "· %lld in shop · %lld booked": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld in der Werkstatt · %lld eingeplant"
           }
         }
       }

@@ -35,6 +35,13 @@ func main() {
         return n < limit
     }
     func tick(_ sim: Simulation, _ n: Int) { for _ in 0..<n { sim.advanceTick() } }
+    /// Tick until a condition holds (or give up). The generic sibling of
+    /// `tickUntilCrewCard`, for tests that wait on a different card kind.
+    func tickUntil(_ sim: Simulation, limit: Int = 40_000, _ cond: (Simulation) -> Bool) -> Bool {
+        var n = 0
+        while n < limit && !cond(sim) { sim.advanceTick(); n += 1 }
+        return n < limit
+    }
 
     // ── 1. Speed restore: slow on the card, restore on clear ────────────────────
     do {
@@ -71,12 +78,26 @@ func main() {
     // ── 3. A card that PRE-DATES the slow doesn't hold the speed hostage ─────────
     do {
         let sim = newSim()
-        guard let a = buy(sim, "A320"), let b = buy(sim, "A320"),
+        // ⚠️ The two aircraft must be in DIFFERENT CREW FAMILIES. Both were A320s,
+        // and since the crew-training pipeline made a bundled crew line-ready on
+        // arrival, buying two A320s put TWO ready crews in one pool — so the single
+        // routed aircraft could always rotate onto the spare crew and the shortage
+        // this test needs never happened. (That silently turned 4 checks red at
+        // HEAD; the failures pre-date the maintenance work.) Separate families give
+        // each aircraft its own pool, so neither can bail the other out.
+        guard let a = buy(sim, "A320"), let b = buy(sim, "B737800"),
               let den = sim.airport("DEN"), let ord = sim.airport("ORD"), let sea = sim.airport("SEA"), let sfo = sim.airport("SFO")
         else { check(false, "setup 3"); printResult(); return }
         sim.requestSpeed(1)
         _ = sim.openRoute(from: den, to: ord, using: a)
-        check(tickUntilCrewCard(sim, tail: a.tail), "3: first card (at 1×, no auto-slow)")
+        // The OLDER card must be one that does NOT heal itself while we wait for the
+        // newer one, or the test races its own setup: a CREW hold clears the moment
+        // that crew finishes its 600-tick rest, which is inside the window it takes
+        // the second aircraft to run its own crew down. An AOG card sits until it is
+        // answered, which is what "a card that pre-dates the slow" needs to mean.
+        a.maint = true
+        check(tickUntil(sim) { $0.decisionQueue.contains { $0.kind == .aog && $0.aircraft?.tail == a.tail } },
+              "3: first card (at 1×, no auto-slow)")
         check(sim.autoSlowRestoreSpeed == nil, "3: no restore intent at 1×")
         _ = sim.openRoute(from: sea, to: sfo, using: b)
         sim.requestSpeed(25)
@@ -84,7 +105,7 @@ func main() {
         check(sim.speed == 1 && sim.autoSlowRestoreSpeed == 25, "3: slowed by the second card")
         // Random offer cards (slot buyback / airport recruitment) can arrive during the
         // 1× stretch — they PRE-DATE the slow, which is exactly the case under test.
-        check(sim.decisionQueue.count >= 2, "3: both crew cards pending (got \(sim.decisionQueue.count))")
+        check(sim.decisionQueue.count >= 2, "3: both cards pending (got \(sim.decisionQueue.count))")
         check(sim.decisionQueue.contains(where: { $0.kind == .crew && $0.aircraft?.tail == b.tail }), "3: the second crew card is the pending one")
         if let d = sim.decisionQueue.first(where: { $0.kind == .crew && $0.aircraft?.tail == b.tail }) { sim.resolveCrewHire(d) }
         tick(sim, 3)

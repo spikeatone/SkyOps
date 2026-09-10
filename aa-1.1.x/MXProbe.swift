@@ -69,6 +69,13 @@ func main() {
         for _ in 0..<runs {
             let sim = Simulation(); sim.configure(viewport: CGSize(width: 400, height: 800))
             sim.nameAirline("Defer Air", tailCode: "DF"); makeFleet(sim)
+            // ⚠️ TURN THE AUTO-A POLICY OFF, or this stops being a DEFERRED arm at all.
+            // With it on (the default since the maintenance-automation work) every A
+            // check is serviced at the gate without a card, so the "never service"
+            // player quietly gets on-time A maintenance for free and only defers C/D —
+            // which made DEFERRED beat SERVICED, inverting this probe's central finding.
+            // The arm has to mean what it says.
+            sim.mxAutoServiceAChecks = false
             var prevMaint = false
             for _ in 0..<(720 * 1440) {
                 sim.advanceTick()

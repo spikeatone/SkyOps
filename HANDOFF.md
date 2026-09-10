@@ -196,7 +196,44 @@ the map stayed smooth with the traffic slider at 150 background aircraft.
   but for the 2 known DEBUG-only livery strings — run it against the DerivedData you actually built
   into.
 
-**► ⏭️ NEXT SESSION — issue 4: MX + TRAINING AUTOMATION AT SCALE.** The designer's words: *"For my
+**► ⭐⭐ MAINTENANCE AUTOMATION + THE MAINTENANCE NETWORK — BUILT 9 Sep, on `main`, NOT in a build.**
+This is issue 4, the designer's "maintenance eats a third of my time at 5×". Full detail in CLAUDE.md
+"Decided — Maintenance automation & the maintenance network".
+**The headline is a measurement: a 60-aircraft fleet over 180 sim-days pushed 243 MX cards and 100%
+of them were A checks. It now pushes 0, with flights unchanged.** A checks are serviced at the gate
+with no card and one daily Ops roll-up (policy toggle, default ON, on FLEET ▸ MAINTENANCE); C and D
+still ask, because they are real planning events and they are rare. Alongside it: the contract MRO
+is now the default provider at +25% with a 0–7-day hangar-slot BOOKING the aircraft keeps flying
+through (charged once, exempt from the card and from force-grounding), and you can build your own
+**line stations ($4M) and hangar bases ($18M/$45M)** at a hub or any ≥3-route airport — −30% cost,
+−25% downtime, no slot queue, **A checks overnight with zero lost legs**, 2-aircraft C/D capacity
+with MRO overflow, and a per-base payback ledger that books fees saved AND flying days returned.
+`totalMXBaseSpend` is a new cash-invariant term.
+⚠️ **The cycles→days bug is fixed**: four sites converted at a hardcoded 2 while the engine flies
+~3.52, so every maintenance DATE was ~76% too far out — now one derived constant. It was not only
+cosmetic; `mxDaysPastDue` feeds the C/D calendar grace, so a "25-day" grace really ran ~44 days.
+⚠️ **ONE DESIGNER CALL OPEN:** the balance A/B has the HANGAR passing the gate exactly (−$8.0M at 6
+aircraft, +$22.7M at 20) but the LINE STATION gating on NETWORK SHAPE rather than fleet size — a
+scattered network never pays one back, a concentrated one pays back from ~4 served aircraft, so it
+is an unlock rather than a dilemma. Shipped at the confirmed $4M rather than retuned silently; one
+constant fixes it if wanted. Table in `MX_BASES_SCOPE.md` §7.
+⚠️ **Two silently-wrong things found in passing:** 15 German keys were DEAD (written with a
+different escape from their call sites, so they never matched — German players saw English), and
+`OpsTweaksVerify` test 3 had been red at HEAD (39/43) while the handoff recorded 43/43, because the
+crew-training pipeline invalidated its setup. Both fixed. **A recorded pass is not a pass.**
+Verified: MXBaseVerify 86/86 · MXBaseABProbe 7/7 · MXCoverage 82/82 · RoundTrip 13/13 · SaveCompat
+12/12 · AcquisitionMX 31/31 · OpsTweaks 43/43 · soak · Debug + Release builds · German clean · and
+driven live on the iPad sim via the committed `-devScenario mxbase`.
+
+**► ⏭️ WHAT'S LEFT of issue 4 — TRAINING automation.** The MX half is done (above). The designer's
+report also said *"Same with training"*, and the throughput bug behind it is still open and still
+one line: the auto-recurrent scheduler filters `status == .available`, so it only ever sees crews
+idle at that instant — a crew flying when its currency window closes is never scheduled and LAPSES
+instead of training. That both starves the Training Centre's payback (32% capture) and makes crews
+lapse more than intended in every game, bay or no bay. Fix is to queue on-duty/resting crews for
+their next release; it is a designer call, not taken unilaterally. See CLAUDE.md's training section.
+
+**► (historical framing of issue 4, kept for the quotes) MX + TRAINING AUTOMATION AT SCALE.** The designer's words: *"For my
 200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and near all-time at anything
 faster. This really needs to be automated via maintenance bases or something as it's very tedious.
 Same with training."* Half of it is already addressed — the auto-slow exemption stopped MX pinning

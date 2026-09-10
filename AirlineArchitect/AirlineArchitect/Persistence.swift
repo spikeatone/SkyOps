@@ -99,6 +99,13 @@ struct GameSnapshot: Codable {
     /// The player's training center (facility, sim bays, payback ledger); nil = none.
     var trainingCenter: TrainingCenter? = nil
     var totalTrainingCenterSpend: Int? = nil
+    /// The player's maintenance bases (line stations / hangars), their build spend,
+    /// and the auto-A-check policy. All nil in pre-base saves — the policy then
+    /// defaults ON, which is the intended behaviour for an existing airline too:
+    /// the card volume was the complaint, so a returning player gets the fix.
+    var mxBases: [String: MaintenanceBase]? = nil
+    var totalMXBaseSpend: Int? = nil
+    var mxAutoServiceAChecks: Bool? = nil
     // Per-hub payback ledgers (nil in pre-ledger saves; backfilled on restore).
     var hubLedgers: [String: Simulation.HubLedger]? = nil
 
@@ -158,6 +165,12 @@ struct AircraftSave: Codable {
     // MX temporary-substitution coverage (a covered C/D check). Optional/back-compat.
     var mxReclaimRouteId: Int? = nil
     var coveringForTail: String? = nil
+    // Maintenance network (nil in pre-base saves): which of the player's own bases
+    // is doing the current shop visit (it holds a finite hangar slot), and a booked
+    // contract-MRO slot the aircraft is still flying toward.
+    var mxShopBaseCode: String? = nil
+    var mxBookedKind: Int? = nil
+    var mxBookedStartTick: Int? = nil
     var sellOfferDismissed: Bool
     var isLeased: Bool
     var leaseAccrued: Double
@@ -368,6 +381,9 @@ extension GameSnapshot {
         totalHubLabor = c.decodeSafeOpt(Int.self, .totalHubLabor)
         totalClubRent = c.decodeSafeOpt(Int.self, .totalClubRent)
         trainingCenter = c.decodeSafeOpt(TrainingCenter.self, .trainingCenter)
+        mxBases = c.decodeSafeOpt([String: MaintenanceBase].self, .mxBases)
+        totalMXBaseSpend = c.decodeSafeOpt(Int.self, .totalMXBaseSpend)
+        mxAutoServiceAChecks = c.decodeSafeOpt(Bool.self, .mxAutoServiceAChecks)
         totalTrainingCenterSpend = c.decodeSafeOpt(Int.self, .totalTrainingCenterSpend)
         hubLedgers = c.decodeSafeOpt([String: Simulation.HubLedger].self, .hubLedgers)
         fuelHedgeExpiryTick = c.decodeSafeOpt(Int.self, .fuelHedgeExpiryTick)
@@ -418,6 +434,9 @@ extension AircraftSave {
         mxStartTick = c.decodeSafeOpt(Int.self, .mxStartTick)
         mxReclaimRouteId = c.decodeSafeOpt(Int.self, .mxReclaimRouteId)
         coveringForTail = c.decodeSafeOpt(String.self, .coveringForTail)
+        mxShopBaseCode = c.decodeSafeOpt(String.self, .mxShopBaseCode)
+        mxBookedKind = c.decodeSafeOpt(Int.self, .mxBookedKind)
+        mxBookedStartTick = c.decodeSafeOpt(Int.self, .mxBookedStartTick)
         sellOfferDismissed = c.decodeSafe(.sellOfferDismissed, default: false)
         isLeased = c.decodeSafe(.isLeased, default: false)
         leaseAccrued = c.decodeSafe(.leaseAccrued, default: 0)

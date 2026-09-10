@@ -5860,6 +5860,110 @@ Four gameplay issues the designer hit in one acquisition playthrough. Three fixe
   button that scrolls to the first family that didn't fit in the top four (ScrollViewReader +
   per-family `.id`).
 
+## Decided — Maintenance automation & the maintenance network (9 Sep 2026; on `main`, unreleased)
+
+The rest of `aa-1.1.x/MX_BASES_SCOPE.md` (phases 1 and 2 — §3.4's placement shipped in 1.8). This is
+the answer to the player report that maintenance ate a third of their time at 5× and nearly all of
+it faster. Moving MX to Fleet ▸ Maintenance cut the SCREEN REAL ESTATE; this cuts the CARD VOLUME,
+which is what they actually asked for.
+
+- **⚠️ AUTO A CHECKS, DEFAULT ON — and the measurement is the whole argument.** A 60-aircraft fleet
+  over 180 sim-days pushed **243 MX cards, and 100% of them were A checks** (`MXVolume` probe). A
+  checks recur every 150 cycles ≈ 43 sim-days, so a 180-plane fleet is due one every few sim-HOURS,
+  and there is no decision in them — nobody defers an A check. With the policy on, a due A check is
+  serviced at the gate and the whole day is rolled into ONE Ops line. Measured after:
+  **243 → 0 cards, with flights unchanged** (35,895 → 35,777, inside noise) — the work still
+  happens, it just stops asking. C and D still push cards: they are real planning events with real
+  downtime and the coverage flow, and they are RARE, so the alert load collapses to the checks that
+  deserve a look. Toggle on FLEET ▸ MAINTENANCE; OFF restores the per-aircraft card.
+  **`tickAutoAChecks` is guarded to ONCE PER SIM-DAY** — it walks the fleet asking each aircraft for
+  its most-urgent check, and a per-tick O(fleet) scan on the main-thread tick loop is the exact
+  shape of the 1.7 hang. **A pre-base save restores with the policy ON**, deliberately: the card
+  volume is what an existing airline was complaining about.
+- **CONTRACT MRO is the default provider: +25% on every check, and a 0–7-day hangar-slot wait on
+  C/D.** The wait is a BOOKING, not a shop state — the aircraft keeps flying and goes in on the
+  date, the fee is charged once at booking (so shop entry must not charge again), and a booked
+  aircraft is exempt from the MX card AND from force-grounding. Punishing a player for the hangar
+  queue after they did the right thing would be the obvious trap. `mxSlotWaitDays` is DETERMINISTIC
+  per aircraft+check so the quote a player reads is the quote they get.
+- **YOUR OWN BASES remove both.** Two tiers at an operating hub or any airport with ≥3 of your
+  routes: a **line station** ($4M + $60k/mo, A checks only) and a **hangar base** ($18M narrowbody /
+  $45M widebody-capable, + $250k/mo, adds C/D). Base work is **−30% cost, −25% downtime, no slot
+  wait**, and **an A check at a base is OVERNIGHT — zero lost legs**, the realism the feedback
+  described. A hangar line holds **2 aircraft in C/D at once**; past that the work overflows to the
+  MRO at its premium and wait — an under-built network costs money, never dead-ends.
+  **NETWORK COVERAGE is the strategic lever**: a routed aircraft uses a base only if its ROTATION
+  touches that airport (that is where it overnights), so a hub-and-spoke network gets near-total
+  coverage from one base and a scattered one does not.
+  `mxBaseCovering` picks off a SORTED list — Dictionary iteration order is not stable across
+  instances, and picking a provider off an unsorted sequence would make the same save behave
+  differently on reload (the competitor-profile determinism bug, which cost a session once).
+- **`totalMXBaseSpend` is a NEW cash-invariant capital term.** Base opex and every check fee keep
+  flowing through `totalMaintenanceCheckSpend`, so only the build needed its own line. Any future
+  harness must include it.
+- **Per-base payback ledger** (`MaintenanceBase.MXBaseLedger`, snapshots capped at 120 — the
+  unbounded-history save-crash lesson): fees saved + **flying days returned**, valued at what the
+  aircraft actually earns per day, so a grounded, spare or loss-making aircraft books nothing. Same
+  honesty property as the Training Centre's crew-time value, and the same reason it exists — the fee
+  saving alone does not explain why an airline builds a hangar.
+- **⚠️ THE CYCLES→DAYS BUG — every maintenance DATE the player saw was ~76% too far out.** Four
+  sites converted cycles to sim-days at a hardcoded `2` while the engine flies **1440/409 ≈ 3.52**
+  (measured: ~3.3 on a real fleet). Now ONE derived constant, `Simulation.mxCyclesPerSimDay`, off
+  `legCycleTicks`, so it follows the flight cycle instead of drifting. **This was not only cosmetic**
+  — `mxDaysPastDue` feeds the C/D calendar grace, so a "25-day" grace really ran ~44 days; it now
+  means what it says. `MXCoverageVerify` had the SAME hardcoded `2` in its own test setup and went
+  red — the harness was asserting behaviour derived from the same bad constant, so it now derives it
+  too (82/82).
+- Verified: **`MXBaseVerify` 86/86** (auto-A on/off, C/D still ask, provider pricing both ways,
+  build cost + invariant, overnight A checks, tier capability, hangar capacity + overflow, network
+  coverage, the slot-wait booking end to end, persistence, a legacy save, and 120 sim-days producing
+  ZERO MX cards) · **`MXBaseABProbe` 7/7** · MXCoverage 82/82 · RoundTrip 13/13 · SaveCompat 12/12 ·
+  AcquisitionMX 31/31 · OpsTweaks 43/43 · soak · Debug AND Release builds · German clean.
+  **Driven live on the iPad sim** (`-devScenario mxbase`, committed): the policy card and both
+  toggle states, the provider line flipping from "Contract MRO" to "Contract MRO + 1 of your own",
+  the bases card with all three tier buttons, a C-check Details view reading "contract MRO (+25%) ·
+  ~7 days · hangar slot in ~2 days — it keeps flying until then", and then the payoff — after one
+  sim-day the list went **3 due → 1 due** (only the C check left), **0 in shop**, and the base
+  ledger read "Fees saved $71k · Time returned $65k · $3.9M to recoup · 2 checks so far".
+
+### The balance gate — the hangar passes as specced, the line station deviates (flagged)
+
+`aa-1.1.x/MXBaseABProbe.swift`, 36 sim-months. **The method is the reusable part: the base's own
+ledger IS the A/B** (each check books contract-minus-base plus the days returned), so there is no
+two-sim comparison for economic events to poison — the trap that invalidated the first acquisition
+run. Full table in `MX_BASES_SCOPE.md` §7.
+
+- **The HANGAR BASE meets the gate exactly**: −$7.99M at 6 aircraft, +$22.74M at 20, +$87.02M at 54.
+  A real fleet-size threshold.
+- **⚠️ THE LINE STATION GATES ON NETWORK SHAPE, NOT FLEET SIZE.** A SCATTERED network never pays one
+  back at any size (−$0.5M…−$0.8M — the strategic pull the spec wanted, arriving on the other axis),
+  but a CONCENTRATED one pays it back from ~4 served aircraft, and you cannot build until 3 routes
+  concentrate at an airport. So it is an unlock, not a dilemma. **Shipped at the designer-confirmed
+  $4M rather than silently retuned**, per the working agreement; the fix, if wanted, is one constant
+  (~$14M puts break-even near 10 aircraft) or reopening §6 decision 2. Value is ~$1.64M per served
+  aircraft per 3 years and about two-thirds of it is the flying DAY an A check no longer costs.
+- ⏭️ **STILL NOT BUILT** (phase 3, optional): selling hangar capacity to other airlines, subsidiary
+  fleets using your bases, engine shop visits.
+
+### Two harness/localization bugs found in passing — both were silently wrong
+
+- **⚠️ 15 GERMAN KEYS WERE DEAD.** Route-label strings in `simLocalizationTables` were written with
+  `\\u{FE0E}` (four backslashes in the file → the literal text `\u{FE0E}`) while the call sites use
+  `\u{FE0E}` (the real U+FE0E character), so the keys never matched and German players saw English
+  for every one. Fixed, and fixing it exposed the second half: two spellings of the SAME string then
+  collided, and **a duplicate key in a Swift dictionary literal is a runtime TRAP** (the compiler
+  warns; nobody reads warnings). `LocCheck` in the scratchpad asserts a German string actually
+  resolves — a `de==en` diff cannot see this class, and neither can `de-findgaps.py`, which only
+  scans the VIEW layer's stringsdata. **Every Sim-layer `L()` string now has German** (21 added, of
+  which 10 pre-dated this session).
+- **`OpsTweaksVerify` test 3 had been silently red at HEAD (39/43, while the handoff recorded
+  43/43).** It bought two A320s to get two crew shortages, but since the crew-training pipeline made
+  a bundled crew line-ready on arrival, two A320s put two ready crews in ONE pool and the shortage
+  never happened. Fixed by giving the two aircraft different crew families, and by making the older
+  card an AOG (a CREW card heals itself when its crew finishes rest — the test was racing its own
+  setup). Genuinely 43/43 now. Same lesson as the last session's silent no-ops: **a recorded pass is
+  not a pass.**
+
 ## Decided — The 1.7 hang fixes (8 Sep 2026; branch `hang-fixes-1.7.1`)
 
 TelemetryDeck reported **`hang.under3s` ×43**, a first-ever **`hang.3to10s` ×1**, and

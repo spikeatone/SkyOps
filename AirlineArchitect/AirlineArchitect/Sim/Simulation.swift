@@ -1599,6 +1599,7 @@ final class Simulation {
             - totalAcquisitionSpend - totalRouteSpend - totalHedgeSpend - totalHubSpend
             - totalAcquisitionPrice - totalDividendsPaid - totalBuybackSpend - totalMarketingSpend
             - totalRepaintSpend - totalMaintenanceCheckSpend - totalTrainingCenterSpend
+            - totalMXBaseSpend
             + totalSaleProceeds + totalOfferIncome + totalLoanProceeds + totalEquityRaised
         return expected - playerBalance
     }
@@ -1641,6 +1642,12 @@ final class Simulation {
         /// program UI, which otherwise needs sim-months of flying to reach.
         /// THROWAWAY: strip before merging the MX branch (like -devScenario park).
         case mx
+        /// A CONCENTRATED network — six routes out of one airport — so FLEET ▸
+        /// MAINTENANCE has a buildable base site, the policy toggle has real work to
+        /// show, and a heavy check can be pushed through the contract MRO's slot
+        /// queue. The `mx` scenario deliberately scatters its routes (it exists for
+        /// the C/D coverage flow), which makes every airport base-ineligible.
+        case mxbase
     }
 
     func devSeed(_ scenario: DevScenario) {
@@ -1727,6 +1734,42 @@ final class Simulation {
             //    → Acquire a replacement / Suspend route" path. Buy a widebody on the
             //    Network tab (or via the Acquire button) to then cover the 787.
             if let a = AircraftType.all.first(where: { $0.id == "A320" }) { _ = buyAircraft(a); _ = buyAircraft(a) }
+            pendingMaintenance = true     // land on FLEET ▸ MAINTENANCE
+            return
+        }
+        if scenario == .mxbase {
+            // Six A320s all flying out of DEN, well crewed, so DEN clears the
+            // base-eligibility bar and the whole maintenance network is live on the
+            // first frame. THROWAWAY.
+            nameAirline("Air Tina", tailCode: "TN")
+            setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "AIR TINA")
+            devInjectCash(3_000_000_000)
+            guard let t = AircraftType.all.first(where: { $0.id == "A320" }) else { return }
+            for code in ["ORD", "SEA", "LAX", "PHX", "MSP", "DTW"] {
+                guard let ac = buyAircraft(t), let o = airport("DEN"), let d = airport(code) else { continue }
+                _ = openRoute(from: o, to: d, using: ac)
+            }
+            for fam in ownedFamilies {
+                let want = Int(Double(ownedCount(family: fam)) * 2.5) + 2
+                while crewCount(family: fam) < want { if hireCrew(family: fam) == nil { break } }
+            }
+            // Stage the fleet across A-check states so the auto-serviced roll-up has
+            // something to do, and put ONE aircraft on a due C check so the contract
+            // MRO's hangar-slot queue is reachable from the Details view.
+            let owned = aircraft.filter { $0.purchased }
+            for (n, ac) in owned.enumerated() {
+                let over = [160, 120, 60, 20, 200, 90][n % 6]
+                ac.cyclesAccrued = max(ac.cyclesAccrued, over + 10)
+                ac.mxA = Aircraft.MXCheck(lastCycle: ac.cyclesAccrued - over, lastTick: tick)
+                ac.mxC = Aircraft.MXCheck(lastCycle: ac.cyclesAccrued, lastTick: tick)
+                ac.mxD = Aircraft.MXCheck(lastCycle: ac.cyclesAccrued, lastTick: tick)
+            }
+            if let ac = owned.last {
+                ac.cyclesAccrued = max(ac.cyclesAccrued, 1300)
+                ac.mxA = Aircraft.MXCheck(lastCycle: ac.cyclesAccrued, lastTick: tick)
+                ac.mxC = Aircraft.MXCheck(lastCycle: ac.cyclesAccrued - 1260, lastTick: tick)
+            }
+            pendingMaintenance = true     // land on FLEET ▸ MAINTENANCE
             return
         }
         if scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer {
@@ -3666,9 +3709,19 @@ final class Simulation {
     // AOG risk (mxOverdueAOGMultiplier, wired into tickAOGOnset).
     //
     // Game-scale intervals (real ratios preserved, compressed — the sim accrues only
-    // ~2 cycles/sim-day; calendar co-trigger surfaces checks on idle aircraft too):
+    // ~3.5 cycles/sim-day; calendar co-trigger surfaces checks on idle aircraft too):
     static let mxACycles = 150,  mxACalendarTicks = 3  * ticksPerMonth   // A: 150 cyc or 3 mo
     static let mxCCycles = 1200, mxCCalendarTicks = 18 * ticksPerMonth   // C: 1200 cyc or 18 mo
+    /// Cycles a CONTINUOUSLY-FLYING aircraft accrues per sim-day. **DERIVED, never
+    /// hand-typed** — one leg = one cycle and a leg is `legCycleTicks` long, so this
+    /// is 1440/409 ≈ 3.52. It used to be a hardcoded `2` at four sites, which made
+    /// every maintenance DATE the player saw ~76% too far out (and, worse, silently
+    /// stretched the C/D calendar grace: a "25-day" grace really ran ~44 days). A
+    /// measured fleet accrues ~3.3/day — a little under the ceiling, since aircraft
+    /// lose time to turnarounds and holds — so this is the right, slightly
+    /// conservative planning rate. If the flight cycle's length ever changes, this
+    /// follows it instead of drifting.
+    static var mxCyclesPerSimDay: Double { 1440.0 / Double(legCycleTicks) }
     /// D interval = lifespanCycles / this (cycles only; the fraction IS the lifecycle clock).
     static let mxDLifespanDivisor = 3
     // Downtime (sim-days) and cost (fraction of purchase price) per check — rising
@@ -3708,7 +3761,7 @@ final class Simulation {
     /// intervals, so 1.5× of THOSE is a huge grace: C ≈ 9 months, D ≈ a decade — which
     /// produced the absurd "D check due now, forced grounding in ~3,660 days" (real bug),
     /// and the same, milder, for C (~265 days). A due heavy check is a real, near-term
-    /// legal obligation. Expressed in days-past-due (cycles-past-due ÷ ~2 cyc/day). C is
+    /// legal obligation. Expressed in days-past-due (cycles-past-due ÷ mxCyclesPerSimDay). C is
     /// a bit tighter than D (it recurs; a stuck C jet shouldn't drag as long as a rare D).
     static let mxCOverdueGraceDays = 25, mxCHardGroundingGraceDays = 60
     static let mxDOverdueGraceDays = 20, mxDHardGroundingGraceDays = 45
@@ -3767,14 +3820,14 @@ final class Simulation {
         return all.map { ($0, mxProgress($0, ac)) }.max { $0.1 < $1.1 }
     }
     func mxIsDue(_ ac: Aircraft) -> Bool { (mxMostUrgent(ac)?.progress ?? 0) >= 1.0 }
-    /// Sim-days a check is PAST its due point, on the cycle axis (~2 cyc/day). ≤0 when
+    /// Sim-days a check is PAST its due point, on the cycle axis. ≤0 when
     /// not yet due. Used for the HEAVY-check (C/D) CALENDAR-based overdue/grounding grace
     /// (their intervals are big, so a cycle-FRACTION band would be months/years away —
     /// see mxC/DOverdueGraceDays). For A the interval is short and the multiple-of-interval
     /// band is the right model, so this is only consulted for C/D.
     func mxDaysPastDue(_ kind: Aircraft.MXKind, _ ac: Aircraft) -> Int {
         let due = mxState(kind, ac).lastCycle + mxCycleInterval(kind, ac)
-        return (ac.cyclesAccrued - due) / 2   // ~2 cycles/sim-day
+        return Int(Double(ac.cyclesAccrued - due) / Simulation.mxCyclesPerSimDay)
     }
     func mxIsOverdue(_ ac: Aircraft) -> Bool {
         guard let u = mxMostUrgent(ac), u.progress >= 1.0 else { return false }
@@ -3810,7 +3863,11 @@ final class Simulation {
                                            case .d: return Simulation.mxDCostRate } }()
         // Overdue → surcharge: servicing on time is cheaper than letting it lapse.
         let surcharge = mxIsOverdue(ac) ? Simulation.mxOverdueCostSurcharge : 1.0
-        return Int((Double(ac.type.purchasePrice) * rate * surcharge).rounded())
+        // …and WHO does the work: your own base is cheaper than the contract MRO.
+        // This lives inside the quoted cost on purpose, so the price the player is
+        // shown is the price they pay.
+        let provider = mxProviderCostMultiplier(ac, kind: kind)
+        return Int((Double(ac.type.purchasePrice) * rate * surcharge * provider).rounded())
     }
     /// The on-time (non-surcharged) base cost, for showing the player what they'd
     /// pay by servicing NOW before it lapses (the "service early to save" signal).
@@ -3827,12 +3884,26 @@ final class Simulation {
     }
 
     /// Owned aircraft with a due (or overdue) check, not already in the shop.
-    var mxDueAircraft: [Aircraft] { aircraft.filter { $0.purchased && !$0.inMXShop && mxIsDue($0) } }
+    /// Owned aircraft with a due (or overdue) check that still NEEDS A DECISION. An
+    /// aircraft already booked into an MRO hangar slot is excluded: it is handled and
+    /// waiting, so counting it would keep a red "N due" chip lit for work the player
+    /// has already paid for.
+    var mxDueAircraft: [Aircraft] {
+        aircraft.filter { $0.purchased && !$0.inMXShop && !$0.awaitingMXSlot && mxIsDue($0) }
+    }
+    /// Owned aircraft flying toward a booked contract-MRO slot.
+    var mxAwaitingSlotCount: Int { aircraft.lazy.filter { $0.purchased && $0.awaitingMXSlot }.count }
+    /// Sim-days until a booked MRO slot opens (nil if not booked).
+    func mxSlotDaysLeft(_ ac: Aircraft) -> Int? {
+        guard let start = ac.mxBookedStartTick else { return nil }
+        return max(0, (start - tick + 1439) / 1440)
+    }
     var mxInShopCount: Int { aircraft.lazy.filter { $0.purchased && $0.inMXShop }.count }
-    /// Sim-days until a check is due on whichever axis is TIGHTER (cycles at ~2/sim-day,
+    /// Sim-days until a check is due on whichever axis is TIGHTER (cycles at
+    /// `mxCyclesPerSimDay`,
     /// or calendar). ≤0 = due; more negative = more overdue.
     func mxDaysUntilDue(_ kind: Aircraft.MXKind, _ ac: Aircraft) -> Int {
-        var days = mxCyclesUntilDue(kind, ac) / 2
+        var days = Int(Double(mxCyclesUntilDue(kind, ac)) / Simulation.mxCyclesPerSimDay)
         if let cal = mxCalendarInterval(kind) {
             days = min(days, (cal - (tick - mxState(kind, ac).lastTick)) / 1440)
         }
@@ -3886,7 +3957,7 @@ final class Simulation {
         // show the tighter axis in its own units
         let cycText = String(localized: "in ~\(cyc) cyc")
         if let cd = calDays {
-            let cycAsDays = cyc / 2   // ~2 cycles/sim-day
+            let cycAsDays = Int(Double(cyc) / Simulation.mxCyclesPerSimDay)
             return (u.kind, cd <= cycAsDays ? String(localized: "in ~\(cd)d") : cycText)
         }
         return (u.kind, cycText)
@@ -3898,11 +3969,27 @@ final class Simulation {
     /// nothing is due. The check that gets serviced is the most-urgent one.
     @discardableResult
     func sendToMX(_ ac: Aircraft) -> Bool {
-        guard ac.purchased, !ac.inMXShop, let urgent = mxMostUrgent(ac), urgent.progress >= 1.0 else { return false }
+        guard ac.purchased, !ac.inMXShop, !ac.awaitingMXSlot,
+              let urgent = mxMostUrgent(ac), urgent.progress >= 1.0 else { return false }
         let kind = urgent.kind
         let cost = mxCheckCost(kind, ac)
         guard playerBalance >= cost else { return false }
-        beginMXCheck(ac, kind: kind, cost: cost)
+        let baseCode = mxBaseCovering(ac, kind: kind)
+        // A contract heavy check waits for a hangar slot. Commit (and pay) now; the
+        // aircraft keeps flying its schedule and goes in on the date.
+        let wait = mxSlotWaitDays(ac, kind: kind)
+        if wait > 0 {
+            playerBalance -= cost
+            totalMaintenanceCheckSpend += cost
+            ac.mxBookedKind = kind
+            ac.mxBookedStartTick = tick + wait * 1440
+            decisionQueue.removeAll { $0.kind == .mxCheck && $0.aircraft === ac }
+            logOps(.disruption, L("%@ booked for %@", ac.tail, kind.label),
+                   L("Contract MRO hangar slot in ~%@ days — it keeps flying until then · %@", wait, dollars(cost)),
+                   airportCode: nil)
+            return true
+        }
+        beginMXCheck(ac, kind: kind, cost: cost, baseCode: baseCode)
         return true
     }
 
@@ -3910,22 +3997,33 @@ final class Simulation {
     /// downtime, log it. Used by both plain `sendToMX` and covered service. The
     /// PARKED-gate rule means an airborne jet finishes its leg before it actually
     /// stops flying (same as repaint).
-    private func beginMXCheck(_ ac: Aircraft, kind: Aircraft.MXKind, cost: Int) {
-        playerBalance -= cost
-        totalMaintenanceCheckSpend += cost
+    /// `charge: false` is for a contract booking whose fee was already taken when the
+    /// slot was reserved; `quiet: true` suppresses the per-aircraft log line for
+    /// auto-serviced A checks, which are rolled up into one daily Ops entry instead.
+    private func beginMXCheck(_ ac: Aircraft, kind: Aircraft.MXKind, cost: Int,
+                              baseCode: String? = nil, charge: Bool = true, quiet: Bool = false) {
+        if charge {
+            playerBalance -= cost
+            totalMaintenanceCheckSpend += cost
+            if let c = baseCode { creditMXBase(c, ac: ac, kind: kind, paid: cost) }
+        }
+        let days = mxDowntime(kind, base: baseCode)
+        ac.mxShopBaseCode = baseCode
         ac.mxCheckKind = kind
         ac.mxStartTick = tick
-        ac.mxUntilTick = tick + mxDowntimeDays(kind) * 1440
+        ac.mxUntilTick = tick + max(0, days) * 1440
+        guard !quiet else { return }
+        let where_ = baseCode.map { L("your %@ base", $0) } ?? L("contract MRO")
         logOps(.disruption, L("%@ scheduled", kind.label),
-               L("%@ in the shop ~%@ days · %@", ac.tail, mxDowntimeDays(kind), dollars(cost)),
-               airportCode: nil)
+               L("%@ in the shop ~%@ days at %@ · %@", ac.tail, days, where_, dollars(cost)),
+               airportCode: baseCode)
     }
 
     // MARK: MX coverage (temporary substitution for long C/D checks)
 
     /// Days until the aircraft would hit the HARD legal window (force-grounding) on
     /// whichever axis (cycles or calendar) is tighter. nil if not applicable (in shop
-    /// / no check). Cycles convert at ~2/sim-day. This is the "you have N days before
+    /// / no check). Cycles convert at `mxCyclesPerSimDay`. This is the "you have N days before
     /// this is grounded for you" warning the Details view shows.
     func mxDaysUntilForcedGrounding(_ ac: Aircraft) -> Int? {
         guard let u = mxMostUrgent(ac) else { return nil }
@@ -3938,7 +4036,7 @@ final class Simulation {
         // A: whichever axis (cycles or calendar) hits 1.5× its interval first.
         let limit = Double(mxCycleInterval(u.kind, ac)) * Simulation.mxHardGroundingMultiple
         let usedCyc = Double(ac.cyclesAccrued - mxState(u.kind, ac).lastCycle)
-        let cycDays = Int(max(0, (limit - usedCyc) / 2.0))   // ~2 cycles/sim-day
+        let cycDays = Int(max(0, (limit - usedCyc) / Simulation.mxCyclesPerSimDay))
         var days = cycDays
         if let cal = mxCalendarInterval(u.kind) {
             let limitTicks = Double(cal) * Simulation.mxHardGroundingMultiple
@@ -4001,7 +4099,10 @@ final class Simulation {
         ac.mxReclaimRouteId = rid
         sub.coveringForTail = ac.tail
         assign(sub, to: r, origin: o, dest: d)
-        beginMXCheck(ac, kind: urgent.kind, cost: cost)
+        // Resolve the provider BEFORE the route moves: `mxBaseServes` reads the
+        // aircraft's rotation, and `mxReclaimRouteId` (set above) keeps that answer
+        // stable now the route is handed to the sub.
+        beginMXCheck(ac, kind: urgent.kind, cost: cost, baseCode: mxBaseCovering(ac, kind: urgent.kind))
         logOps(.structural, L("%@ covering for %@", sub.tail, ac.tail),
                L("%@ ↔\u{FE0E} %@ while %@ is in the shop", r.originCode, r.destCode, ac.tail),
                airportCode: nil)
@@ -4037,14 +4138,18 @@ final class Simulation {
         guard let urgent = mxMostUrgent(ac) else { return }
         let kind = urgent.kind
         let cost = mxCheckCost(kind, ac)
+        let baseCode = mxBaseCovering(ac, kind: kind)
         playerBalance -= cost
         totalMaintenanceCheckSpend += cost
+        if let c = baseCode { creditMXBase(c, ac: ac, kind: kind, paid: cost) }
+        ac.mxShopBaseCode = baseCode
         ac.mxCheckKind = kind
         ac.mxStartTick = tick
-        ac.mxUntilTick = tick + mxDowntimeDays(kind) * 1440
+        let days = mxDowntime(kind, base: baseCode)
+        ac.mxUntilTick = tick + max(0, days) * 1440
         decisionQueue.removeAll { $0.kind == .mxCheck && $0.aircraft === ac }
         logOps(.disruption, L("%@ grounded — %@ overdue", ac.tail, kind.label),
-               L("Mandatory check · ~%@ days · %@", mxDowntimeDays(kind), dollars(cost)),
+               L("Mandatory check · ~%@ days · %@", days, dollars(cost)),
                airportCode: nil)
     }
 
@@ -4056,16 +4161,25 @@ final class Simulation {
         // HARD LEGAL WINDOW: force any wildly-overdue aircraft into the shop NOW. It's
         // un-airworthy — grounded until serviced, and the check is mandatory (charged
         // even into the red, like other forced costs; you can't fly it to raise cash).
-        for ac in aircraft where ac.purchased && !ac.inMXShop && mxPastHardWindow(ac) {
+        // An aircraft AWAITING A BOOKED MRO SLOT is exempt: it has committed to the
+        // check and is waiting on the shop, not deferring. Grounding it for the
+        // hangar queue's delay would punish the player for doing the right thing.
+        for ac in aircraft where ac.purchased && !ac.inMXShop && !ac.awaitingMXSlot && mxPastHardWindow(ac) {
             forceGroundForMX(ac)
         }
-        for ac in aircraft where ac.purchased && !ac.inMXShop && mxIsDue(ac) {
+        for ac in aircraft where ac.purchased && !ac.inMXShop && !ac.awaitingMXSlot && mxIsDue(ac) {
+            // AUTO-A: with the policy on, an A check never becomes a card — it was
+            // (or will be) serviced silently by `tickAutoAChecks`. This is the whole
+            // card-volume fix: A checks were 100% of the measured MX card load.
+            if mxAutoServiceAChecks, mxMostUrgent(ac)?.kind == .a { continue }
             guard !decisionQueue.contains(where: { $0.kind == .mxCheck && $0.aircraft === ac }) else { continue }
             decisionQueue.append(Decision(id: "mx_\(ac.tail)_\(tick)", kind: .mxCheck, aircraft: ac))
         }
-        // clear stale cards for aircraft no longer due (serviced via the OPS section,
-        // or sold) — same pattern as clearDecisionForAircraft.
-        decisionQueue.removeAll { $0.kind == .mxCheck && ($0.aircraft.map { !mxIsDue($0) || $0.inMXShop } ?? true) }
+        // clear stale cards for aircraft no longer due (serviced via the Fleet ▸
+        // Maintenance section, booked into an MRO slot, or sold) — same pattern as
+        // clearDecisionForAircraft.
+        decisionQueue.removeAll { $0.kind == .mxCheck
+            && ($0.aircraft.map { !mxIsDue($0) || $0.inMXShop || $0.awaitingMXSlot } ?? true) }
     }
 
     /// Resolve the MX decision card: SERVICE NOW (send to shop) or KEEP FLYING (defer).
@@ -4078,6 +4192,292 @@ final class Simulation {
         // next daily tick if still due (a persistent nudge — MX is mandatory), and
         // its AOG risk climbs while overdue.
         decisionQueue.removeAll { $0.id == decision.id }
+    }
+
+
+    // MARK: - Maintenance network (auto-A policy · contract MRO · own bases)
+    //
+    // `aa-1.1.x/MX_BASES_SCOPE.md`, phases 1 and 2. Three things that only make sense
+    // together:
+    //
+    //  1. AUTO A CHECKS (the ⅓-of-player-time fix). A checks are the FREQUENT ones —
+    //     150 cycles is ~43 sim-days, so a 180-aircraft fleet is due one every few
+    //     sim-hours — and there is no decision in them: nobody defers an A check.
+    //     Measured before this landed: a 60-aircraft fleet over 180 sim-days pushed
+    //     240 MX cards and **100% of them were A checks**. With the policy ON they
+    //     are serviced at the gate with no card and ONE rolled-up Ops line a day.
+    //     C and D still push cards — they are real planning events with real downtime
+    //     and the coverage flow — and they are rare, so the alert load collapses to
+    //     the checks that deserve a look.
+    //  2. The CONTRACT MRO is the default provider, at a premium and (for heavy
+    //     checks) a hangar-slot wait. That is what makes a base worth building.
+    //  3. Your own BASES remove both. Line stations do A checks OVERNIGHT — zero lost
+    //     legs, the realism the player feedback described. Hangar bases add C/D with
+    //     finite capacity; overflow falls back to the MRO, so an under-built network
+    //     costs money and never dead-ends.
+
+    /// Policy: service due A checks automatically, no card. Default ON (designer
+    /// decision 1). OFF restores the per-aircraft card for a player who wants to
+    /// micro-manage. Persisted.
+    var mxAutoServiceAChecks = true
+
+    /// The third-party MRO's premium over in-house cost. Real MRO labour rates run
+    /// modestly above an airline's fully-loaded cost; the bigger real premium is the
+    /// SLOT (below).
+    static let mxContractPremium = 0.25
+    /// Real hangar slots book months out. Compressed to a 0–7 sim-day wait before a
+    /// heavy check's downtime STARTS — the aircraft keeps flying while it waits, so
+    /// this is a later shop date, not dead time.
+    static let mxContractSlotWaitMaxDays = 7
+    /// Your own base is cheaper than outsourcing (−30% vs the MRO's +25% ≈ 44% less)
+    /// and quicker (−25% downtime), with no slot queue.
+    static let mxBaseCostDiscount = 0.30
+    static let mxBaseDowntimeDiscount = 0.25
+    /// A hangar line holds this many aircraft in a C/D check at once. Capacity is the
+    /// decision lever — past it, work overflows to the MRO at its premium and wait.
+    static let mxHangarCapacity = 2
+    /// An airport needs an operating hub OR this many of your routes to host a base:
+    /// a real outstation is somewhere your aircraft already overnight.
+    static let mxBaseMinRoutes = 3
+
+    static func mxBaseBuildCost(_ tier: MaintenanceBase.Tier) -> Int {
+        switch tier {
+        case .lineStation:  return 4_000_000
+        case .hangarNarrow: return 18_000_000
+        case .hangarWide:   return 45_000_000
+        }
+    }
+    static func mxBaseMonthlyOpex(_ tier: MaintenanceBase.Tier) -> Int {
+        switch tier {
+        case .lineStation:  return 60_000
+        case .hangarNarrow, .hangarWide: return 250_000
+        }
+    }
+    static func mxBaseTierName(_ tier: MaintenanceBase.Tier) -> String {
+        switch tier {
+        case .lineStation:  return String(localized: "Line station")
+        case .hangarNarrow: return String(localized: "Hangar base")
+        case .hangarWide:   return String(localized: "Widebody hangar")
+        }
+    }
+
+    /// The player's maintenance bases, by airport code.
+    private(set) var mxBases: [String: MaintenanceBase] = [:]
+    /// Capital spent on building them — a NEW cash-invariant term. Base OPEX and every
+    /// check fee keep flowing through `totalMaintenanceCheckSpend`, so only the build
+    /// needed its own line.
+    private(set) var totalMXBaseSpend = 0
+    private var nextMXBaseBillTick = 0
+
+    /// Bases in a STABLE order. Dictionary iteration order is not stable across
+    /// instances, and picking a provider off an unsorted sequence would make the same
+    /// save behave differently on reload — the exact bug the competitor-profile work
+    /// caught once already.
+    var mxBaseList: [MaintenanceBase] { mxBases.values.sorted { $0.code < $1.code } }
+
+    /// Can a base be built here? An operating hub, or any airport carrying at least
+    /// `mxBaseMinRoutes` of the player's routes — the designer's "hub or other
+    /// strategic location". One base per airport (upgrade by rebuilding is out of
+    /// scope; pick the tier you need).
+    func mxBaseEligible(_ code: String) -> Bool {
+        mxBases[code] == nil && (hubOperating(code) || routesAt(code) >= Simulation.mxBaseMinRoutes)
+    }
+
+    /// Airports the player could put a base at, busiest-first and bounded — a big
+    /// network makes almost every airport eligible, and an unbounded build list on a
+    /// view that refreshes at the display heartbeat is the churn trap this codebase
+    /// keeps relearning.
+    func mxBaseBuildSites(limit: Int = 4) -> [String] {
+        var seen = Set<String>()
+        var codes: [String] = []
+        for r in playerRoutes { for c in r.stops where !seen.contains(c) { seen.insert(c); codes.append(c) } }
+        return codes.filter { mxBaseEligible($0) }
+            .sorted { a, b in
+                let ra = routesAt(a), rb = routesAt(b)
+                return ra != rb ? ra > rb : a < b
+            }
+            .prefix(limit).map { $0 }
+    }
+
+    @discardableResult
+    func buildMXBase(at code: String, tier: MaintenanceBase.Tier) -> Bool {
+        guard mxBaseEligible(code), airport(code) != nil else { return false }
+        let cost = Simulation.mxBaseBuildCost(tier)
+        guard playerBalance >= cost else { return false }
+        if mxBases.isEmpty { nextMXBaseBillTick = tick + Simulation.ticksPerMonth }
+        playerBalance -= cost
+        totalMXBaseSpend += cost
+        var b = MaintenanceBase(code: code, tier: tier, openedTick: tick)
+        b.ledger.buildSpend = cost
+        mxBases[code] = b
+        logOps(.structural, L("%@ opened at %@", Simulation.mxBaseTierName(tier), code),
+               L("Your own maintenance base — no MRO premium, no slot queue · %@", dollars(cost)),
+               airportCode: code)
+        return true
+    }
+
+    /// Does this base serve this aircraft? A base is where an aircraft OVERNIGHTS, so
+    /// a routed aircraft uses one only if its rotation actually touches that airport —
+    /// the same strategic pull hubs have, and the reason a scattered point-to-point
+    /// network gets less out of one base than a hub-and-spoke one does. An idle spare
+    /// is already parked and has no schedule to fit around, so any base takes it.
+    func mxBaseServes(_ code: String, _ ac: Aircraft) -> Bool {
+        guard let rid = ac.assignedRouteId ?? ac.mxReclaimRouteId else { return true }
+        guard let r = playerRoutes.first(where: { $0.id == rid }) else { return true }
+        return r.stops.contains(code)
+    }
+
+    /// Owned aircraft occupying a hangar's C/D capacity right now.
+    func mxHangarInUse(_ code: String) -> Int {
+        aircraft.lazy.filter { $0.purchased && $0.inMXShop && $0.mxShopBaseCode == code
+                               && ($0.mxCheckKind == .c || $0.mxCheckKind == .d) }.count
+    }
+    func mxHangarFreeSlots(_ code: String) -> Int {
+        guard let b = mxBases[code], b.tier.handlesHeavyChecks else { return 0 }
+        return max(0, Simulation.mxHangarCapacity - mxHangarInUse(code))
+    }
+
+    /// Which of the player's bases would take this check — nil = the contract MRO.
+    /// A checks need only a station on the rotation; heavy checks additionally need a
+    /// hangar that physically fits the type AND has a free slot (past capacity the
+    /// work overflows to the MRO: a wallet cost, never a dead end).
+    func mxBaseCovering(_ ac: Aircraft, kind: Aircraft.MXKind) -> String? {
+        guard !mxBases.isEmpty else { return nil }
+        let usable = mxBaseList.filter {
+            $0.tier.canHandle(ac.type.bodyType, kind: kind) && mxBaseServes($0.code, ac)
+        }
+        if kind == .a { return usable.first?.code }
+        return usable.first { mxHangarFreeSlots($0.code) > 0 }?.code
+    }
+    /// True when this check will go to the contract MRO.
+    func mxUsesContract(_ ac: Aircraft, kind: Aircraft.MXKind) -> Bool {
+        mxBaseCovering(ac, kind: kind) == nil
+    }
+    /// Provider multiplier on the check fee: your own base is cheaper than in-house
+    /// list, the MRO dearer.
+    func mxProviderCostMultiplier(_ ac: Aircraft, kind: Aircraft.MXKind) -> Double {
+        mxBaseCovering(ac, kind: kind) == nil
+            ? 1.0 + Simulation.mxContractPremium
+            : 1.0 - Simulation.mxBaseCostDiscount
+    }
+    /// Sim-days this aircraft would actually sit out for a check, given who does it.
+    /// An A check at your own base is OVERNIGHT — zero lost legs, which is the whole
+    /// point of a line station (and the realism the player feedback asked for).
+    func mxDowntimeDays(_ kind: Aircraft.MXKind, for ac: Aircraft) -> Int {
+        mxDowntime(kind, base: mxBaseCovering(ac, kind: kind))
+    }
+    /// The downtime rule itself, given an ALREADY-RESOLVED provider. Callers that
+    /// have picked the base pass it in rather than re-querying: `mxBaseCovering`
+    /// reads live hangar occupancy, so asking twice around a state change could
+    /// answer differently and quote one downtime while booking another.
+    private func mxDowntime(_ kind: Aircraft.MXKind, base: String?) -> Int {
+        let days = mxDowntimeDays(kind)
+        guard base != nil else { return days }
+        if kind == .a { return 0 }
+        return max(1, Int((Double(days) * (1.0 - Simulation.mxBaseDowntimeDiscount)).rounded()))
+    }
+    /// Days the MRO makes a heavy check wait for a hangar slot. Deterministic per
+    /// aircraft+check so the quote a player reads is the quote they get (a fresh
+    /// random each time the Details view opened would re-roll under their eyes).
+    func mxSlotWaitDays(_ ac: Aircraft, kind: Aircraft.MXKind) -> Int {
+        guard kind != .a, mxBaseCovering(ac, kind: kind) == nil else { return 0 }
+        // Wrapping arithmetic, so the hash can legitimately be Int.min — and `abs`
+        // TRAPS on Int.min. Reduce through the unsigned bit pattern instead; there is
+        // no value it can't handle.
+        var h = 5381
+        for u in ac.tail.unicodeScalars { h = (h &* 33) &+ Int(u.value) }
+        h = (h &* 33) &+ kind.rawValue &+ (ac.cyclesAccrued / 100)
+        return Int(UInt(bitPattern: h) % UInt(Simulation.mxContractSlotWaitMaxDays + 1))
+    }
+
+    // MARK: Base ledgers (the MX P&L payback line)
+
+    /// Credit the base that did this check with what it saved: the fee the MRO would
+    /// have charged instead, plus the flying days it handed back. Both are recorded
+    /// against spend that is ALREADY deducted and globally tracked, so this adds no
+    /// cash flow and the Finance invariant is untouched.
+    private func creditMXBase(_ code: String, ac: Aircraft, kind: Aircraft.MXKind, paid: Int) {
+        guard var b = mxBases[code] else { return }
+        let contractCost = Int((Double(paid) / (1.0 - Simulation.mxBaseCostDiscount)
+                                * (1.0 + Simulation.mxContractPremium)).rounded())
+        b.ledger.feeSavings += max(0, contractCost - paid)
+        // Days the MRO would have taken minus the days the base took. Valued at what
+        // the aircraft actually earns per flying day, so a grounded, spare or
+        // loss-making aircraft books nothing — you cannot save revenue you were never
+        // going to earn.
+        let daysSaved = max(0, mxDowntimeDays(kind) - mxDowntime(kind, base: code))
+        b.ledger.timeValue += dailyNet(for: ac) * daysSaved
+        b.ledger.checksDone += 1
+        mxBases[code] = b
+    }
+
+    /// Monthly: bill every base's running cost and take a payback snapshot.
+    private func tickMXBaseBilling() {
+        guard !mxBases.isEmpty, tick >= nextMXBaseBillTick else { return }
+        nextMXBaseBillTick = tick + Simulation.ticksPerMonth
+        for code in mxBases.keys.sorted() {
+            guard var b = mxBases[code] else { continue }
+            let opex = Simulation.mxBaseMonthlyOpex(b.tier)
+            playerBalance -= opex
+            totalMaintenanceCheckSpend += opex     // flows through the existing MX line
+            b.ledger.opexPaid += opex
+            b.ledger.monthly.append(MaintenanceBase.MXBaseSnapshot(tick: tick, payback: b.ledger.payback))
+            let over = b.ledger.monthly.count - MaintenanceBase.maxSnapshots
+            if over > 0 { b.ledger.monthly.removeFirst(over) }
+            mxBases[code] = b
+        }
+    }
+
+    // MARK: Contract-MRO bookings (the hangar-slot wait)
+
+    /// Daily: open the shop for any heavy check whose booked MRO slot has arrived.
+    /// The fee was charged at booking, so shop entry must not charge again.
+    private func tickMXBookings() {
+        guard tick % 1440 == 0 else { return }
+        for ac in aircraft where ac.purchased && ac.awaitingMXSlot && !ac.inMXShop {
+            guard let kind = ac.mxBookedKind, let start = ac.mxBookedStartTick, tick >= start else { continue }
+            ac.mxBookedKind = nil; ac.mxBookedStartTick = nil
+            beginMXCheck(ac, kind: kind, cost: 0, baseCode: nil, charge: false)
+        }
+    }
+
+    // MARK: Auto-serviced A checks (the card-volume fix)
+
+    /// Daily: quietly service every due A check, charge it, and roll the whole day up
+    /// into ONE Ops line. No cards — that is the point. An aircraft mid-heavy-check,
+    /// awaiting an MRO slot, or whose most-urgent check is a C or D is left alone.
+    private func tickAutoAChecks() {
+        // ONCE PER SIM-DAY. This walks the whole fleet and asks every aircraft for its
+        // most-urgent check, so running it per-tick would put an O(fleet) scan on the
+        // main-thread tick loop — the exact shape of the 1.7 hang. A checks are never
+        // urgent to the hour, so a daily sweep is the right cadence anyway.
+        guard tick % 1440 == 0, mxAutoServiceAChecks else { return }
+        var serviced = 0, spent = 0, overnight = 0
+        for ac in aircraft where ac.purchased && !ac.inMXShop && !ac.awaitingMXSlot {
+            guard let u = mxMostUrgent(ac), u.kind == .a, u.progress >= 1.0 else { continue }
+            let cost = mxCheckCost(.a, ac)
+            guard playerBalance >= cost else { continue }   // can't afford → it falls to the normal due path
+            let baseCode = mxBaseCovering(ac, kind: .a)
+            if mxDowntimeDays(.a, for: ac) == 0 {
+                // Overnight on the line: never enters the shop, never misses a leg.
+                playerBalance -= cost
+                totalMaintenanceCheckSpend += cost
+                ac.mxA = Aircraft.MXCheck(lastCycle: ac.cyclesAccrued, lastTick: tick)
+                if let c = baseCode { creditMXBase(c, ac: ac, kind: .a, paid: cost) }
+                overnight += 1
+            } else {
+                beginMXCheck(ac, kind: .a, cost: cost, baseCode: baseCode, quiet: true)
+            }
+            decisionQueue.removeAll { $0.kind == .mxCheck && $0.aircraft === ac }
+            serviced += 1; spent += cost
+        }
+        guard serviced > 0 else { return }
+        let detail = overnight == serviced
+            ? L("Serviced overnight at your own base — no legs lost · %@", dollars(spent))
+            : (overnight > 0
+               ? L("%@ overnight at your base, %@ in the shop for a day · %@", overnight, serviced - overnight, dollars(spent))
+               : L("Contract MRO · one day each · %@", dollars(spent)))
+        logOps(.disruption, L("%@ A checks completed", serviced), detail, airportCode: nil)
     }
 
     // MARK: - Crew (per-family pools, FAA Part 117 duty/rest)
@@ -6359,6 +6759,9 @@ final class Simulation {
         s.totalHubLabor = totalHubLabor
         s.totalClubRent = totalClubRent
         s.trainingCenter = trainingCenter
+        s.mxBases = mxBases.isEmpty ? nil : mxBases
+        s.totalMXBaseSpend = totalMXBaseSpend
+        s.mxAutoServiceAChecks = mxAutoServiceAChecks
         s.totalTrainingCenterSpend = totalTrainingCenterSpend
         s.fuelHedgeExpiryTick = fuelHedgeExpiryTick
         s.opsCollapsedSections = opsCollapsedSections.map(\.rawValue).sorted()
@@ -6376,6 +6779,8 @@ final class Simulation {
                          mxCheckKind: ac.mxCheckKind?.rawValue,
                          mxUntilTick: ac.mxUntilTick, mxStartTick: ac.mxStartTick,
                          mxReclaimRouteId: ac.mxReclaimRouteId, coveringForTail: ac.coveringForTail,
+                         mxShopBaseCode: ac.mxShopBaseCode,
+                         mxBookedKind: ac.mxBookedKind?.rawValue, mxBookedStartTick: ac.mxBookedStartTick,
                          sellOfferDismissed: ac.sellOfferDismissed,
                          isLeased: ac.isLeased, leaseAccrued: ac.leaseAccrued, maint: ac.maint,
                          aogAutoClearTick: ac.aogAutoClearTick, crewId: ac.crewId,
@@ -6524,6 +6929,13 @@ final class Simulation {
         totalHubLabor = s.totalHubLabor ?? 0
         totalClubRent = s.totalClubRent ?? 0
         trainingCenter = s.trainingCenter
+        mxBases = s.mxBases ?? [:]
+        totalMXBaseSpend = s.totalMXBaseSpend ?? 0
+        // Pre-policy saves default the auto-A policy ON: the card volume is exactly
+        // what an existing airline was complaining about, so a returning player
+        // should land in the fixed behaviour, not the old one.
+        mxAutoServiceAChecks = s.mxAutoServiceAChecks ?? true
+        if !mxBases.isEmpty { nextMXBaseBillTick = tick + Simulation.ticksPerMonth }
         totalTrainingCenterSpend = s.totalTrainingCenterSpend ?? 0
         nextTrainingBillTick = s.tick + Simulation.ticksPerMonth   // re-seed like the hubs
         // Active fuel hedge (a PAID asset — must survive app close/reopen). Absolute
@@ -6594,6 +7006,11 @@ final class Simulation {
             // MX coverage (a covered C/D check in progress): restore the swap-back links.
             ac.mxReclaimRouteId = a.mxReclaimRouteId
             ac.coveringForTail = a.coveringForTail
+            // Maintenance network: which base holds this aircraft's hangar slot, and
+            // any contract-MRO booking it's still flying toward (fee already paid).
+            ac.mxShopBaseCode = a.mxShopBaseCode
+            ac.mxBookedKind = a.mxBookedKind.flatMap { Aircraft.MXKind(rawValue: $0) }
+            ac.mxBookedStartTick = a.mxBookedStartTick
             rollRevenue(for: ac)
             aircraft.append(ac)
         }
@@ -6647,6 +7064,10 @@ final class Simulation {
         tickCurfews()
         tickCrewPool()
         tickAOGOnset()
+        // Order matters: bookings open the shop for slots that have come due, then
+        // auto-A quietly clears the routine work, and only what's LEFT becomes a card.
+        tickMXBookings()
+        tickAutoAChecks()
         tickMXDue()
         tickEconomicEvents()
         tickWorldEvents()
@@ -6657,6 +7078,7 @@ final class Simulation {
         tickLoanBilling()
         tickStockPrice()
         tickHubBilling()
+        tickMXBaseBilling()
         tickTrainingCenterBilling()
         tickUsedMarketReplenishment()
         tickSolvency()

@@ -84,7 +84,11 @@ func main() {
               let den = sim.airport("DEN"), let ord = sim.airport("ORD") else { check(false, "setup B"); printResult(); return }
         guard let ac = sim.buyAircraft(t) else { check(false, "setup B buy"); printResult(); return }
         _ = sim.openRoute(from: den, to: ord, using: ac)
-        // Force an MX check due right now.
+        // Force an MX check due right now. The AUTO-A POLICY must be off for this
+        // test: with it on (the default) a due A check is serviced silently and never
+        // becomes a card at all — which is the point of that feature, but it would
+        // leave this test with nothing to observe. This test is about auto-SLOW.
+        sim.mxAutoServiceAChecks = false
         ac.mxA = Aircraft.MXCheck(lastCycle: ac.cyclesAccrued - Simulation.mxACycles - 5, lastTick: 0)
         sim.requestSpeed(25)
         var sawMXCard = false, n = 0
