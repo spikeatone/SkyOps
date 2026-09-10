@@ -5935,13 +5935,19 @@ run. Full table in `MX_BASES_SCOPE.md` §7.
 
 - **The HANGAR BASE meets the gate exactly**: −$7.99M at 6 aircraft, +$22.74M at 20, +$87.02M at 54.
   A real fleet-size threshold.
-- **⚠️ THE LINE STATION GATES ON NETWORK SHAPE, NOT FLEET SIZE.** A SCATTERED network never pays one
-  back at any size (−$0.5M…−$0.8M — the strategic pull the spec wanted, arriving on the other axis),
-  but a CONCENTRATED one pays it back from ~4 served aircraft, and you cannot build until 3 routes
-  concentrate at an airport. So it is an unlock, not a dilemma. **Shipped at the designer-confirmed
-  $4M rather than silently retuned**, per the working agreement; the fix, if wanted, is one constant
-  (~$14M puts break-even near 10 aircraft) or reopening §6 decision 2. Value is ~$1.64M per served
-  aircraft per 3 years and about two-thirds of it is the flying DAY an A check no longer costs.
+- **THE LINE STATION GATES ON NETWORK SHAPE, NOT FLEET SIZE — measured, raised, and CONFIRMED BY
+  THE DESIGNER (10 Sep 2026): KEEP THE $4M PRICE. This is now a decided design property, not a
+  deviation to fix.** A SCATTERED network never pays one back at any size (−$0.5M…−$0.8M — the
+  strategic pull the spec wanted, arriving on the other axis), but a CONCENTRATED one pays it back
+  from ~4 served aircraft, and you cannot build until 3 routes concentrate at an airport. So the
+  line station is the cheap ON-RAMP — an unlock that rewards concentrating a network — and the
+  $18M/$45M HANGAR is the real fleet-size decision. Value is ~$1.64M per served aircraft per 3
+  years, about two-thirds of it the flying DAY an A check no longer costs.
+  **Do not "fix" this by raising `mxBaseBuildCost(.lineStation)`, and do not re-flag it as a failed
+  balance gate.** The alternatives were priced and declined: ~$14M would move break-even to ~10
+  aircraft, and reopening §6 decision 2 (all auto-A checks zero-downtime) would gut the station's
+  value entirely. If a future change makes it dominant in some new way, that is a fresh finding —
+  re-measure with `MXBaseABProbe` and raise it again rather than assuming this call still covers it.
 - ⏭️ **STILL NOT BUILT** (phase 3, optional): selling hangar capacity to other airlines, subsidiary
   fleets using your bases, engine shop visits.
 

@@ -179,8 +179,12 @@ func main() {
     //    airport, so the decision it poses is "is my network concentrated enough",
     //    not "am I big enough". A SCATTERED network never pays one back at any size —
     //    which is the strategic pull the spec asked for, arriving on the other axis.
-    //    ⚠️ Consequence to know: a SMALL but concentrated fleet does pay a line
-    //    station back (~1–2 years). See CLAUDE.md — flagged for the designer.
+    //    Consequence to know: a SMALL but concentrated fleet DOES pay a line station
+    //    back (~1–2 years). That was raised with the designer and DECIDED on
+    //    10 Sep 2026 — KEEP the $4M price; the station is the cheap on-ramp and the
+    //    hangar is the real fleet-size decision. So this is an intended property,
+    //    NOT a failing gate: do not "fix" it by raising the build cost. See
+    //    MX_BASES_SCOPE.md §7.
     let small = sizes.min() ?? 6, big = sizes.max() ?? 60
     if let s = lineByFleet[small], let b = lineByFleet[big] {
         check(b > s, "line station: payback improves with fleet size (\(money(s)) → \(money(b)))")

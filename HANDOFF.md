@@ -212,11 +212,14 @@ with MRO overflow, and a per-base payback ledger that books fees saved AND flyin
 ⚠️ **The cycles→days bug is fixed**: four sites converted at a hardcoded 2 while the engine flies
 ~3.52, so every maintenance DATE was ~76% too far out — now one derived constant. It was not only
 cosmetic; `mxDaysPastDue` feeds the C/D calendar grace, so a "25-day" grace really ran ~44 days.
-⚠️ **ONE DESIGNER CALL OPEN:** the balance A/B has the HANGAR passing the gate exactly (−$8.0M at 6
-aircraft, +$22.7M at 20) but the LINE STATION gating on NETWORK SHAPE rather than fleet size — a
-scattered network never pays one back, a concentrated one pays back from ~4 served aircraft, so it
-is an unlock rather than a dilemma. Shipped at the confirmed $4M rather than retuned silently; one
-constant fixes it if wanted. Table in `MX_BASES_SCOPE.md` §7.
+**BALANCE GATE — SETTLED.** The HANGAR passes exactly (−$8.0M at 6 aircraft, +$22.7M at 20). The
+LINE STATION gates on NETWORK SHAPE rather than fleet size — a scattered network never pays one
+back, a concentrated one pays back from ~4 served aircraft — which was raised with the designer and
+**DECIDED 10 Sep 2026: KEEP the $4M price.** That is its intended role: the cheap on-ramp that
+rewards concentrating a network, with the $18M/$45M hangar as the real fleet-size decision. The
+~$14M alternative and reopening §6 decision 2 were both priced and declined. **Don't re-flag it as
+a failed gate** — re-measure only if a later change makes it dominant in a NEW way. Table in
+`MX_BASES_SCOPE.md` §7.
 ⚠️ **Two silently-wrong things found in passing:** 15 German keys were DEAD (written with a
 different escape from their call sites, so they never matched — German players saw English), and
 `OpsTweaksVerify` test 3 had been red at HEAD (39/43) while the handoff recorded 43/43, because the

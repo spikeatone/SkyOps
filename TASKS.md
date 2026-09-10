@@ -72,15 +72,13 @@ in-training"), but the CARD VOLUME itself is untouched.
       (1440/`legCycleTicks` ≈ 3.52). It was NOT only cosmetic: `mxDaysPastDue` feeds the C/D
       calendar grace, so a "25-day" grace really ran ~44 days. `MXCoverageVerify` had the same
       hardcoded 2 in its own setup and now derives it (82/82).
-- [ ] ⚠️ **DESIGNER CALL — the LINE STATION has no fleet-size threshold.** The balance A/B
-      (`MXBaseABProbe`, 36 months) shows the hangar base behaving exactly as specced (−$8.0M at 6
-      aircraft, +$22.7M at 20), but the $4M line station pays back from ~4 SERVED aircraft — and you
-      cannot build one until 3 routes concentrate at an airport, so it is effectively an unlock
-      rather than a decision. A scattered network never pays one back at any size, which IS the
-      strategic pull the spec wanted, just on a different axis. Shipped at the confirmed $4M rather
-      than retuned silently. Options: leave it (it is the cheap on-ramp; the hangar is the real
-      decision) · raise the build to ~$14M for a ~10-aircraft break-even · or reopen §6 decision 2
-      and make ALL auto-A checks zero-downtime, which removes most of its value. Table in
+- [x] **LINE STATION PRICE — DECIDED 10 Sep 2026: KEEP $4M.** The balance A/B raised that the $4M
+      line station gates on NETWORK SHAPE rather than fleet size (a scattered network never pays one
+      back; a concentrated one does from ~4 served aircraft, and you can't build until 3 routes
+      concentrate). Designer's call: keep it — the line station is the cheap on-ramp, the $18M/$45M
+      hangar is the real fleet-size decision, and the hangar meets the specced threshold exactly.
+      No code change; $4M is already shipped. **Don't re-flag this as a failed gate** — the ~$14M
+      alternative and reopening §6 decision 2 were both priced and declined. Table in
       `MX_BASES_SCOPE.md` §7.
 - [ ] Phase 3 of `MX_BASES_SCOPE.md` (optional, unbuilt): sell hangar capacity to other airlines,
       subsidiary fleets using your bases, engine shop visits.

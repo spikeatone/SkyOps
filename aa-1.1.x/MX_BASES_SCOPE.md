@@ -106,8 +106,8 @@ premium), and **all MX moves to a new section under the FLEET tab.**
 - **Balance gate (mandatory, the Hubs lesson)**: A/B at 6 / 20 / 60 aircraft must show a base is a
   value-sink for a small fleet and pays back for a big one — a threshold, never dominant.
   **✅ RUN (`aa-1.1.x/MXBaseABProbe.swift`, 36 sim-months, 7/7). Result in §7 — the hangar meets it
-  exactly; the line station gates on NETWORK SHAPE instead of fleet size, which is flagged, not
-  silently accepted.**
+  exactly; the line station gates on NETWORK SHAPE instead of fleet size, which was raised with the
+  designer and DECIDED on 10 Sep 2026: keep the $4M price.**
 
 ### 3.4 FLEET ▸ MAINTENANCE — the new home (Phase 1) ✅ SHIPPED in 1.8.0 (9 Sep 2026)
 
@@ -202,19 +202,22 @@ acquisition run and the first FareVerify attempt.
 
 - **The HANGAR BASE meets the gate exactly as written**: a value-sink at 6 aircraft, a payback at
   20, better at 54. $18M of hangar is a real fleet-size threshold.
-- **⚠️ THE LINE STATION GATES ON NETWORK SHAPE, NOT FLEET SIZE — a real deviation, flagged for the
-  designer rather than fixed unilaterally, because §6 decision 3 confirmed the $4M price.** A
-  SCATTERED network never pays one back at any size (the strategic pull the spec asked for, arriving
-  on the other axis), but a CONCENTRATED one pays it back from about **4 served aircraft** — and the
+- **THE LINE STATION GATES ON NETWORK SHAPE, NOT FLEET SIZE — ✅ RAISED AND DECIDED (10 Sep 2026):
+  KEEP THE $4M PRICE. This is a decided design property now, not an open deviation.** A SCATTERED
+  network never pays one back at any size (the strategic pull the spec asked for, arriving on the
+  other axis), but a CONCENTRATED one pays it back from about **4 served aircraft** — and the
   eligibility bar is 3 routes at one airport, so the moment you *can* build it, it is close to
-  break-even and profitable thereafter. It is an unlock, not a dilemma.
+  break-even and profitable thereafter. It is an unlock, not a dilemma — **which is the intended
+  role**: the line station is the cheap ON-RAMP that rewards concentrating a network, and the
+  $18M/$45M hangar is the real fleet-size decision (and meets the gate exactly).
 - **Why**: value is ≈ **$1.64M per served aircraft per 3 years**, and roughly two-thirds of that is
   the flying DAY an A check no longer costs (decision 2: overnight at a base, one day elsewhere).
   The fee saving alone would not repay it.
-- **If the designer wants a strict size threshold on the line station too, it is ONE constant.**
-  Raising `mxBaseBuildCost(.lineStation)` from $4M to ~$14M puts break-even near 10 served aircraft
-  — but $4M is the realistic price of a crew, a van and a small facility, so the honest alternative
-  is decision 2: make ALL auto-A checks zero-downtime (the option §6 offered and the designer
-  declined), which removes most of the line station's value at a stroke.
+- **Both alternatives were priced and DECLINED.** Raising `mxBaseBuildCost(.lineStation)` from $4M
+  to ~$14M would put break-even near 10 served aircraft — but $4M is the realistic price of a crew,
+  a van and a small facility. The other option was reopening §6 decision 2 (make ALL auto-A checks
+  zero-downtime), which removes most of the line station's value at a stroke. Neither was taken.
+  **Don't re-open this from the table alone** — if a later change makes the station dominant in some
+  NEW way, re-measure with `MXBaseABProbe` and raise it as a fresh finding.
 - Do NOT tune off one run. Course volume rides on random events and crew availability; read the
   table as ranges.
