@@ -87,9 +87,10 @@ question was the game's fault. Detail in CLAUDE.md "Decided — Integration is V
       ⚠️ **And the TOTAL is not evidence either:** section A emits 2 checks per inherited aircraft and
       the carrier varies with `competitorSeed`, so the same code prints 42/53/56/63. **Check the
       roll-call, not the count and not the ✅.**
-- [ ] **STILL OWED: send the customer reply.** Draft written, not sent — awaiting the designer's go.
-      Should say integration finishes on its own, give both speed figures, and mention that the next
-      build shows a live countdown in Ops.
+- [x] **Customer replied to — SENT by the designer 12 Sep.** Told them integration finishes on its
+      own (18 sim-months; ~32 min at 100×, ~2.2 h at 25×), that nothing was stuck, and that the next
+      build adds the live Ops countdown + the early seniority settlement. **So the fix now has a
+      waiting customer: ship it in the next build rather than letting it sit on `main`.**
 
 ### ⏭️ NEXT SESSION — MX + TRAINING AUTOMATION AT SCALE (designer issue #4, deferred on purpose)
 Designer, 8 Sep: *"For my 200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and

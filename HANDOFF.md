@@ -59,9 +59,11 @@ inherited aircraft and the carrier varies with `competitorSeed`, so the same cod
 not the ✅.** **DRIVEN LIVE on the iPad Air 13" sim** (`-devScenario integ`, committed): tapping
 Settle now · $4.8M moved cash $19.605B → $19.600B, returned all 5 sidelined crews, dropped Needs
 Attention 9 → 1, and correctly left the integration itself running at 18 mo left.
-⚠️ **STILL OWED: the reply to the customer.** Draft written; not sent — the designer hasn't said to
-send it. It should say integration finishes on its own, give the two speed figures, and mention that
-the next build shows a live countdown in Ops.
+✅ **CUSTOMER REPLIED TO — the designer sent it 12 Sep**: integration finishes on its own (18
+sim-months; ~32 min at 100×, ~2.2 h at 25×), nothing was stuck, and the next build adds the live Ops
+countdown plus the early seniority settlement. ⚠️ **That makes this a PROMISE, not just a fix** — a
+paying customer has been told the countdown is coming, so this should ride the next build (58+)
+rather than sitting on `main`.
 ⚠️ **A localization FALSE POSITIVE to not "fix":** the Sim-layer `L()` scan reports `'%@ ↔︎ %@'` as a
 German gap. It is not one — the catalog carries the escaped spelling `"%@ ↔\u{FE0E} %@"`, the
 IDENTICAL string at runtime (verified by comparison). Re-adding the literal-spelling key
