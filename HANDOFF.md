@@ -7,8 +7,38 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 12 September 2026._
 
-**► ⭐⭐⭐ 1.8.0 (build 57) IS LIVE — APPROVED and `READY_FOR_SALE` (confirmed via the ASC API,
-10 Sep 2026). Next new build = 58+.** The whole chain ran from the CLI: bumped 1.7.0→1.8.0 / 56→57
+**► ⭐⭐⭐ 1.9.0 (build 58) IS SUBMITTED — `WAITING_FOR_REVIEW` (submitted via the ASC API, 12 Sep 2026,
+auto-releases on approval). Next new build = 59+.** The whole chain ran from the CLI: bumped
+1.8.0→1.9.0 / 57→58 (6 configs) → archive (ARCHIVE SUCCEEDED, 1.9.0/58) → export → validate
+(VERIFY SUCCEEDED) → upload (UPLOAD SUCCEEDED, **Delivery UUID `b3521401-9259-4095-bc30-97813abdb384`**,
+79.8 MB) → build 58 attached → en-US + de-DE What's New set → App Review notes set (3961 chars, §1
+studio block, under the 4000 cap) → Game Center already enabled on the record → reviewSubmission
+created + item added + submitted. **ASC ids — version `e687204d-e620-4163-ae10-41e11d261553`, review
+submission `76579777-2c34-4032-a2bc-d18bd8c89b46`.** ⚠️ **The 1.9 version record already existed in
+ASC as `1.9` (the designer had created it); I PATCHed its versionString to `1.9.0` to match the
+uploaded build** — a build's `CFBundleShortVersionString` must match the record string exactly.
+**Versioned 1.9.0 (minor feature, designer's call) because the maintenance bases are buildable new
+content players spend on** — matches how 1.5 and 1.7 were versioned, and strengthens the 4.3(a)
+"real update" case. **1.9 carries everything merged to `main` AFTER build 57 (1.8.0) was cut 9 Sep:**
+the **MAINTENANCE AUTOMATION + maintenance network** (auto A checks, contract MRO, player-built line
+stations + hangar bases — the designer's issue #4, his "maintenance eats a third of my time"
+complaint) · the **INTEGRATION Ops drawer + settle lever** (the promised customer fix) · the **crew
+recurrent-training scheduler fix** · the **Spirit Airlines roster removal** · and the **MX surcharge
+2.5→5.0 rebalance**. Drafts: `aa-1.1.x/whats-new-1.9.0.md` + `aa-1.1.x/app-review-notes-1.9.0.txt`.
+⚠️ **TELEMETRY VERDICT ON THE 1.8 HANG FIXES (read 12 Sep, still inconclusive — re-read after 1.9 is
+live + ~1–2 weeks of adoption):** querying the Errors signal grouped by MESSAGE (the build tag) over
+120 days — `hang.under3s` ×48 (39 untagged pre-b56 stale + 5 on b56 + 4 on b57), `crash.sig9` watchdog
+×6 (2+2+2), `hang.3to10s` ×1 (b56). **The b57 events are NOT yet a real test of the fix** — 1.8.0 only
+went live 10 Sep and the newest data point is 9 Sep, so those b57 hangs came from TestFlight/dev
+devices, not the public. No `hang.under3s` at all since 9 Sep; the pipeline is live (716–1,353
+events/day through today), so that gap is real, not a lag. Encouraging, not proven. Query tool kept:
+the TD creds are at `~/Architect Universe/~PostmarkOps/secrets/telemetrydeck-credentials.json` (AA app
+UUID `55DD6B12-…`); the Query API is `POST https://api.telemetrydeckapi.com/api/v4/query/tql`, a
+Druid-style `groupBy`/`timeseries` body, Bearer `tdpat_` token. Baseline before the fixes: under3s ×43,
+3to10s ×1, watchdog ×3.
+
+**► (history) 1.8.0 (build 57) IS LIVE — APPROVED and `READY_FOR_SALE` (confirmed via the ASC API,
+10 Sep 2026).** The whole chain ran from the CLI: bumped 1.7.0→1.8.0 / 56→57
 (6 configs), archived → exported → validated (VERIFY SUCCEEDED) → uploaded (UPLOAD SUCCEEDED,
 **Delivery UUID `01c7b045-faea-4722-b178-9f5a942c9e44`**, 76 MB), build 57 attached, en-US + de-DE
 What's New set, App Review notes set, Game Center enabled, submitted. ASC ids — version

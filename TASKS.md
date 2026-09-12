@@ -33,6 +33,31 @@ and update it in the same session as the work.
 
 ## In flight
 
+### ✅ SUBMITTED IN 1.9.0 (build 58) — `WAITING_FOR_REVIEW`, 12 Sep — maintenance automation + the integration fix
+Everything merged to `main` after build 57 (1.8.0) was cut 9 Sep. Chain ran end-to-end from the CLI
+(archive → export → validate → upload → attach build 58 → What's New en/de → review notes → submit).
+- [x] **MAINTENANCE AUTOMATION + the maintenance network** (`291786e`) — auto A checks default ON (no
+      cards, one Ops roll-up), contract MRO as default provider (+25%, 0–7d slot the aircraft flies
+      through), player-built line stations ($4M) + hangar bases ($18M/$45M). The designer's issue #4,
+      his "maintenance eats a third of my time at 5×" complaint. `MXBaseVerify` 86/86.
+- [x] **INTEGRATION Ops drawer + settle lever** (`1766533`) — the promised customer fix. Live Ops
+      countdown for a bought subsidiary + the `Settle now · $X` button. Driven on the iPad sim.
+- [x] **Crew recurrent-training scheduler fix** (`cde134c`) — the sweep sees RESTING crews + releaseCrew
+      books a landing crew into recurrent; capture 32%→101–112%, lapses 3→0. `CrewPipelineVerify` 63/63.
+- [x] **Spirit Airlines removed** (`242fddc`) — ceased passenger ops May 2026; NK kept in realCodes.
+- [x] **MX surcharge 2.5→5.0** (`743df23`) — deferring heavy checks is a losing gamble again.
+      `MXProbe.swift 20` → serviced wins 20/20. Re-measure with 20 runs after any change to the constant.
+- [x] Bumped to **1.9.0 / build 58** (6 pbxproj configs). Archive SUCCEEDED (1.9.0/58), VERIFY
+      SUCCEEDED, UPLOAD SUCCEEDED (Delivery UUID `b3521401-9259-4095-bc30-97813abdb384`, 79.8 MB).
+- [x] ASC: version record (`e687204d-…`, existing `1.9` PATCHed → `1.9.0` to match the build) · build
+      58 attached · en-US + de-DE What's New · review notes 3961 chars (§1 4.3(a) block, under 4000) ·
+      Game Center already enabled · reviewSubmission `76579777-…` submitted → `WAITING_FOR_REVIEW`.
+- [ ] **AFTER 1.9 is LIVE:** designer does nothing (AFTER_APPROVAL auto-release). Next new build = 59+.
+- [ ] **TELEMETRY — re-read after ~1–2 weeks of 1.9 adoption.** The 1.8 hang-fix verdict is still
+      inconclusive (b57 events so far are dev/TestFlight, not public; zero `hang.under3s` since 9 Sep,
+      but 1.8 only went live 10 Sep). Query tool: TD creds + `POST api.telemetrydeckapi.com/api/v4/query/tql`
+      groupBy on `TelemetryDeck.Error.id` × `.message` (the build tag). Baseline: under3s ×43 / watchdog ×3.
+
 ### ✅ SHIPPED IN 1.8.0 (build 57) — LIVE, approved 10 Sep — hang fixes + the MX move
 Nine confirmed findings behind the live `hang.under3s` ×43 / watchdog-SIGKILL ×3 signal. Detail in
 CLAUDE.md "Decided — The 1.7 hang fixes"; measured A/B in `aa-1.1.x/TickCostProbe.swift`.
