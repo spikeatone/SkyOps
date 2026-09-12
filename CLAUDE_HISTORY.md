@@ -1,0 +1,5778 @@
+# CLAUDE_HISTORY.md — Airline Architect decided-items archive
+
+> The settled decisions and their reasoning, moved out of `CLAUDE.md` so that file stays
+> lean (it auto-loads every session). Read a section here when you need the *why* behind a
+> built feature. The active thesis, open questions, current release state and working
+> agreement stay in **`CLAUDE.md`**. Archive established by the split of 2026-09-12.
+
+---
+
+## Project history — how the scope evolved (moved from the CLAUDE.md intro)
+
+> game clock, extracted from *this* app's real-time clock. Airline predates it and still carries the
+> private original.
+
+This file has been substantially rewritten and updated multiple times
+across sessions — the fleet peaked at 32 types then settled to 30 (two
+real-world-driven removals, Sukhoi Superjet 100 and Bombardier CRJ700, per
+designer direction to keep the fleet current with real deliveries and
+retirements — expect this number to keep moving), the map went from an
+abstract scope grid to a real geographic projection with pan/zoom and
+actual U.S. airports (plus Alaska, Hawaii, and Canada for context), fees
+and revenue moved from placeholder numbers to real sourced data with a
+working economic-event system, aircraft icons moved from a generic
+triangle to real Figma-sourced vector art, and a real, playable ownership
+economy now exists — cycle-based lifespan, selling, buying, leasing, AND
+a real used-aircraft market, a genuine player route network (aircraft fly
+real routes the player opens, not random destinations), real starting
+capital, a crew system rebuilt twice in one session (first from
+ratio-auto-sizing to player-driven hiring, then to fix duty/rest time not
+actually accumulating across flights), and — most recently — a real
+player airline identity plus real-world-weighted competitor airlines on
+background traffic, alongside a round of rendering fixes (flight-path
+arcs that scale with real distance instead of a fixed pixel offset, and
+aircraft color tied to actual flight phase instead of an altitude
+threshold that never lined up with it). Most recently: the competitor
+airline roster was rebuilt from body-type-category eligibility to real
+SPECIFIC-aircraft-type eligibility (researched per-airline, with several
+real corrections found along the way — Delta's all-Airbus widebody
+fleet, Lufthansa turning out to still be the world's largest A340
+operator, Air France's A380 retirement), a new "must be actually
+certified and in service, not just ordered" principle got established
+(737 MAX 7/10 removed from the fleet entirely; Delta's real Jan 2026
+787-10 order deliberately NOT added yet for the same reason), and the
+Airbus A330-900/A350-900 were added specifically to give Delta a real
+widebody fleet in this game for the first time. If you're picking this
+up cold, don't assume the smaller original scope — read this whole file,
+not just skim it. If you're the one updating this file next, note that
+comments and counts elsewhere in this codebase have gone stale between
+updates more than once already (see the `TYPE_WEIGHT_TOTAL` stale-comment
+note in the Fleet section for a concrete example) — spot-check numbers
+against the actual code rather than trusting a prior description at face
+value, including the numbers in THIS file. Also note: the SAME flicker/
+dropped-click bug (a panel re-rendering on every tick instead of only on
+real state changes) has now been independently discovered and fixed
+THREE separate times in this codebase (decision panel, route-picker
+dropdowns, buy/lease panel) — if a fourth panel shows this symptom, don't
+apply a fourth one-off fix, see the note in the Fleet Lifecycle section.
+
+---
+
+## Decided — Core Simulation
+
+- **Tick engine**: 1 tick = 1 sim-minute, decoupled from real-time. Speed
+  multiplier just changes how often ticks fire; the tick logic itself never
+  changes with speed. Speeds: ¼× / ½× / 1× / 5× / 10× / 25× / 100× (100× added
+  in 1.7). No pause.
+  ¼× is rate-limited: 3 uses per FIXED sim-calendar-day boundary (resets when
+  the day-of-sim-clock number changes, not on a rolling 24h window). Exhausting
+  it snaps speed to 1×, not back to whatever was active before.
+  - **AUTO-SLOW + SPEED RESTORE (auto-slow 1.7; restore 8 Sep 2026, designer
+    request).** A NEW decision card while at >1× snaps the sim to 1× (never
+    fast-forward past a real choice at 100×) with a banner naming why. The sim
+    now GIVES THE SPEED BACK: `autoSlowRestoreSpeed` remembers the player's
+    setting and restores it once every card that arrived while slowed is cleared
+    (`autoSlowPendingIDs` — a card that PRE-DATES the slow, e.g. a lingering
+    offer, never holds the speed hostage). A deliberate pick meanwhile
+    (`requestSpeed`) drops the intent, so the game never overrides the player.
+    Both transient (not persisted; speed resets on load anyway). Verified in
+    `aa-1.1.x/OpsTweaksVerify.swift` (43/43, shared with the Ops drawers + the
+    MX list order).
+- **State machine per aircraft**: PARKED → BOARDING → TAXI_OUT → TAKEOFF →
+  CRUISE → APPROACH → LANDING → TAXI_IN → TURNAROUND → loop. Durations were
+  tuned so that PEAK velocity (not just average) matches across phases —
+  short states covering large path-distance fractions will visually/mechanically
+  "run fast" if you don't check this. See prototype-reference for exact tick
+  counts per phase; port them, don't re-guess them.
+- **Position interpolation**: waypoint/bezier-arc between airports, NOT real
+  pathfinding. Aircraft don't need A*/navmesh — they follow known routes.
+  Airport *positions themselves* are now real (see Map section) — this is
+  about the curve shape between two real points, not the points' locations.
+- **Revenue model**: each flight's revenue is rolled at SCHEDULING time (when
+  a route is assigned), not at landing. This is what lets an AOG/crew hold
+  erode the actual number a flight will collect — the player watches one live
+  number cross from profitable to net-loss, rather than two abstract stats.
+  Do not go back to rolling revenue only at landing.
+- **AOG frequency**: calibrated to a real anchor (2 incidents/month for a
+  ~100-aircraft "large" airline), scaled as a continuous per-aircraft
+  per-tick probability — NOT five hardcoded bracket values (that creates a
+  cliff at bracket boundaries). Formula: rate/aircraft/month ÷ ticks/month.
+- **AOG clustering**: one incident temporarily (3 sim-days, linear decay)
+  triples AOG risk for the SAME aircraft family only (real-world analog:
+  type-wide issues like an AD or bad parts batch — see the actual 737 MAX
+  grounding). Families never cross-contaminate each other's risk.
+- **SCHEDULED MAINTENANCE (MX program) — BUILT on branch `mx-program` (2 Sep),
+  NOT yet merged. Full spec: `aa-1.1.x/MX_PROGRAM_SPEC.md`.** Player-driven
+  Line/A/C/D checks (B is obsolete — merged into A in modern MSG-3 practice),
+  DISTINCT from AOG: PM is SCHEDULED (the player plans it), AOG is the emergency.
+  Both cycle-driven. Each owned aircraft is due for A/C/D on the tighter of a
+  CYCLE or CALENDAR limit; **D is pegged to `expectedLifespanCycles/3`** so it
+  lands ~2–3× per airframe (matches the real "2–3 D checks then retire") and
+  auto-scales per type with ZERO blast radius on the sell/lifespan economy. Cost
+  = % of purchase price (A 0.05% / C 1.2% / D 4% — reproduces the real
+  737≈$1M / 747≈$6M D-cost spread); downtime blocks at the PARKED gate (airborne
+  finishes its leg first, mirroring the repaint shop). New OPS ▸ MX section +
+  `.mxCheck` decision card. **CRITICAL BALANCE FINDING (took 4 rounds — do not
+  undo lightly):** the service-vs-defer choice is economically flat unless
+  DEFERRING is made strictly worse, because AOG is rare (the real 2/100/month
+  anchor) AND shop downtime is tiny at the sim's ~2 legs/day. Neither raising AOG
+  onset on overdue aircraft NOR force-grounding alone flipped it (a forced check
+  costs the same as a proactive one — deferring just delays the identical bill).
+  What worked: an **OVERDUE check costs a 2.5× SURCHARGE** vs on-time
+  (`mxOverdueCostSurcharge`) — so servicing early is genuinely cheaper. Also in
+  the model: overdue AOG risk ×6, overdue breakdown repair ×4, and a HARD legal
+  window (1.5× interval) that force-grounds an un-airworthy aircraft into a
+  mandatory check. Verified: RoundTripVerify 13/13, MX sweep 6/6 (`MXProbe.swift`,
+  SERVICED beats DEFERRED), soak 6/6. The "sell before the D check" strategic
+  dynamic emerges naturally (D cost ≈¼ of residual near EOL).
+  - **MX LIST ORDER = NEAREST DATE FIRST (8 Sep 2026, designer request).** The
+    OPS ▸ MX list sorted by `mxMostUrgent` (highest FRACTION of interval
+    consumed), which put a D check 12k cycles out ABOVE an A check due in 146 —
+    the player wants the soonest date. `mxNearestCheck` (the soonest of A/C/D on
+    the tighter cycle-or-calendar axis, via `mxDaysUntilDue`) now drives BOTH the
+    row's shown check (`mxNextCheckETA`) and `mxFleet`'s order: due/overdue (most
+    overdue first) → soonest upcoming → in the shop last (soonest back first).
+    `mxMostUrgent` still drives the due/grounding LOGIC — only the display pick
+    changed. (A bigger MX rework — backgrounded A checks, MRO premium, own
+    maintenance bases, MX moving to a Fleet ▸ Maintenance section — is scoped in
+    `aa-1.1.x/MX_BASES_SCOPE.md`, awaiting designer decisions.)
+- **PREVENTIVE-MAINTENANCE BUDGET — SHELVED (branch `maint-budget-t22`), superseded
+  by the MX program above.** A passive 3-tier PM budget (Minimal/Standard/Premium)
+  that only nudged AOG frequency and/or repair cost. Two balance sweeps proved it
+  economically TRIVIAL — AOG is too rare at the real anchor for any per-incident or
+  frequency lever to aggregate into a decision at late-game scale (Premium cost
+  dwarfed the ~$3k repairs it offset; deferring/Minimal won). The lesson that drove
+  the MX redesign: a maintenance mechanic only matters if it's a CONTINUOUS,
+  SCHEDULED obligation with a real deferral penalty, not a passive AOG modifier.
+  Don't revive the budget idea unless the AOG base rate is ever raised.
+- **CoreML**: NOT currently justified. This genre runs on deterministic/
+  lightly-randomized rule systems, which is what's built. The one place it
+  could earn its place is a competitor-airline AI that learns rather than
+  follows scripted rules — deliberately deferred, not forgotten. Don't
+  introduce it speculatively.
+- **GameKit**: deferred, secondary. Leaderboards/achievements layer, not
+  core loop. Add later without architectural risk.
+- **Task tracking**: `TASKS.md` in this repo, not GitHub Issues. Default
+  chosen for zero-setup simplicity given the designer isn't a dev by
+  background. Revisit if that becomes limiting.
+
+## Decided — Fleet (rewritten this session, was 6 types / 4 families, now 35 / 18)
+
+- **TURBOPROP TIER — ADDED (designer supplied Figma side-view art). 35 types
+  now (was 31).** A brand-new `BodyType.turboprop` (the first non-jet
+  body-type) with FOUR types: **Beechcraft 1900D** (`B1900`, 19 seats,
+  $2.5M — out of production, cheap used), **ATR 42-600** (`AT46`, 48 seats,
+  $18M — in production, the EIS-class workhorse), **Dornier 328-110** (`D328`,
+  33 seats, $4M), and **De Havilland Dash 8-200** (`DH8B` — its real ICAO
+  type code — 39 seats, $4.5M, the designer's Twin-Otter stand-in). Each is its
+  OWN crew family (`B1900_FAMILY` / `ATR42_FAMILY` / `D328_FAMILY` /
+  `DASH8_FAMILY` — real distinct type ratings; FAMILY_LABELS + CREW_FAMILY_INFO
+  hand-updated). The tier default `BodyType.turboprop.minRunwayFt = 3400` serves
+  short regional/island fields jets can't (EIS 4,642 ft). **The Dash 8 is the
+  SHORTEST-FIELD aircraft** via a new per-type override
+  (`AircraftType.minRunwayFtOverride`, read by the runway gate as
+  `type.minRunwayFt`): `DH8B` = 2,000 ft, so it's the ONLY type that can serve
+  **St. Barths (SBH 2,119 ft)** — the shortest field in the game. (Real Dash 8-200
+  needs ~3,000 ft; 2,000 is a deliberate gameplay stretch since it's the
+  Twin-Otter/DHC-6 stand-in the designer couldn't source. A true DHC-6 would go
+  lower still.) The other three turboprops keep the 3,400 default, so SBH is a
+  genuine Dash-8-exclusive unlock.
+  All the derived BodyType switches got a turboprop case (iconLength 8.5,
+  block-minutes 55, fare $150, cruise 4.6 nm/min ≈ 275 kt); `usesWidebodyGateFee`
+  is false so they pay the narrowbody gate tier. **Map icon is a PLACEHOLDER** —
+  reuses the regionalJet top-down silhouette (no turboprop glyph exists); the
+  side-view Marketplace/Fleet art is real (Resources/Illustrations/{B1900,AT46,
+  D328,DH8B}.png). **FIGMA-EXPORT GOTCHA (bit us once):** `download_assets`'s
+  `export` PNG bakes in the frame's GRAY BACKGROUND (opaque) — the aircraft art
+  shipped with a gray box the first time. The fix: use the `rawImages` entry
+  instead (the transparent source fill, `raw_image_1`, already 1024px-wide and
+  alpha-0). For any future Figma illustration pull, grab the RAW image, not the
+  node export. Not in any
+  competitor roster's `types` list → background traffic resolves them via the
+  Independent Operator fallback (realistic — regional turboprops = small
+  operators). Verified 29/29 headless (types resolve, families labeled, runway
+  gating serves EIS but blocks SBH, buyable + in-range route) + live Marketplace
+  (Beech 1900D + Dornier 328 render with correct specs, buy/lease/used rows,
+  auto-generated used listings).
+
+
+- **Fleet size**: 37 distinct playable aircraft types (native-app era).
+  Running history: 32 (initial big expansion) -> 31 (Sukhoi Superjet 100
+  removed) -> 30 (Bombardier CRJ700 removed — aging out of most real fleets,
+  nearing retirement, per designer direction) -> 28 (737 MAX 7 and MAX 10
+  removed — see the new "not yet certified" principle below) -> 30 (Airbus
+  A330-900 and A350-900 added — see the new Airline Identity section for why)
+  -> 31 (Boeing 787-10 Dreamliner added, id `B78J`, B787 family — a widely
+  flown Dreamliner stretch; United/British Airways operators) -> 35 (turboprop
+  tier added — Beechcraft 1900D, ATR 42-600, Dornier 328-110, De Havilland Dash
+  8-200 — the first non-jet `BodyType.turboprop`, each its own crew family) ->
+  **37** (Airbus A350-1000 `A35K` + Boeing 747-8i `B748` added, 30 Aug — a paying
+  player asked for the "legendary" jumbos + newer A350s; both pass the certified-
+  and-in-service bar. A35K: 327 seats/513,700 lb/8,700 NM/$320M/$14,500hr/44k cyc,
+  shares the existing `A350` crew rating, fuelIntensity 0.72. B748: 364 seats/
+  675,000 lb/7,730 NM/$185M/$29,000hr/20k cyc, its OWN `B747-8` crew family,
+  fuelIntensity 1.6. Real Figma side-view art + traced fin masks; specs sourced,
+  in git. ⚠️ **The B748 REVERSES the earlier deliberate "skip it — the passenger
+  -8 was essentially freighter-only" call below** — the designer chose to add it;
+  the -400 stays too, both jumbos coexist. Shipped on branch `aircraft-and-thermal`
+  off `main`, NOT the German branch). ALSO changed,
+  not a count change: the `B747` entry was re-modelled from Boeing 747-8 →
+  **Boeing 747-400** (the -8 PASSENGER variant was thought essentially freighter-
+  only at the time — a call now reversed by the B748 addition above; the -400 is
+  still the passenger 747 airlines flew most) — seats 416, MLW
+  652,700 lb, range 7,260 NM updated; its cost/price/lifespan now carry real -400-profile values (lifespan 20k =
+  Boeing DSG; cheaper price, higher op cost for an aging jumbo). The two new
+  widebody families (`A330`, `A350`), the four turboprop families, and (30 Aug)
+  the new `B747-8` family brought the crew-family count to **19 today** (verified
+  via script — matches the crew-families bullet below). `CRJ_FAMILY` stays real (CRJ900/1000 remain). See the "stale
+  comment" note near the end of this section for a real gotcha this kind
+  of repeated change has already surfaced once. This is still a major
+  expansion from the original locked 6 — the "locked"
+  framing on the old 6-type list no longer applies; that constraint was
+  explicitly reopened by the designer this session. **Designer has stated
+  an explicit ongoing intent to keep the fleet current with real-world
+  aircraft deliveries and retirements** — expect this number to keep
+  moving in both directions over time, not just grow. The architecture
+  already supports this cleanly for add/remove in almost every respect
+  (see the dedicated note on this later in this section) — only
+  `FAMILY_LABELS` requires hand-maintenance on change.
+- **Granularity principle**: each real named variant (A319, A320, A321,
+  A319neo, A320neo, A321neo, etc.) is its own separate `AIRCRAFT_TYPES`
+  entry with its own seats/cost/revenue/MLW — NOT one averaged entry per
+  "family." Designer's explicit call: "separate entry per named variant,
+  real specs each."
+- **Crew-pooling principle — the one that does NOT follow the same 1:1
+  granularity**: crew pools follow REAL type-rating groupings, which are
+  coarser than the aircraft-type list and don't always match marketing
+  "family" names. Concretely:
+  - A320 family (ceo + neo, all 6 variants) = ONE crew family
+    (`A320_FAMILY`) — real EASA type rating covers ceo and neo together.
+  - 737 family (NG + MAX, all 7 variants) = ONE crew family
+    (`B737_FAMILY`) — FAA/EASA treat all 737 generations as one type
+    rating with differences training between them.
+  - A220-100/-300 = ONE crew family (`A220_FAMILY`) — 99% commonality,
+    same type rating, despite one being tagged `narrowbody` and the other
+    `regionalJet` for icon/fee purposes (see below — these are
+    independent axes, not in conflict).
+  - **E-Jets split into TWO crew families despite one marketing name**:
+    E170/E175 share a type rating (`E170_FAMILY`); E190/E195 require a
+    SEPARATE one — different wing, different airframe systems, despite
+    Embraer marketing all four as "the E-Jet family." This is the one
+    real-world nuance most likely to get silently re-flattened by a
+    future session that doesn't read this note — don't merge them.
+  - CRJ700/900/1000 = ONE crew family (`CRJ_FAMILY`) — Bombardier
+    differences-training model, one base type rating.
+  - ERJ135/140/145 = ONE crew family (`ERJ_FAMILY`) — shared type
+    certificate.
+  - Every 4-engine widebody (747, A380, A340) and every other widebody
+    (777, 787, A330, A350) is its OWN separate family — no real-world
+    commonality between manufacturers or airframe generations at that
+    size. (Real-world footnote, not modeled: Airbus itself says the
+    A350 and A330 actually DO share a common type rating in reality —
+    see the A350-900 sourcing note in Airline Identity — but this game
+    keeps them as separate crew families anyway, consistent with how
+    every other widebody pair here is modeled as non-interchangeable.)
+  - ARJ21 was its own standalone family — but the COMAC ARJ21 has since been
+    REMOVED entirely (native app; designer direction — no illustration, few
+    carriers, none in the US roster), so `ARJ21_FAMILY` is gone too.
+    (Sukhoi Superjet 100 / `SSJ100_FAMILY` was in this standalone category too,
+    before its earlier removal — see stale-comment note below.)
+  - **Net result: 19 crew families total** (`A320_FAMILY`, `B737_FAMILY`,
+    `A220_FAMILY`, `B777`, `B787`, `A330`, `A350`, `B747`, **`B747-8`** (new,
+    30 Aug — the 747-8i is its OWN type rating, distinct from the -400 `B747`),
+    `A380`, `A340`, `E170_FAMILY`, `E190_FAMILY`, `CRJ_FAMILY`, `ERJ_FAMILY`,
+    plus the four turboprop families `B1900_FAMILY`, `ATR42_FAMILY`,
+    `D328_FAMILY`, `DASH8_FAMILY` — `ARJ21_FAMILY` removed with the ARJ21).
+    The `B787` family now covers THREE variants (787-8 `B788`, 787-9 `B789`,
+    787-10 `B78J`) on one type rating; the `A350` family now covers TWO
+    (A350-900 `A359`, A350-1000 `A35K`). Covering 37 aircraft types — verified via script, not hand-counted,
+    after this count went stale at least once before (see the
+    `TYPE_WEIGHT_TOTAL` note). `CREW_FAMILIES` is auto-derived from
+    `AIRCRAFT_TYPES.map(t => t.family)` — adding or removing an aircraft
+    type automatically updates this list, no separate maintenance needed.
+    `FAMILY_LABELS` (crew status display) is NOT auto-derived — it's a
+    hand-maintained object literal, and DOES need updating whenever a
+    family is added or removed. This bit an update mid-session: adding
+    the A330 and A350 families for Delta's real widebody fleet required
+    a manual `FAMILY_LABELS` edit (`A330: 'A330', A350: 'A350'`) — miss
+    this step next time a family changes and the crew status strip will
+    show `undefined` for that family instead of a real label. (Native app:
+    the equivalents are `FAMILY_LABELS` + `CREW_FAMILY_INFO` in `Sim/Crew.swift`
+    — the 30-Aug `B747-8` family required hand-adding BOTH there:
+    `"B747-8": "B747-8"` and `"B747-8": ("Boeing 747-8 family", "Covers 747-8i")`,
+    plus updating A350's coverage string to "Covers A350-900/1000".)
+  - `crewsPerTail: 6` was applied to every narrowbody AND every regional
+    jet by default. This is a real, UNVERIFIED assumption for the
+    regional-jet tier specifically — there's no sourced reason RJs should
+    have the same crew ratio as mainline narrowbodies, it just hasn't
+    been researched. Revisit if regional-jet crew shortages feel wrong in
+    playtesting.
+- **Fleet spawn weights are real-world-proportional, not designer
+  placeholders** — explicit designer direction: "for sim testing it's fine
+  to have a ratio that matches real-world deployment" (the shipped game
+  will have players buy their fleet directly, so this doesn't need to be
+  the final economy, just realistic for now). Confidence varies by tier:
+  - **Well-sourced** (real Wikipedia-cited global in-service fleet
+    counts, 2025-26): A320 family 11,374 · 737 family 7,876 · A220 family
+    522 · 777 ~1,600 · 787 ~1,000 · 747 (passenger) 427 · A380 ~170 ·
+    A340 71. All weights scaled from one anchor: A340 (rarest) = weight 1.
+  - **Real but lower confidence**: the SPLIT within the A320/737/A220
+    family totals across named variants (e.g., how much of the A320
+    family's total weight goes to A319 vs A320 vs A321neo specifically).
+    The family-level total is sourced; the intra-family proportions are
+    estimated from order-share data and general market knowledge, not
+    independently sourced per-variant counts.
+  - **Weakest tier**: all remaining regional-jet family totals (E170/E175,
+    E190/E195, CRJ, ERJ, ARJ21) are synthesized estimates, not directly
+    cited totals like the mainline families above. Plausible, not
+    verified — revisit with real sourcing if precision matters here.
+  - `TYPE_WEIGHT_TOTAL` is auto-computed via `.reduce()`, not a hardcoded
+    number — always correct by construction, don't hand-maintain it.
+    **A stale COMMENT on this line is a real trap even though the CODE is
+    self-correcting**: after SSJ100 was removed, the code was already
+    correct (31 types, weight auto-recalculated to 363), but the
+    descriptive comment next to it still said "32 types / ~365" for an
+    unknown number of sessions until caught by chance while doing
+    unrelated work. The lesson: auto-computed VALUES don't drift, but
+    comments describing them are just prose and drift like any other doc
+    — don't trust a comment's numbers without spot-checking them
+    occasionally, the same way this file itself needs periodic syncing.
+- **Aircraft icon base sizes are +15% larger than originally shipped**
+  (regionalJet 8.6→9.9, narrowbody 10.9→12.5, widebody2Engine 14.9→17.1,
+  widebody4Engine 17.3→19.9 — see Icons section below), per direct
+  designer feedback that the original sizing felt too small. Relative
+  hierarchy between tiers preserved, verified by script after the change.
+- **Every type now carries real `purchasePrice` and `expectedLifespanCycles`
+  fields**, added to support the cycle-based lifespan/sell/buy economy —
+  see the new "Decided — Fleet Lifecycle & Ownership Economy" section
+  below for the full mechanic and sourcing detail. Confidence on these two
+  fields specifically: `purchasePrice` is real (median of designer-sourced
+  published list price and estimated current market value, or a
+  discount-ratio extrapolation where only one figure existed — see that
+  section for the exact methodology and its known weak points).
+  `expectedLifespanCycles` is real FAA/manufacturer Design Service Goal
+  data for the well-established families (A320ceo/737/777/787/A340/CRJ),
+  extrapolated from CRJ's confirmed figure for regional-jet types lacking
+  a published DSG — same two-tier confidence pattern as everything else
+  real-data-sourced in this file.
+- **30-type fleet has NOT been visually playtested end-to-end.** Individual
+  pieces were spot-checked (the 777/787 icon smoke test, the 4-engine
+  widebody icon, syntax/math verification on every weight/scale/price/
+  lifespan calculation) but nobody has watched a full play session with
+  the current fleet spawning together, including the newer sell/buy loop.
+  Do this before treating the expansion as done, not just implemented —
+  this note has been true and repeated at every fleet-size change so far;
+  don't let its repetition make it feel less urgent than it is.
+
+## Decided — Fees (real data, replacing original flat placeholders)
+
+- **Landing fee**: real signatory rate ($/1,000 lbs of aircraft max landing
+  weight) at the destination airport × that aircraft type's `mlwLbs`. This
+  is why aircraft of different sizes now correctly pay different amounts at
+  the same airport — the original flat per-airport fee couldn't express
+  that. `mlwLbs` is set per `AIRCRAFT_TYPES` entry, sourced from public
+  type-cert-adjacent data (SimpleFlying/AirInsight/Wikipedia-tier, not
+  primary type-certificate documents).
+- **Gate fee**: real per-turn rate, tiered by `bodyType`
+  (`narrowbody`/`widebody`/`widebody2Engine`/`widebody4Engine`/
+  `regionalJet`), sourced per real airport. Fee-tier logic uses
+  `WIDEBODY_BODY_TYPES.has(bodyType)` (a Set), NOT a direct string
+  comparison to `'widebody'` — the old direct-comparison version broke
+  silently the moment 777/787 got reassigned to `'widebody2Engine'` for
+  icon testing. If a new widebody-adjacent bodyType string is ever added,
+  it must be added to `WIDEBODY_BODY_TYPES` or gate fees will silently
+  undercharge that type at the narrowbody rate.
+- **Airport network**: 48 U.S. airports (grew from an initial top-25 to
+  top-50 minus overlaps — see Map section below for the exact accounting),
+  designer-sourced (not the original 7 placeholder airports). Each carries
+  real `groundStopsPerMonth`, replacing one flat rate that was previously
+  applied uniformly to every airport.
+- **Fee detail level is context-dependent, and this is deliberate, not an
+  inconsistency to "fix" later.** The aircraft hover tooltip (in-gameplay,
+  quick-glance context) collapses landing fee + gate fee into one "Fees"
+  line — scanning speed matters more than granularity while actively
+  playing. The eventual native app's dedicated FINANCIALS section
+  (dashboard context, not yet built — the Figma mockups show a finance
+  tab, but nothing in this browser prototype implements it) should split
+  landing fee and gate fee back into separate line items — a player
+  intentionally reviewing financials can afford, and likely wants, more
+  detail than someone glancing mid-flight. Both views can pull from the
+  same `computeLegEconomics()` breakdown (`landingFee`/`gateFee` returned
+  separately even though the tooltip currently sums them for display) —
+  this is a presentation-layer choice per screen, not a data-layer one.
+- **Known data conflicts, not silently resolved one way:** BWI and FLL each
+  appear in two different source batches with different ground-stop
+  numbers (BWI 2.4 vs 3.8/month; FLL 3.8 vs 3.4/month). Kept the
+  original/first-sourced values since they were already live; flag if the
+  newer numbers are actually the correction. SMF's real fee structure is
+  base+per-seat ($61 + $6/seat), which doesn't fit this schema at all —
+  approximated by averaging comparable mid-size regional airports already
+  in the network (PIT/CMH/MCI/IND/CVG/RDU/STL/SAT/CLE) rather than
+  guessing at representative seat counts, which had produced an outlier
+  on the first attempt (see git history / chat log for that version).
+
+## Decided — Economy (revenue, operating cost, and economic events)
+
+- **Revenue formula**: `seats × load factor × average fare per seat`,
+  replacing the original arbitrary `revMin`/`revMax` random-range bands
+  entirely (those fields no longer exist on `AIRCRAFT_TYPES`). Real
+  2025-26 sourced baselines: average domestic one-way fare ~$214 (BTS/DOT
+  Q1 2026 data), average international one-way fare ~$608 (FCM/Corporate
+  Traveler), industry load factor 83.8% (IATA 2026 — a genuine record
+  high due to supply-chain-constrained aircraft deliveries, not a rounded
+  guess). Regional jet fare ($165) is an ESTIMATE — no direct source,
+  meaningfully lower confidence than the other two tiers. Both fare and
+  load factor carry a small per-flight random spread so identical
+  aircraft/conditions don't produce identical revenue every time.
+- **PASSENGER-DEMAND MODEL — prototype, native app, behind a DEV toggle
+  (`Simulation.useDemandModel`, default ON; "Demand (DEV)" switch under the
+  Network eye-overlay dev row).** The flat 83.8% load factor made route
+  SELECTION meaningless — every city pair earned the same per seat. The demand
+  model makes load factor an OUTCOME of a route's real passenger demand vs. the
+  aircraft's capacity, so matching aircraft SIZE to route is now the core
+  decision. `Demand` (Economics.swift) is a gravity model: `dailyOneWay =
+  k × geomean(throughputA, throughputB) × distanceFactor(nm)`, where throughput
+  = `AirportInfo.annualPassengers` (geomean, NOT the raw product, so the big×small
+  spread stays sane and demand tracks the SMALLER endpoint). `k = 3.0e-5`
+  calibrated so two ~5M-pax airports at medium haul fill a narrowbody at ~75%.
+  `loadFactor(seats:dailyOneWay:) = min(0.92, (dailyOneWay / 2) / seats)` — the
+  `/2` is the sim's ~2 daily frequencies each way (a ~369-tick leg). `rollRevenue`
+  uses it (event/random modifiers still stack on top); the route-confirm panel
+  shows "Est. demand N/day" + "Projected load X% · <a/c>" so the choice is
+  informed. `Airport.greatCircleNM(to:)` (haversine, antimeridian-normalized for
+  PPT's stored +210° lon) is the shared distance helper. Verified headlessly: the
+  gradient is right (trunk/long-haul overflow → reward big jets; mid = narrowbody
+  sweet spot; thin routes only pay on regional jets; Cheyenne-tier ≈ dead), and
+  the settled load factor matches the predicted value exactly (ERJ135 BZN-FAR →
+  59% predicted, 59% settled). NOT YET: real distance-based fare, and COMPETITION
+  splitting a route's demand (the natural next layer — background traffic is still
+  cosmetic). **Balance finding this surfaced (independent of demand, verified via
+  the OFF/ON A/B — demand is NOT the cause): a $20M starting player can only
+  afford the ERJ135/145, which LOSE money even at full load because regional
+  fares ($165) don't cover their per-leg cost. Early-game economy (starting
+  capital / cheaper viable aircraft / regional fares) needs a tuning pass — a real
+  "more balanced" lever, separate from demand.**
+- **Real per-flight operating cost, charged on EVERY flight at
+  turnaround — not just held ones.** This was NOT the original design:
+  the first version only charged `costPerHour`-derived cost during
+  AOG/crew holds, which meant an economic event that raised costs
+  paradoxically made the airline MORE profitable net-net (fare gains hit
+  every flight, cost gains only hit the rare held ones). Fixed by
+  deducting real operating cost from every flight's revenue at
+  `TURNAROUND`, computed via a shared `computeLegEconomics(ac)` function
+  (also used by the aircraft hover tooltip, so the "projected" leg
+  economics shown mid-flight always match what actually gets recorded).
+- **Operating cost uses per-bodyType realistic stage length, NOT the
+  fixed ~4.8hr state-machine visual cycle every aircraft flies through.**
+  This was also a real bug caught before shipping: an initial version
+  applied one universal block-time constant to every aircraft type,
+  which — because the sourced `costPerHour` figures were quoted assuming
+  each type's typical REAL mission length (narrowbody ~1.5-2.5hr,
+  widebody ~8-10hr) — over-charged narrowbodies and under-charged
+  widebodies badly enough that the A321neo was unprofitable even with no
+  economic event active. Fixed with
+  `OPERATING_COST_BLOCK_MINUTES_BY_BODYTYPE` (regionalJet 75min,
+  narrowbody 120min, widebody2Engine 480min, widebody4Engine 540min) —
+  industry-commonly-cited average stage lengths, not freshly sourced this
+  session, real but lower-confidence than the direct-cited fare/load data
+  above. This is intentionally decoupled from the visual flight-cycle
+  timing (which is locked, see Core Simulation section) — the cost
+  calculation uses its own realistic assumption, the aircraft still
+  visually flies the same fixed cycle either way.
+- **DISTANCE-BASED FARES + DISTANCE-BASED OPERATING COST (native app) —
+  replacing the flat per-bodyType fare AND the fixed per-bodyType block
+  minutes above. A matched pair; done together on purpose.** Fare now depends
+  on the ROUTE, not the aircraft: `FareModel.farePerSeat(nm) = 25 + 2.95 ×
+  nm^0.65` (~$145 at 300nm, $464 at 2,200nm, $982 at 7,300nm — sublinear,
+  long-haul end rich enough for premium-cabin blended yield). This fixes the
+  old quirk where a widebody on a short domestic leg charged the $608
+  "international" fare. Because a distance fare alone makes long routes a
+  same-cost/more-revenue EXPLOIT, operating cost is now distance-based too:
+  `BodyType.blockMinutes(forNM:) = max(oldFixed×0.5, 35 + nm / cruiseNMPerMin)`
+  (cruise 6.8/7.5/8.3 nm-per-min by tier) × `holdCostPerTick`. The two were
+  calibrated TOGETHER against a full aircraft×distance profitability matrix
+  (headless): every type has a real distance sweet spot, widebodies lose on
+  short hops (A380 −$63k at 300nm) but profit big on long-haul (A380 +$73k,
+  B789 +$53k — their purpose), regionals pay on short-medium, mismatches lose.
+  Verified the demand gradient still holds and the $30M 2-aircraft startup
+  grows (+$491k/mo). `avgFarePerSeat` and `operatingCostBlockMinutes` on
+  BodyType are now SUPERSEDED (kept as calibration references). `greatCircleNM`
+  (Airport) is the shared distance source. NOTE the interaction with the demand
+  model: profitability = fare(distance) × load(demand vs seats) − opcost(distance)
+  — so a long route needs BOTH range AND demand to pay; that's the strategic core.
+- **AGING & ESCALATING MAINTENANCE (native app).** An old airframe now costs
+  progressively more and breaks more as it nears retirement — so buy-new vs
+  buy-used vs lease is a real trade-off (a cheap high-cycle used jet is no longer
+  a free win). `Aircraft.ageFraction = cyclesAccrued / expectedLifespanCycles`.
+  Two QUADRATIC escalators (climb accelerates near/past design life):
+  `aogAgeMultiplier = 1 + 3.0·age²` scales AOG onset probability AND repair costs
+  (new 1×, 80% life 2.9×, design life 4×, past it 5×+); `maintenanceAgeMultiplier
+  = 1 + 0.4·age²` scales per-leg operating cost (design life +40%). Surfaced in
+  the Fleet detail Maintenance card ("Upkeep (age)" row). Leased/newly-bought
+  aircraft start at 0 cycles (fresh); used-market aircraft carry their real
+  cycles — so leasing = a fresh low-maintenance jet with an ongoing bill, buying
+  used = cheap upfront but higher AOG + upkeep. Verified headlessly.
+- **FUEL EFFICIENCY as a real per-aircraft axis (native app).** Fuel used to be
+  invisible except as an event that hit every aircraft equally. Now the economic
+  event's `costMultiplier` is explicitly a FUEL-PRICE multiplier that scales ONLY
+  the fuel share (~35%, `fuelShareBase`) of operating cost, and by each type's
+  `AircraftType.fuelIntensity` (modern neo/MAX/787/A350/A330neo/A220 = 0.72,
+  4-engine widebodies = 1.6, everything else 1.0). `effectiveCostMultiplier` is
+  now a PER-AIRCRAFT function `effectiveCostMultiplier(for:)`: normal conditions →
+  1.0 for everyone (so real `costPerHour` stays the truth when fuel is normal),
+  but an Oil Spike (raised 1.30→1.50, i.e. fuel +50%) hits a thirsty 4-engine jet
+  +28% vs a modern neo/787 only +12.6% — a 15-pt differential that makes a modern
+  fleet a real hedge against fuel volatility (and the fuel hedge still caps a
+  spike to 1.0 = full protection). Fuel Drop raised 0.85→0.70. Finance market
+  banner relabeled "Costs"→"Fuel". `avgFarePerSeat`/`operatingCostBlockMinutes`
+  stay superseded refs; costPerHour already carries each type's NORMAL-condition
+  fuel efficiency — this is the extra differential fuel-PRICE sensitivity on top.
+- **Economic events**: randomly triggered (checked once per sim-day, 15%
+  daily chance when conditions are normal, designed pacing not sourced),
+  lasting 3-10 sim-days, one active at a time. Four types (Oil Price
+  Spike, Fuel Price Drop, Economic Boom, Recession), each with a
+  cost/fare/load multiplier. Magnitude is anchored to a real data point
+  (jet fuel prices moved ~32% year-over-year in a real 2026 supply shock,
+  per IATA Jet Fuel Price Monitor data) but the specific multiplier
+  values and the price-elasticity relationship (higher fares -> lower
+  load factor) are designed for gameplay pacing, not derived from an
+  economic model. A real emergent property worth knowing: 4-engine
+  widebodies (747/A380) go NET NEGATIVE during an oil spike while
+  everything else just compresses — this wasn't hand-tuned, it fell out
+  of the real cost/revenue math, and it happens to match the actual
+  historical dynamic that pushed those aircraft toward retirement.
+  - **PER-EVENT COOLDOWN (native app) — the same economic event can't recur
+    within 30 sim-days.** A playtester saw two "Fuel Price Drop"s a few days
+    apart (unrealistic). `tickEconomicEvents` now sets `eventCooldownUntil[id] =
+    tick + 30d` at ONSET (not end — onset-based is airtight regardless of the
+    event's duration) and picks only from ids whose cooldown has expired (falls
+    back to all if every type is cooling, which can't happen with 5 types).
+    Verified 0 same-within-30d violations across 3× 3-sim-year runs. Cooldowns are
+    transient (not persisted — events reset to Normal on load anyway).
+- **Financials UI is a stacked ledger** (Revenue / −Operating Costs /
+  −Fees / =Net Revenue), replacing a single-line formula string — net
+  revenue colors green/red by sign. Same breakdown surfaced in the
+  aircraft hover tooltip, both pulling from `computeLegEconomics()`.
+  Tooltip field ORDER is Route → Tail → Type → Status → Crew legal hours →
+  Revenue → Fees → Operating cost → Net for this leg (Route moved to the
+  top per designer direction; this is presentation-order only, doesn't
+  affect `computeLegEconomics()` itself).
+- **A real ship-blocking bug happened here, worth understanding the root
+  cause, not just knowing it got fixed.** When `computeLegEconomics()` was
+  extracted (pulling shared fee/cost math out of the inline TURNAROUND
+  block so the tooltip could reuse it — see above), one log-message
+  reference to the old local `operatingCost` variable was missed and left
+  bare instead of being updated to `econ.operatingCost`. This threw
+  `ReferenceError: operatingCost is not defined` on every flight that hit
+  either the 4%-random-log-sample branch or any net-loss branch — meaning
+  it fired constantly in practice, not on some rare path. **`node --check`
+  never caught this because it only parses syntax; a reference to a
+  variable that's syntactically valid but doesn't exist at runtime is
+  invisible to a parse-only check.** Fixed, and the verification practice
+  changed as a direct result: an ESLint pass with the `no-undef` rule
+  (config: `/tmp/eslint.config.mjs` pattern used in-session, not
+  persisted anywhere in this repo — recreate if needed) now runs
+  alongside `node --check` before anything ships. This was validated
+  against both a synthetic test case and the actual broken file before
+  being trusted (confirmed it caught the real bug, not just that it ran
+  without erroring) — don't skip that validation step if resurrecting
+  this practice in a future session, a linter that silently passes
+  everything is worse than no linter.
+- **Player-facing purchase economy — PARTIALLY built now, was "not built
+  yet" as of the last update to this file.** Buying and selling aircraft
+  is real (see the new "Decided — Fleet Lifecycle & Ownership Economy"
+  section immediately below for the full mechanic). Route-opening costs
+  and starting capital are still NOT built — see that section's Open
+  items. The real tension flagged here previously is still real and still
+  worth repeating: real aircraft list prices run into the hundreds of
+  millions, this sim's per-flight revenue is in the tens of thousands —
+  the purchase prices now in the game are NOT a naive real-price import,
+  they went through real designer-supplied market-value data and a
+  documented discount methodology (see below), but the deeper
+  game-balance question (does a player's revenue realistically support
+  buying anything without selling first, given there's still no starting
+  capital) has not been tested end-to-end.
+
+## Decided — Fleet Lifecycle & Ownership Economy (cycles, sell, buy, lease, crew)
+
+- **1 cycle = 1 completed flight (takeoff + landing)**, tracked per
+  aircraft as `cyclesAccrued`, incremented once per `TURNAROUND`. Every
+  type carries a real `expectedLifespanCycles` (see Fleet section above
+  for sourcing). Spawned (stress-test) aircraft start with a RANDOMIZED
+  cycle count (0-90% of expected lifespan) rather than 0 — same reasoning
+  as the existing crew-backfill pattern seeding partial duty hours on
+  spawn: a real fleet is mixed-age, not all brand-new, and starting
+  everyone at 0 would mean nobody approaches retirement without an
+  unreasonably long real-time play session. Aircraft bought through the
+  real purchase flow (see below) DO start at exactly 0 cycles — a genuine
+  new purchase hasn't flown for this airline yet, unlike a stress-test
+  spawn representing an existing mixed-age fleet.
+- **At 80% of expected lifespan, a `SELL` decision is pushed** — same
+  `decisionQueue`/`DECISION_TYPES` system as AOG/CREW, not a separate
+  mechanic. Options are "Sell aircraft" (real transaction, see below) or
+  "Keep flying" (sets `ac.sellOfferDismissed = true` so the aircraft
+  doesn't re-prompt every single subsequent flight — the offer is a
+  one-time nudge per aircraft, not a recurring interruption).
+- **Sell value is real LINEAR depreciation from `purchasePrice`, floored
+  at 5%** — explicit designer spec, verified against a concrete example
+  before shipping ($50M new, 20% cycles remaining -> sells for exactly
+  $10M) rather than just trusting the formula matched the words. The 5%
+  floor is a deliberate designer choice (confirmed directly, not just
+  assumed): an aircraft never sells for literally $0 even well past
+  100% of expected lifespan, matching a real scrap/parts-value floor
+  rather than a cliff to zero. This is a simple linear model, NOT a real
+  depreciation curve (real aircraft depreciate steeply early and flatten
+  out) — a known, acceptable simplification, not an oversight.
+- **`playerBalance` is a real, minimal stand-in economy — NOT the full
+  Phase 5 purchase economy from `ROADMAP.md`.** It accumulates net
+  revenue from every completed flight (`econ.net`, the same number the
+  financials ledger and tooltip already show) plus sell proceeds. This is
+  explicitly a "master account" in the sense the designer described it:
+  proceeds from a sale go into the same balance used to buy new aircraft.
+  What's still missing: no starting capital (a fresh session begins at
+  $0 — buying anything requires accumulating revenue or selling first),
+  and no route-opening cost yet (still just the fleet slider's random
+  route assignment, no real "open a route" action for the player).
+- **Buying**: `buyAircraft(typeId)` checks `playerBalance >= purchasePrice`,
+  deducts it, and creates a genuinely fresh aircraft via
+  `makePurchasedAircraft()` — a separate function from the stress-test
+  `makeAircraft()`, not a parameterized branch of it, since the two need
+  meaningfully different defaults (0 cycles vs. randomized;
+  always-`PARKED` vs. randomized starting state). A purchased aircraft
+  gets its route/crew through the SAME `PARKED` gate logic every other
+  aircraft uses — no special-casing needed there. UI is a scrollable
+  "Buy Aircraft" panel listing all types sorted by price, each row
+  showing a Buy button that disables itself when unaffordable and stays
+  LIVE (re-rendered every tick while the panel is open, via
+  `updateStatusStrip()`) since balance changes with every completed
+  flight, not just on click.
+- **A real bug caught and fixed BEFORE it could destroy a player's
+  purchase, not after.** The stress-test fleet slider's old
+  `setFleetSize()` used `fleet.length = n` to shrink the fleet — a raw
+  array truncation with no concept of "some of these aircraft are real
+  purchases, not stress-test filler." The moment buying became real,
+  dragging the slider down would have silently deleted purchased
+  aircraft the player had actually paid for, with no warning. Fixed by
+  tagging every aircraft with `purchased: true/false` and rewriting
+  `setFleetSize()` to only ever trim NON-purchased aircraft when
+  shrinking — verified numerically for both normal shrinkage and the
+  extreme case where the slider goes below the actual purchased count
+  (fleet size floors at the owned count rather than deleting anything).
+  This is the kind of bug that's invisible until two previously-separate
+  systems (a stress-test convenience control, and a new real economy)
+  start interacting — worth remembering when adding future mechanics
+  that touch the `fleet` array.
+- **A second real bug, unrelated to the economy itself but caught in the
+  same work area: the decision panel (AOG/CREW/SELL — anything using
+  `decisionQueue`) used to flicker and unreliably register clicks.**
+  Root cause: `advanceTick()` called `renderDecisions()` unconditionally
+  whenever any decision was pending, and `advanceTick()` can fire up to
+  50 times per animation frame at high game speed. Every call did a full
+  `innerHTML` replacement of the whole panel — destroying and recreating
+  every button that often. That produced exactly the two reported
+  symptoms: hover flicker (`:hover` CSS state resets because it's
+  literally a new DOM node each time) and dropped clicks (a re-render
+  landing between mousedown and the click event completing means the
+  clicked button no longer exists by the time the click would fire).
+  Fixed by removing the per-tick call entirely — `pushDecision()` and
+  `resolveDecision()` already call `renderDecisions()` exactly when the
+  queue's contents actually change (a card added or resolved), which is
+  the correct and sufficient trigger. **This exact same bug pattern
+  recurred TWICE more later in this session** — once in the route panel's
+  original dropdown-based UI (fixed by replacing dropdowns with
+  click-to-select entirely), and once in the buy/lease panel (fixed the
+  same way, removing its per-tick refresh). Three independent instances
+  of the identical root cause, each only caught after being built, not
+  anticipated. If a FOURTH panel ever shows this symptom, stop applying
+  one-off fixes — build a single shared "re-render only on real state
+  change" helper every panel uses, instead of trusting each new panel to
+  independently avoid a mistake that's already happened three times.
+- **Leasing — a real alternative to buying, not a strictly-better option.**
+  Explicit designer spec: 15% of purchase price upfront (`LEASE_UPFRONT_RATE`),
+  vs. paying the full purchase price outright. Monthly lease rate is real,
+  sourced data — 0.8% of aircraft value per month (`LEASE_MONTHLY_RATE`),
+  the middle of a real industry range (0.6%-1.2% "lease rate factor",
+  Acumen Aero market analysis), cross-validated against real quoted
+  dollar figures for narrowbody leases ($380K-$500K/month on $55-70M
+  aircraft). The ACQUIRE AIRCRAFT panel (renamed from BUY AIRCRAFT — same
+  button, both the main one and the copy inside the route-confirm panel)
+  shows Buy and Lease as two independent options per type, each with its
+  own affordability check.
+- **A real, substantive bug caught mid-build on leasing, not shipped
+  quietly: the first version made leasing almost strictly dominant, not
+  a genuine tradeoff.** Root cause: lease cost was prorated PER-FLIGHT,
+  the same way operating cost works (block-minutes × per-tick rate) —
+  meaning an idle leased aircraft (a spare never assigned to a route, or
+  one sitting held) cost nothing. Real leases are a FIXED MONTHLY
+  OBLIGATION regardless of utilization — you owe the lessor whether the
+  plane flies or sits idle. Under the wrong model, the crossover point
+  where cumulative lease payments would exceed the upfront savings from
+  buying was ~38,000 flights (roughly 23 years of daily flying) —
+  functionally never reached in any real playthrough. Fixed with a real
+  recurring-billing mechanism, `tickLeaseBilling()`: checked every tick,
+  bills `ac.type.monthlyLeaseCost` against `playerBalance` whenever
+  `tick >= ac.nextLeaseBillTick`, for EVERY leased aircraft regardless of
+  flying/parked/held/idle-spare status, then advances the next-bill tick
+  by `TICKS_PER_MONTH`. Verified numerically: an idle leased aircraft
+  that never flies a single leg now genuinely loses money over time (a
+  representative narrowbody: ~$4.5M lost over 6 months of pure idle
+  lease payments). `playerBalance` is allowed to go negative here — no
+  bankruptcy mechanic exists (see Open below) or is planned yet; a
+  negative balance is itself the consequence, rendering in red and
+  blocking further Buy/Lease/Open Route actions.
+- **`computeLegEconomics()` still returns a `leaseCostEstimate` field,
+  but it is DISPLAY-ONLY and does not affect `net`.** This is deliberate,
+  not a leftover from the broken per-flight model: the designer wants the
+  in-flight tooltip to show a smoothed, readable lease-cost-per-leg
+  estimate folded into the displayed "Operating cost" line (too much
+  detail to break out in that view), while report views (the financials
+  ledger's real "– Lease Costs" row, the Routes detail panel's "Total
+  lease cost" line) show the REAL number from `tickLeaseBilling()`'s
+  running totals (`totalLeaseCost`, `route.totalLeaseCost`) — not derived
+  from the per-flight estimate, which would now be wrong since billing
+  isn't tied to individual flights anymore.
+- **Crew provisioning was rebuilt from automatic ratio-based sizing to
+  fully player-driven hiring — a real architecture reversal, not a bug
+  fix, prompted by a real reported bug.** The original design auto-sized
+  each family's crew pool to `ownedAircraftCount × crewsPerTail` (6-11
+  crews per aircraft) via `resizeCrewPools()` — meaning a SINGLE aircraft
+  purchase silently granted 6-11 crew immediately, which trivialized the
+  entire crew-rest tension the AOG/CREW hold mechanic exists to create.
+  Worse, a `Math.max(1, ...)` floor guaranteed a phantom minimum pool
+  for EVERY family regardless of ownership — the reported bug (crew
+  status strip showing "1/0/0 · 2 res" for families with zero owned
+  aircraft). Both are fixed by the same redesign: buying or leasing an
+  aircraft now bundles exactly 1 crew member (`grantBundledCrew()`,
+  called from both `buyAircraft()`/`leaseAircraft()`) — deliberately NOT
+  enough for continuous operation once duty/rest limits kick in, which
+  is the actual intended pressure toward hiring more. A family's FIRST
+  aircraft also seeds its reserve pool (1 reserve — see the "2 res"
+  correction below), which stays flat regardless of how many more
+  aircraft get added to that family. `resizeCrewPools()` is now purely a
+  CLEANUP pass — it clears a family's pool/reserves to 0 only when owned
+  aircraft count hits zero (last one sold), and otherwise does NOT grow
+  or shrink the pool by any ratio. Real `crewsPerTail` ratios (6
+  short-haul, 11 long-haul) are no longer consumed by any code — they're
+  now purely a REFERENCE figure the player has to learn and reason about
+  themselves ("how many crews does this route actually need"), per
+  explicit designer direction that this stays on the player to figure
+  out, not something the game calculates or recommends for them.
+- **New ADD CREW panel**: lists only families the player currently owns
+  aircraft in (never the full 13), each with a real hire cost
+  (`computeCrewHireCost()`) and current pool size shown. Hire cost is a
+  DESIGNED estimate, not deeply sourced like purchase prices/lease rates
+  — real crew hiring/training costs vary too much by role and seniority
+  to research precisely at this level; 0.2% of a representative
+  aircraft's purchase price (`CREW_HIRE_COST_RATE`) scales cost with
+  aircraft complexity ($28K for a regional jet crew up to $578K for a
+  widebody crew) without claiming to be researched. Revisit with real
+  sourcing if precision matters here later.
+- **Reserve crew count corrected: 1, not 2** — a family's first aircraft
+  purchase should grant 2 crew TOTAL (1 bundled + 1 reserve), not 3. Both
+  places that seeded the old value of 2 were fixed for consistency: the
+  real functional one (`grantBundledCrew()`) and a vestigial startup
+  default (`reserveCrewsByFamily` initialization) that was functionally
+  harmless but left inconsistent — the same class of stale-value trap
+  this file has flagged before elsewhere in this codebase.
+- **A second real, reported bug: AOG, crew shortage, and sell-eligibility
+  decisions were firing for background stress-test traffic the player
+  doesn't own** — offering to sell aircraft, or asking the player to call
+  in reserve crew, for planes that were never theirs. Root cause: these
+  three mechanics (plus `resizeCrewPools()` and `backfillStaggeredCrews()`)
+  predate the `purchased` ownership concept entirely and were never
+  retrofitted with an ownership check when background traffic and real
+  ownership diverged. Fixed across FIVE places, all with the same
+  principle — background traffic has zero economic/decision stakes, pure
+  visual flavor: `tickAOGOnset()` skips non-purchased aircraft entirely
+  (they can never be flagged `maint`, not just never prompted about it);
+  the PARKED boarding gate's crew check is gated on `ac.purchased` (
+  background traffic proceeds unconditionally, no hold, no decision); the
+  SELL trigger requires `ac.purchased`; `resizeCrewPools()` only counts
+  purchased aircraft; `backfillStaggeredCrews()` is scoped the same way
+  so background traffic can't pull a crew slot from a pool sized for the
+  player's real fleet. Every OTHER fleet-wide loop in the codebase (main
+  tick advancement, canvas rendering, status-strip counts, airport hover
+  status) was individually checked and confirmed to be correctly
+  UNSCOPED — those legitimately need background traffic included for it
+  to look and feel like real airspace. Only the five decision/stake-bearing
+  mechanics needed the fix.
+- **Background traffic is visually distinct from the player's own fleet**:
+  `#55BBFF` inflight / `#FF6D0C` on the ground, vs. the player's
+  green/amber. Held (red) stays shared between both — background traffic
+  can still show a real weather ground-stop (that applies universally),
+  and red-for-problem was kept as a universal constant rather than adding
+  a fourth color scheme.
+- **Background traffic's hover tooltip is deliberately reduced**: Route,
+  Tail, Type, Status only — no economics, no crew, no load, no route P&L.
+  This is a real early return in `renderAircraftTooltip()`, not fields
+  hidden in the template — none of the economic computation (crew
+  lookup, `computeLegEconomics()`, route P&L) runs at all for background
+  traffic, since none of it would be displayed anyway.
+- **Crew duty/rest was rebuilt to real FAA 14 CFR Part 117 mechanics —
+  the original implementation didn't actually accumulate duty time
+  across flights.** Reported and diagnosed directly: `dutyTicks` was
+  reset to 0 on every new assignment (`crew.dutyTicks = 0` at the
+  boarding gate), including for a crew member who'd just been released
+  as `AVAILABLE` without hitting the rest threshold. Since one full
+  flight cycle (369 ticks) is well under `MAX_DUTY_TICKS` (600), this
+  meant duty time NEVER meaningfully accumulated — a lone crew member
+  could fly indefinitely without ever triggering real rest, as long as
+  no SINGLE flight was individually delayed past 600 ticks. Fixed by
+  removing the reset from the assignment point entirely; `dutyTicks` now
+  only resets when a crew member completes an ACTUAL rest period
+  (`RESTING` → `AVAILABLE` transition in `tickCrewPool()`), matching how
+  a real Flight Duty Period works — the whole duty day (potentially
+  several flight segments back-to-back), not a per-flight allowance that
+  refills on every new leg. Also caught and fixed in the same pass: 
+  `REST_TICKS` was **wrong**, not just simplified — 480 (8hr) conflated
+  the real Part 117 minimum-sleep-opportunity component (8 of the 10
+  hours) with the full required rest period, which is 10 CONSECUTIVE
+  hours (14 CFR 117.25(e)). Corrected to 600. `MAX_DUTY_TICKS` (600,
+  10hr) was independently verified as already reasonable — real Table B
+  Flight Duty Period limits run roughly 9-13hr depending on report time
+  and segment count, so 10hr sits appropriately in that real range.
+  Verified with an actual simulation, not just logic review: a lone
+  crew member now flies exactly 2 consecutive cycles (~12.3 cumulative
+  hours) before mandatory rest blocks a third, which is the real
+  mechanism creating pressure toward hiring a second crew member.
+- **Real used-aircraft market, buy-only (no lease), persistent inventory
+  (designer decisions, not re-randomized on panel open).** 1-2 listings
+  generated per type at game start, randomized 15%-75% of expected
+  lifespan, slowly replenished over time (~10%/day per under-2 type) so
+  the market doesn't permanently deplete over a long session. Pricing
+  reuses the EXACT SAME linear depreciation formula as `computeSellValue()`
+  — same 5% floor, deliberate consistency with the sell mechanic, not a
+  new formula. Real market research behind this: used aircraft trading is
+  a genuine $1.96B+ industry segment (Technavio, 7.7% CAGR 2025-2030),
+  partly driven by real OEM production delays. Real depreciation curve
+  (Acumen Aero): aircraft retain ~70%/50%/35% of value at 5/10/15 years —
+  cross-checked against a real Boeing 737-800 example ($106.1M new,
+  ~$20-22M at 8 years old). The linear model runs slightly OPTIMISTIC at
+  high cycle counts versus that real curve (real depreciation steepens
+  with age/usage, this model doesn't) — a known simplification matching
+  the designer's existing choice for the sell mechanic, not a new,
+  undisclosed one. A purchased used aircraft genuinely starts with its
+  real cycle count (not 0), verified end-to-end with the actual extracted
+  functions: a real listing generated, purchased, balance deducted
+  exactly, and the resulting aircraft correctly inherited the used
+  aircraft's cycle count rather than starting fresh.
+- **A real, reported bug: decision cards went stale when their underlying
+  condition resolved through a path OTHER than that card's own buttons.**
+  Concretely: hiring a new crew member via the ADD CREW panel while a
+  CREW hold was showing correctly unblocked the aircraft, but the stale
+  "no available crew" card kept showing anyway. Root cause: `decisionQueue`
+  entries were ONLY ever removed by `resolveDecision()` (a card's own
+  buttons) — there was no cleanup path for a condition resolving
+  independently. This turned out to affect a SECOND case too, caught by
+  checking rather than assuming the fix was narrowly scoped: AOG's timed
+  "standard repair" auto-completion had the identical gap. Fixed with a
+  real `clearDecisionForAircraft(ac, type)` function, called from both
+  actual resolution points (crew becoming available, AOG auto-clearing).
+  Verified the removal logic directly, not just reasoned about it.
+- **CREW decision now has a real third option: "Hire new crew"**,
+  alongside "Call in reserve crew" and "Wait." Reuses `hireCrew()`
+  directly — same real cost, same pool-growth logic as the standalone
+  ADD CREW panel, not a duplicated implementation — and immediately
+  assigns the newly hired crew to the specific held aircraft, resolving
+  the hold right away rather than waiting for the next tick's normal
+  boarding-gate pickup. Disables itself with "Insufficient funds to
+  hire" using the same real cost function the ADD CREW panel uses.
+- **Not yet playtested**: the sell/buy/lease/used-market loop, the full
+  route-opening and route-history system, the rebuilt crew-hiring
+  economy, the corrected duty/rest mechanic, and the airline-identity
+  system below — none of this has been run together in one continuous
+  real session. Individually spot-checked and numerically verified at
+  every step (that verification caught real bugs — the lease proration
+  bug, the crew-reset bug, the phantom-family bug, the ownership-scoping
+  gap, the stale-decision-card bug — meaning "spot-checked" has a real,
+  demonstrated catch rate here, not just a theoretical safety net), but
+  the combined, played experience is still the one thing that hasn't
+  actually happened.
+
+## Decided — Airline Identity & Competitor Traffic
+
+- **Player airline naming**: a styled modal blocks the game on load,
+  asking the player to name their airline (Enter or button submits;
+  defaults to "New Airline" if left blank rather than blocking
+  submission). Stored in `playerAirlineName`, shown as the first line
+  in the player's own aircraft tooltip.
+- **Background traffic now carries a real competitor airline name**,
+  weighted by actual 2025-26 US domestic market share (BTS/OAG/Statista,
+  cross-checked across five sources this session). `AIRLINE_ROSTER`:
+  American ~21%, Delta ~19%, Southwest ~18%, United ~17% (the real "Big
+  Four," together ~75-76% of US domestic capacity, consistent across
+  every source checked), Alaska a clear real 5th at ~6%. Remaining ~19%
+  split across JetBlue/ULCCs (Spirit, Frontier, Allegiant)/regional-brand
+  liveries (SkyWest, Republic, Envoy, Endeavor, Horizon, PSA) — designed
+  proportions within that remainder, not individually sourced the way
+  the Big Four figures are.
+- **Airline eligibility was REBUILT mid-session from body-type CATEGORY
+  restriction to SPECIFIC aircraft-type restriction — a real
+  architecture upgrade, not a refinement.** The original version only
+  restricted by category (narrowbody/regionalJet/widebody2Engine/
+  widebody4Engine), which isn't accurate enough: "Southwest doesn't fly
+  widebodies" is a category fact, but "Southwest doesn't fly the
+  737-900, only 700/800/MAX8" or "Delta has ZERO Boeing widebodies at
+  all" are SPECIFIC-type facts a category system can't represent — and
+  the designer explicitly flagged the risk of a player noticing
+  ("Airline X doesn't fly the A340!"). Every airline's `types` array is
+  now a real, individually-researched list of specific `AIRCRAFT_TYPES`
+  IDs, not a category. Real findings from that research, several of
+  which corrected assumptions rather than confirming them:
+  - **Delta's widebody fleet was ENTIRELY excluded at first** — real
+    fleet was 100% Airbus (A330/A350), and neither was modeled in this
+    game at the time, despite Delta being a real widebody operator.
+    Resolved this session — see the A330/A350 addition below.
+  - Delta flies NO Boeing 737 MAX at all (confirmed, a real and
+    deliberate carrier choice); United flies A321neo but no A321ceo;
+    JetBlue retired its LAST Embraer E190 in September 2025 (real,
+    recent) and is now all-Airbus; Emirates flies NO 787 at all (777/
+    A380 only); Lufthansa flies NO Boeing 777 passenger service at all
+    (747-8/A380/787/A340/A350 instead).
+  - **A genuine surprise caught by checking rather than assuming**:
+    Lufthansa is confirmed the world's LARGEST Airbus A340 operator in
+    2026 (14 A340-300s + 5 A340-600s), kept flying specifically because
+    of Boeing 777X delivery delays — not a retired type as first
+    assumed before searching. The A340 in this game now resolves 100%
+    of the time to Lufthansa specifically, verified via a 10,000-sample
+    check, matching this real, current fact.
+  - Seven specific types (`A319NEO`, `E190`, `E195`, `ERJ135`, `ERJ140`,
+    `ARJ21`, and formerly `MAX10` before it was removed entirely — see
+    below) have NO real match anywhere in the 21-airline roster — either
+    vanishingly rare variants, retired from major-carrier US regional
+    feed, or (ARJ21) a China-market-only type no Western carrier flies.
+    These fall to a generic `Independent Operator` fallback entry rather
+    than forcing a fake mainline match — smaller/charter/startup
+    operators are the genuine real-world pattern for exactly this kind
+    of orphaned type. This fallback is also what prevents
+    `pickAirlineForType()` from crashing on an empty eligible-airlines
+    array; every type in `AIRCRAFT_TYPES` is verified via script (not
+    just assumed) to resolve to at least one eligible entry.
+  - Alaska Airlines includes real `B788` eligibility from an earlier
+    update this session — absorbed Hawaiian Airlines' 787-9 fleet and
+    launched genuine widebody international routes from Seattle (London,
+    Rome, Reykjavik, Seoul, Tokyo), confirmed via search before that
+    change, not taken on request alone. Still excluded from
+    `widebody4Engine` — no 747/A380/A340-class aircraft.
+- **A new, real design principle established this session: aircraft
+  types must be actually FAA/ICAO certified AND in real service to stay
+  in this game — an order or a certification-pending status isn't
+  enough.** Prompted by removing Boeing 737 MAX 7 and MAX 10 entirely
+  from `AIRCRAFT_TYPES` — verified via search before removing (not
+  assumed): as of this game's real current timeframe, MAX 7 certification
+  is expected within weeks but hadn't cleared FAA sign-off yet, and MAX
+  10 isn't expected until year-end 2026, with first DELIVERIES for both
+  not until 2027 even after certification clears. Fleet dropped to 28
+  types/349 weight, then back to 30/367 with the A330/A350 addition
+  below. This same certified-and-flying bar was then applied to Delta's
+  real Boeing 787-10 order (Jan 2026, 30 firm + 30 options) — a genuine
+  order, confirmed via search, but explicitly NOT added to Delta's fleet
+  yet since an order isn't a delivery. Revisit both MAX7/10 and Delta's
+  787 once they've actually entered real service, not before. **UPDATE: the
+  Boeing 787-10 TYPE has since been added (id `B78J`) — consistent with the
+  certified-and-in-service bar, since the -10 is widely flown (United, Singapore,
+  BA, etc.). What stays excluded is DELTA specifically flying it — Delta's
+  order is still undelivered, so `B78J` is NOT in Delta's roster `types` (it's
+  on United + British Airways).**
+- **Airbus A330-900 and A350-900 added specifically because Delta's
+  entire real widebody fleet is Airbus** — this is what actually
+  resolved the "Delta excluded from every widebody" gap noted above.
+  Real sourced specs: A330-900 MLW 191,000kg (confirmed, Airbus/
+  AeroCorner), 300 seats; A350-900 MLW 207,000kg (confirmed, multiple
+  technical sources), seats set to 306 to match DELTA'S OWN real cabin
+  configuration specifically (not a generic representative number),
+  purchase price ~$300M sourced from Axon Aviation's real market-value
+  estimate, not Airbus sticker list price — the same "real transacted
+  value" methodology already used for every other type in this game.
+  Delta gets both new types. Also added, individually confirmed (not
+  assumed uniform across "the international carriers"): Air France
+  (both A330 and A350 — real, current operator of both), Lufthansa and
+  British Airways and Japan Airlines (A350 only — each independently
+  confirmed, deliberately not adding A330 to any of them since that
+  wasn't confirmed), Air Canada (A330 only, confirmed, no A350).
+  - **A second real correction surfaced while researching this
+    addition, unrelated to the reason for the search**: Air France's
+    A380 fleet was fully retired by 2022 — their current 2026 long-haul
+    fleet is 787/777/A350 only. The roster had them still eligible for
+    A380 from the ORIGINAL build, which had simply never been
+    independently re-verified. Fixed in the same pass rather than left
+    for later, exactly the kind of drift this roster is expected to
+    accumulate over time (see the scope-limit note below).
+- Verified via real 10,000-20,000-sample distribution checks at multiple
+  points this session, not just trusting the configured weights on
+  paper: narrowbody assignment lands within a percentage point or two of
+  the real sourced market share; widebody-only international carriers
+  come out appropriately rare (~1.5-4% each depending on how many
+  carriers are eligible for that specific type); Delta appropriately
+  dominates A330/A350 assignment as the real anchor customer, with the
+  occasional international carrier showing up alongside it.
+- **Real scope limit worth being explicit about**: this whole roster is
+  hardcoded to US market share because the game itself is hardcoded to
+  48 real US airports — there's no region-selection feature. If a future
+  version lets players start in a different region, this roster and its
+  weights would need to become region-aware rather than assuming US
+  market share universally, which is what "weight based on the
+  geography the player is playing within" actually implied as a design
+  intent, not fully realized yet.
+- **SPIRIT AIRLINES REMOVED — the third such correction (12 Sep 2026, designer's
+  call).** Spirit ceased ALL passenger operations in May 2026, so it was flying
+  background traffic and appearing in Market Intelligence as a live rival for a
+  carrier that no longer exists. Flagged 8 Sep while fact-checking carrier hubs (it
+  was also the only US entry with no `hubs:` field), decided 12 Sep. The US roster
+  drops 15 → 14 carriers and total weight 112 → 109; `Airline.roster` is the only
+  place the entry was removed.
+  - **NO TYPE WAS ORPHANED** — verified by script, not reasoned: every type Spirit
+    flew still has US operators (A319 ×5, A320 ×6, A321 ×4, A321neo ×5). The one
+    real concentration is **A320neo, which now resolves to Frontier ALONE** — and
+    that is REALISTICALLY CORRECT post-Spirit (Frontier is the last major US A320neo
+    operator), the same class of verified single-operator outcome as the documented
+    "A340 → 100% Lufthansa". Not a gap to fill.
+  - **`NK` STAYS IN `realCodes` on purpose** (annotated at the site). That map is
+    deliberately a SUPERSET of the roster — a brand-collision guard for the player's
+    tail code, not a roster mirror — and NK still reads as Spirit to anyone who knows
+    airlines. Keeping it also stops `randomTailCode()` painting NK on an Independent
+    Operator. The only visible effect is that a player typing NK is told it "belongs
+    to Spirit Airlines"; flag it if that inconsistency ever bothers anyone.
+  - `CarrierHubVerify`'s hub check is `withHubs >= 130` of the roster, NOT "all" —
+    8 entries legitimately carry no hubs and Spirit was one, so removing it moves
+    nothing. (⚠️ Two counts in this file were STALE: the roster is **147** entries
+    after this removal, not the "141"/"142" quoted in the acquisition section.)
+- **This roster has now been independently corrected THREE times for facts
+  that were wrong or went stale** (Air France's A380 status, implicitly Delta's
+  widebody exclusion once A330/A350 existed to resolve it, and now Spirit's
+  shutdown). Real airline fleets and route networks change constantly
+  and this roster has no mechanism to detect that on its own — it only
+  gets fixed when someone notices and asks, or when unrelated research
+  happens to surface the correction. Treat every entry as due for
+  re-verification eventually, not as settled once written.
+
+## Decided — Route Network & Player Operations
+
+- **MULTI-CITY ROTATIONS — BUILT + MERGED to `main` (Phases 1–2, native app; designer
+  request "not every plane should fly point-to-point and loop").** A route is no longer a
+  fixed 2-airport pair — it's an ordered ROTATION LOOP of 2–5 stops (`Route.stops`) flown
+  by one aircraft, that AUTO-REPEATS. The classic reverse-shuttle A↔B is exactly the 2-stop
+  case (`[A,B]`), so nothing regressed for existing routes/background traffic — every legacy
+  route restores as a 2-stop rotation. **Design answers that shaped it** (see
+  `aa-1.1.x/MULTI_CITY_ROUTING_SCOPE.md`): rotations, NOT daily scheduling (auto-repeat keeps
+  it non-chore-like; the sim is time-decoupled at 100×, a timetable would be misery); each leg
+  earns its OWN point-to-point demand (no connecting-passenger/itinerary model — deliberately
+  out); overnighting is deferred to a Phase 3 (would emerge from the existing night curfews, no
+  player planning). **Locked designer decisions**: per-leg P2P demand · no hub double-count (a
+  rotation visiting a hub twice counts it once) · max 5 stops · per-DISTINCT-stop cost+slot ·
+  overnighting deferred.
+  - **Sim/data (Phase 1)**: `Aircraft.legIndex` walks the loop; the old `swap(&origin,&dest)`
+    is now a `nextLeg` closure (default = swap, so background traffic + 2-stop are unchanged).
+    `openRotation(stops:using:replacingCurrentRoute:)`, `rotationBlock` (range+runway on EVERY
+    leg incl. the closing one), `rotationOpeningCost` (base + gate fee + slot per distinct
+    stop), `rotationLegs`. `detachFromRoute` frees a slot at every distinct stop now (was
+    origin/dest only) — correct for any multi-stop route torn down by sell/park too.
+    Persistence: `RouteSave.stops` + `AircraftSave.legIndex`, tolerant-decode (nil → legacy
+    default), so a save mid-rotation resumes on the right leg.
+  - **UI (Phase 2)**: AIRCRAFT-FIRST flow (designer's explicit ask). "Open Route" →
+    `RouteAircraftPicker` (WHICH AIRCRAFT? — idle spares w/ tail/type/seats/range; skipped if
+    one spare or a Fleet ASSIGN target) → tap cities in order (each map tap appends a stop; a
+    live loop + Done/Undo/Abandon bar) → `RotationConfirmPanel` (per-leg distance + range/load,
+    total loop, cost). `RouteMode` gained `.pickAircraft`/`.rotate(UUID,[String])`/
+    `.confirmRotation(UUID,[String])`; the OLD `.pickOrigin/.pickDest/.confirm` cases STAY —
+    the Ops route-SUGGESTION path still uses them (a suggestion is inherently a 2-airport pair).
+    `MapView.drawRotationPreview` draws the in-progress loop (marching arcs + fainter closing
+    leg + base ring) from the transient `sim.rotationPreview`.
+  - **Verified**: `aa-1.1.x/RotationVerify.swift` 34/34 (loop order, 2-stop == classic shuttle,
+    per-leg economics + cash invariant, range blocks the offending leg, distinct-stop cost,
+    save/load of stops+legIndex, `replacingCurrentRoute` archives-old + validation-before-detach;
+    two guards bite-tested) + RoundTrip 13/13 + soak 6/6 GREEN + full Debug build. Designer
+    confirmed the flow works on device; the aircraft-first picker was driven in-session.
+  - **BALANCE PASS — DONE (4 Sep, `aa-1.1.x/RotationBalanceProbe.swift`, 6/6).** A rotation is a
+    genuine TRADEOFF, not strictly better/worse than N separate 2-stop routes — no retune. Opening
+    cost 0.41× the 3-route sum (sunk cost, minor); per-leg net-per-flight 0.93–0.99× a standalone
+    leg (per-leg code is identical — neutral); one rotation aircraft flies 0.33× the total legs of
+    3 dedicated aircraft (⅓ frequency, ⅓ revenue, but ⅓ the capital). The small per-leg shortfall
+    is the hub bonus overlapping SEPARATE routes get at shared airports (a lone rotation gets no
+    self-bonus) — healthy, keeps rotations from dominating. Methodology lesson in the probe: run
+    both arms in ONE sim on disjoint demand-matched triples (events cancel) + DRAIN the decision
+    queue each tick (a headless run never answers a CREW card → blocked aircraft stall → flight
+    counts become noise).
+  - **ROTATION-AWARE LABEL audit — DONE (4 Sep).** Every whole-route display now reads as a loop
+    for a multi-stop rotation (2-stop still shows the classic `ORIG ↔ DEST` / ⇄ pair). `Route.label`
+    (`"A ↔ B"` for 2-stop, `"A → B → C → ↺"` for a rotation) + `route(byId:)` are the primitives;
+    wired into RoutesPanel card header, the Ops incentive + competition route lists (`routeTitle`
+    helper), the MX cover/suspend copy, the slot-buyback alert, the reassignment "Leaves" row, the
+    close-route confirm, the pending-reassignment + current-route + ReplacementPicker labels
+    (Fleet), and the route MILESTONE toast (`Celebration.stops` — a route recoup / first-route on a
+    rotation shows the loop, not just the ⇄ pair). German added for the 8 new catalog keys
+    (`de-findgaps.py` clean but for the 2 known DEBUG-only livery strings — CORRECTION 8 Sep: that run
+    used a STALE DerivedData; the Phase 2 aircraft-first UI's 21 strings had NO German until they were
+    added 8 Sep — always point the gap checker at the DerivedData you actually built into). Verified: RotationVerify
+    40/40 (+ a label test) + full Debug build. **The feature is now complete** (balance + labels
+    done, designer-confirmed on device). The only residual is a nice-to-have live re-drive of the
+    exact pick→sequence→confirm gesture chain in a session where the Simulator input isn't wedged.
+  - **⚠️ A ROTATION SERVES EVERY STOP — the standing completeness RULE (8 Sep, player-reported "my
+    new multi-leg route doesn't show the dotted green lines").** `Route.originCode`/`destCode` are
+    only the FIRST and LAST stop, so every consumer that keyed off that PAIR was silently partial on
+    a rotation: the map drew ONE arc, and intermediate cities counted toward NOTHING — not hub
+    eligibility (`routesAt`, `hubRoutes`), not `hubSpokeNet`, not `hubDemandMultiplier`, not the
+    competition fortress / rival-hub factors. All now read the whole loop (`rotationLegs` /
+    `stops.contains(code)`). **RULE: any new code keyed off a route's endpoint pair must ask whether
+    a rotation makes it partial.** Aircraft-based calls (the CURRENT leg) are correct as-is.
+    Two lessons from the review that caught my own incomplete first pass:
+    (a) **A PARTIAL sweep is worse than none** — making `routesAt` stops-aware newly ALLOWED a hub
+    on an intermediate stop, which then earned a +0% bonus and an unrecoupable payback chart,
+    because `hubSpokeNet`/`hubDemandMultiplier` were still endpoint-only. Sweep every consumer in
+    one pass, or none.
+    (b) **`rotationLegs` closes the loop, so a 2-stop route emits BOTH A→B and B→A** — and
+    CoreGraphics restarts a dash phase per subpath, so drawing both rendered every classic shuttle
+    as a near-SOLID line. Dedupe on the unordered pair when drawing. My commit message had claimed
+    "visually unchanged"; it wasn't. RotationVerify **55/55** (tests 12–13 are the guard).
+  - **TRANSPACIFIC LEGS TAKE THE SHORT WAY (8 Sep, designer-reported: transpacific routes routed
+    across the ATLANTIC).** On the wrap-around map the destination has infinitely many copies; the
+    path was drawn to the stored one, so LAX→NRT went the long way round. `FlightPath.nearestCopy`
+    now snaps every leg to the copy of its destination NEAREST the origin, keyed off a shared
+    `FlightPath.wrapWidth` set once in `projectAirports()`. **Fixed at the shared level ON PURPOSE**
+    — route arcs, the route suggestion, the rotation preview, aircraft motion and the weather rejoin
+    all consume it, so they're fixed together and can't regress one at a time. `.taxiIn`/`.turnaround`
+    return `path.end`, not the raw dest. `PathWrapVerify` 16/16; designer-confirmed on device.
+
+- **The foundational shift this session: aircraft you own no longer fly
+  randomly.** Before this work, EVERY aircraft (purchased or background)
+  picked a destination via `randomRoutePair()` on every PARKED cycle —
+  there was no concept of "the player's network" at all. Purchased
+  aircraft now fly ONLY between airports the player has explicitly opened
+  a route between (`ac.assignedRouteId`), swapping direction each cycle
+  (A→B, then B→A) rather than picking randomly. A purchased aircraft with
+  no assigned route is a real "spare" — it sits genuinely idle (skips the
+  entire state machine via an early return in `advanceAircraft`, consumes
+  no crew) until assigned via `openRoute()`. Background traffic keeps the
+  old fully-random behavior unchanged — it's unrelated to the player's
+  network by design.
+- **Abstract slot scarcity, explicitly NOT real competitor-airline
+  modeling** — a deliberate scope decision. Each airport has
+  `slotsTotal`/`slotsAvailable`, `slotsTotal` scaled inversely to real
+  landing-fee data already in the game (busier/more-expensive airports
+  have less room for new entrants — ORD floors at 3 slots, smaller
+  airports get up to ~13). Slots free up slowly over time
+  (`tickSlotAvailability()`, ~5%/day per under-capacity airport, designed
+  pacing not sourced) representing unnamed background churn, or can be
+  bought outright when none are free (a real premium added to the
+  route-opening cost). Real competitor airlines were explicitly
+  considered and rejected for this pass — see `ROADMAP.md`'s "Deferred
+  indefinitely" list, which this deliberately did not reopen.
+- **Real route-opening cost**, built from data already in the game rather
+  than invented: a base fee plus both endpoints' gate fees
+  (`computeRouteOpeningCost()`), landing in a real $68K-$275K range
+  depending on airport size and slot scarcity — small relative to
+  aircraft prices, real relative to per-flight revenue.
+- **Route-opening UI is click-to-select on the map, not dropdowns** — a
+  real rebuild, not the original design. The first version used two
+  `<select>` dropdowns and hit the exact same per-tick-flicker bug
+  documented above (third instance). Rebuilt as a real 4-step flow: click
+  OPEN ROUTE → click origin airport on the map → click destination
+  airport → confirm panel with live cost/slot info and Open Route/Abandon
+  buttons. Selected airports get a visible highlight ring, correctly
+  zoom-scaled the same way as everything else on the map. Basic tap
+  support exists for mobile, honestly scoped to just this flow (not full
+  touch-pan/pinch-zoom, which remains unbuilt). Airport hit-testing was
+  refactored into one shared function (`findAirportAtScreenPos`) used by
+  both hover AND route-picking, rather than two copies that could drift.
+- **Buying/leasing an aircraft while mid-route-selection auto-assigns it
+  to the pending route** — explicit designer call, chosen over a
+  separate two-step buy-then-manually-assign flow. If the acquisition
+  succeeds but the route still can't open (e.g., the route fee alone
+  exceeds what's left of the balance), the aircraft stays as a real spare
+  and the route panel stays open showing why, rather than silently
+  failing. A second ACQUIRE AIRCRAFT button lives inside the route
+  confirm panel itself (next to Open Route/Abandon) for exactly this
+  case — both buttons share one `toggleBuyPanel()` implementation, not
+  two copies.
+- **Real route-level profitability, weighed against the actual
+  establishment cost** — a route isn't "profitable" the moment one
+  flight nets positive; it's profitable once cumulative net revenue
+  actually recoups `route.openingCost`. Tracked via `route.cumulativeNet`,
+  accumulated at every completed flight AND decremented by real lease
+  bills (`tickLeaseBilling()` reduces a route's cumulativeNet too, if its
+  aircraft is leased) — so a route's true P&L reflects both flight
+  economics and ongoing lease obligations, not just ticket revenue.
+- **Full per-flight route history**, not just the running total — this is
+  what makes a real "chart profitability over time" view possible.
+  `route.history` captures one entry per completed flight: tick,
+  aircraft tail, revenue, fees, operating cost, a DISPLAY-ONLY lease
+  estimate, net, pax/seats/load factor, and cumulative net at that point.
+  Verified the data model is sufficient to reconstruct the full curve and
+  identify the exact flight that crossed into profitability, not just
+  that it eventually did. `route.assignmentHistory` tracks which
+  aircraft has flown the route and when — a real array even though today
+  a route only ever has ONE aircraft for its whole life (it just closes
+  if that aircraft is sold); this is intentionally future-proofed for
+  when aircraft reassignment on an existing route gets built.
+- **Routes are archived, not deleted, when closed.** Selling a
+  route-assigned aircraft used to `splice()` the route out of
+  `playerRoutes` entirely — which would have destroyed exactly the
+  history data the designer wants to eventually chart, right at the
+  moment it'd be most interesting to review (a route that didn't make
+  it). Routes now move to `closedPlayerRoutes` with a `closedTick`
+  stamped on, full history intact. The closure log message now reports
+  real final P&L ("recouped its $X opening cost with $Y to spare" or
+  "never recouped... closed $Z short") instead of a bare "aircraft sold."
+- **A dedicated ROUTES panel**: list view of every route (open AND
+  closed, newest first), tap one for full detail — start date, close
+  date if applicable, flights flown, opening cost, cumulative net and
+  profitability status, total revenue/fees/operating cost/lease cost,
+  average load, full assigned-aircraft history, and a recent-flights log
+  (capped at the most recent 15 for display — a long-running route could
+  have hundreds of entries, but the summary numbers above are always
+  computed from the COMPLETE history regardless of that display cap, not
+  truncated). Not yet built: the actual chart visualization the designer
+  described wanting eventually — this panel has the real data ready for
+  it, but the chart itself doesn't exist yet.
+- **Not yet built**: player-funded route marketing (view loads by
+  route/origin, spend to boost them) — flagged early as a genuinely
+  separate feature from the airport-incentive-offer mechanic, needs its
+  own load-visibility UI that doesn't exist yet. The airport-incentive
+  mechanic itself (bottom-15 airports offering waived fees + marketing
+  support, with a real clawback penalty for abandoning the route early)
+  is also not built — this was explicitly sequenced as Phase C/D, held
+  until the Phase A/B foundation (this section) could be felt in actual
+  play first.
+
+- **AIRCRAFT REASSIGNMENT — BUILT (tester-reported: "ASSIGN TO NEW ROUTE doesn't
+  work").** The button was a bare tab switch (`{ detailID = nil; tab = 0 }`) with
+  THREE defects: (1) no follow-through — it never started the route flow, so the
+  Network tab looked identical to a normal tab tap; (2) wrong aircraft — even if
+  the player then tapped Open Route themselves, `openConfirmedRoute` assigned
+  `idleSpares.first`, NOT the aircraft they'd tapped (with several spares you got
+  a different tail); (3) impossible for a routed aircraft — `openRoute` guards
+  `assignedRouteId == nil`, so an aircraft already flying could never be
+  assigned, which is the case a tester is most likely to try.
+  The fix, per designer direction ("build true reassignment"):
+  `Simulation.reassign(_:from:to:)` moves ANY owned aircraft (idle spare or
+  currently flying) onto a brand-new route. `openRoute` keeps its
+  spare-only guard and both now share `openRouteCore(…detaching:)`, so the
+  cost/range/runway/duplicate checks and hub-eligibility logging can't drift
+  between the two paths. **The route the aircraft LEAVES is archived** (moved to
+  `closedPlayerRoutes` with `closedTick`, full P&L history intact, both slots
+  freed, pending slot-offer cards cleared) — the same teardown selling uses, via
+  a shared `detachFromRoute`. Chosen over leaving it PENDING because a pending
+  route with no way to close it would hold its slots forever. **Detach happens
+  BEFORE `createRoute`**, so reassigning onto a route that reuses an old endpoint
+  gets that slot back instead of being blocked by its own aircraft (verified).
+  A failed reassign (out of range, already-open, unaffordable) is INERT — it
+  returns before detaching, so the existing route survives.
+  UI: `Simulation.pendingAssignment` (transient, not persisted) carries the tapped
+  aircraft across the tab switch; NetworkView adopts it exactly like
+  `pendingSuggestion` (`adoptAssignmentIfAny` → `routeMode = .pickOrigin`), the
+  pick hint names the tail ("Assigning N1ZR: tap the first airport…"), the confirm
+  panel's projected-load/range/runway checks read THAT aircraft rather than a
+  spare, and it shows a red "Leaves ORD–DFW · that route closes" row so the
+  consequence is visible BEFORE committing. The intent is cleared on success and
+  on every exit from the flow.
+  **DEFERRED WHEN AIRBORNE (designer: "I'd rather the jet complete the leg it's
+  flying first. Real world.")** — an initial version repositioned a mid-flight
+  aircraft to the new origin as PARKED, i.e. it teleported. Now `reassign` checks
+  `isEnRoute(ac)` (assigned AND not parked): if airborne it creates + PAYS FOR the
+  new route immediately but sets `ac.pendingRouteId` and leaves the aircraft on its
+  current route; `completePendingReassignment` runs at `.legCompleted` (after
+  `settleLeg`, so the leg's revenue is still booked to the OLD route) and only then
+  detaches/archives and assigns. An IDLE spare still moves instantly — no pointless
+  delay. Two non-obvious consequences handled: `assignSpareToPendingRoutes` skips
+  routes reserved by a pending move (otherwise a newly-bought spare STEALS the
+  route the airborne aircraft is heading to — this is tested), and
+  `pendingRouteId` is PERSISTED (optional field on AircraftSave, back-compatible)
+  so a save/load mid-move doesn't strand the aircraft. Surfaced in the UI: the
+  confirm panel reads "closes after this leg", the flash says "moves over after it
+  lands at X", and the Fleet detail shows an amber "Moves to PDX–SEA after landing
+  at BOS" line. If the reserved route disappears before arrival (e.g. a slot
+  buyback), the pending move is dropped rather than crashing.
+  Verified 41/41 headless (archival, slot accounting incl. the shared-endpoint
+  case, inert failures, no aircraft pointing at a closed route, no teleport, the
+  route-stealing guard, completion on arrival, immediate move for idle spares, and
+  a save/load round-trip of a pending move) plus live in the Simulator.
+  - **REGRESSED then RE-FIXED (native app) — the whole flow silently no-op'd after
+    the TabView→custom-`SkyTabBar` refactor.** The tab bar RECREATES the tab-content
+    view on every switch (documented in the NETWORK-view note). `NetworkView` adopted
+    a pending assignment ONLY via `.onChange(sim.pendingAssignment?.id)` — and
+    SwiftUI `.onChange` never fires on a freshly-created view whose value was already
+    set (here `beginAssignment` runs in Fleet BEFORE the switch). So the fresh
+    NetworkView never entered `.pickOrigin`: tapping ASSIGN TO NEW ROUTE switched to
+    Network and did nothing, and tapping an airport just opened its info card. The
+    Ops route-SUGGESTION path survived because `adoptSuggestionIfAny()` was ALSO on
+    `.onAppear`; the assignment path was missing that same hook. **Fix: call
+    `adoptAssignmentIfAny()` in `.onAppear` too** (one line). GENERAL RULE for this
+    codebase: any intent set BEFORE a tab switch (which recreates the view) must be
+    adopted in `.onAppear`, NOT only in `.onChange` — `.onChange` is for changes that
+    happen while the view is already alive. Found by a live Simulator test-drive
+    (the headless 41/41 can't see gesture/lifecycle wiring); the sim seed used a
+    throwaway `-devScenario reassign` (2 flying jets), stripped after.
+    - **SWEEP DONE — this was the ONLY instance.** Audited every `.onChange(of:)`
+      in the view layer for the same pattern (adopts sim state that could be set
+      before the view is (re)created, with no matching `.onAppear`). All clear:
+      NetworkView's `pendingSuggestion`+`pendingAssignment` and OpsView's
+      `opsEventLog`+`playerRoutes.count` each have their action mirrored in the
+      view's `.onAppear`; AirportPhoto's width-measure likewise; ContentView's
+      `scenePhase`/celebration/decisionQueue/isBankrupt handlers are ROOT-view
+      event reactions (the root is never recreated, and those haptics must NOT
+      fire on appear); AirlineNamingView `tailCode` / GoPublicView `ticker` are
+      local input validation with no preset intent. So no other latent no-ops.
+
+- **SELL A ROUTE-ASSIGNED AIRCRAFT → REPLACE-OR-CLOSE (native app; designer
+  request).** Selling a routed aircraft used to silently ARCHIVE its route (it
+  warned "This closes its route", but the only choice was Sell or Cancel — no way
+  to KEEP the route). Now the Fleet-detail SELL of a route-assigned aircraft opens
+  a custom **AA-styled modal** (Karla + Sky tokens + the app's card/button chrome
+  — NOT a native `confirmationDialog`; the native action sheet was the first cut
+  and the designer flagged it as off-brand, so it was rebuilt as a dimmed-backdrop
+  card `.overlay`): **Assign one from your fleet** (a `.sheet` picker of the idle,
+  IN-RANGE spares, styled like the marketplace cards) · **Acquire a replacement**
+  (jumps to the Network Acquire panel; buying there swaps the new jet onto the
+  route and sells the old one in one step) · **Sell & close the route** (the old
+  behavior) · Cancel. Idle spares (no route to lose) keep the plain confirm.
+  - **Sim core** (Simulation.swift): `replaceRouteAircraft(sell:with:)` clears the
+    old aircraft's `assignedRouteId` WITHOUT archiving the route, `assign`s the
+    replacement in its place, then liquidates the old one (whose route is now nil,
+    so the route STANDS); returns false and changes nothing if the replacement
+    can't physically fly the route (range/runway), so the caller warns.
+    `spareCandidates(for:)` = idle spares that pass `routeBlock`. Works for leased
+    aircraft too (routes to `terminateLease`).
+  - **`pendingReplacement`** is the cross-tab intent for the acquire path — set
+    before the Fleet→Network switch, adopted in NetworkView `.onAppear` (opens the
+    `.acquire` panel), completed in `handleBought`, and CLEARED via
+    `.onChange(of: panel)` when the player leaves Acquire without buying (so a
+    later normal purchase isn't hijacked into a swap+sell). Transient (not
+    persisted). Reinforces the standing rule: an intent set BEFORE a tab switch is
+    adopted in `.onAppear`, not `.onChange` (see the ASSIGN-TO-NEW-ROUTE note).
+  - Verified live on the iPhone sim via a throwaway `-devScenario sellrep` (1 jet
+    on a route + 2 idle spares, stripped after): modal + picker render on-brand,
+    and the swap keeps the route flying while selling the original.
+
+- **CLOSE ROUTE / PARK AIRCRAFT — BUILT (customer-reported, 2026-08-10). A direct
+  "close this route and keep the plane" lever.** A paying customer asked "is it
+  possible to close a route? or force a plane to be idle? it feels difficult to move
+  planes/routes around." It genuinely WASN'T possible: a route only closed as a
+  SIDE-EFFECT of selling its aircraft (replace-or-close), reassigning to a BRAND-NEW
+  route (ASSIGN TO NEW ROUTE archives the old one), or accepting a slot-buyback offer.
+  There was no way to close a route and keep the plane as an idle spare, and no "park"
+  action at all — so the only move-lever was the heavy reassignment flow.
+  - **`Simulation.parkAircraft(_:)`** (Simulation.swift, next to `reassign`): archives
+    the aircraft's route (P&L history kept, both slots freed) via the shared
+    `detachFromRoute` and leaves the plane as an IDLE SPARE (owned or leased — the
+    plane is KEPT). Reuses reassignment's airborne rule: an at-gate aircraft parks
+    IMMEDIATELY; an airborne one sets `Aircraft.pendingPark` and parks on arrival
+    (completed in the `.legCompleted` hook, right beside `completePendingReassignment`)
+    — the "don't teleport a jet mid-air" principle. It also CANCELS any scheduled
+    reassignment and tears down that (paid, now-unwanted) pending route so its slots
+    free. **No cash moves** — the route's opening cost is already sunk (do NOT refund).
+  - **`detachFromRoute` gained a `note:` param** (default "reassigned") so the Ops log
+    reads "parked as spare" vs "reassigned" — the two existing callers keep the default.
+  - **`pendingPark` is PERSISTED** (AircraftSave, `decodeSafe` default false) so a save
+    mid-airborne-park doesn't strand the intent — same reasoning as `pendingRouteId`.
+  - **UI, two surfaces** (designer's call): Fleet detail gets a **PARK (CLOSE ROUTE)**
+    outline button shown only when the aircraft is on a route (idle spares have nothing
+    to close), next to ASSIGN TO NEW ROUTE, with a confirm dialog (tailored copy for the
+    airborne "parks after the current leg" case). The Routes panel's route detail gets a
+    **Close route · park aircraft** button on OPEN, staffed routes, with the same confirm.
+  - Verified **28/28 headless** (`aa-1.1.x/ParkVerify.swift`): at-gate immediate park →
+    idle spare + route archived + slots freed + plane not sold, airborne deferred park,
+    idle-spare park is a no-op (returns false), park cancels + tears down a scheduled
+    reassignment, `pendingPark` survives a save/reload round-trip, and the cash invariant
+    holds through every path. Plus a clean full app build. **Driven live on the iPhone 17
+    Pro sim** via a throwaway `-devScenario park` (1 routed jet + 2 idle spares, stripped
+    before commit): the Fleet-detail PARK button rendered next to ASSIGN, the confirm
+    dialog showed the correct airborne copy, and confirming DEFERRED the park — the jet
+    finished its leg (cycles 6→7) then went IDLE, with the PARK button correctly gone on
+    the now-spare. The Routes-panel button uses the identical `parkAircraft` + confirm and
+    was not separately driven (same call; button-in-card taps fine in SwiftUI). Shipped in
+    **1.1.5 (build 40)**, submitted for review 2026-08-11.
+
+## Decided — Airport hero images (1.2 feature; full spec in `AIRPORT_PHOTOS_SPEC.md`)
+
+- **Each airport card shows a Midjourney-generated hero band (`AirportPhoto.swift`),
+  Vineyard-Architect style.** Resolution order in `AirportPhoto.image(for:)`:
+  per-code `airport_<CODE>.jpg` → shared-metro alias (`sharedOverride`: NYC→JFK/LGA/EWR,
+  TYO→HND/NRT, CHI→ORD/MDW) → one of 9 terrain ARCHETYPES (`airport_<archetype>.jpg`).
+  380+ airports share a curated set, not unique photos. A styled placeholder renders
+  if no file exists (never seen in normal play).
+- **54 images as of 2026-08-30** (was 34): 9 archetypes + 45 per-code city files.
+  The +20 city heroes added this session: **OAK MEX GIG CPT KEF** (first pass — OAK
+  fixed the "beach town for Oakland" miss) + the 15 busiest airports that all shared
+  the generic `metro` skyline (**ATL** DFW DEL CAN MAD FRA MCO ICN CGK CLT BOM SZX PHX
+  KUL IAH — ATL, the world's busiest at 105M pax, was the biggest miss). All MJ
+  `--v 8`, **1456×816 JPG**. The audit that ranks remaining high-traffic airports on
+  generic art is `aa-1.1.x/archetype-audit` (mirror the current `AirportPhoto` logic
+  incl. `archetypeOverrides`, and add each new hero to its `hasOwnArt` set, or the
+  ranking is wrong).
+- **LANDMARK RULE (per spec):** a specific landmark ONLY where it's globally-iconic
+  and MJ-faithful (Golden Gate, Table Mountain, Petronas, India Gate…); otherwise an
+  evocative skyline/landscape — MJ garbles regional landmarks and players notice.
+  Keep the subject in the center-to-upper band and NO baked-in text (the card overlays
+  the city name).
+- **HERO FRAMING FIX (2026-08-30, `AirportHero`):** `scaledToFill` center-cropped the
+  16:9 source into the shorter 2.5:1 band and lopped the SKY off skylines (worst on the
+  wide iPad card). Fixed by cropping toward the TOP (`biasFromTop = 0.38`) + raising
+  `maxHeight` 220→300. ONE change, fixes all 54 heroes, no regen; verified on device
+  (ATL skyline + MEX/KEF landscapes, no regressions).
+- **⚠️ WORKING-FOLDER GOTCHA:** the designer's source library is
+  `~/Architect Universe/Airline Architect/Resources/Airport Photos` (WITH a space,
+  human-named `San Francisco.jpg`). That is NOT the bundle. The app only loads from
+  `SkyOps/AirlineArchitect/AirlineArchitect/Resources/AirportPhotos/` (no space,
+  code-named `airport_SFO.jpg`). New heroes must be COPIED into the app folder (renamed
+  `airport_<CODE>.jpg`); files left only in the working folder never load. `Resources/`
+  uses synchronized groups, so a copied file auto-bundles on the next build.
+
+## Decided — Map (real geography, replacing the original abstract scope grid)
+
+- **Airport positions are real**, not hand-placed. Each airport carries
+  real lat/lon; a lightweight equirectangular projection with a longitude
+  cosine correction at the map's center latitude (`projectPoint()`,
+  shared by airports AND the basemap below so nothing can drift out of
+  alignment) converts these to "world pixel" coordinates once at startup.
+  NOT a true Albers/conic projection — a defensible approximation at this
+  latitude range and scale, not survey-grade, and NOT a true global
+  projection either (see camera section below — still a fixed rectangular
+  lon/lat box, not a sphere).
+- **Airport network grew in three passes, worth knowing the accounting**:
+  started at 7 placeholder airports → 25 (definitive top-25 by fee,
+  designer-sourced) → 46 (top 26-50 batch, minus BWI/FLL which were
+  duplicates across both source lists with conflicting ground-stop
+  numbers, see Economy section) → 48 (added ANC + Honolulu HNL once the
+  projection bounds were expanded to include Alaska/Hawaii). Current
+  count is 48, not 25 or 50 — don't assume either round number.
+- **`WORLD_BOUNDS` now covers Alaska-to-Hawaii-to-East-Coast**
+  (`latMin: 18, latMax: 71, lonMin: -170, lonMax: -66.5`), expanded from
+  continental-only. This was a deliberate reversal, not scope creep: the
+  designer's stated direction is an eventual GLOBAL map (players will
+  open routes worldwide), so when ANC/HNL needed the map to go
+  non-continental, the choice was between a throwaway continental+AK/HI
+  patch or building the real mechanism (camera pan/zoom, see below) that
+  a global map will actually need. Chose the latter — "let's do C."
+  Aleutian Islands are clipped at `lonMin: -170` rather than crossing the
+  antimeridian, which this projection can't handle cleanly; no airports
+  sit that far west so it doesn't matter yet.
+- **Camera system: pan (drag) + zoom (scroll wheel, cursor-anchored),
+  the desktop-appropriate equivalent of pinch-zoom** (which isn't a
+  native desktop gesture — the eventual mobile app gets real pinch-zoom +
+  touch-drag, this is NOT the final interaction design, just the
+  right one for a browser POC). Implementation: `camera = { zoom,
+  worldCenterX, worldCenterY }` is a transform applied ONCE per frame via
+  `ctx.translate/scale/translate`, wrapping all world content (geography,
+  airports, aircraft). Mouse hit-testing inverts the same transform once
+  (`screenToWorld()`) rather than every position needing dual awareness.
+  Default view is NOT the full Alaska-to-Hawaii world — `resetCameraToConus()`
+  computes a zoom/center that frames continental US specifically (real
+  lat/lon math, not hardcoded pixel numbers, captured once into
+  `DEFAULT_CAMERA_ZOOM` for reuse elsewhere — see the sizing curve below),
+  matching what the map looked like before this expansion. A "Reset View"
+  button returns to this default after panning away. Real bug caught
+  before shipping: the reset button initially shared `class="speed"` with
+  the game-speed controls, which would have swept it into that click
+  handler and set game speed to `NaN` on click, silently freezing the
+  tick loop — caught by checking the class assignment before shipping,
+  not by a bug report.
+- **Airport AND aircraft screen size follow a shared damped zoom curve —
+  this went through two real iterations based on direct designer
+  feedback, not one clean build.** V1 (first shipped): airport dots were
+  made fully zoom-INVARIANT (constant screen size regardless of zoom,
+  like a map pin), while aircraft icons were left with NO zoom
+  compensation at all (scaling fully proportional to `camera.zoom`, same
+  as terrain). Designer feedback on V1: airports should grow SLIGHTLY at
+  high zoom (not stay perfectly flat), and aircraft were "too large when
+  zoomed in" — the fully-proportional behavior was the actual problem,
+  not a minor tuning issue. V2 (current): both now share one function,
+  `getMapElementVisualScale()` — constant size from zoomed-out through
+  the default (CONUS-framing) zoom level, then growing modestly, capped
+  at exactly +15% at max zoom (`CAMERA_MAX_ZOOM`). Airports implement
+  this by dividing their base pixel sizes by `zoom/visualScale`; aircraft
+  implement it by inserting an explicit counter-scale `ctx.scale()` call
+  into `drawAircraft()` that didn't exist before (they previously relied
+  entirely on the ambient camera transform for sizing, which is exactly
+  why they scaled fully proportional). Verified numerically before
+  shipping both times — screen-pixel output confirmed via script at
+  multiple zoom levels, not just eyeballed after a code change.
+- **Real basemap, including Alaska and Hawaii** (added after an earlier
+  gap where AK/HI airports existed with no landmass under them — same
+  `us-atlas` extraction pipeline, re-run with AK/HI INCLUDED instead of
+  filtered out). Nation outline and state borders both cover all 50
+  states now, not just the continental 48.
+- **Canada renders as a separate, deliberately muted background-context
+  layer** (`CANADA_RINGS`, sourced from the `world-atlas` npm package —
+  a NEW dependency, not previously in this project — filtered to Canada's
+  ISO numeric id 124, tiny Arctic-archipelago islands dropped). Purely
+  visual context so Alaska doesn't read as a disconnected blob floating
+  in empty ocean space; NOT interactive, no airports here, drawn UNDER
+  the US outline in a neutral gray specifically so it stays visually
+  secondary. Real geography, but deliberately the least prominent layer
+  on the map by design, not by oversight.
+- **Label decluttering**: airports genuinely close together at this map
+  scale get their text labels fanned out with leader lines
+  (`computeAirportLabelPositions()`), while their dots stay at true
+  projected positions. Runs generically over whatever's in `AIRPORTS`, so
+  it automatically picked up new clusters when the network grew to 48
+  (Chicago's MDW/ORD, the Bay Area's SFO/SJC/OAK three-way, DFW/DAL,
+  LAX/SNA, BWI/IAD, AUS/SAT, IAH/HOU, MCO/TPA, on top of the original
+  JFK/EWR/LGA and MIA/FLL) — no code changes needed when the airport
+  count grew, this held up as designed. Cluster detection itself is
+  computed ONCE at startup and does NOT re-evaluate as the player zooms —
+  a cluster fanned out at the default zoom stays fanned out even if
+  zooming in would naturally have given it enough room to un-fan. Known,
+  not fixed — flagged in Open below.
+- **Airport hover tooltip**: shows live ground-stop status (with time
+  remaining if active), on-ground/inbound aircraft counts, and fee
+  reference data. Shares the same tooltip DOM element as the aircraft
+  tooltip (id is still `aircraftTooltip` — cosmetic naming leftover, not
+  worth a rename-everywhere). Aircraft hover takes priority over airport
+  hover when they overlap (a PARKED/BOARDING/TURNAROUND aircraft renders
+  at the airport's exact position) — this was an explicit default, not
+  extensively tested against alternatives.
+- **A real reported bug: flight-path arcs looked disproportionately
+  curved on short routes.** Root cause in `getPathPoints()`: the bezier
+  midpoint's vertical offset was a FIXED 90px regardless of the actual
+  distance between the two airports — a short hop (e.g. DEN-MCI) got the
+  exact same bulge as a coast-to-coast route, which reads as an
+  unrealistic exaggerated arc on anything nearby. Fixed to scale with
+  real distance: 12% of the straight-line distance between the two
+  points, floored at 15px (so very short hops still read as a
+  deliberate curve, not robotically straight) and capped at 120px (so a
+  genuinely long route doesn't arc absurdly high relative to the visible
+  map). These specific proportions are a designed visual choice, not
+  sourced from anything. Verified numerically: a short route now gets a
+  ~15px arc instead of the old flat 90px, scaling smoothly up to the
+  120px cap for long routes.
+
+## Decided — Aircraft Icons (real Figma vector data, replacing the generic triangle)
+
+- **4 icon tiers, all sourced as real SVG path data from Figma** (pasted
+  directly as `<path d="...">` strings, not raster images — the Figma MCP
+  tool's `get_design_context` only returns flattened raster exports for
+  these nodes regardless of query parameters, a confirmed tool-side
+  limitation, not a property of the source file): `narrowbody`,
+  `regionalJet`, `widebody2Engine`, `widebody4Engine`.
+- **Rendering**: each icon is a precomputed `Path2D`, filled with a
+  dynamically-set `fillStyle` at render time (red=held, green=flying,
+  amber=ground) — this is why real vector paths were necessary instead of
+  the raster export; a raster image can't be recolored per-state the same
+  way. Icons are recentered and scaled via a per-icon `targetLength`
+  (NOT a shared constant) so the real size hierarchy holds. Current values
+  (as of the +15% designer-requested bump, up from an earlier baseline
+  that itself already wasn't the original ship values — this comment had
+  gone stale before, check the actual code if precision matters):
+  regionalJet 9.9px < narrowbody 12.5px < widebody2Engine 17.1px <
+  widebody4Engine 19.9px. A shared constant was tried first (early in the
+  icon work) and caused a real bug (narrowbody rendering larger than the
+  widebody fallback) — caught and fixed before shipping, not after.
+- **Icon screen size now follows a damped zoom curve, not the ambient
+  camera transform directly.** Originally aircraft had NO zoom
+  compensation and scaled fully proportional to `camera.zoom` (this is
+  what made them feel oversized when zoomed in — a real designer-caught
+  issue, not a hypothetical). Fixed by sharing `getMapElementVisualScale()`
+  with airports (see Map section) — both now render at a constant size up
+  to the default (CONUS-framing) zoom level, then grow modestly, capped at
+  +15% at max zoom, rather than airports staying perfectly flat and
+  aircraft scaling linearly. This required an explicit counter-scale
+  `ctx.scale()` call inserted into `drawAircraft()`, not just a constant
+  tweak — the two element types now share one formula but arrive at their
+  final size through different render-path mechanics (airports divide
+  their base radius, aircraft insert a compensating transform).
+- **bodyType now drives THREE independent things** that all happen to
+  read the same field: gate-fee tier, on-scope render scale (fallback
+  triangle path), and icon selection (`AIRCRAFT_ICON_PATHS` lookup, real
+  Figma icon path). Changing what a bodyType string means has
+  consequences in all three places — check all three before renaming or
+  adding a bodyType value.
+- All 4 icon tiers are confirmed visually correct in-browser (narrowbody,
+  then widebody2Engine via the 777/787 smoke test, then widebody4Engine
+  via 747/A380/A340) — real verification, not just algebraic
+  transform-math checking. This was checked type-by-type as each was
+  added, and again after the zoom-curve and +15%-size changes via
+  numeric script verification (constant-then-damped-growth confirmed
+  exact at multiple zoom levels), but a full in-browser re-check across
+  the entire 31-type fleet at varied zoom levels hasn't happened.
+- **A real reported bug: aircraft color stayed in the wrong flight-phase
+  color too long, both at takeoff and at landing.** Root cause: color was
+  picked from an altitude THRESHOLD (`pos.alt > 0.5`), which never
+  actually lined up with the real state-machine transitions. Checked the
+  actual altitude curves before fixing: TAKEOFF's altitude never even
+  crosses 0.2 across its whole duration (so it never triggered the
+  "flying" color at all during takeoff), while APPROACH stayed above the
+  0.5 threshold for roughly the first 71% of its duration before
+  dropping. Fixed by tying color DIRECTLY to the real state, not
+  altitude: the player's own aircraft now use three real per-phase
+  colors — `#37FFB0` (takeoff/initial climb, the original green,
+  unchanged), `#83C9FF` (cruise — updated from an initial `#6CD3FF` for
+  better contrast, a follow-up tweak in the same session), `#FFB300`
+  (descent/landing, i.e. APPROACH+LANDING states). Ground states keep
+  the original amber, unchanged. Applied the same state-based fix (not
+  altitude-threshold) to background traffic too, for the same accuracy
+  reason, even though only the player's colors were explicitly requested
+  to change.
+- **Background traffic's color scheme was simplified to one constant
+  color**, replacing an earlier two-tier blue/orange (flying/ground)
+  scheme from the same session. Makes background traffic instantly
+  recognizable as "not mine" regardless of what it's doing, without
+  needing the phase-distinction that actually matters for the player's
+  own fleet. The constant color itself was tweaked once already —
+  `#B25BFF` initially, then `#D767FF` in a follow-up pass because the
+  first value "wasn't popping enough" — current value is `#D767FF`, if a
+  future edit references the old one it's stale. HELD (red) stays a
+  shared universal constant for both ownership tiers — background
+  traffic can still show a real weather ground-stop, and red-for-problem
+  doesn't need a fourth color.
+
+## Decided — Native iOS Port (Phase 0–1, the actual Xcode app)
+
+The port from the browser prototype into the real SwiftUI app has started.
+The prototype (`prototype-reference/…Stress Test.html`) remains the source
+of truth for all sim behavior — the Swift code ports FROM it, verbatim
+where numbers are involved.
+
+- **App RENAMED SkyOps → Airline Architect (designer direction).** Full deep
+  rename done and build-verified: the `.xcodeproj`, all three targets
+  (`AirlineArchitect` / `AirlineArchitectTests` / `AirlineArchitectUITests`),
+  the source/test/container folders, the scheme (autocreated from the target,
+  so `xcodebuild -scheme AirlineArchitect`), the entitlements file, the app
+  struct (`AirlineArchitectApp`), the logo type (`SkyOpsLogo` → `AppLogo`),
+  and the **bundle id** (`Postmark-Digital.SkyOps` → `Postmark-Digital.AirlineArchitect`)
+  all carry the new name. **HOME-SCREEN NAME IS "Airline Arch" ON PURPOSE (designer
+  confirmed, build 33):** the `Info.plist` sets `CFBundleDisplayName` = "Airline
+  Architect", but the app target's build setting `INFOPLIST_KEY_CFBundleDisplayName
+  = "Airline Arch"` OVERRIDES it (INFOPLIST_KEY_* wins over the merged plist), so
+  the icon label is "Airline Arch" — short enough to avoid a home-screen ellipsis.
+  This is NOT a bug to "fix": the designer was asked directly at the build-33 cut
+  and chose to keep "Airline Arch". Leave both configs (Debug + Release) as-is. (The
+  App Store listing name, the in-app wordmark, and `CFBundleName` all still read the
+  full "Airline Architect".) The default blank-name airline is now "New Airline"
+  (was "SkyOps Air"). Identifiers use the NO-SPACE `AirlineArchitect`; the
+  human display name uses the space. **Deliberately still named SkyOps** (not
+  a miss): the git REPO directory (`GitHub/SkyOps`), the Figma file
+  (`SkyOps-Production`, an external name), and the prototype artifact
+  (`prototype-reference/SkyOps — Multi-Aircraft Stress Test.html`). The
+  launch/naming screen reuses the SAME winged-plane badge mark; only the
+  wordmark changed to the two-line "Airline Architect" (Karla Light 25), and
+  the whole naming screen now uses the bundled Karla family.
+
+- **Project shape**: `AirlineArchitect/AirlineArchitect.xcodeproj`, SwiftUI + SwiftData
+  template. objectVersion 77 → uses **file-system-synchronized groups**
+  (`PBXFileSystemSynchronizedRootGroup`): any `.swift` file dropped inside
+  `AirlineArchitect/AirlineArchitect/` is auto-compiled into the app target — NO `.pbxproj`
+  editing needed to add files. This is a real workflow win; don't hand-edit
+  the project file to register new sources, just create them in the folder.
+- **Min deployment target: iOS 18.0** (was 26.5 from the template default).
+  Nothing in the port needs iOS-26-only APIs; 18 maximizes reach at no
+  technical cost. Set across all three targets.
+- **SwiftData kept** (template default) but NOT used yet — Phase 1 has
+  nothing to persist. `Item.swift` template model deleted. SwiftData
+  returns for real in Phase 5 (fleet/routes/economy persistence).
+- **Tick engine architecture (Phase 1)**: `Simulation` is a `@MainActor
+  @Observable` class owning airports + aircraft + `tick`. The tick loop is
+  `Simulation.run()` — a Swift-Concurrency async task started from the
+  view's `.task`, using a `ContinuousClock` accumulator: `BASE_TICK_MS =
+  250` at 1× (ported from the prototype), divided by `speed`, capped at 50
+  catch-up ticks/wake. This is the ROADMAP's "async tick source decoupled
+  from render frame rate." Verified in-sim the timing matches the prototype
+  exactly (142 ticks in 7s at 5×).
+- **State machine + interpolation ported VERBATIM** into `Sim/FlightState`,
+  `Sim/FlightPath`, `Sim/Aircraft`. The chained per-state `t` ranges
+  (takeoff 0→0.12, cruise 0.12→0.82, approach 0.82→0.92, landing
+  0.92→1.0) and the eased takeoff/landing curves are the exact prototype
+  values — that continuity is what prevents the takeoff-jolt/landing-
+  teleport bugs. Phase 1 deliberately OMITS the WEATHER holding-pattern and
+  REJOIN branches (Phase 3). Aircraft color is tied to real flight PHASE,
+  not an altitude threshold — same validated fix as the prototype.
+- **A real SwiftUI redraw bug caught by watching it run, NOT by the build
+  — and it WILL recur in Phase 2+.** The map froze at the launch frame
+  (aircraft stuck parked-at-SFO, amber) while the HUD's tick/phase advanced
+  live. Root cause: a child view (`MapView`) whose only stored property is
+  a reference type (`Simulation`) that never changes gets diffed as
+  IDENTICAL by SwiftUI every tick, so its `body` is never re-invoked and
+  its `Canvas` never redraws. Plain (non-`@Observable`) model classes
+  (`Aircraft`/`Airport`) don't help — they carry no observable dependency.
+  Neither did a `TimelineView(.animation)` wrapper, nor a discarded `let _
+  = sim.tick` read inside the frozen body. **The fix that works: pass the
+  changing value (`tick: sim.tick`) into the child view as a real VALUE
+  input, so SwiftUI sees the input change and re-renders.** Aircraft
+  position is a step-function of the tick, so a tick-driven redraw is exact,
+  not a hack. This is the SwiftUI analog of the prototype's three-times-
+  recurring per-tick panel-flicker bug: any new tick-driven Canvas or panel
+  view (fleet, routes, decision cards in later phases) must take a changing
+  value input, or it will silently freeze. If a second view freezes this
+  way, build the shared pattern rather than fixing it one-off a fourth time.
+- **Verification practice for the native app**: a clean `xcodebuild`
+  build proves NOTHING about runtime behavior — the freeze above compiled
+  perfectly. Same lesson as the prototype's `operatingCost` ReferenceError
+  (`node --check` passed it). Drive the app in the simulator
+  (`xcrun simctl` install/launch/screenshot) and actually WATCH the
+  behavior before calling a phase done. This caught the freeze bug.
+- **Phase 2 (multi-aircraft + fleet + icons) — DONE.** Ported the full
+  fleet data as Swift structs (`AircraftType.all` = 30 variants, weighted
+  `pickWeighted`; `Airport.all` = 48 airports with real fee/ground-stop
+  fields). Stress-test fleet spawns weighted/staggered via `setFleetSize`
+  (10–250). Verified 250 aircraft tick at the full rate with no drops —
+  Canvas + tick-driven redraw scales fine. The 4 real Figma icon tiers
+  render via a hand-written `SVGPath.parse()` (M/L/H/V/C/Z, absolute +
+  relative, handles scientific-notation numbers like `4.8e-06`; no arcs/
+  shorthands — the icons don't use them) → SwiftUI `Path`, cached once in
+  `AircraftIcon.byBodyType`, scaled per-tier by `targetLength/viewBoxWidth`
+  and recentred, nose authored toward +x so `rotate(heading)` aims it. Same
+  transform order as the prototype's `drawAircraft`.
+- **Default map framing = continental US** (`Simulation.layout` excludes
+  ANC/HNL from the fit bounds, like the prototype's `resetCameraToConus`).
+  There is NO camera/pan-zoom yet — that's Phase 4; until then ANC/HNL
+  render off the framed area and AK/HI-bound flights fly off-screen. This
+  is expected, not a bug.
+- **Deferred out of Phase 2 into the economy work**: the ROADMAP folded
+  revenue/operating-cost/economic-event systems into Phase 2, but they
+  pair more naturally with the Phase 5 economy + the hover-tooltip UI —
+  not yet ported. Phase 2 covered scale + types + icons only.
+- **Basemap (continent outline + state lines) — PULLED FORWARD from
+  Phase 4** at the designer's request while looking at the map. Real
+  geometry (`US_NATION_RINGS`/`US_STATE_RINGS`/`CANADA_RINGS`) extracted
+  from the prototype into a bundled `Basemap.json` (~58KB: 26 nation
+  rings, 51 state features, 22 Canada rings), decoded + pre-projected to
+  unit space once in `Basemap.swift`, drawn beneath airports in
+  `MapView.drawBasemap` with the prototype's colours/layer order (Canada
+  muted gray → US nation faint-green fill+stroke → state borders fainter).
+  Projects through `Simulation.transform` (the shared unit→screen map
+  transform, now exposed) so it can't drift from the airports. The rest of
+  Phase 4 (pan/zoom camera, label decluttering, the Figma UI pass) is
+  still deferred — only the static basemap was pulled forward.
+- **Resource bundling works with synchronized groups**: dropping
+  `Basemap.json` in the app folder (under `Resources/`) auto-bundles it —
+  confirmed it lands in the built `.app` and `Bundle.main.url(forResource:)`
+  finds it. No pbxproj resource-phase editing needed, same as source files.
+- **LATIN AMERICA expansion — DONE (native app). 48 → 93 airports; map now
+  covers Alaska → the Americas down to Argentina.** Added 15 Mexico + 10
+  Central America + 20 South America airports (`Airport.all`), real lat/lon.
+  Fee/ground-stop figures are **TIER-BASED ESTIMATES** calibrated to the US
+  ranges + each airport's real size/role — NOT per-airport sourced signatory
+  rates (unavailable for most); same "weakest tier" confidence as the RJ
+  weights. Flagged in the code.
+  - **Projection extended WITHOUT disturbing the existing North American map**
+    — the key trick: `GeoProjection` keeps `lonMin = -170` and `latMax = 71`
+    UNCHANGED and PINS the longitude cosine correction to a new constant
+    `cosRefLat = 44.5` (the ORIGINAL bounds' centre) instead of recomputing it
+    from the new centre. Since `unit()` only uses `lonMin`, `latMax`, and
+    `lonCorrection`, every previously-placed point (US/Canada geometry, all US
+    airports, the CONUS frame) projects to the EXACT same unit position; only
+    `latMin` (−56, Tierra del Fuego) and `lonMax` (−33, Recife) grew, extending
+    the canvas south/east. Default CONUS framing is unchanged (verified) —
+    `conusFrame` uses fixed CONUS bounds, and `defaultZoom`/`worldScale` cancel
+    so CONUS fills the frame identically; the previously-empty southern margin
+    now shows Mexico peeking in, inviting pan-down.
+  - **Basemap geometry**: pulled Natural Earth 110m country outlines (same
+    fidelity as the existing Canada layer) for the 20 countries via `curl` +
+    a Python extract (outer rings only, tiny-island drop, 2-dp round) → a new
+    `"latam"` key in `Basemap.json` (22 rings, ~1.4k pts, +22KB). `Basemap.swift`
+    decodes it (optional, back-compatible) and projects it through the SAME
+    `GeoProjection`; `MapView.drawBasemap` renders it muted like Canada (faint
+    fill + 0.20 stroke). Verified in the Simulator: all 45 airports sit on their
+    countries (BOG/Colombia, LIM/Peru coast, GRU-CGH/São Paulo, EZE-AEP/Buenos
+    Aires, SCL/Chile, REC-SSA/Brazil east coast), US map pixel-identical.
+  - **Region-aware competitor airlines — DONE, then EXPANDED to 5 regions.**
+    `Airline.Region` = {us, canada, mexico, centralAmerica, southAmerica}, each
+    with its OWN roster (`roster` US / `canadaRoster` / `mexicoRoster` /
+    `centralAmericaRoster` / `southAmericaRoster`) and its own airport-code Set
+    (`canadaCodes`/`mexicoCodes`/…; US is the default). `Airline.region(code)`
+    classifies an airport; `pick(forType:origin:dest:)` draws that region's
+    roster for a same-region leg, or BOTH rosters for a cross-region leg (every
+    type resolves → Independent Operator fallback). `makeAircraft` calls it with
+    `Airline.region(origin.code)`/`dest.code`. This replaced the old binary
+    `latamRoster`/`latamAirportCodes`/`pick(…originLatam:destLatam:)` — the LatAm
+    pool was too coarse (MEX↔CUN could show LATAM). Carriers (real, per-type
+    researched, real IATA codes incl. digit ones): Canada — Air Canada, WestJet,
+    Jazz, Porter, Air Transat, Flair; Mexico — Aeroméxico, Volaris, Viva Aerobus;
+    Central America — Copa, Avianca, Volaris; South America — LATAM, GOL, Azul,
+    Avianca, Aerolíneas Argentinas, SKY, JetSMART. New codes in `realCodes`:
+    AD/VB/JA (LatAm) + TS/PD/QK (Canada). Verified 17/18 headless (the one
+    "fail" was a bad test expectation — Air Canada correctly doesn't fly the
+    737-800, only the MAX 8): region isolation both ways, transborder shows both,
+    every type resolves in every region pair, tails carry real codes.
+  - **Remaining scope note (deliberate)**: still no region-SELECTION (player
+    always starts US). The equirectangular projection stretches the far south
+    modestly (pinned cosine) — accepted per the "not a true global projection"
+    limitation.
+- **Cozumel (CZM) added — 114 airports (48 US + 46 LatAm + 20 Canada).** For the
+  scuba divers. Real lat/lon (20.52, −86.93), Mexico-tier fees; added to
+  `mexicoCodes` so it draws Mexican carriers.
+- **NETWORK control bars restyled for light (Figma 2:1592) — DONE.** The control
+  bar / speed bar were dark navBarDark boxes that read as "black" on the white
+  light map. Now theme-aware via `barBG`/`barBorder`/`barText`/`barShadow` in
+  NetworkView: dark = navBarDark @0.92 (unchanged); **light = opaque white + a
+  #C9C9C9 border + soft shadow + #497AA5 "Core Blue" text** (Figma uses white@80%
+  but opaque here since our map is white, not the Figma's dark screenshot). The
+  active speed pill stays bright-blue+white in both. The DEV Competitive-Traffic
+  + Pro-toggle controls (previously loose) are now wrapped in a matching
+  `devControls` container so they don't get lost on white; the traffic count
+  colour is theme-aware too. Verified both themes.
+- **Map is now THEME-AWARE (was dark in both themes) — DONE (designer request).**
+  `MapView` reads `@Environment(\.colorScheme)`: **light mode = white canvas**,
+  dark mode unchanged. Only the background, grid, labels, and selection ring
+  flip: `mapBackground` (white/dark), `gridColor` (black-tint/white-tint),
+  `labelColor` (slate #334155 / white), `selectionRing` (black/white). Coloured
+  strokes get a `strokeBoost` (×1.7 in light, ×1.0 in dark) because a light
+  colour at low opacity vanishes on white; region FILL opacities are also
+  bumped in light. Airport dots stay green (climb-green) in both. Verified both
+  themes (dark pixel-unchanged). Follow-up (done): the player's own CRUISE-phase
+  colour is now theme-aware — `#83C9FF` on dark, **`#4E67A0` on light** (the
+  section-header blue) since the light blue washed out on white; `cruiseColor` is
+  a computed var in MapView. Also: NetworkView's header/eye/bell + the
+  Competitive-Traffic/Pro(DEV) labels were switched from the bright `#0EA5E9` to
+  the shared `titleColor` (dark `#BDE0FF` / light `#4E67A0`, Figma 2:1594) so the
+  Network tab matches every other tab's section-header colour (the bottom tab-bar
+  active tint stays bright blue — that's its own Figma spec).
+- **Per-region geography COLOURS — DONE (designer request).** The basemap used
+  to be all one green; now each region has its own hue at a shared brightness
+  (the old US-outline treatment: faint fill + `0.35×strokeBoost` outline, one
+  colour each): **US blue `#4A9EFF` · Mexico green `#35C75A` · Canada red
+  `#FF5C5C` · Central America orange `#FF9A3C` · South America yellow `#EDB93C`**.
+  Required SPLITTING the old single `latam` basemap layer into `mexico` /
+  `centralAmerica` / `southAmerica` keys in `Basemap.json` (re-extracted from the
+  same Natural Earth 110m geojson, per-region; `Basemap.swift` decodes the new
+  optional keys). Canada gained a fill (was stroke-only muted grey). US state
+  borders are a faint US-blue now (were grey). `MapView.drawBasemap` has a
+  `region(rings, color)` helper. Colours defined as `usColor`/`mexicoColor`/etc.
+  in MapView. Verified both themes framed to the whole Americas.
+- **Canada airports — DONE. 93 → 113 airports (48 US + 45 LatAm + 20 Canada).**
+  Top-20 Canadian airports added to `Airport.all`, real lat/lon; fee/ground-stop
+  figures are tier-based ESTIMATES like the LatAm set (ground-stops lean high for
+  winter/Atlantic-weather airports). **Correction applied:** the requested "YKA
+  — Kelowna" is wrong (YKA is Kamloops); added Kelowna as **YLW** (correct code).
+  No WORLD_BOUNDS change needed (all within existing lat/lon extent). SCOPE NOTE:
+  no Canadian CARRIERS yet — Canadian domestic legs draw the US roster (Air
+  Canada is in it for widebodies only), so YYZ↔YVR shows US carriers; the
+  region-aware `pick` only splits US vs LatAm. Adding WestJet/Porter/Flair + a
+  Canada region is an easy follow-up if wanted.
+- **Pan/zoom camera + airport labels — ALSO PULLED FORWARD from Phase 4**
+  (same session, designer focused on the map). The projection is now
+  camera-based: everything lives in unit space and `Simulation` maps
+  unit→screen via `{cameraZoom, cameraCenter}` each frame (`project`/`unit(fromScreen:)`).
+  Ported from the prototype's camera: default view frames CONUS
+  (`resetCameraToConus` math, 0.92 pad), zoom clamps to [0.4×, 4×], and a
+  damped `elementScale` keeps airports/aircraft legible (constant size to
+  default zoom, +15% at max) instead of ballooning. Gestures: `DragGesture`
+  → `pan`, `MagnifyGesture` (anchored at pinch start) → `zoom`, plus a
+  RESET VIEW button. Airport code labels now render (constant size), and
+  zooming separates the dense NE / Bay-Area clusters.
+- **Redraw on camera change uses the same value-input pattern as `tick`**:
+  `MapView` takes `cameraZoom`/`cameraCenter` as inputs (ContentView reads
+  them from the `@Observable` sim), so a pan/zoom re-renders immediately,
+  not on the next tick. Same fix family as the Phase 1 freeze bug.
+- **Default-framing robustness**: a transient launch/rotation viewport size
+  briefly mis-framed the map once. Fixed with `userAdjustedCamera` — the
+  view auto-re-frames CONUS on every size change UNTIL the user first
+  pans/zooms, so a bad transient size can't lock the wrong framing.
+  RESET VIEW clears the flag (re-enables auto-framing).
+- **Verification caveat**: pan/zoom RENDERING was verified (exact camera
+  values confirmed via an on-screen debug readout; a forced zoomed-in view
+  confirmed basemap scaling + label separation + non-ballooning icons). The
+  live GESTURE input was NOT driven end-to-end — the user declined
+  Simulator control for computer-use — so the drag/pinch handlers
+  themselves are only verified by inspection, not by a real gesture.
+  UPDATE: designer confirmed interactively — "pan feels great, as does
+  pinch." Max zoom raised 4→14→28→**60** (`cameraMaxZoom`) across designer
+  passes — the latest bump (28→60) so tightly-clustered airports (SFO/OAK/SJC)
+  can be pinched far enough apart to tap the right one against the 44pt hit
+  target. The icon-growth curve is anchored to a FIXED span (defaultZoom×2.5) so
+  icons/airports don't balloon as max zoom rises; labels get their own
+  `labelScale` reaching +15% at max zoom. Basemap coastline reads faceted at
+  extreme zoom (topology-simplified source) — accepted for now.
+- **TAP AN OPS EVENT TO LOCATE ITS AIRPORT — DONE (native app).** `OpsEvent`
+  gained an optional `airportCode` (set on capacity-expansion + single-airport
+  ground-stop logs via `logOps(..., airportCode:)`). Those Ops event cards show a
+  "Show on map" affordance + chevron and are tappable → `Simulation.focusCamera(on:)`
+  centers the map on that airport (zoom `max(defaultZoom*8, 10)`, capped at max)
+  and ContentView switches to the Network tab (`onShowAirport` closure). Solves
+  "most airport codes are foreign to the player" (WLG, YVR…) — they can see WHERE
+  it is. Route-opened (two airports) is deliberately not mappable.
+- **Label declutter — DONE, better than the prototype.** Ports
+  computeAirportLabelPositions() (greedy 13px-threshold clustering, ring
+  fan from cluster centroid starting straight up, leader lines) but
+  recomputes clusters against CURRENT screen distance EVERY FRAME — the
+  exact upgrade the old "doesn't re-evaluate on zoom" Open item asked
+  for, affordable now because 48 airports is ~1,100 distance checks.
+  Fanned clusters un-fan automatically once zoom gives labels room.
+  Ground-stopped airports' labels render red. The old Open item is
+  resolved for the native app (the browser prototype still has the
+  static version).
+- **Wrap-around map — DONE (native app; designer request).** The map now
+  tiles horizontally so panning east/west circles the globe seamlessly
+  instead of hitting a hard edge (Tahiti/far-east rolls into the
+  Americas/far-west and back). Mechanism: `Simulation.wrapWidthUnits =
+  360° × lonCorrection` is the wrap PERIOD; `wrapDrawOffsetsPx()` returns
+  the pixel x-offsets of every world tile that intersects the viewport,
+  and `MapView` redraws the whole world (basemap/routes/airports/aircraft)
+  once per offset into a translated `GraphicsContext` copy (same trick
+  `drawAircraft` already used per-icon; the grid stays screen-space, drawn
+  once). `pan()` normalizes `cameraCenter.x` mod the period via
+  `wrapCameraX()` (a shift of exactly one period is invisible on a periodic
+  scene, so it never jumps); the incremental-delta drag gesture is
+  unaffected. Hit-testing (`airport(atScreenPoint:)`/`aircraft(...)`) uses a
+  `wrappedDX()` minimal-horizontal-distance so a tap on ANY tile registers.
+  **Key subtlety, don't "fix" it:** the rendered content spans ~390° of
+  longitude (Alaska −170° → Tahiti stored at +210°), but the wrap period is
+  360°, NOT the 390° content width — because Anchorage and Tahiti are at the
+  SAME real longitude (~150°W) and must coincide at the seam. This leaves a
+  ~30° overlap of near-empty mid-Pacific where far-north (Alaska) and
+  far-south (Tahiti/NZ) content co-draw at the same x but different
+  latitudes — correct, not a bug. Verified: seam renders Asia→Americas
+  across the Pacific like a globe; default CONUS view pixel-unchanged (tiles
+  off-screen at that zoom). The browser prototype does NOT have wrap.
+  - **SEAM-STRADDLING LEGS — FIXED (8 Sep 2026; player-reported "transpacific
+    routes route across the Atlantic").** The note above used to say a leg whose
+    endpoints straddle the seam "still draws the long way around (rare;
+    acceptable)" — it was NOT rare once Asia/Oceania airports existed: every
+    LAX↔HND-class leg (player route arc AND the aircraft flying it) drew east
+    across the whole map. Root cause: `FlightPath.pathPoints` interpolated between
+    two RAW `Airport.screen` points in flat screen space. Fix: every path now runs
+    to the copy of its destination NEAREST the origin (`FlightPath.nearestCopy`,
+    the screen-space twin of the ±180° normalization already in
+    `Airport.greatCircleNM` — sim distances/range checks were always right; only
+    the drawn arc + the aircraft riding it went the wrong way). The wrap period is
+    ONE shared `FlightPath.wrapWidth` (px) that `Simulation.projectAirports()`
+    refreshes every frame, so ALL callers are fixed at once (route arcs, suggestion
+    arc, rotation preview, aircraft motion, weather-hold rejoin) and a future call
+    site can't regress it; headless harnesses never project → 0 → the flat
+    prototype geometry unchanged. `.taxiIn/.turnaround` sit at `path.end` (the same
+    tiled copy the aircraft flew into) rather than the raw dest one period away.
+    `frameRoute` (Ops suggestion → map) also frames the short way now. Guard:
+    `aa-1.1.x/PathWrapVerify.swift` 16/16 (two-file compile, see its header);
+    designer confirmed on device.
+- **Phase 3 slice 2 — AOG + decision cards, DONE.** Faithful port:
+  calibrated onset (2/100/month as continuous per-tick probability),
+  family clustering (3×, 3-sim-day linear decay, families never
+  cross-contaminate), maint blocks at the PARKED gate only (in-flight
+  aircraft finish flying first), Expedite $15,000-now vs Standard
+  $3,000-~3hr(180-tick timer). `Aircraft.advance` returns an
+  `AdvanceEvent` (aogHoldStarted / aogRepairCompleted) so the aircraft
+  stays free of queue/UI knowledge; `Simulation` owns `decisionQueue`,
+  push (dupe-guarded), resolve, and `clearDecision` (the prototype's
+  stale-card fix, called on timer completion + fleet shrink).
+  `maintenanceSpend` accumulates real charges until the Phase 5 economy
+  absorbs them. Decision cards are bottom-anchored SwiftUI views over the
+  map — stable `Decision.id` + ForEach diffing is the SwiftUI idiom for
+  the prototype's thrice-recurring per-tick-re-render bug; don't key
+  cards off tick. OWNERSHIP SCOPING DEBT (deliberate): AOG currently
+  applies to the whole stress-test fleet because `purchased` doesn't
+  exist until Phase 5 — when it lands, gate `tickAOGOnset` on ownership,
+  the SAME retrofit the prototype documents having missed once.
+- **A second verification lane now exists and caught nothing only because
+  it ran BEFORE shipping**: the Sim/ sources compile standalone with
+  `swiftc` (no SwiftUI imports in the sim layer — deliberate), so a
+  headless test harness can drive the REAL app code. The AOG slice
+  shipped with 16/16 passing lifecycle checks (hold/push/resolve paths/
+  timer/cleanup/onset statistics) run this way. Pattern lives in the
+  session scratchpad, trivial to recreate: compile Sim/*.swift + a
+  @main @MainActor TestMain.swift. Use it for every future sim-layer
+  port (crew duty/rest is next and is exactly the kind of logic it
+  catches).
+
+- **Aircraft tap-tooltip — DONE, and a real gesture bug shipped twice
+  before a fix stuck.** Tap-to-select (highlight ring + bottom card), tap
+  empty to dismiss, field order per the documented designer decision
+  (Route → Tail → Type → Status → Cycles) with marked slots for the crew
+  and economy rows. THE BUG: tap + pan were TWO separate recognizers
+  (`.onTapGesture` / `SpatialTapGesture` alongside `.gesture(DragGesture)`).
+  They fought — the tap fired then the drag machinery cleared it, exactly
+  the user's "flashes up then it's gone." First remote fix (swap
+  SpatialTap→onTapGesture) also failed. THE FIX THAT WORKS: ONE
+  `DragGesture(minimumDistance: 0)` that decides tap-vs-pan itself —
+  movement > 8pt = pan, ended-without-moving = tap → hit-test at
+  `v.location`. Simultaneous with the magnify gesture; nothing else
+  competes. **Lesson for every future map interaction: don't stack a tap
+  recognizer next to the pan recognizer — extend the ONE drag gesture.**
+- **Gesture bugs are invisible to the headless harness — they need a real
+  driven gesture.** The hit-test logic passed 4/4 headless checks and was
+  fine; the bug was 100% in SwiftUI gesture COMPOSITION, which only
+  surfaces through an actual tap. Verified the fix by driving the
+  Simulator via computer-use (an on-screen tap-debug readout —
+  `tap (x,y) → HIT/miss · sel yes/no` — pinpointed it as a hit that was
+  immediately cleared, not a miss). When a UI-interaction bug resists
+  reasoning, add a temporary on-screen state readout and drive it, rather
+  than shipping another blind fix. (The user initially declined Simulator
+  control, then granted it once the on-screen readout wasn't enough — ask
+  for it when a gesture genuinely can't be verified any other way.)
+
+- **Phase 3 slice 3 — crew, DONE. Phase 3 now COMPLETE (weather + AOG +
+  crew).** Per-family pools (`Crew`, `crewPoolsByFamily`), real Part 117
+  duty/rest (`maxDutyTicks`/`restTicks` = 600/600), duty accrues ACROSS
+  flights and resets ONLY after a completed rest (the corrected version —
+  verified duty reaching 926 before rest). Boarding gate holds an aircraft
+  red for a legal crew and pushes a CREW card (Call reserve $5,000 / Wait);
+  staggered spawns get backfilled crew with partial duty. The pool lives on
+  `Simulation`; `Aircraft.advance` takes `assignCrew`/`releaseCrew` CLOSURES
+  so the aircraft stays pool-free and headless-testable. Same event-return
+  pattern as AOG (`crewHoldStarted`/`crewHoldResolved` → push/clear card).
+  Tooltip's crew-legal-hours slot is now filled.
+- **A real balance bug found and fixed BY the headless harness, not in
+  play: crew provisioning has a hard CLIFF at the duty/rest break-even.**
+  A crew flies ~55% of the time (2 cycles on, one 600-tick rest), so you
+  need ~1.8 crews/aircraft just to keep aircraft flying. At/below 1.8 there
+  is ZERO margin: any timing cluster starts a shortage that CASCADES into a
+  permanent fleet-wide jam (I first shipped 1.8 → the whole screen filled
+  with CREW cards). At 2.6+ it never holds at all (trivial, the thing
+  CLAUDE.md warned about). A headless sweep (1.9–2.4 all steady, max 1–2
+  simultaneous holds) pinned the usable band; locked `crewsPerAircraft =
+  2.1`. LESSON: this behavior is bimodal (cascade vs dead) with a sharp
+  edge — any future change to duty/rest timing, cycle length, or the ratio
+  must be re-swept with the balance probe, not eyeballed. The real
+  crew-management tension (starting under-crewed, hiring up) is the Phase 5
+  player-driven model; this auto-provisioned ratio is the pre-ownership
+  stand-in (same ownership-scoping debt as AOG — re-scope to `purchased`
+  when it lands). **UPDATE: this auto-ratio stand-in is now GONE — replaced
+  by the player-driven model below.**
+- **Player-driven crew hiring — DONE (native app), replacing the auto-ratio
+  `crewsPerAircraft = 2.1` stand-in entirely.** Ported the prototype spec
+  (re-supplied by the designer). Buying/leasing/used-buying an aircraft now
+  `grantBundledCrew(family)` — exactly 1 crew, plus 1 reserve seeded on the
+  family's FIRST aircraft (1 bundled + 1 reserve = 2 total, the corrected
+  count — was 2 reserves). `resizeCrewPools()` is CLEANUP-ONLY now: it clears
+  a family's pool/reserves to 0 when its owned count hits zero (last sold),
+  and NEVER grows/shrinks by any ratio — so the old cascade-prone 2.1 sweep is
+  irrelevant (the balance probe no longer applies to crew sizing; the player
+  sizes the pool). `hireCrew(family:)` costs a real `crewHireCost` (0.2% of a
+  representative aircraft's price — ERJ $28k … 777 $578k, verified) charged to
+  `playerBalance`. The CREW decision card gained a 3rd option "Hire · $X"
+  (`resolveCrewHire`, disabled "Can't afford hire" when broke) alongside
+  Reserve/Wait. `ownedFamilies`/`crewCount(family:)`/`ownedCount(family:)`
+  feed the ADD CREW panel (which lands with the NETWORK view). Duty/rest is
+  UNCHANGED (already correct: dutyTicks resets only on a completed rest). The
+  intended tension is now REAL: a fresh 1-aircraft-1-crew operator hits a CREW
+  hold within ~2 flight cycles and must hire — verified headlessly. Also
+  removed `backfillStaggeredCrews` (dead — purchased aircraft always spawn
+  PARKED and get crew at the boarding gate; background traffic uses no crew).
+- **Fixed a real pre-existing gap while here: decision costs were FREE.**
+  `maintenanceSpend` accumulated AOG-expedite ($15k) / AOG-standard ($3k) /
+  crew-reserve ($5k) charges but NEVER subtracted from `playerBalance` and was
+  never displayed — a dead accumulator, so every decision was silently free.
+  Now a shared `chargeDecisionCost()` deducts from `playerBalance` (and still
+  tracks the stat) at all three points, plus `hireCrew`. Verified headlessly.
+- Crew model verified: 22/22 headless (bundled 1+reserve, per-family seeding,
+  hire cost/deduction, sell-clears-only-at-zero + crew release, decision-cost
+  balance deductions, resolveCrewHire assign+resolve, and the CREW-hold
+  tension arising on a busy single-crew route).
+- **NETWORK view — DONE (native app), the FIRST full app screen from Figma.**
+  The app is now a 5-tab shell (`ContentView` = `TabView`: Network / Fleet /
+  Crews / Ops / Finance — the latter four are "Coming soon" placeholders,
+  designed later). `NetworkView.swift` is the Network tab, built to the Figma
+  (2:1592 light / 2:1994 dark): a **Cash-on-hand + NETWORK header** (cash value
+  green `#10B981`, live), an **eye** toggle (`View Overlay Menus` — hides the
+  Control Bar + Speed Bar for a clean map; icon flips eye↔eye.slash) and a
+  **bell** (`Events Icon`, badge on pending decisions — the events feed itself
+  is NOT built yet, a real TODO), the **Network Control Bar** (Acquire A/C /
+  Open Route / Routes / Hire Crew / Fuel Hedge — mutually-exclusive panels via
+  a `NetPanel` enum, except Open Route which drives `routeMode`), the map, and
+  the **Sim Speed Control Bar** (¼× ½× 1× 5× 10× 25×). Design tokens in the
+  `Sky` enum (`brightBlue #0EA5E9`, `coreGreen #10B981`, `navBarDark #1F232D`,
+  `darkBG #2B303D`, `onDarkStroke #4C5D88`, etc.); theme-aware via colorScheme.
+  Karla/SF-Pro approximated with the system font (bundle OFL Karla for exact
+  type). Tab icons are SF Symbol approximations of the Figma glyphs. The DEV
+  TRAFFIC stress-test control (not in the Figma) is tucked under the eye
+  overlays, labelled DEV.
+- **The map is now a BOUNDED ROUNDED CARD, not full-screen — this reworked the
+  tap coordinate space AGAIN.** The Figma insets the map (rounded card below
+  the header, above the tab bar). So MapView's Canvas `.ignoresSafeArea()` was
+  REMOVED (it now fills the card), and taps are read in a NAMED coordinate
+  space (`.named("mapCanvas")` on the card) instead of the earlier full-screen
+  `.global` fix — because the Canvas now fills the card, the card's local
+  space IS the Canvas draw space. Verified live: route-picker DEN selection
+  landed correctly in the new bounded card. (Lesson: the correct tap space is
+  whatever matches the Canvas's actual frame — `.global` when it's full-screen
+  ignoresSafeArea, a named/local card space when it's bounded.)
+- **¼×/½× speeds + the ¼× rate limit — ported.** `Simulation.speedOptions` is
+  now [0.25, 0.5, 1, 5, 10, 25]; `speed` is `private(set)` and set via
+  `requestSpeed(_:)`. ¼× is capped at 3 uses per FIXED sim-day
+  (`quarterSpeedUsesRemaining`, resets when `tick/1440` changes, NOT a rolling
+  window); the 4th request snaps to 1× (not the previous speed). Verified 8/8
+  headless. NetworkView reads/greys the ¼× control by the remaining count.
+- **GAME CLOCK readout on the speed bar — DONE (designer request).** A slim
+  `Day N · Mon D, YYYY · HH:MM` line sits at the TOP of the Sim Speed Control Bar
+  box (Network tab), above the pills — designer's chosen spot (pairs the time
+  DISPLAY with the time CONTROL). Three pure `Simulation` helpers off a passed tick
+  (not instance state): `gameDay(at:)` = `tick/1440 + 1` (**1-INDEXED: Day 1 at
+  start**), `gameTimeString(at:)` = 24-hr `HH:MM` from minute-of-day,
+  `gameDateString(at:startDay:)` = real-month date **with year** ("Jan 8, 2026")
+  on the sim's 30-DAY-MONTH calendar (`gameStartYear = 2026`, the game's 2025–26
+  fleet/roster era; year advances every 360 sim-days). **Game Date is derived from
+  the SAME 30-day-month calendar the seasonal curves read (`monthOfYear`), on
+  purpose** — a real 365-day calendar would drift out of sync with the weather/
+  season model; the date's month index is provably always == `monthOfYear`. Within
+  the first month Game Day == the date's day-of-month (Day 7 = Jan 7); after that
+  Game Day keeps counting while the date wraps monthly (two different readouts).
+- **RANDOMIZED START DATE + SEASON per new game (designer request).**
+  `Simulation.calendarStartDay` (0–359, `private(set)`, **persisted**) offsets the
+  calendar so a new game begins on a random date AND in a random season.
+  `monthOfYear` is now `((tick/1440 + calendarStartDay) / 30) % 12` (identical to
+  the old `(tick/ticksPerMonth)%12` when the offset is 0), so the weather/leisure
+  curves shift WITH the start date automatically — a December start shows winter
+  storms from tick 0 (verified live: "Dec 17, 2026" with snowflake glyphs on the
+  map). `gameDateString` takes `startDay` (view passes `sim.calendarStartDay`);
+  Game Day and time-of-day are OFFSET-INDEPENDENT (operational days / minute of
+  day). **`randomizeCalendarStart()` is called ONCE from the app's new-game flow
+  (ContentView, right after `nameAirline`), NOT inside `nameAirline`** — because
+  headless harnesses call `nameAirline` and `SeasonVerify` asserts a Jan-start
+  month; keeping the randomizer in the view layer leaves every harness
+  deterministic at offset 0. Loaded games keep their persisted offset; legacy
+  saves (no field) default to 0 (Jan start), unchanged from how they were played.
+- RENDER ISOLATION (the documented churn rule): the readout is a dedicated leaf
+  view `GameClockLine` that reads the THROTTLED `sim.displayTick` (~5×/sec) in ITS
+  OWN body — NOT raw `tick`, and NOT in NetworkView.body — so the clock refreshes
+  without pulling NetworkView's panels/scroll views onto the per-tick re-render
+  path (same isolation idea as `LiveMap`). Hides with the speed bar under the
+  eye-overlay toggle. Verified 23/23 headless (`aa-1.1.x/GameClockVerify.swift` —
+  1-indexed day, year, edges, month/year rollover, the date-month == seasonal-
+  month invariant WITH a random offset over a full year, and a `calendarStartDay`
+  persistence round-trip + legacy-default-0) + Season 28/28 / SaveCompat 12/12 /
+  RoundTrip 13/13 unaffected + live. Not persisted for the LOAD MENU's separate
+  "Day N" summary (still `tick/1440`, 0-indexed) — a minor known inconsistency,
+  align if wanted. Easy tweaks parked: mirror the readout to other tabs.
+- **Two NEW control-bar panels (functional; FuelHedge now Figma-restyled — see
+  the "Figma panel-restyle batch — DONE" note; AddCrew still dev-chromed):**
+  `AddCrewPanel` (Hire Crew — lists owned families with crew count + real hire
+  cost, verified showing "ERJ · 1 crew · 1 aircraft · Hire $28k" live after a
+  purchase) and `FuelHedgePanel` (Fuel Hedge — empty-fleet / active-countdown /
+  30-60-90-day-buy states, verified showing the empty-fleet message with no
+  fleet). Both use a shared `NetPanelBox` dev chrome.
+- Verified live in the Simulator: header + live cash update ($20M→$6M on a
+  buy), all five control-bar buttons + panel switching, the eye toggle
+  hiding/showing the bars, the bounded-card map tap (route picker), the speed
+  bar, and the 5-tab nav. Existing panels (BuyPanel/RoutesPanel/tooltip/
+  decision cards) carried over unchanged into the new view — their Figma
+  restyle (Acquire, Routes, Open Route flow, tooltip, Fuel Hedge) was the
+  designer's next batch of frames, now DONE (see the "Figma panel-restyle
+  batch — DONE" note near the end of this Phase-5 section).
+- **The headless harness now has a third proven catch** (after nothing,
+  then the AOG lifecycle): it caught the crew cascade as a design/balance
+  bug a unit test wouldn't frame. Two harness kinds now live in the session
+  scratchpad: lifecycle assertions (`CrewMain` — 12/12) and a balance probe
+  (`BalanceMain` — steady-state / max-simultaneous sweep). Both compile the
+  real `Sim/*.swift`. Reach for the balance probe whenever a change alters
+  rates, capacities, or timing.
+
+- **EARLY-GAME BALANCE PASS (native app) — two tunables.** Playtest analysis
+  found the reported "starter aircraft loses money even full" was NOT the base
+  economics (a well-crewed ERJ135 nets ~+$1.8k/leg on a trunk route, +$2.5k on
+  mid routes — profitable) — it was CREW-HOLD BURN. An under-crewed 1-aircraft
+  operator sits in crew-rest holds, and that burn was charged at the FULL
+  in-flight operating rate (op cost $9.7k vs $2.5k base → ~$5k/held-leg loss,
+  ruinous). Fix 1: `holdBurnRate = 0.4` — a PARKED aircraft (AOG/crew hold)
+  isn't burning full block-hour cost, so hold burn is 40% of the flight rate.
+  Now under-crewing is a recoverable setback (~−$0.1M/mo drift, a clear "hire
+  crew" signal + you still lose the held flights) instead of a death spiral, and
+  a well-run regional is profitable. The AOG expedite-vs-standard tradeoff is
+  PRESERVED and now correct: a regional's standard-repair burn (~$2.4k+$3k) <
+  expedite $15k → wait; a widebody's (~$24k+$3k) > $15k → expedite. Fix 2 was
+  `startingCapital` $20M → $30M, but **REVERTED to $20M by designer direction** —
+  the starting stake is **$20M** again ($30M briefly aimed to reach a two-aircraft
+  operation faster; the designer prefers the leaner $20M start). The slow-early-
+  growth issue below still stands at $20M — revisit with a revenue lever if wanted.
+  KNOWN DEEPER ISSUE (flagged, not fixed — a designer decision): growth is still
+  slow in absolute terms because REAL aircraft prices ($14M–$300M) against
+  realistic per-leg profit + the LOCKED ~6-hr flight cycle (aircraft fly only
+  ~2 legs/day vs real ~6) mean long aircraft-payback times. Options if faster
+  growth is wanted: higher starting capital, a gameplay revenue multiplier, or
+  variable (distance-based) leg duration — none done, all change the game's
+  core scale/feel.
+- **Phase 5 core loop — the FULL SHIFT to a player-driven game, DONE.**
+  Designer chose (over a hybrid) to match the prototype: a fresh session
+  starts EMPTY — `startingCapital` **$20M** (was briefly $30M in an early-game
+  balance pass, then reverted to $20M by designer direction — see above), zero
+  aircraft, zero routes. The
+  player BUYS aircraft (ACQUIRE panel, affordability-gated, sorted by
+  price) which sit as idle SPARES (`isIdleSpare` — a purchased aircraft
+  with no `assignedRouteId` returns early from `advance`, fully idle), and
+  OPENS routes (tap-origin → tap-dest → confirm). `openRoute` charges a
+  real cost (base + both gate fees + a per-endpoint slot-buyout premium
+  when none free), consumes airport slots (`slotsTotal`/`slotsAvailable`,
+  scaled inversely to landing fee, replenished slowly), and assigns a
+  spare. Owned aircraft fly ONLY their route (A↔B); `settleLeg` feeds
+  `playerBalance` + `Route.cumulativeNet` only for `purchased` aircraft.
+- **Ownership scoping retrofit — done deliberately, the exact thing the
+  prototype documents getting wrong once.** `purchased` gates: AOG onset,
+  the crew boarding-gate, crew provisioning/backfill, SELL, and economics
+  settlement. Non-owned = pure background flavor. The old FLEET slider is
+  now a DEV stress-test control spawning NON-owned traffic; `setFleetSize`
+  only ever trims non-purchased aircraft, so it can never delete an
+  aircraft the player paid for (`ownedCount`/`stressTestCount`).
+- **Architecture that kept it headless-testable**: `Aircraft.advance`
+  takes `assignCrew`/`releaseCrew` CLOSURES and returns `AdvanceEvent`s
+  (`legScheduled`/`legCompleted` now too) — the aircraft never reaches
+  into the pool, balance, or routes. So the whole buy→spare→openRoute→fly→
+  earn loop + scoping is verified by a standalone `swiftc` harness (23/23,
+  incl. "shrinking the dev fleet never removes an owned aircraft"). Then
+  the full loop was driven live in the Simulator ($20M → buy ERJ135 →
+  open SLC↔RDU → balance grows as it flies).
+- **Airport tap tolerance is 44pt** (`Simulation.airport(atScreenPoint:)`)
+  — a fingertip, and nearest-wins keeps dense clusters unambiguous. 26pt
+  (the first value) was too tight for real touch AND for driving via
+  computer-use on the small simulator; don't shrink it.
+- **Competitor airline identity — DONE.** Background (non-owned) traffic
+  now carries a real competitor airline (`Airline.roster`, ported verbatim
+  incl. the researched per-type eligibility — Southwest 737-only, Delta no
+  Boeing widebodies, A340→100% Lufthansa, orphan types→Independent
+  Operator). Assigned in `makeAircraft` via `Airline.pick(forType:)`.
+  Competitor aircraft render in the constant `#D767FF` (owned = phase
+  colours; held = red, shared) and get a REDUCED tooltip (airline +
+  route/tail/type/status only — no crew/economics, a rival's books aren't
+  visible). The old dev FLEET/"TEST" slider is now the player-facing
+  "TRAFFIC" control.
+- **Background traffic rebuilt to an AIRLINE-FIRST, region-constrained model
+  (native app) — replacing the old type-first / random-global-route model.**
+  The trigger was a real playtest report: an EgyptAir flight going South
+  America → Oklahoma City. Root cause (two compounding bugs): (1) `makeAircraft`
+  picked a random GLOBAL airport pair (`Airport.randomPair()`), and (2) a
+  background aircraft RE-RANDOMISED to another random global pair every leg
+  (`advanceTick`'s `.legScheduled`) while KEEPING its spawn carrier — so a
+  carrier assigned on an African leg would later wander anywhere still wearing
+  its livery. The new model: pick a REGION (weighted by that region's airport
+  count ≈ its traffic share) → a CARRIER in it (`Airline.weighted(roster(for:))`)
+  → a TYPE it actually flies (`pickBackgroundType`, weighted by global type
+  commonness) → a ROUTE in its sphere (`backgroundLeg(for:)`). Each aircraft
+  stores `homeRegion` and stays that ONE coherent airline for life; its re-route
+  draws from the SAME `backgroundLeg(for: homeRegion)`. `backgroundLeg` is
+  mostly a DOMESTIC leg within the region; ~25% of the time, and ONLY from a
+  GATEWAY airport, an INTERNATIONAL leg to a plausible-neighbour region's
+  gateway. Gateways = the busiest ~35% of each region's airports by
+  `AirportInfo.annualPassengers` (min 2) — so a small airport (OKC, Bozeman)
+  is domestic-only and never gets a foreign carrier flying in. Plausible
+  corridors are `Airline.corridors` (real intercontinental flows; excludes ones
+  nobody flies nonstop like Oceania↔Africa or South America↔Asia). Verified
+  headlessly over 3,000 spawns + 3,000 ticks: 0 legs where the carrier's home
+  isn't an endpoint, 0 international legs off-corridor or at a non-gateway, every
+  EgyptAir leg touches Africa, and 0 foreign carriers at any small US airport.
+  SIDE EFFECT (an improvement): the old "type-first" model's Southwest-under-
+  representation artifact is GONE — carriers are now picked directly by roster
+  weight, so Southwest ≈ its roster share. `Airline.pick(forType:origin:dest:)`
+  still exists (region-combining) but is no longer used by background spawns.
+  Helpers are `@ObservationIgnored lazy` (the `@Observable` macro rejects plain
+  `lazy` stored props — needed that attribute to cache the region grouping).
+  - **RANGE-GATED (native app) — a narrowbody is never handed a leg it can't
+    fly.** A playtester saw an American A320 on FLL→BCN (transatlantic, far past an
+    A320's range). `backgroundLeg(for:type:)` now takes the aircraft TYPE (picked
+    before the leg in `makeAircraft`) and filters both the international-corridor
+    dest AND the domestic dest to airports within `type.rangeNM` of the origin; a
+    remote origin with nothing in range falls back to its NEAREST airport (rare,
+    cosmetic). So only widebodies get the long corridors; short international
+    (US↔Mexico/Canada) stays open to narrowbodies — realistic. Both call sites
+    (spawn + the per-leg re-route in `advanceTick`'s `.legScheduled`) pass the
+    type. Verified: 0 over-range legs across 400 background aircraft over 8k ticks.
+- **Player airline naming — DONE, and the FIRST Figma-built screen.**
+  First-launch modal (`AirlineNamingView`, overlaid in ContentView while
+  `sim.playerAirlineName == nil`; blank submits as "New Airline"). Built to
+  the designer's real Figma (file `wRMkEaLt6bJdZoHsOz9JWH`, node 1:2 light
+  / 1:456 dark), theme-aware via `@Environment(\.colorScheme)`, all
+  colours/sizes/spacing ported from the Figma tokens. The player's airline
+  name renders (green) as the header of their OWN aircraft's tooltip
+  (competitors already showed theirs).
+- **Player fleet TAIL CODE — DONE (native app), a second field on the naming
+  screen (designer request).** The player picks a 2-letter code stamped into
+  every owned aircraft's tail (e.g. code `ZQ` → tails `N1ZQ`, `N2ZQ`…),
+  replacing the old hardcoded `SK` suffix (note: `SK` was itself a real code
+  — SAS — so the old default would have failed today's validation). Stored in
+  `Simulation.playerTailCode` (default `"ZQ"` when blank), set by
+  `nameAirline(_:tailCode:)`. **Validation: the code can't collide with a real
+  airline's IATA designator** — `Airline.realCodes` (in Airline.swift) is a
+  `[code: name]` map of the roster's own carriers plus ~50 major world
+  airlines; the naming field live-validates (2 letters, uppercased, letters
+  only), shows the exact owner on a hit ("UA belongs to United Airlines —
+  choose another." in the readable `#FF9292`/`#D70000` red), red-borders the
+  field, and disables Launch. `nameAirline` also ignores an invalid code
+  server-side (keeps the default), so the sim can't be handed a colliding
+  code. As a bonus, **competitor (background) traffic now carries its real
+  IATA code in the tail too** — `Airline` gained a `code` field (AA/DL/WN/UA…),
+  `Airline.pick(forType:)` now returns the `Airline` struct (was a bare name
+  String — update this one caller signature if porting), and `makeAircraft`
+  builds the tail from `airline.code` (Delta → `N123DL`); the generic
+  "Independent Operator" fallback (empty code) gets `Airline.randomTailCode()`,
+  a random non-real 2-letter code, so background tails are varied rather than
+  all-`SK`. Verified: 12/12 headless (valid accept + uppercase, real-code
+  reject, blank default, player tail carries the code, background shows real
+  carrier codes) + Simulator screenshots of the new field and the UA error
+  state.
+- **NATIONAL REGISTRATION PREFIXES (1.1.x realism polish).** Background/subsidiary
+  tails used to be ALL US-registered `N…` regardless of carrier — a Lufthansa jet
+  read `N123LH` instead of `D…LH`, the last obvious tell that background traffic
+  isn't real (the same "a player will notice" ethos behind the roster-accuracy
+  work). `Airline.regPrefixByCode` maps every roster carrier's IATA code to its
+  country's ICAO registration prefix (the recognizable leading letters: D Germany,
+  F France, G UK, VH Australia, JA Japan, B China, A6 UAE, C Canada, XA Mexico, CC
+  Chile…), with a loose `regPrefixByRegion` fallback for the Independent Operator.
+  `Airline.registrationPrefix(code:region:)` is applied in `makeAircraft` (background)
+  and the acquisition-inherited tail build (a subsidiary keeps its OWN flag — an
+  Air Canada sub stays `C…`). The game tail is stylised (`<prefix><n><IATAcode>`),
+  so this nationalises just the leading prefix — `D123LH`, `VH456QF`, `JA789JL`.
+  **Player's own fleet stays `N`** (a US startup; a future touch could key it to
+  home region). Persistence-safe (background tails regenerate; existing saved
+  acquisition tails are unaffected — only newly-generated ones change). The 141
+  code→prefix entries are keyed by HQ country (multinationals like SAS use their
+  primary flag). Verified 43/43 headless (`aa-1.1.x/RegDelightVerify.swift`):
+  well-known carriers map correctly, every roster carrier has a prefix, and the
+  real spawn path produces national tails (a live Lufthansa tail is `D…`, Qantas
+  `VH…`, player `N…`).
+- **Figma-to-code workflow that worked (for the next Figma screen):**
+  `get_design_context` (official Figma MCP, loaded via ToolSearch) returned
+  STRUCTURED React+Tailwind + a screenshot + a token list — NOT the
+  raster the old CLAUDE.md note feared for full-screen mockups. So the
+  caveat did NOT bite here; design-to-code gave real structure. Adapt the
+  React/Tailwind to SwiftUI by hand (colours as hex, Tailwind sizes →
+  points 1:1). The Airline Architect LOGO came back as an SVG asset (7 solid-fill
+  paths) — rendered NATIVELY via the existing `SVGPath.parse` into a
+  `Canvas` (`AppLogo.swift`), no bundled raster and it scales crisply.
+  Downloaded from the `figma.com/api/mcp/asset/...` URLs (valid ~7 days).
+- **Karla font — BUNDLED (font-substitution debt resolved).** The 5 static
+  Karla weights (Light/Regular/Medium/SemiBold/Bold, OFL, from googlefonts/
+  karla) live in `Resources/Fonts/` (+ OFL.txt) and are registered in
+  `Info.plist` `UIAppFonts`. Confirmed in the built `.app`: the TTFs land FLAT
+  in the bundle root (the synchronized group flattens `Resources/Fonts/*` out),
+  so the bare-filename UIAppFonts entries resolve. `Font.karla(_:_:)`
+  (Typography.swift) maps a SwiftUI weight → the matching face
+  (Karla-Light/Regular/Medium/SemiBold/Bold); Font.custom falls back to system
+  if a face is missing, so it degrades gracefully. Applied across the NETWORK
+  chrome (header, control bar, speed bar, tab labels); apply `.karla(...)` on
+  every future Figma screen. NOTE: the project uses `GENERATE_INFOPLIST_FILE=YES`
+  AND `INFOPLIST_FILE=AirlineArchitect/Info.plist` — Xcode MERGES them, so custom keys in
+  that Info.plist (UIAppFonts, UIBackgroundModes) DO take effect. (Geist was
+  dropped by the designer; only Karla is needed.)
+- **NETWORK control-bar spacing fixed + tab bar rebuilt to the Figma.** The
+  control bar was cramped ("Acquire A/C"/"Open Route" crowding); fixed with
+  Karla 12 + `lineLimit(1)` + `minimumScaleFactor(0.72)` so long labels shrink
+  to fit their equal columns instead of crowding the dividers. The bottom nav
+  was rebuilt as a CUSTOM bar (`SkyTabBar`) — the Figma tab bar (2:2001 dark /
+  2:1602 light) isn't a stock UITabBar: active tint is theme-dependent (Light
+  Yellow `#FFC73B` on dark, Bright Blue `#0EA5E9` on light), inactive is Light
+  Blue on dark / slate on light, with custom line icons and Karla labels. The
+  5 icons were extracted from the Figma as stroked SVGs (viewBox 24, stroke
+  1.5, round caps — commands all C/L/M/H/V/Z, no arcs) into `SkyTabIcons.swift`
+  and rendered via `SVGPath` into a tintable Canvas (same native-SVG approach
+  as AppLogo/AircraftIcon — no raster). ContentView dropped `TabView` for a
+  `switch`-on-`tab` + `.safeAreaInset(edge:.bottom){ SkyTabBar }`, driving
+  selection itself. Tradeoff (acceptable for now): switching tabs recreates the
+  content view, so NetworkView's transient UI state (open panel, route-in-
+  progress) resets — the sim state persists in `sim`. Verified live (via a temp
+  naming-skip, since a Simulator input glitch this session blocked driving the
+  UI directly — screenshots still worked): the custom tab bar icons render
+  correctly, Karla renders in the header/control bar, and the control-bar
+  spacing is clean.
+- **EARLY LEASE TERMINATION (native app) — a leased jet can't be SOLD, it's
+  handed back with a penalty.** The Fleet-detail action button reads **TERMINATE
+  LEASE** (not SELL AIRCRAFT) for `ac.isLeased`, and the confirm dialog charges a
+  real early-termination fee = **3 months' lease** (`leaseTerminationPenalty` =
+  `3 × monthlyLeaseCost`; ERJ135 = $336k) — the real-world "few months' rent to
+  break early" analog (there's no fixed lease TERM in this model, so months-of-rent
+  is the honest proxy). `terminateLease()` hands the jet back (proceeds $0 — you
+  never owned it) and books the fee to `totalLeaseCost` so the Finance invariant
+  holds. `resolveSell` (the SELL card) and the end-of-service card also route a
+  leased aircraft to terminate instead of crediting a bogus sell value. Verified
+  live (button + dialog) + 6/6 headless. KNOWN cosmetic gap (not fixed): the
+  Fleet-detail "Market Value" card still shows a sell-value figure for a leased
+  jet — RESOLVED: the Fleet-detail "Maintenance & Value" card now shows the real
+  lease figures for a leased jet (Monthly Lease + Early Termination fee) instead of
+  a resale value/depreciation; owned aircraft still show Market Value + Depreciation.
+- **Leasing + used-aircraft market — DONE (native app).** Ported faithfully
+  from the prototype. LEASING: 15% upfront (`leaseUpfrontRate`) + a fixed
+  MONTHLY obligation (`AircraftType.monthlyLeaseCost` = 0.8% of purchase price),
+  ACCRUED continuously (`monthlyLeaseCost / ticksPerMonth`) but COMMITTED once per
+  sim-HOUR (`tickLeaseBilling`, `leaseBillIntervalTicks = 60`), REGARDLESS of
+  utilization — an idle leased spare that never flies still bleeds money (the
+  whole reason leasing is a real tradeoff, not strictly dominant; the prototype's
+  original per-leg proration bug made idle leases free — did NOT reappear here).
+  **The hourly commit is a DISPLAY-cadence fix** (was per-tick, which made the
+  Finance "Lease payments" total flicker "multiple times/second" at speed — a
+  playtester flagged it); the monthly total is unchanged (1 sim-month bills
+  ≈ `monthlyLeaseCost`, verified). Sub-dollar remainders carry in `ac.leaseAccrued`. Leased aircraft are
+  still `purchased: true`. Route P&L absorbs lease bills (`Route.totalLeaseCost`
+  + `cumulativeNet -= bill`). USED MARKET: buy-only, persistent per-type
+  inventory (`usedInventory`, 1–2 listings/type at start via
+  `initializeUsedInventory()`, replenished ~10%/day per under-stocked type),
+  each listing at 15–75% of life, priced with the EXACT SAME linear
+  depreciation as `sellValue()`; a bought used aircraft inherits its real
+  cycle count (not 0). UI: `BuyPanel` now has NEW/USED tabs — NEW shows Buy +
+  Lease per type, USED lists pre-owned airframes cheapest-first with cycle/%
+  -of-life. The tooltip folds a DISPLAY-ONLY smoothed lease estimate
+  (`LegEconomics.leaseCostEstimate` → `displayOperatingCost`/`displayNet`,
+  does NOT affect settlement) into OP COST and shows an amber `LEASED · $X/mo`
+  line. Crew still uses the auto-ratio `provisionCrew()` model (leasing/used
+  buying call it like `buyAircraft` does) — the prototype's separate
+  player-driven crew-hiring rebuild (grantBundledCrew + ADD CREW panel) is a
+  distinct future item, deliberately NOT bundled into this work. Verified: a
+  20/20 headless harness (`scratchpad/LeaseUsedMain.swift` → rename to
+  `main.swift` to run; covers upfront math, idle-spare monthly billing, used
+  price = sell formula, cycle inheritance, listing removal) PLUS live in the
+  Simulator (exact $2.1M lease deduction on an ERJ135, NEW/USED tabs, USED
+  listings with real cycle data, a leased aircraft flown SLC↔DEN with the
+  `LEASED · $112,000/mo` tooltip and lease-folded OP COST confirmed).
+- **Off-screen spare base — FIXED.** `makePurchasedAircraft` used to pick
+  `airports.randomElement()` as a bought/leased spare's base, which could be
+  an OFF-SCREEN AK/HI airport (ANC lat 61 / HNL lat 21) in the CONUS-framed
+  default view — making a fresh spare invisible/untappable until routed. Now
+  it picks from `conusAirports` (airports within the CONUS frame bounds
+  lat 24.5–49.5 / lon −125…−66.5), so a new spare is always visible. The base
+  is cosmetic anyway (openRoute reassigns origin), so this purely improves
+  visibility; background traffic is unaffected (it can still fly AK/HI).
+  Verified: 400 purchases across buy/lease/used all base in CONUS (46 distinct
+  airports, never ANC/HNL).
+- **ROUTES P&L panel — DONE (native app).** A ROUTES button (HUD action row)
+  toggles a bottom panel. LIST view: every route open+closed, newest first,
+  each row "`ORIG ↔ DEST` OPEN/CLOSED · profitable|$X short · N flts", tap for
+  DETAIL. DETAIL view (Back button): start date, close date (if archived),
+  flights, opening cost, cumulative net, profitability status (green
+  "profitable (+$X)" / red "$X short"), then total revenue/fees/operating
+  cost/lease cost/avg load, assigned-aircraft history, and a recent-flights
+  log CAPPED at the last 15 for display (header reads "last 15 of N") while
+  every aggregate is computed from the FULL history. The `Route` model gained
+  `history: [FlightRecord]` (per-flight tick/tail/rev/fees/opcost/leaseEst/net/
+  pax/seats/load/cumulativeNet — the data a future chart needs),
+  `assignmentHistory`, `closedTick`, and history-derived aggregates.
+  `settleLeg` appends a FlightRecord; `resolveSell` now ARCHIVES the route to
+  `closedPlayerRoutes` (closedTick set, history intact) instead of deleting it
+  — so a route that never recouped stays reviewable. All @Observable, so an
+  open route's numbers tick up LIVE. Verified: 18/18 headless (`scratchpad`
+  RoutesMain: history accumulation, field sanity, cumulativeNet consistency,
+  archival-preserves-history) + live in the Simulator (watched a SLC↔DEN route
+  recoup from $50,951 short → $7,112 short over ~30 flights, correct P&L math
+  rev−fees−opcost=cumulativeNet, the "last 15 of N" cap, and the flight log).
+- **Profitability CHART — DONE (native app).** `RouteProfitChart` (top of the
+  ROUTES detail view) plots per-flight net measured AGAINST opening cost, so a
+  dashed break-even (zero) line shows exactly when — and whether — a route
+  recouped. Series is `[−openingCost]` (flight 0, the full hole) + one point
+  per flight (`cumulativeNet − openingCost`); the line is RED below break-even
+  and MINT above, split PRECISELY at each zero crossing, with a mint dot at the
+  recoup point and a caption naming the exact flight ("Recouped at flight 40 ·
+  Day 13 · 11:02"). Hand-drawn in a `Canvas` (matches the map + dev aesthetic;
+  the Figma restyle repaints it later). Verified live: watched a route's line
+  climb red from −$84k, cross the $0 line at flight 40 with the mint dot, then
+  continue green to +$19k — chart, caption, and summary all agreeing.
+- **The Canvas-freeze bug RECURRED — its SECOND native occurrence (first was
+  the Phase 1 MapView).** `RouteProfitChart`'s only input was `route` (a stable
+  reference), so SwiftUI diffed it identical and NEVER redrew the Canvas — the
+  chart froze at its first render (red line, "$33k short") while the sibling
+  summary Texts, being inline in the parent's body, updated live. A clean
+  build hid it (compiles fine); only watching it run at 25× exposed the frozen
+  chart vs. a "profitable" summary. Fix is the documented one: pass a CHANGING
+  VALUE input — `RouteProfitChart(route: r, flights: r.history.count)`. CLAUDE.md
+  warned "if a second view freezes this way, build the shared pattern": noted —
+  every future tick-driven Canvas/child view in this app MUST take a changing
+  value input (tick, or a count that moves with its data), or it silently
+  freezes. This is now a firm rule, not a per-view surprise.
+- **A real SwiftUI note from the ROUTES detail scroll:** at high sim speed the
+  recent-flights `ForEach(history.suffix(15).reversed())` churns its element
+  identity every completed flight (a new flight shifts the 15-window), which
+  fights manual scroll position — expected, not a bug; scrolling is fine at
+  low speed. (The chart above does NOT have this issue — it redraws in one
+  Canvas pass rather than a ForEach of moving rows.)
+- **iPad RESPONSIVENESS / RE-RENDER-CHURN PASS (native app) — the INVERSE of the
+  freeze bug, from 1.1(28) external-test feedback.** The freeze bug is "a view
+  that needs `tick` didn't take it." This is the opposite failure: **a heavy
+  view read the RAW `sim.tick` and re-rendered ~125×/sec at 25×** (the tick loop
+  runs on the `@MainActor`, so those re-renders saturate the main thread → taps
+  dropped, scroll sticks). Testers hit exactly this: iPad CREWS→OPS took 5–6 taps
+  and several seconds; the Acquire aircraft list "got stuck" while scrolling.
+  **THE RULE (firm now): list/HUD/scroll views observe `sim.displayTick`
+  (throttled ~5×/sec in `run()`), NEVER raw `sim.tick`.** Raw `tick` is ONLY for
+  the map's motion/animation and the live aircraft tooltip. Fixes shipped:
+  - `CrewsView`, `FleetDetailView`, and BOTH `AlertsView` cards were reading raw
+    `sim.tick` — switched to `sim.displayTick` (FleetView/FinanceView/OpsView
+    already did). CrewsView was the "Crews is slow to leave" report.
+  - **`NetworkView.mapCard` read `sim.tick`/`cameraZoom`/`cameraCenter` INLINE**,
+    so the whole map card — INCLUDING the docked/overlaid Acquire panel's
+    ScrollView — re-rendered every tick (the "scroll gets stuck" report).
+    Extracted a `private struct LiveMap` that reads those hot values in ITS body,
+    so only the map re-renders per tick; the control bar / route / Acquire panels
+    stay stable. (Same value-input contract as before — LiveMap still passes
+    `tick:` into MapView — just isolated so siblings don't share the dependency.)
+    General principle: don't read a hot `@Observable` prop in a parent whose body
+    also builds stable panels; push the hot read into a leaf child.
+  - `GameStore.epoch(of:)` (used by `reconcileCloud`, which runs on the MAIN
+    thread at foreground via the iCloud change notification) decoded the ENTIRE
+    `GameSnapshot` ×6 (3 slots × local+cloud) just to read `savedAtEpoch` — a real
+    app-switch stall for late-game saves. Now decodes a tiny `SaveHeader`
+    (savedAtEpoch + playerAirlineName only; JSONDecoder ignores the rest).
+- **MAP RENDER THROTTLE — DONE (30 Aug, branch `aircraft-and-thermal`; a paying
+  player's "device gets hot / drains battery" report).** Distinct from the
+  displayTick churn above: that fix was about LIST/HUD views over-rendering; this
+  is the MAP's `Canvas` specifically. `LiveMap` fed `MapView` the RAW `sim.tick`,
+  so the full-world Canvas (wrap-around tiled basemap + every airport + every
+  aircraft) repainted on EVERY sim tick — **~125×/sec at 25×** — which pins the
+  GPU and heats the phone. Fix: a new **throttled `Simulation.mapTick`**, bumped
+  in the `run()` loop at `mapRenderFPS` (**30fps**) alongside the existing
+  `displayTick`; `LiveMap` now reads `mapTick`, so the map redraws ≤30×/sec
+  regardless of speed (a ~4× cut at 25×). Aircraft position is a function of tick,
+  so a throttled tick still animates smoothly — the cap only bites at 5×/10×/25×.
+  The SIM is UNAFFECTED (still ticks at full `speed`); only the map's redraw
+  cadence changes. At 1×/½× the sim already ticks slower than 30fps, so the map
+  draws every tick and motion is identical to before. **RULE going forward: the
+  map Canvas takes `mapTick` (throttled), never raw `tick`** — the same
+  value-input contract as the freeze-bug fix, just capped. `displayTick` (~5fps)
+  is still the right input for the lists/HUD; `mapTick` (~30fps) for the map;
+  raw `tick` only where per-tick precision matters (the live aircraft tooltip).
+- **OPEN — app-switch CRASH (1.1(28), reported on BOTH iPhone + iPad).** Testers
+  report AA crashing when toggling between other apps and AA. NO repro/crash log
+  on the dev machine (testers' logs live in TestFlight → Xcode Organizer →
+  Crashes). Working hypothesis: the SAME main-thread saturation above → on
+  FOREGROUND the OS watchdog kills a hung app (0x8badf00d), which reads as a
+  "crash" on both platforms; the re-render + foreground-reconcile fixes above
+  target it. NOT yet confirmed — pull the symbolicated Organizer crash logs to
+  get the real frame before assuming it's fixed. (Other unruled-out candidates:
+  OOM from the wrap-around map's tiled redraw under memory pressure; the
+  never-removed `observeCloudChanges` NotificationCenter observer.)
+- **RESOLVED (pending 1.1(29) tester confirmation) — the crash is on SAVE, not
+  launch.** The ASC crash report (build **27 / 1.0**, iPhone 13) settled it: the
+  tester wrote *"Clicked save and it got hung up and then crashed"* (3× reports),
+  appUptime 12s, 11.9 GB free disk. So it's a main-thread **watchdog/OOM during
+  SAVE** — `sim.snapshot()` + `JSONEncoder().encode` + iCloud `kvs.set`, all on
+  the main thread, choking on the UNBOUNDED `Route.history`. The save-size
+  hardening below IS the fix (a capped save encodes in ms). NOTE it's in **1.0
+  (27) too** — the bug predates 1.1; the fix only exists in 1.1(29). The
+  "build 28 on launch" framing was imprecise — the real fault is the save write,
+  and the launch-path guards below are complementary belt-and-suspenders. Added
+  in the same area: `mirrorToCloud` skips the iCloud KVS set for any save over
+  ~900KB (the ~1MB KVS value limit — pointless + a needless main-thread risk).
+- **(historical hypothesis, kept for context) LAUNCH-CRASH sweep.** A tester
+  reported build 28 crashing "on launch"; a sweep found no in-code trap and
+  pointed at env-layer suspects (iCloud entitlement / RevenueCat) — superseded by
+  the ASC report above, which shows it's the SAVE path. An exhaustive multi-agent sweep of the whole launch/first-frame/
+  restore path found **NO confirmed in-code trap**: data is clean (35 unique
+  aircraft-type ids, 384 unique airport codes, 19,272 basemap points valid),
+  `restore()` guards every aircraft (`guard let type/o/d … continue`) and all
+  1.1 fields restore via `?? default`, decodes are `try?`, `byCode` uses
+  `uniquingKeysWith`. So a deterministic-for-one-tester crash most likely lives
+  in the **environment layer** — the sweep's top picks: (1) the iCloud KVS
+  entitlement under build 28's FIRST *external*-distribution profile (touched at
+  launch by `reconcileCloud()`); (2) RevenueCat/StoreKit init under that
+  profile. **Neither is confirmable without the tester's symbolicated `.ips`**
+  (ASC → TestFlight → Crashes / Feedback, or their device's Analytics Data) —
+  get it: KVS/entitlement frames → cause 1, RevenueCat/StoreKit frames → cause 2.
+- **ASYNC SAVE — DONE + LIVE (1.4.2 / build 52, `READY_FOR_SALE` 27 Aug; the sequel
+  to SAVE-SIZE HARDENING, driven by real TelemetryDeck data).** The MetricKit CrashReporter (shipped in 1.4.1)
+  surfaced `hang.under3s` ×13 in the TD Errors dashboard — the FIRST real signal
+  the crash reporter produced, and it worked exactly as designed. Diagnosed to the
+  **synchronous main-thread save**: `GameStore.save` runs `JSONEncoder().encode` +
+  a `.bak` read-back that RE-DECODES the existing save (`validGame`) + an atomic
+  disk write + the iCloud mirror, ALL on the main actor, called from three
+  ContentView sites (autosave-on-background, the SAVE button, QUIT). This is the
+  same mechanism as the build-27 save-hang CRASH — the SAVE-SIZE HARDENING below
+  capped save SIZE (turning a fatal >10s watchdog kill into a survivable sub-3s
+  hang) but left the encode ON MAIN, so a heavy late-game save still briefly froze
+  the UI, worst on background/quit. **Fix: `GameStore.saveInBackground(_:slot:onDone:)`
+  runs the encode/validate/write/mirror on a SERIAL `DispatchQueue`** (serial so two
+  saves to one slot can't race on the `.bak` copy) — `snapshot()` is still captured
+  on the main actor by the caller (it reads sim state), only the heavy work moves
+  off-main. The sync `save()` is UNCHANGED (still the worker; the headless harness
+  calls it, and RoundTripVerify stays 13/13). **Autosave-on-background wraps the
+  call in a UIKit `beginBackgroundTask`/`endBackgroundTask` assertion** (in
+  ContentView, not Persistence — Persistence stays UIKit-free for the harness) so
+  iOS grants the seconds a ~tens-of-KB save needs before suspending. `GameSnapshot`
+  is a Codable struct of value types → implicitly Sendable, so passing it across the
+  queue is clean. Verified on the iPhone sim: SAVE button (file mtime advanced, no
+  hang, app alive) AND autosave-on-background (mtime advanced AFTER the HOME press —
+  the bg-task assertion let the detached write finish; app survived). Re-run the
+  `hang.under3s` count in TD after 1.4.2 is live to confirm it drops.
+- **ASYNC SLOT DECODE — DONE (1.4.3 / build 53; the DECODE-side twin of the async
+  save above).** After 1.4.2 shipped, the TD `hang.under3s` breakdown still showed
+  hangs attributed to 1.4.2 (ambiguous — MetricKit tags a hang with the version
+  running when it's DELIVERED, not when it OCCURRED, so some were likely late 1.4.1
+  reports; sample was only 3 users). Rather than wait, hunted OTHER synchronous
+  main-thread work and found a real second source: **`GameStore.slotInfos()` does up
+  to 3 FULL `GameSnapshot` decodes** (it needs `aircraft.count`/`routes.count`, so a
+  header-only decode won't do) and it ran **synchronously on the main thread** from
+  `SaveSlotsView` (a `@State` initializer at cold launch, `.onAppear`, and after a
+  delete). On a large save that triple-decode is a load-menu stall — the exact
+  decode-side mirror of the save-encode hang. Fix: `GameStore.slotInfosAsync(_:)`
+  runs the decodes on the SAME shared serial `saveQueue` and delivers back on the
+  main actor; `SaveSlotsView` starts with empty slots + a `loaded` flag (a brief
+  `ProgressView` instead of empty rows, so a real save never flashes as a tappable
+  "New Airline" before its summary arrives). `SlotInfo` marked `Sendable`. Other
+  suspects examined and CLEARED: `reconcileCloud` already uses a lightweight
+  `SaveHeader` decode + file-size guards (hardened earlier); `restore(from:)` is
+  bounded (Route.history cap 60, hub snapshots 120), so a normal load is fast; the
+  map's per-frame tiled redraw is Canvas work throttled to the redraw cadence, not a
+  250ms+ block. Verified: Debug build clean, RoundTripVerify 13/13, and live on the
+  sim (all 3 saves decode off-main and populate the load menu correctly, no flash).
+  KNOWN LIMITATION (worth a future touch if the metric stays interesting): the hang
+  telemetry still isn't tagged with the app version at OCCURRENCE, so 1.4.1-vs-1.4.3
+  attribution stays fuzzy until adoption grows — the honest read on whether these
+  two fixes cleared it is the TD count trend over 1–2 weeks, not an instant verdict.
+- **SAVE-SIZE HARDENING — DONE (the strongest CODE fit for the launch crash).**
+  Independent of the sweep: `Route.history` was persisted **completely uncapped**
+  — a heavy tester (recall the 182-aircraft one) accumulates a **multi-MB save**,
+  and build 28's cold-launch path decoded whole saves (reconcile ×6, plus
+  `slotInfos()` fully decodes EVERY save just for the menu card) → a plausible
+  launch **watchdog/OOM**, deterministic for heavy users, invisible on the dev
+  machine's small saves. Fixes: (a) **cap `Route.history` to `maxHistory`=60**
+  (oldest dropped, at append/snapshot/restore) and convert its 4 display
+  aggregates (`totalRevenue`/`totalFees`/`totalOperatingCost`/`averageLoadPct`)
+  to STORED running totals (`revenueTotal` etc., incremented in `settleLeg` like
+  `flights`/`cumulativeNet`) so the cap never loses lifetime numbers; FlightRecord
+  `id` is now the GLOBAL flight index (was `history.count`, which would repeat
+  under the cap). Pre-1.1 saves (nil totals + full history) recompute the totals
+  via `?? history.reduce`. (b) **File-size guard** (`maxDecodeBytes`=4MB) in
+  `slotInfos()` + `reconcileCloud()`: an oversized legacy save is NOT parsed on
+  the cold-launch path — use file metadata (size/mtime via `attributesOfItem`,
+  no read) instead; `slotInfos` shows a lightweight "Saved game" placeholder,
+  reconcile uses mtime as the ordering epoch. Loading it re-saves it capped/small
+  (self-heals). NOTE the chart value-input changed `history.count` → `r.flights`
+  (else the capped count re-freezes the Canvas — the documented bug). Verified
+  **18/18 headless** (cap engages, aggregates tie to `cumulativeNet` across all
+  flights incl. dropped, save/load preserves them + stays capped, pre-1.1 recompute,
+  cash invariant holds) + clean live launch. Plus the sweep's two cheap defensive
+  guards: `Basemap.project` (`guard p.count >= 2`) and `makePurchasedAircraft`'s
+  `homeBaseAirports.randomElement()!` → nil-coalesced. STILL a hypothesis for
+  THIS tester until the `.ips` confirms — but the uncapped save was a real latent
+  bug regardless.
+- **Fuel hedging (sim mechanic) — DONE (native app); panel UI lands with the
+  NETWORK view.** Ported faithfully from the prototype spec (which had been
+  dropped from CLAUDE.md and was re-supplied by the designer). A fuel hedge is
+  a real CALL OPTION, and the ASYMMETRY is the whole point:
+  `Simulation.effectiveMultiplier(raw:hedged:)` (a pure, testable helper) caps
+  the player's cost multiplier at `fuelHedgeCeiling` (1.0) ONLY when a spike
+  would push above it — a genuine price DROP (fuel glut 0.85×) passes through
+  UNCHANGED, since a call option doesn't erase the benefit of prices falling.
+  A native port that applied a flat discount instead of this conditional cap
+  would be the wrong mechanic. `effectiveCostMultiplier` (instance) feeds every
+  player-facing cost calc — `legEconomics` op cost AND the AOG/crew
+  hold-erosion in `advanceTick` were both re-routed through it; the GLOBAL
+  economic banner deliberately still reads the RAW `currentEvent.costMultiplier`
+  (the market's true state, not the hedged view). Premium
+  (`fuelHedgePremium(days:)`) is priced against the player's ACTUAL owned fleet
+  (Σ holdCostPerTick × durationTicks × 0.35 utilization × 10% rate), scales
+  LINEARLY with duration (30/60/90-day tiers), and is $0 for an empty fleet.
+  `buyFuelHedge(days:)` guards fleet>0 / not-already-active / affordable, and
+  the hedge expires naturally (`fuelHedgeExpiryTick`, computed
+  `fuelHedgeActive`/`fuelHedgeDaysRemaining`). The prototype's warning about an
+  UNGATED turnaround-settlement corrupting the balance does NOT apply here —
+  native `settleLeg` is already `guard ac.purchased`. Verified: 18/18 headless
+  (asymmetry both directions, linear premium, formula match, buy/deduct/expire/
+  block-re-buy/insufficient-funds). Premium magnitude is fleet-dependent (4×
+  ERJ135 ≈ $200k/30d; the spec's "$1.1M/4-aircraft" anchor was a larger
+  representative fleet — the FORMULA matches exactly, only the fleet differs).
+  - **FUEL HEDGE PERSISTENCE BUG — FIXED (customer-reported, 2026-08-10).** A paying
+    customer bought a 90-day hedge; on app close/reopen it VANISHED and the buy option
+    returned. Root cause: `fuelHedgeExpiryTick` was set by `buyFuelHedge` but was NEVER
+    in `GameSnapshot` / `snapshot()` / `restore()` — so the autosave→relaunch round-trip
+    silently dropped a PAID asset. This is exactly the class the persistence conventions
+    warn about, and it slipped because the hedge was ADDED after the initial snapshot
+    plumbing and never wired in. Fix: `var fuelHedgeExpiryTick: Int?` on GameSnapshot +
+    one `decodeSafeOpt` line in Persistence.swift + `s.fuelHedgeExpiryTick = …` in
+    snapshot() + `fuelHedgeExpiryTick = s.fuelHedgeExpiryTick` in restore(). It's an
+    ABSOLUTE tick and `tick` is persisted, so no relative conversion is needed and
+    `fuelHedgeActive`/`fuelHedgeDaysRemaining` read correctly after load. Shipped in
+    **1.1.5 (build 40)**, submitted for review 2026-08-11 (1.1.4/39 approved & live same
+    day). Verified `aa-1.1.x/FuelHedgeVerify.swift` 11/11 (real save path:
+    hedge survives reload, re-buy refused after reload, still expires on schedule,
+    legacy save with no field decodes gracefully) + clean full app build. **AUDIT (same
+    session, designer asked "check everything that should persist DOES"):** fuel hedge
+    was the ONLY material paid/earned gap. Everything a player pays for or earns
+    persists — aircraft, routes, crew (+ training schedule), hubs/clubs, loans, public
+    company/equity, subsidiaries, diligence, and the PAID route promotions
+    (`playerFareWarUntil`/`adCampaignUntil`/`loyaltyPushUntil`), plus every cash-invariant
+    accumulator. Deliberately-transient (correct, not bugs): background traffic (regen
+    by count), live event effects (reset to Normal by policy: economicEventTicksLeft,
+    insurance/maint/fx/fareWar/labor-action expiry timers), used market, ground-stops,
+    slots. Low-stakes remaining gaps (NOT fixed — noted): `quarterSpeedUsesToday` resets
+    on reload (a reload refills the 3 ¼× uses — minor, ¼× costs no money and resets per
+    sim-day anyway); `opsEventLog` feed history isn't kept (cosmetic, regenerates);
+    `speed` resets to the 5× default (session preference). Flag before touching any of
+    these if the designer decides they matter.
+- **A real SwiftUI note from the ROUTES detail scroll:** at high sim speed the
+  recent-flights `ForEach(history.suffix(15).reversed())` churns its element
+  identity every completed flight (a new flight shifts the 15-window), which
+  fights manual scroll position — expected, not a bug; scrolling is fine at
+  low speed. If a chart view is built later, snapshot the history for display
+  rather than binding a live-growing slice if scroll stability matters.
+- **Figma panel-restyle batch — DONE** (the "designer's NEXT batch of frames"
+  flagged above at the FuelHedge/AddCrew note). All to real Figma nodes, Sky
+  tokens + `.karla(...)`, verified together live via a temp seed (buy an
+  ERJ135, open SLC↔RDU, select it) + screenshot, then reverted:
+  - **Aircraft tooltip** (3:1662): `Label:`-style rows (white Karla-Bold 14 +
+    light-blue Karla-Regular 14 value), airport-code Route row
+    (Karla-ExtraBold 12 + arrow), lease folded into the Tail value (no
+    separate badge), `Cycles` before `Crew legal hours` ("N.N hrs remaining"),
+    and a new `Route P&L` line. Airline row keeps the ownership colour signal
+    (own = On-Dark green, competitor = purple) layered on the Figma layout.
+    NO close button (tap the map to dismiss) — matches the Figma. Route P&L
+    uses `Route.isProfitable`/`netVsOpeningCost` ("$X short of $Y opening
+    cost" until recouped), NOT a raw `cumulativeNet>=0` test — a real bug
+    caught in the screenshot ("recouped +$0" on a brand-new route).
+  - **Open Route steps 1-2** (alert box 5:8040 / 19:6705): `routeHint` is now a
+    solid `#1F232D` bar with the exact "Step One: Tap one of the airports you
+    want in the city pair" / "Step Two: Now tap the other airport pair" lines
+    (Karla-Bold 14, light blue). No cancel button — the highlighted "Open
+    Route" control-bar button toggles the flow off.
+  - **Open Route step 3** (New Route Confirm 19:6758): `RouteConfirmPanel`
+    rebuilt — ORIG → DEST header (Karla-ExtraBold 20), Distance (great-circle
+    nm, computed in-panel) / Slots (green "Avail both ends" vs red "Buyout
+    needed") / Range check (vs the spare that'd be assigned = `idleSpares.first`;
+    "a/c not assigned" red when none) / Opening cost (green/red by
+    affordability), then outlined "Open route" / "Abandon" buttons. Dropped the
+    separate `onBuy`/ACQUIRE button that the older prototype had — the Figma
+    step-3 has only two buttons, and "Open route" with no spare still opens the
+    Acquire panel via `openConfirmedRoute`'s existing no-spare branch (buy
+    mid-flow auto-assigns, preserved).
+    - **ENFORCED PHYSICAL CONSTRAINTS (native app) — the range check is now REAL,
+      plus a runway check.** `openRoute` rejects a route the assigned aircraft
+      can't physically fly, via `Simulation.routeBlock(for:from:to:)` →
+      `.range(nm)` if the great-circle distance exceeds `rangeNM`, or
+      `.runway(code)` if either endpoint's `AirportInfo.longestRunwayFt` is below
+      the type's `BodyType.minRunwayFt` (RJ 5000 / NB 6800 / WB2 8000 / WB4 9500
+      ft). New `OpenRouteResult` cases `.outOfRange` / `.runwayTooShort(code)`
+      (NetworkView flashes a reason); the confirm panel's old display-only "Range
+      check" row became an "Aircraft check" (range + runway) that also DISABLES
+      Open Route when blocked. This is a real fleet-vs-network puzzle: a regional
+      jet can't fly transcon (ERJ135 JFK-LAX blocked, 2146 > 1750nm), and a
+      short-runway field is RJ-only (Queenstown 6,204ft takes an ERJ135 but blocks
+      a narrowbody/widebody — matching reality). Airports with no runway data
+      don't block (data-gap tolerant). Background traffic is NOT gated (cosmetic).
+  - **Fuel Hedge** (Fuel Hedge Card 19:6920): `FuelHedgePanel` rebuilt as a
+    titled card (Karla-ExtraBold 20) + the real explainer paragraph (with live
+    owned-aircraft count) + 30/60/90-day premium rows (light-blue label, white
+    "$X premium", green BUY), plus empty-fleet and active-hedge states. Dropped
+    `NetPanelBox`/`onClose` — the toggle-off is the highlighted control-bar
+    button, matching the Figma (no X). `AddCrewPanel` still uses the dev
+    `NetPanelBox` chrome (no Figma frame for Hire Crew in this batch).
+- **FLEET tab — DONE (all three screens).** The Fleet tab (was a placeholder)
+  is now `FleetView` + `FleetDetailView`, built to the Figma
+  (Airline-Architect-Production: fleet home 1:725/1:1057, detail 2:561/2:1273,
+  marketplace 5:6501/5:6941). Theme-aware via the Sky tokens + light Figma
+  colours; reads `sim.tick` so statuses/counts refresh live (the owned fleet is
+  small, so a per-tick body re-eval is cheap — no Canvas freeze concern here).
+  - **My Fleet**: My Fleet / Marketplace segmented control, a 4-box status bar
+    (Total / Flying / Idle / Grounded — live counts), and a scrollable list of
+    fleet cards (tail, type, live status chip, current route or "No route",
+    OWNED/LEASED chip, airframe-life bar). Fleet status: `grounded` = AOG,
+    `idle` = spare (no route), `flying` = in service — a STABLE mapping
+    (doesn't flicker per flight phase), chosen over the literal
+    airborne/on-ground reading so the chip/counts don't churn every landing.
+  - **Detail** (tap a card): back header, tail/type/ownership + the bundled
+    side-view illustration, a Current Status card (live phase + ETA computed
+    from the state-machine tick budget + leg-progress bar), a Maintenance &
+    Value card (airframe-life bar + market value = real `sellValue` +
+    depreciation-vs-new), and a Last Leg Economics card from the route's last
+    `FlightRecord`. Actions: ASSIGN TO NEW ROUTE (jumps to the Network tab —
+    route reassignment on an existing route still isn't a real feature, so this
+    is a nav shortcut, not in-place reassignment) and SELL AIRCRAFT (confirm →
+    `sim.sellAircraft`, factored out of `resolveSell` so the SELL card and the
+    detail share ONE sell path).
+  - **Marketplace**: cheapest-first aircraft profile cards (name, illustration,
+    Seats/Practical Range/Avg Lifespan, then Buy new / Lease new / Buy used
+    rows), reusing the sim's real `buyAircraft`/`leaseAircraft`/`buyUsedAircraft`
+    with live affordability gating. **Deliberate overlap, designer's call:** the
+    Network tab's ACQUIRE panel STAYS (it auto-assigns a bought aircraft to the
+    pending route mid-flow — a convenience the Marketplace doesn't replicate).
+    So there are now TWO acquire entry points; not a bug to "dedupe."
+  - Verified live in the Simulator (light + dark) with a seeded fleet: all three
+    screens, live phase/ETA/cycles, real economics (Net Income math checks),
+    illustrations with the fixed transparent backgrounds, and the buy/lease/used
+    rows. `FleetView` takes a `@Binding var tab` (from ContentView) so the
+    detail's Assign action can switch tabs.
+- **Alerts modal + bell badge — DONE, and it REPLACED the always-on map
+  decision cards.** `AlertsView.swift`: a badged bell (`AlertBell` — a red
+  count bubble, "9+" cap) and the Alerts modal (Figma 5:4488 light / 5:4552
+  dark). "Alerts" = the sim's `decisionQueue` (the events that need player
+  attention: AOG / crew / end-of-service sell). Each is an accent-bordered
+  "Needs Attention" sub-card — AOG red (live $/min erosion), crew red
+  (Reserve/Hire/Wait), sell amber (Sell/Keep) — wired to the SAME resolvers
+  the old cards used, so acting here is identical. Empty state ("all caught
+  up") when the queue clears.
+  - **App-wide wiring**: `ContentView` owns the modal overlay (dimmed bg,
+    tap-to-close, `@State showAlerts`) and passes an `onBell` closure to
+    `NetworkView` / `FleetView` / `FleetDetailView`; their bells are now
+    `AlertBell(count: sim.decisionQueue.count, …, action: onBell)`. So the bell
+    works from any tab, and the badge count is live.
+  - **Removed the always-on AOG/Crew/Sell cards from the Network map bottom
+    stack** — alerts now live SOLELY in the bell/modal, so the same alert no
+    longer appears in two places (it did briefly — see the light screenshot in
+    that session). The `AOGCard`/`CrewCard`/`SellCard`/`DecisionCardChrome`/
+    `CardButton` structs in ContentView.swift are now UNUSED (kept, not deleted
+    — harmless, and they document the resolver wiring; delete if desired).
+  - The Figma also shows an "Offer" alert type (blue — e.g. an airport offering
+    to buy a slot back). That event type doesn't exist in the sim yet, so the
+    modal renders only the three real decision kinds; the card layout is generic
+    (`AlertModel`) so adding Offer later is a one-case addition.
+- **CREWS tab — DONE.** `CrewsView.swift` (Figma crews home 5:2439 light /
+  5:2218 dark; hire success 12:4509 / 12:4713), wired into the Crews tab. One
+  card per crew family the player owns aircraft in (`sim.ownedFamilies`):
+  family name + type-rating coverage, a 2×2 grid of Available (green #10B981) /
+  On duty (blue #497AA5) / Resting (slate — #555E70 dark / #F1F1F1 light) /
+  Reserve (purple #6E43A6), computed live from `crewPoolsByFamily` +
+  `reserveCrewsByFamily`, a "New crew · $X · HIRE" action, and a "RUNNING THIN"
+  chip (orange #FFAB44) when `available == 0 && ownedCount > 0`.
+  - **`CREW_FAMILY_INFO` added to Crew.swift** — a hand-maintained (name,
+    coverage) map for all 14 families (like FAMILY_LABELS; keep the coverage in
+    sync if the fleet changes). Coverage strings verified against the real
+    AircraftType variants per family.
+  - **Hire "confirmation" is an inline SUCCESS BANNER, not a modal** — the
+    Figma "hire confirmation" frame is just Crews Home with a green
+    #10B981/#87ED7A banner ("New {family} crew successfully hired!") at the top.
+    So HIRE fires immediately (`sim.hireCrew`, affordability-gated) and shows
+    the banner for ~3s; no confirm dialog.
+  - The Figma also shows an "Alert box" (red — "N sidelined; labor action - D
+    days left") inside the card; that's a labor-action EVENT the sim doesn't
+    have yet, so it's omitted for now (add when that event exists).
+  - Verification note: the HIRE button is small; driving it via computer-use on
+    the scaled Simulator kept missing the target (NOT a dropped-click bug — the
+    banner rendered fine when forced on; SwiftUI preserves button identity
+    across the per-tick re-render, unlike the JS prototype's innerHTML flicker).
+- **OPS tab — DONE, and it introduced a real EVENT LOG.** `OpsView.swift`
+  (Figma ops home 5:3458 light / 5:3707 dark), wired into the Ops tab. Two
+  groups:
+  - **Needs Attention** = the sim's `decisionQueue` (AOG/crew/sell), rendered
+    with a NEW shared `NeedsAttentionCard` (extracted from AlertsModal — the
+    Alerts modal and Ops now render IDENTICAL decision sub-cards from one
+    source; refactor removed the duplicate).
+  - **Events** = a real, capped (40) event log: NEW `Sim/OpsEvent.swift`
+    (`OpsEvent` + `Category` = disruption/market/structural) and
+    `Simulation.opsEventLog` + `logOps()`. Grouped in the UI into DISRUPTIONS /
+    MARKET / STRUCTURAL with relative timestamps (`sim.tick − event.tick`,
+    1 tick = 1 min → Xm/Xh/Xd ago). Fed from REAL mechanics via three hooks:
+    economic-event onset (`tickEconomicEvents` → MARKET, with the real %
+    change), weather ground-stop onset/lift **only at the player's route
+    airports** (`tickWeather` → DISRUPTIONS, kept relevant), and route
+    open/close (`openRoute` / `sellAircraft` archive → STRUCTURAL).
+  - **The Figma's flavour events with no sim mechanic (ATC shortage, fare war,
+    ORD capacity expansion) are NOT fabricated** — the feed shows only real
+    events. Add them if/when those mechanics exist. Also folded in: the "Offer"
+    alert type (blue slot-buyback) still doesn't exist, so Needs Attention shows
+    only the three real decision kinds.
+  - Gotcha fixed: a plain `↔` in a Text string renders as an EMOJI (blue box);
+    the route-log strings use `↔\u{FE0E}` (text variation selector) to force
+    text presentation. Watch for this with any bare arrow/symbol char in a
+    string (elsewhere the app uses `Image(systemName: "arrow.right")` instead).
+  - **OPS DRAWERS — DONE (8 Sep 2026; designer: with a big airline, Ops is a
+    long scroll).** Every section box is a collapsible drawer
+    (`OpsView.drawer(_:_:trailing:content:)`: chevron + a trailing summary that
+    stays visible when collapsed — Reputation tier/score, Needs Attention count,
+    "N due · M in shop", "N contested", "N hubs", "N routes"). The collapsed set
+    is `Simulation.opsCollapsedSections` (`Sim/OpsSection.swift`) — on the SIM,
+    not view `@State`, so it survives the tab switch that recreates OpsView — and
+    PERSISTED (`GameSnapshot.opsCollapsedSections`, tolerant-decode; legacy saves
+    → all open). **An alert about a box AUTO-OPENS it** (`opsAutoOpen`): any new
+    card → Needs Attention (+ its home box via `Decision.Kind.opsSection`:
+    mxCheck → Maintenance, hubOffer → Hubs), a rival entering a route →
+    Competition, an accepted airport offer → Incentives, a fuel-price spike →
+    Fuel Hedge. Events never auto-opens (events aren't alerts).
+    `FuelHedgePanel(embedded:)` drops its own title/card inside the drawer.
+    Verified: OpsTweaksVerify 43/43 (toggle, persist, legacy, auto-open, kind
+    map) + live on the iPad sim (collapse, survives Fleet→Ops, saved to disk).
+    German added for the 5 new summary strings.
+- **FINANCE tab — DONE, and the FIRST screen with NO Figma mockup (designer
+  said to build critical info from the app's own design language).**
+  `FinanceView.swift`, wired into the Finance tab. Four cards + a conditional
+  market banner, all theme-aware (Sky tokens / light, same card+header pattern
+  as Crews/Ops), reds per the app rule (`#FF9292` dark / `#D70000` light):
+  - **NET WORTH hero** = cash on hand + fleet market value, with a "$X since
+    launch" delta vs `startingCapital`.
+  - **FLIGHT OPERATIONS** stacked ledger (revenue − fees − op-cost = operating
+    profit/loss) + flights-flown and avg net/flight.
+  - **Ledger figures are COMPACT (B/M/k), not exact dollars — a late-game/25×
+    fix.** A player deep in the game (~$2.6B, public + loans) reported the numbers
+    "jiggling all over the place." Diagnosed from their screen recording: the
+    values were correct and climbing MONOTONICALLY — the ledger just printed
+    cumulative totals to the exact dollar (10–11 digits), so at 25× the trailing
+    6–7 digits churned every `displayTick` refresh. Fix: route `ledgerRow` through
+    `compactMoney` (given a new **billions tier**), so `$30,145,662,958` → `$30.1B`
+    (moves once every few sim-minutes = visually stable). The NET WORTH hero shares
+    `compactMoney` so it reads in B too. The per-flight AVERAGE stays exact
+    (`money()`/`signedMoney()` untouched — small numbers, precision matters there).
+    The always-visible top HEADER still uses `cashLabel` ($M) — deliberately left
+    as-is; unify it to B only if a divergence between header ($2,618.1M) and ledger
+    ($2.6B) ever bugs someone.
+  - **OVERHEAD & CAPITAL** itemized: lease / insurance / maintenance+crew, then
+    acquisition / route openings / fuel hedges (out), then sales / slot
+    buybacks (in).
+  - **CASH FLOW** reconciliation: starting capital → +operating → −overhead →
+    −capital-out → +capital-in = **cash on hand**, and it ties EXACTLY (verified
+    on-screen: $20.0M − $1,082,607 − $208,904 − $17,285,840 = $1,422,649 = header).
+  - **Market banner** when an economic event is active — shows the event and its
+    fare/cost/demand % deltas (amber if harmful, green if favourable).
+  - **New reconciling accumulators on Simulation** (so the Cash Flow card can't
+    quietly disagree with cash): `totalAcquisitionSpend` (buy+used+lease-upfront),
+    `totalRouteSpend`, `totalHedgeSpend`, `totalSaleProceeds`, `totalOfferIncome`
+    — added at every cash-move site. INVARIANT (keep it if you add a new cash
+    flow): startingCapital + totalRevenue − totalFees − totalOperatingCost −
+    totalLeaseCost − totalInsuranceSpent − maintenanceSpend − totalAcquisitionSpend
+    − totalRouteSpend − totalHedgeSpend + totalSaleProceeds + totalOfferIncome ==
+    playerBalance. Verified 9/9 headless across buy/lease/used/route/hedge/sell +
+    40k ticks.
+  - **A real modeling fix caught in the first screenshot: leased aircraft were
+    inflating net worth.** `fleetMarketValue` originally summed sellValue over
+    ALL `purchased` aircraft — but a LEASED aircraft isn't a sellable asset (15%
+    down + ongoing monthly obligation, you don't own it). Fixed to
+    `purchased && !isLeased`; added `ownedOutrightCount`/`leasedCount`, and the
+    hero footnote now reads "resale value of N aircraft owned outright (M leased,
+    not counted)". A $34M fleet-value for 2 aircraft that cost $17M total (one
+    leased) was the tell.
+  - Verified live in the Simulator (dark + light) with a seeded fleet; a random
+    run rolled an Oil Price Spike, correctly showing the market banner + an
+    operating LOSS + net worth down — the real emergent economy, not a happy path.
+- **FINANCE per-period views + net-worth trend — DONE (native app).** Added a
+  **period selector** (Total / This month / Last month) that drives the P&L,
+  overhead/capital, and cash-flow cards, plus a **NET WORTH TREND** sparkline.
+  - **Month-boundary snapshots** power it: `Simulation.FinanceSnapshot` freezes
+    every cumulative total (+cash +netWorth +flights) at a moment;
+    `financeSnapshots` gets a **launch baseline seeded in `init`** (tick 0, $20M
+    — NOT lazily on first tick, so it's pristine regardless of when the player
+    first buys) and one appended at each sim-month boundary in `advanceTick`
+    (`tick % ticksPerMonth == 0`). A period's activity = difference between two
+    snapshots, so it reconciles the SAME way the cumulative ledger does:
+    cashStart + operatingProfit − overhead − capitalOut + capitalIn == cashEnd.
+    Verified 5/5 headless over ~3.2 sim-months (every completed month
+    reconciles, this-month reconciles to live cash, flights partition exactly).
+  - Added `totalFlightsFlown` (owned-leg counter, per-period via snapshot delta).
+  - The Cash Flow card relabels for periods ("Cash, period start" → "Cash,
+    period end") vs Total ("Starting capital" → "Cash on hand"); the hero delta
+    and label follow the selected period ("this month" / "last month" / "since
+    launch").
+  - **NET WORTH TREND** = a small `NetWorthSparkline` (private Canvas) plotting
+    `financeSnapshots.map(netWorth) + [live]`, green above / red below the dashed
+    launch baseline, split per segment. Kept as a **value-input** view (`values`
+    changes every tick via the live last point) so it re-renders and never hits
+    the documented Canvas-freeze bug — do NOT make it a stable-input child.
+  - Verified live (dark): trend line renders (red below the $20M launch dash
+    during a recession run), and the Last-month view shows that period's own
+    numbers reconciling exactly ($934,633 − $1,079,046 − $187,128 = −$331,541),
+    with capital spending correctly $0 (acquisitions were in earlier months).
+- **FINANCE split into REPORTS / FUNDING top-level tabs (native app; designer
+  request).** The tab now leads with a `Section` segmented pill (REPORTS |
+  FUNDING) reusing the SAME styling as the period selector. **REPORTS** = the
+  period-scoped statements (plan, market-intelligence, market banner, net worth +
+  trend, flight-ops / overhead / cash-flow) with the Total/This-month/Last-month
+  selector as its SUB-nav (shown only under REPORTS). **FUNDING** = the
+  capital-raising cards: FINANCING (loans) + GO PUBLIC / PUBLIC COMPANY. Pure
+  view-layer regroup in `FinanceView.body` (new `reportsContent`/`fundingContent`
+  `@ViewBuilder`s + `sectionSelector`) — no sim/economics/cash-invariant change,
+  nothing added or dropped from the card set. **Market Intelligence lives under
+  FUNDING** (designer call) alongside loans + Go Public — it scouts rivals for
+  Competitor Acquisition, the capital-deployment endgame. The screen header still
+  reads "FINANCE" (screen identity + cash + bell). Build-verified; live-tap check
+  declined this session (designer declined Simulator control).
+- **MONETIZATION PIVOT — SUBSCRIPTION → ONE-TIME UNLOCK (1.2.0 / build 41; designer
+  direction 2026-08-11). Everything below about "two subscription tiers" is now
+  HISTORICAL for NEW users.** Trigger: dismal sub conversion (3 trials / 300+ installs,
+  2 cancelled). Premium games convert far better on a buy-once than a rental. The model
+  is now a **one-time full-game unlock** granting the SAME `Airline Architect Pro`
+  entitlement (so every `store.isPro` gate is unchanged), with **FOUNDING PLAYER pricing:
+  $9.99 through the founding window, then $19.99.**
+  - **FAMILY STANDARD = TWO NON-CONSUMABLES (the "Postmark Digital founding-pricing
+    standard" — codified in `PostmarkOps/ARCHITECT_FAMILY.md`, matches FCA).** Two products,
+    both granting the entitlement: `aa_unlock_founding` ($9.99) + `aa_unlock` ($19.99). In
+    the RevenueCat `default` offering they carry the CUSTOM package identifiers `founding`
+    and `standard`. The app reads BOTH live prices, shows the founding price with the
+    standard STRUCK THROUGH during the window, and SELLS whichever the window dictates.
+    **Why two products, not one + an ASC scheduled price change** (which was the first cut,
+    reverted): with two products the struck regular price is LIVE from StoreKit — never a
+    hardcoded `$19.99` that can drift — and the flip needs NO ASC scheduled change (both
+    products stay in the offering permanently; the app picks). `Store.foundingUntil` (Dec 1,
+    2026) is the SINGLE SOURCE OF TRUTH for the flip; on that date the app auto-switches to
+    selling `aa_unlock` with no dashboard action or app update.
+  - Decisions (designer): founding ends **Dec 1, 2026**; ship as **1.2.0 (build 41)** and let
+    1.1.5 (40) clear on its own; **keep the two legacy subscriptions attached to the
+    entitlement** (existing subscribers keep Pro until they cancel) but **removed from the
+    RevenueCat offering** so new users only see the one-time unlock. Free tier (6 aircraft /
+    5 routes) UNCHANGED — now the "try before you buy" (no trial clock, no card). Code built +
+    clean build + paywall DRIVEN LIVE on the sim ($9.99 / struck $19.99 / "rises to $19.99 on
+    Dec 1, 2026"; both prices live from StoreKit).
+  - **`Store.swift`** (two-product model): `foundingPrice`/`standardPrice` (both localized,
+    from `offering.package(identifier: "founding"/"standard")`), computed `currentPrice`
+    (founding during window else standard) + `strikePrice` (standard, only during window),
+    `pricesAreLive` (= `currentPrice != nil`), `isFoundingWindow`, `foundingUntil`,
+    `foundingChangeDateLabel`, `hasActiveSubscription`. `purchase()` re-checks the window at
+    TAP time and buys `activePackage()`. The old monthly/annual/trial/savings/`Plan` logic is
+    GONE. **NO hardcoded price anywhere** (a deliberate correction of the reverted one-product
+    cut, which had `foundingRegularPrice = "$19.99"`).
+  - **`PaywallView.swift`** — single price block (FOUNDING PLAYER badge + big `currentPrice`
+    + struck-through `strikePrice` (LIVE) + "rises to $X on Dec 1, 2026" while in window;
+    plain "$X · yours forever" after), "Unlock Full Game" CTA, "Restore Purchase", one-time
+    fine print (auto-renew disclosure removed — 3.1.2 is subscription-only), Terms/Privacy
+    kept. Plan selector removed.
+  - **`FinanceView.swift`** plan card — Pro state reads "Full game unlocked — thank you";
+    "Manage subscription" shown ONLY when `store.hasActiveSubscription`.
+  - **ASC PRODUCTS — CREATED (2026-08-11), both Non-Consumable, "Ready for Review":**
+    standard = **`aa_unlock_standard`** ($19.99), founding = **`aa_unlock_founding_player`**
+    ($9.99). (The first-try IDs `aa_unlock`/`aa_unlock_founding` were BURNED — an IAP product
+    id is permanent per team even after deletion, and the Type can't be changed post-creation,
+    so a mis-typed Consumable had to be deleted + recreated under a fresh id. See the IAP
+    gotchas in `ARCHITECT_FAMILY.md`.) The app never references these ids — it reads the
+    RevenueCat PACKAGE identifiers `standard`/`founding` — so the exact ids are a pure
+    ASC↔RevenueCat mapping detail.
+  - **STILL NEEDED before build 41 works (designer/account side — see the ASC + RevenueCat
+    guides in this session's chat + the family standard in `ARCHITECT_FAMILY.md`):** in
+    RevenueCat, attach both products to the `Airline Architect Pro` entitlement and add them to
+    the `default` offering under package identifiers **`founding`** (`aa_unlock_founding_player`)
+    and **`standard`** (`aa_unlock_standard`) — the offering config MUST be live before build 41
+    goes to review (the reviewer tests the purchase through the offering). Keep monthly/annual
+    in the offering during the coexistence window (the live pre-pivot build reads them), remove
+    them only once 1.2 dominates; NEVER delete the sub products. The two IAPs must be submitted
+    WITH build 41 (the build whose paywall uses them) — not alone or with 1.1.5. Until the
+    packages exist, the paywall safely shows a "—" placeholder and purchase reports "not
+    available" (no accidental sub sale). Build 41
+    archive/upload waits on that config.
+- **(HISTORICAL — superseded by the 1.2.0 pivot above for NEW users) IN-APP PURCHASES —
+  scaffolded behind a stub (native app). Designer has a
+  RevenueCat account; two tiers ($5.99/mo, $49.99/yr) + a free preview.**
+  Decisions (designer): free tier gates SCALE not features (route + fleet cap),
+  custom SwiftUI paywall (not RevenueCatUI), and build the whole gating
+  experience NOW behind a local stub so it's testable before the account is
+  wired.
+  - **UPDATE (2026-07-27): RevenueCat is now WIRED AND LIVE — the "stub / wiring
+    deferred" framing below is HISTORICAL.** Shipped in 1.1 (build 35), which Apple
+    APPROVED with both subscriptions + the "Airline Architect Pro" group. Concretely:
+    the **RevenueCat + RevenueCatUI SPM packages are added** to the target (in
+    `Package.resolved`), `Store.apiKey` is a **real public SDK key**,
+    `Purchases.configure(withAPIKey:)` runs at launch, and `isPro` is driven by the
+    LIVE `customerInfo` entitlement — the `#if canImport(RevenueCat)` branch compiles,
+    so the `#else` stub (`purchase(){ isPro = true }`) is NO LONGER the active path.
+    **CORRECTION to the old note's guess: the entitlement identifier is
+    `"Airline Architect Pro"` (`Store.entitlementID`), NOT `"pro"`.** Verified in the
+    RevenueCat dashboard: the entitlement's IDENTIFIER matches that string exactly, and
+    the real App Store Monthly + Yearly products (under the "Airline Architect" app —
+    plus RevenueCat Test-Store equivalents for test purchases) are attached to it, so a
+    real purchase activates the entitlement → `isPro` flips. Still-open verification
+    (not blocking): a real SANDBOX purchase to prove the unlock end-to-end on device.
+  - **`Store.swift`** (`@MainActor @Observable`): `isPro` (STUB flag),
+    `freeFleetCap = 3` / `freeRouteCap = 2`, `canAcquireAircraft(sim)` /
+    `canOpenRoute(sim)` (= `isPro || count < cap`), `capMessage(.fleet/.route)`,
+    a `plans` list (annual/monthly display stubs), and `purchase()`/`restore()`
+    STUBS. **RevenueCat wiring is deferred and localized to THIS file**: add the
+    SPM package + public SDK key, then drive `isPro` from `Purchases.shared`
+    customerInfo (entitlement "pro") and route purchase/restore through it —
+    nothing else in the app changes (every gate reads `Store`).
+  - **`PaywallView.swift`**: custom Karla/Sky paywall (logo badge, contextual
+    reason line, 3 feature rows, annual-preselected plan cards with a "save 30%"
+    badge, Continue, Restore Purchases, fine print, close X). Theme-aware.
+    Presented as a ContentView overlay (`showPaywall`/`paywallReason`) via an
+    `upgrade(reason:)` helper.
+  - **3.1.2 COMPLIANCE (added build 34, after 1.1(33) was App-Store-REJECTED for a
+    missing metadata EULA link; RELEASE_STATUS.md documented it and has since been
+    DELETED — historical reference only).** The paywall fine print now
+    carries **functional Terms of Use (EULA) + Privacy Policy `Link`s**
+    (`PaywallView.termsURL` = Apple's standard EULA, `privacyURL` = the support-site
+    privacy page) — required IN THE BINARY for auto-renewable subs; the App
+    Description carries the same two links for the METADATA half. Valid `URL(string:)`
+    force-unwraps (a bad URL would trap on load, so a clean launch proves them
+    parseable). The SAME pass fixed the plan **"Save 30%" badge**: it was
+    `"Best value · save 30%"` in `Store.swift` (2 spots — fallback + RevenueCat-
+    derived), which wrapped to two lines and, once pinned with `.fixedSize()`, shoved
+    the title into wrapping ("Annua/l"). Fix: shortened to "Save 30%" AND moved the
+    badge to the CADENCE line (`per year · [Save 30%]`) so title and badge never share
+    a row → can't wrap on any device. Verified live on the paywall, both themes.
+  - **Gating is at the UI entry points** (single-player local game, no server —
+    UI-level is sufficient; sim methods unchanged): Network "Open Route" button,
+    the ACQUIRE panel's Buy/Lease/Used rows (`AircraftProfileCard.gated`), and
+    the Fleet Marketplace rows (`FleetView.gatedAcquire`) all check the Store and
+    call `onUpgrade(reason)` at the cap instead of acting. Finance has a **PLAN
+    card** (free: live "N/3 aircraft · N/2 routes" usage + Upgrade; pro: a
+    confirmation). A **DEV "Pro (DEV)" toggle** sits under the eye-overlay dev
+    row in NetworkView to flip `isPro` without a purchase (remove once RevenueCat
+    drives it).
+  - **CAPS ARE NOW 6 AIRCRAFT / 5 ROUTES — sized so a free player can build
+    exactly ONE HUB (2026-08-06, after poor early conversion).** They were 3/2,
+    with this reasoning: *"on the $20M start a free player affords ~1 regional
+    jet, so CASH is the early gate and the caps are a growth ceiling reached
+    after playing."* **That reasoning went STALE when the turboprop tier landed:**
+    the cheapest aircraft dropped from the $14M ERJ135 to the **$2.5M Beechcraft
+    1900**, so 3 × B1900 = $7.5M and BOTH caps were reachable within minutes of
+    starting, with $12M still in the bank. Cash stopped being the early gate.
+    - **The bigger problem was WHERE the cap sat.** `hubMinRoutes` is 5, so a
+      2-route cap made hubs — and therefore the network effect, the hub payback
+      chart, meaningful competition, Go Public and Acquisitions — **structurally
+      invisible to a free player**. They were being asked to pay for depth they
+      had never experienced, which is the likeliest driver of weak conversion.
+      At 5 routes they reach one hub, feel it pay back, and the wall now lands
+      when they want a SECOND hub — the emotional peak instead of before it.
+    - **Fleet cap must stay ≥ route cap** (it's routeCap + 1, for one spare). The
+      old 3/2 was internally inconsistent: with 2 routes a 3rd aircraft could
+      never be assigned, so buying it was a pure loss — a punitive dead end.
+    - **RULE: any change to starting capital, aircraft prices, or `hubMinRoutes`
+      invalidates this calibration — re-run `aa-1.1.x/free-tier-probe`**, which
+      drives the REAL sim and asserts a free player can still buy a fleet, open
+      the routes, and afford a hub. Measured today: $20M buys 5 turboprops + 5
+      routes from SLC for $12.9M; SLC hits 5/5; the $3.1M hub is affordable.
+    - Cap/paywall COPY deliberately sells the systems past the wall (hubs, going
+      public, buying rivals), not "more of the same" — the old copy pitched an
+      "unlimited fleet" to someone who had never wanted a bigger one.
+  - Verified: 9/9 headless (isPro bypasses both gates, predicate tracks the
+    count, purchase stub flips isPro, cap messages present) + Simulator
+    screenshots (paywall dark + light, Finance free-plan card with live usage).
+  - **3-DAY FREE TRIAL — SHIPPED (1.1.4 / build 39, in review 2026-08-09). Full plan +
+    the two paywall bugfixes it rode on live in `PRICING_EXPERIMENT_SPEC.md`.** Designer
+    chose a 3-day Apple free trial, **trial on BOTH plans, Monthly the pre-selected
+    front-door default** (palatable "$5.99/mo" post-trial charge; Annual below with its
+    own trial + "Save 30%"). SHIPPING TO EVERYONE (trial in the `default` offering), NOT
+    A/B'd — volume too low for a clean experiment; the A/B stays in reserve.
+    - **The ASC introductory offers are LIVE and INDEPENDENT of the binary.** Free / 3
+      Days on both Monthly + Yearly, all 175 territories, `starts 2026-08-09` / **`ends
+      2026-12-31`**. Apple auto-applies the trial to any eligible new subscriber NOW —
+      confirmed by a real Yearly TRIAL in RevenueCat hours after config, even on the live
+      build 38 (whose paywall doesn't advertise it). So the trial MECHANISM is already
+      generating trials; build 39 just ADVERTISES it (the "3 days free / Start Free Trial"
+      CTA) to lift starts. ⚠️ Offer expires 2026-12-31 unless extended (can't edit an intro
+      offer — delete + recreate).
+    - **Paywall UI** (`Store.swift` + `PaywallView.swift`): `Plan.trial` set from each
+      package's `introductoryDiscount` ONLY when `paymentMode == .freeTrial` AND the user
+      is ELIGIBLE (`checkTrialOrIntroDiscountEligibility` — a returning user must never be
+      shown "3 days free" then charged full). Plan row shows "3 days free, then $X"; CTA
+      flips to "Start Free Trial". `applyDefaultSelection()` auto-selects the first
+      trial-bearing plan (Monthly wins) from `.onAppear` + `.onChange(pricesAreLive)` so
+      the CTA is always right regardless of ASC config. Eligibility is per subscription
+      group, so a user gets ONE trial on whichever plan they pick.
+    - **Two paywall bugfixes shipped alongside** (pricing-experiment prep): no stale-price
+      flash (`Store.pricesAreLive` gates the price — a treatment cohort must never briefly
+      see the control price), and the savings badge is COMPUTED from real prices
+      (`Store.savingsNote`, rounded via `.doubleValue` — `NSDecimalNumber.intValue` returns
+      0 on a long Decimal mantissa, which would have silently dropped the badge for
+      EVERYONE) instead of a hardcoded "Save 30%".
+  - **What's needed to go live (designer/account side; I can't configure these):**
+    RevenueCat public iOS SDK key, an entitlement id (e.g. "pro"), the two
+    product ids + an Offering, the App Store Connect subscription products +
+    "Paid Apps" agreement, and adding the `purchases-ios` SPM package (cleanest
+    via Xcode's Add Package UI, since a package dependency isn't auto-added by
+    the file-synchronized groups the way source files are).
+- **External-events system — the designer specced 16 events; being built in
+  PHASES.** The full list (designer, verbatim intent): Market/economic (mutually
+  exclusive) — Oil Spike, Fuel Drop, Boom, Recession, **FFR Redemption Surge**
+  (fare/load opposite); Ground-stops (shared mechanism) — **Weather**, **ATC
+  Staffing Shortage** (regional 2–4 airports), **Security Incident** (single,
+  sharp/short); Crew/fleet — **Labor Action** (sidelines a fraction of one crew
+  family), **Aircraft Recall/AD** (grounds every owned aircraft of one type at
+  once — a real AOG escalation); Cost — **Insurance Premium** (recurring monthly
+  bill vs fleet value, occasional hard-market ×), **Maintenance Cost Inflation**
+  (spikes AOG REPAIR cost only, separate from fuel); Revenue — **FX Shock**
+  (widebody fare only — the honest adaptation given no real intl routes),
+  **Competitor Fare War** (depresses fare on ONE existing player route, names a
+  plausible competitor); Structural — **Airport Expansion** (permanent slot
+  increase — the only durable event); Decision — **Slot-Value Buyback** (an
+  airport offers to buy a route's slot back — the ONE item that's a real choice
+  with buttons, i.e. the blue "Offer" decision card).
+  - **Phase 1 — DONE** (`25e625b`): FFR Surge (economic #5), ATC Shortage,
+    Security Incident (ground-stop causes reusing the weather mechanism), and
+    Airport Expansion (structural). New `tickWorldEvents()` = once-per-sim-day
+    check (designed daily probs 4%/3%/2.5%). Headless-verified over 120 sim-days.
+  - **Phase 2 — DONE** (`f94fb56`): Slot-Value Buyback (#16), the one event
+    that's a real CHOICE. Daily 6% check when the player has a route (one open
+    at a time); the dest airport offers 2–4× the route's opening cost. **BUGFIX
+    (designer-reported):** the base is `max(openingCost, incentiveWaived)`, NOT
+    just `openingCost` — a SUBSIDIZED route (opened via an airport recruitment
+    offer) has `openingCost` 0, which produced a "$0 offered" buyback; the waived
+    cost is recorded in `incentiveWaived` and is the slot's real value. Routes with
+    no real value are filtered out. Accept =
+    credit cash + close/archive the route + its aircraft becomes an idle spare
+    (SLOT sold, not plane); Decline = keep it. **Decision refactor**:
+    `Decision.aircraft` is now OPTIONAL and `Decision` gained an `.offer` kind +
+    `SlotOffer` payload (route-based, not aircraft-based). The blue "Offer" card
+    renders via the shared `NeedsAttentionCard` → shows in the Alerts modal AND
+    Ops Needs Attention. Also removed the now-dead AOGCard/CrewCard/SellCard/
+    DecisionCardChrome/CardButton structs from ContentView (they blocked the
+    optional-aircraft change). Headless + visually verified.
+  - **Phase 3 — DONE** (`1bca200`): Labor Action (#9) + Aircraft Recall/AD (#10).
+    #9 added a `.sidelined` CrewStatus; a daily 2% check sidelines ~40% of ONE
+    owned crew family's pool (from ready/resting crew, NOT mid-flight) for 3–8
+    days, returning them at expiry — and lit up the red "N sidelined; labor
+    action — D days left" box on the Crews card (previously omitted).
+    `laborActionExpiryByFamily` is the per-family state. #10 grounds EVERY owned
+    aircraft of one type at once (daily 1.5%) by setting `maint = true`, so each
+    AOGs at its next gate via the existing mechanism (an AOG card per tail).
+    Both log DISRUPTIONS. Headless + visually verified.
+  - **Phase 4 — DONE** (`e33bbd5`): the cost/revenue passive events — #11
+    Insurance Premium (recurring MONTHLY bill via `tickInsuranceBilling` = fleet
+    value × 0.08%/mo, occasional ×1.8 hard market; `totalInsuranceSpent` tracked
+    for the Finance tab), #12 Maintenance Cost Inflation (temporary ×1.6 on AOG
+    REPAIR cost only, via `maintCostMultiplier` in the resolvers), #13 FX Shock
+    (widebody fare ×0.85 in `rollRevenue`, gated on owning a widebody), #14
+    Competitor Fare War (one existing player route's fare ×0.75, names a
+    Big-Four competitor). Headless-verified over 300 sim-days (insurance/maint/
+    fare-war fire; FX correctly gated off with a regional fleet — its
+    widebody-gated firing wasn't exercised end-to-end since a widebody is
+    unaffordable at the $20M start, but the effect is one line analogous to the
+    verified fare-war line).
+  - **ALL 16 external events are now built.** Magnitudes for every built event
+    are DESIGNED pacing, not sourced. All surface in the Ops feed and/or the
+    economics; the only one that's a player choice is #16 (the Offer card).
+  - **#17 RECURRENT CREW TRAINING — DONE (a recurring player CHOICE).** Each owned
+    crew family comes due for recurrent training on a ~150-day cycle (real FAA
+    analog). Pushes a blue `.training` card (graduation-cap) with: **Train now**
+    (pay the base cost = the crew-hire basis, ERJ $28k; ~half the family's ready
+    crew go `.sidelined` ~4 days — degrades but doesn't stop ops), or **Defer 30
+    days** (no downtime now, auto-runs in 30 days at 1.6× cost). `Decision` gained
+    `.training` + `trainingFamily`. State: `crewTrainingDueByFamily` /
+    `crewTrainingDeferredByFamily` (BOTH persisted — the schedule survives save/
+    load) + a transient downtime expiry. `tickCrewTraining()` (daily) returns
+    trainees, runs due deferrals, pushes due cards; `resizeCrewPools` clears
+    training state when a family is sold off. Verified 11/11 headless.
+    **SUPERSEDED 8 Sep 2026 by the CREW TRAINING PIPELINE below** — the family-wide
+    card, `crewTrainingDueByFamily`/`DeferredByFamily`, `runTraining`, and the 25%
+    sideline fraction are GONE (`resolveTrainingNow`/`Defer` survive as the LAPSED
+    card's requalify/later actions, so the harness drainers still compile).
+  - **CREW TRAINING PIPELINE — BUILT (Phase 1, 8 Sep 2026, branch `crew-training`;
+    design + the 5 designer decisions in `aa-1.1.x/CREW_TRAINING_SCOPE.md`).**
+    Hiring is no longer instant. A crew is HIRED → in TRAINING with the contract
+    provider (**"Global Aviation Training"**, a fictional house name) → line-ready.
+    Two doors: **RATED hire** (2× course, line-ready in 10d) or **NEW HIRE** through
+    the type-rating course (1.25× course, 45d); `course` = the old 0.2%-of-price
+    hire cost (`crewCourseCost`). The BUNDLED crew that comes with an aircraft stays
+    line-ready (OEM initial-cadre training — real), so a starter flies on day one.
+    Each crew carries **CURRENCY** (`currencyExpiresTick`, 180d — the 6-month PIC
+    check): the per-family **auto-recurrent** policy (default ON, persisted) sends the
+    soonest-expiring available crews to a 4-day recurrent (15% of course each) a few
+    at a time (≤10% of the family, min 1; a crew about to lapse goes regardless of
+    the cap — the contractor has no capacity limit, the cap is about availability).
+    Policy OFF, or unaffordable → the crew **LAPSES** (`.lapsed`, never assigned) →
+    one per-family `.training` card ("currency lapsed") on the bell + the Crews card
+    — deliberately NOT on Ops — with **Requalify** at 1.6× the recurrent rate (the
+    MX overdue-surcharge pattern). A crew whose currency runs out mid-trip finishes
+    the trip, then lapses (`releaseCrew`). New `CrewStatus` cases `.training` /
+    `.lapsed` (save codes 3/4); `Crew.readyTick`/`trainingKind`/`currencyExpiresTick`
+    persisted (`CrewSave`), `crewAutoRecurrent` on GameSnapshot — all tolerant-decode;
+    a PRE-pipeline save gets its crews' currency **staggered across [30d, 180d]** on
+    load so a legacy fleet never lapses in one wave. **The CREW card's "Hire" is now a
+    rated hire that dismisses the card** (it can't fix THIS hold any more — Reserve is
+    the only instant fix; the new crew stops the NEXT holds). `hireCrew(family:)`
+    keeps compiling (mode defaults to `.rated`). **Coverage readout** (designer
+    decision 4 — REVERSES the earlier "the game doesn't calculate the crew need"
+    call, because 10–45-day latency makes the ratio a planning input, not a puzzle):
+    `crewCoverage(family:)` = line-ready crews per aircraft + a verdict from the
+    sim's own sweep thresholds (≥1.9 continuous · ≥1.5 thin · else under-crewed).
+    **Crews tab v2** (`CrewsView`): provider card, per-family DEPLOYMENT (2×2 grid +
+    coverage line), TRAINING PIPELINE (who's in a course + days back, lapsed +
+    REQUALIFY, the AUTO toggle), HIRE (both doors priced live); the Network Add Crew
+    panel shows both doors too. Verified `aa-1.1.x/CrewPipelineVerify.swift` 63/63
+    (incl. a $20M starter with one Beech 1900 surviving 45 days — an early version
+    of that test "failed" because it never answered an AOG card, the documented
+    headless trap) + RotationVerify 40/40 + OpsTweaksVerify 43/43 + RoundTrip 13/13
+    + full Debug build + `de-findgaps` clean. **MERGED to `main` 8 Sep (`162b865`).**
+  - **TRAINING CENTER — BUILT (crew-training Phase 2, 8 Sep 2026, branch
+    `training-center`; `Sim/TrainingCenter.swift` + the "Training Center" MARK in
+    Simulation.swift).** The player's own facility at an OPERATING hub, with one sim
+    BAY per crew family (gate: 6+ owned aircraft in that family). In-house courses
+    cost **0.4×** the contract price and run **30d** initial / **2d** recurrent (vs
+    45/4); the contract provider also carries a **0–10 day class-slot wait** on a new
+    hire, which the center removes. A bay seats **4 crews**; past that, courses
+    overflow to the contractor at contract price and timeline — an under-built center
+    costs money, never dead-ends. Costs are GAME-SCALED, not real-world-scaled
+    (facility $750k; bay $2.5M WB / $1.25M NB / $800k TP; opex $4k + $8k/bay per
+    month) — a real Level D sim's price can never amortize against this game's
+    training volume. `totalTrainingCenterSpend` is a new CASH-INVARIANT capital term
+    (also in `FinanceSnapshot`/`FinanceSave`/`PeriodFigures.capitalOut` + a "Training
+    center built" ledger row); opex flows through the maintenance-&-crew overhead
+    line. The Crews tab's TRAINING card becomes the center card (bays, seat load, a
+    **TRAINING P&L** payback sparkline); each family card gets a bay row.
+    - **⚠️ THE RECURRENT CONCURRENCY CAP IS THE BAY CAPACITY for a family with a bay —
+      do NOT restore a pool-fraction cap there.** The first A/B run capped at 20% of
+      the pool while a bay seats 4, so every wave pushed its surplus to the CONTRACTOR
+      at full price (1-in-5 overflow at 12 aircraft, 2-in-6 at 16, 6-in-10 at 24):
+      savings stopped scaling with the fleet and **16 aircraft paid back WORSE than
+      12**, the inverse of the intended shape. Urgent about-to-lapse crews still
+      bypass the cap (contract if the bay is full) — that's the safety valve.
+    - **Balance gate PASSED** (`aa-1.1.x/TrainingCenterABProbe.swift` 5/5, 6 arms ×
+      5 sim-years): 6×A320 never pays back (−$1.26M at 60mo), 16×A320 crosses ~month
+      36 (+$1.16M at 60), 24×A320 ~month 30, 8×B788 ~month 33 (+$2.47M) — value-sink
+      small, pays back large, the Hubs-lesson threshold. **The probe's METHOD is the
+      reusable bit: the center's own ledger IS the A/B** (each in-house course books
+      `contract − in-house`, so `payback = savings − facility − opex` is exactly the
+      delta vs a contract-only twin) — no two-sim A/B, so economic events can't poison
+      it. Re-run after touching ANY center/course constant.
+    - **KNOWN TENSION (designer call, flagged not overridden): the build gate of 6
+      aircraft sits well below break-even (~14 NB / ~7 WB).** Defused in the UI rather
+      than by moving the confirmed gate — the bay row reads "Course savings repay it
+      above ~N aircraft in this family" (`simBayPaybackAircraft`, derived from the
+      course fee + the 2.1-crews-per-aircraft ratio). Raise `simBayMinAircraft` to ~12
+      if the game should refuse the bad build outright.
+    - Verified `aa-1.1.x/TrainingCenterVerify.swift` **69/69** + CrewPipeline 63/63 +
+      Rotation 47/47 + OpsTweaks 43/43 + RoundTrip 13/13 + full build + German clean.
+      **Harness lesson:** on a flying fleet a graduated crew goes straight `.onDuty`
+      (assert `isLineReady`, not `.available`), and a cash-delta assertion also
+      contains flight revenue + the monthly opex — measure a training charge via
+      `maintenanceSpend` minus the ledger's opex delta, and park the fleet when
+      asserting concurrency.
+  - **#18 AIRPORT RECRUITMENT OFFER — DONE (the counterpart to the #16 slot
+    buyback, which is the OPPOSITE: an airport buying YOUR slot).** A smaller,
+    off-radar CONUS airport periodically courts the player to open a route TO it,
+    with a **human pitch** from its officials (3 templates using real
+    `AirportInfo.city` names) + real incentives: **waived opening cost** (`openRoute`
+    gained a `subsidized` flag → 0 charge, route.openingCost 0) + a **signing
+    bonus** ($100k + demand-scaled, capped $500k). Origin drawn from the bottom
+    ~2/3 by traffic (unserved); dest prefers a hub already in the player's network.
+    Blue `.airportOffer` card (megaphone) via NeedsAttentionCard. **ACCEPT ALWAYS
+    WORKS now (was a spare-required dead-end — designer-reported).** Accept opens
+    the route free + banks the bonus (`totalOfferIncome`, Finance invariant holds)
+    regardless of fleet: with an in-range spare it's assigned + flies immediately;
+    WITHOUT one the route opens PENDING (no aircraft), and `assignSpareToPendingRoutes()`
+    (per tick) auto-staffs it once the player acquires/frees an in-range spare —
+    so "accept → buy a plane → it flies the route" just works. `openRoute` was
+    refactored into shared `createRoute` + `assign` helpers; accept reuses them.
+    **PENDING ROUTES are a real concept now**: `routeStaffed(_)`/`pendingRoutes`
+    (a route in `playerRoutes` with no aircraft assigned) — harmless (no flights,
+    no demand rolled) until staffed. Competition entry now also requires `flights>0`
+    (a subsidized route's $0 opening cost makes `isProfitable` true from tick 0).
+    Route gains `incentiveBonus`/`incentiveWaived` (persisted); a new Ops **"Airport
+    Incentives"** box lists each incented route with the banked bonus + waived
+    opening cost + "Awaiting aircraft"/"In service" status. Offers expire after 12
+    days; one at a time; ~8%/day. `pitch`/`AirportPitch` on `Decision`; not
+    persisted (regenerates). Verified 9/9 headless + live. Example pitch: "Jackson,
+    MS's authority is courting you: fly JAN ↔ ATL and we'll waive every opening fee,
+    plus a $200,800 marketing package…".
+    - **FULFILLMENT COUNTDOWN + FORFEIT (designer request) — the obligation has
+      teeth.** Accepting WITHOUT a spare opens the route pending with a **14-day
+      deadline** (`Route.fulfillByTick`, `offerFulfillmentDays`, persisted).
+      `tickOfferFulfillment()` (daily): staffed-in-time clears the deadline (bonus
+      kept); missed → the route is FORFEITED (closed, slots freed) and the marketing
+      **bonus is clawed back** (`playerBalance` + `totalOfferIncome` both reversed,
+      Finance invariant holds). Ops "Airport Incentives" box shows the live "Nd left
+      to staff" countdown; the accept note states the deadline. Verified headlessly.
+
+- **LOAN / FINANCING mechanic — DONE (Finance tab).** The player can borrow to
+  expand faster than cash flow allows, at the cost of interest + a fixed monthly
+  debt-service payment. `Sim/Loan.swift`: `LoanOffer` products (Short-term
+  $5M/24mo/8%, Fleet $15M/48mo/10%, Expansion $40M/72mo/12%) with an amortized
+  monthly payment `P·r/(1−(1+r)^−n)`; `Loan` tracks remaining principal. `takeLoan`
+  credits cash + creates the loan; `tickLoanBilling` (monthly) charges
+  interest-on-balance + a principal slice, retiring the loan over its term.
+  Borrowing capped at `max($30M, fleetMarketValue)` — a base credit line + fleet
+  collateral — so it can't be abused to infinity. `totalLoanProceeds` /
+  `totalDebtService` accumulators; **the Finance cash invariant now includes
+  `+loanProceeds −debtService`** (folded into PeriodFigures.capitalIn / .overhead,
+  so the cash-flow card still ties out). New Finance **"FINANCING"** card: total
+  debt, monthly service, active loans, and gated Borrow options (a product is
+  disabled when it would breach the limit). Persisted (loans + the two totals +
+  FinanceSnapshot/FinanceSave fields). Verified 9/9 headless (gating, cash credit,
+  full amortization to $0 over the term, invariant holding through 28 sim-months) +
+  live (FINANCING card renders; $40M option correctly disabled past the $30M limit).
+  **A related non-bug clarified (designer question):** the Marketplace lease button
+  updates live (FleetView reads `sim.tick`; the check is upfront-only, matching
+  `leaseAircraft`) — a button that looked stuck was the cash DISPLAY rounding
+  ("$2.1M" covers $2.05–2.14M) sitting just under the exact $2.1M upfront.
+  - **EARLY PAY-OFF — ADDED (designer request).** A loan can now be retired
+    early, and the action ONLY appears when the player has the cash to settle it
+    in full (no partial payments, no unaffordable button). `payOffLoan(id)` /
+    `canPayOffLoan(loan)` / `earlyPayoffCost(loan)` on Simulation: cost = the
+    loan's full `remainingPrincipal` (no future interest — paying early saves
+    every remaining interest payment; no penalty, a deliberately player-friendly
+    choice). The payment counts as `totalDebtService` so the Finance cash
+    invariant (`…−debtService…`) holds EXACTLY unchanged (playerBalance drops by
+    the same amount debtService rises). UI: a green **PAY OFF** button on each
+    active-loan row in the FINANCING card, rendered only when `canPayOffLoan` is
+    true (FinanceView already reads `sim.tick`, so it appears live the moment
+    cash crosses the balance). No new accumulators, no persistence change — an
+    early payoff just removes the loan and bumps the existing debtService total.
+
+- **ROUTE OPPORTUNITIES ARE TAPPABLE → one-tap open (Ops → map preview).**
+  Each Route Opportunity row is now a button (chevron + "tap one to preview it
+  on the map" hint). Tapping one calls `sim.suggestRoute(from:to:)` — sets
+  `pendingSuggestion` (a `RouteSuggestion`, survives the tab switch because it
+  lives on the sim) and frames the camera on both endpoints (`frameRoute`,
+  same fit math as `applyHomeFraming`) — then ContentView switches to the
+  Network tab. NetworkView's `.onAppear`/`.onChange(pendingSuggestion)` adopts
+  it by driving the EXISTING `routeMode = .confirm(o,d)` flow, so opening/buying
+  reuses all the normal machinery (openConfirmedRoute + the no-spare→Acquire
+  branch + handleBought auto-open). MapView.drawSuggestion renders a marching
+  amber DASHED arc between the pair (the in-game FlightPath curve) with
+  continuously PULSING endpoints (tick-driven loop). The RouteConfirmPanel
+  gained `openTitle`/`cancelTitle`/`subtitle` params: for a suggestion it reads
+  "Open This Route" / "Don't Open" with a "Suggested market · ~N pax/day"
+  subtitle. "Open This Route" → openConfirmedRoute + clearSuggestion; "Don't
+  Open" → clearSuggestion + `onReturnToOps` (→ Ops tab). Verified live on iPad:
+  tap FLL↔CLE → framed map + dashed line + pulse → Don't Open returned to Ops;
+  tap CMH↔NLU with an in-range spare → Open This Route opened it (green player
+  route drawn, panel dismissed, Ops event logged).
+- **ROUTE OPPORTUNITIES finder — DONE (Ops tab; "underserved markets").**
+  `Simulation.topRouteOpportunities(perClass:)` surfaces high-demand city pairs the
+  player doesn't serve, using the demand model (the truth of profitability here,
+  since no competitor route-saturation is modeled). Returns a SPREAD across fleet
+  tiers (top regional / narrowbody / widebody markets) rather than a raw demand
+  ranking — otherwise it's always the same mega-hub widebody pairs a starter can't
+  touch; the regional tier naturally surfaces the smaller, off-radar airports.
+  Each row: city pair + real city names + est. demand/day + distance + suggested
+  class. Cached in OpsView `@State`, recomputed only when the route network
+  changes (not per tick). Verified visually + headlessly.
+
+- **MILESTONE ladder extended + audio-fix batch — DONE.** Net-worth awards added a
+  **$30M** tier (gated on owning ≥1 aircraft, so it fires as "grown back past your
+  starting stake", NOT at the $30M start) and a **fleet-of-50** award, alongside
+  the existing $50M/$100M/$250M/$500M/$1B + fleet 5/10/25. Also a **"First jet
+  purchased!"** milestone (🛩️, `first_aircraft`, fires at `ownedCount >= 1`).
+  Haptics come free via the existing celebration `.onChange` hook.
+  - **SOUND-COLLISION FIXES (designer-reported).** (a) Opening a route by BUYING an
+    aircraft in one action played the jet whoosh AND the "now boarding" voice at
+    once — the voice is now suppressed when it follows a purchase
+    (`openConfirmedRoute(announce:false)` from `handleBought`); the route-open
+    haptic still fires, and opening with an EXISTING spare still says "now
+    boarding". (b) The first-purchase whoosh would collide with the new
+    first-aircraft milestone chime — so `Feedback.aircraftAcquired(isFirst:)` skips
+    the whoosh on the FIRST-EVER acquire (the congrats chime is that moment's
+    sound). `isFirst = sim.ownedCount == 1` at each acquire call site.
+
+- **SAVE / QUIT now persistent on EVERY top-level tab — DONE.** Extracted the pair
+  into a shared `SaveQuitBar` (own "Saved ✓" flash + light haptic), flushed right
+  on the cash line of Network / Fleet / Crews / Ops / Finance (was Network-only).
+  `.fixedSize(horizontal:)` keeps the labels from truncating to "S…"/"Q…" when the
+  cash line is tight (a real bug caught in the Simulator).
+
+- **SAVES SURVIVE APP UPDATES — the tester "lost my game on a new TestFlight
+  build" bug, ROOT-CAUSED and FIXED (native app; 1.1.x).** Reported repeatedly:
+  testers lost saves when installing a new build. A 4-angle audit (schema /
+  decode-resilience / iCloud / identity) + an empirical `swiftc` repro found the
+  cause is NOT iCloud or the bundle id — it's **Swift's synthesized `Codable`
+  throwing `keyNotFound` for a missing key on a NON-optional property, EVEN when
+  that property has a default value** (`var x = 0`). So every build that shipped a
+  new persisted field as non-optional (loans, promotions, crew-training,
+  competition, incentives, `leaseAccrued`, …) made every OLDER save undecodable;
+  the throw was swallowed by `try?` → nil → the slot rendered as "empty" → the
+  player overwrote their still-intact file by starting a new game. iOS preserves
+  the Documents container across same-bundle updates, so the file was always there
+  — the code just couldn't read it. (The SkyOps→AirlineArchitect rename was a
+  ONE-TIME container break, not the recurring cause; the build-27 save-crash was a
+  mostly-resolved corrupt-file contributor.)
+  - **THE FIX (durable, structural): every save struct now decodes each field with
+    a `decodeSafe`/`decodeSafeOpt` helper (missing/undecodable key → default) via a
+    hand-written `init(from:)` in an EXTENSION (extensions preserve the memberwise
+    inits `snapshot()` uses; the synthesized `encode`/`CodingKeys` stay).** This
+    makes "add a field → lose saves" IMPOSSIBLE for past AND future saves —
+    unknown keys are ignored (Codable already does that), missing known keys fall
+    back to defaults, and the compiler enforces every stored property is
+    initialised so a new field can't be silently dropped. Covers GameSnapshot +
+    AircraftSave/RouteSave/FlightRecordSave/RouteAssignmentSave/CrewSave/
+    FinanceSave/LoanSave. `try?` flattens the Optional since Swift 5, so the helper
+    is a single `??`. **RULE for future sessions: adding a persisted field means
+    adding one `decodeSafe` line in Persistence.swift; a new nested Codable save
+    type needs the same tolerant `init(from:)`. Never trust a bare `var x = 0` to
+    survive decode.**
+  - **SAFETY NET (Fix B): a last-known-good `.bak` is kept before every overwrite**
+    (only refreshed from a primary that currently decodes, so a corrupt primary
+    can't clobber a good backup); `load()`/`slotInfos()` fall back to `.bak` if the
+    primary won't decode; `clear()` removes it; and a present-but-UNDECODABLE file
+    now shows as an OCCUPIED placeholder (not an empty slot) so the player can't
+    silently overwrite recoverable data — they can still explicitly Delete it. The
+    iCloud `.adoptCloud` path also backs up the local good save before overwriting.
+  - **Verified**: `aa-1.1.x/SaveCompatVerify.swift` (12/12 — reproduces the bug on
+    pre-fix code, then an older-build save with later keys stripped decodes with
+    defaults filled; empty `{}` decodes; normal round-trip intact) +
+    `aa-1.1.x/RoundTripVerify.swift` (13/13 — a REAL sim snapshot→JSON→restore is
+    exact, residual == −(un-persisted `devInjectCash`), keeps running) + clean app
+    build + live launch (a pre-existing on-disk save decoded and showed correctly
+    in the load menu). **STILL DEFERRED (Fix C/D, need two physical devices on one
+    Apple ID to validate real iCloud): full-body cloud validation before adopting
+    (today `adoptCloud` checks only the `SaveHeader`), and async-correct
+    restore-on-fresh-install (a late-arriving cloud save never flips the menu on,
+    and a first-run new game can stomp an un-downloaded cloud save). These are
+    hardening, not the recurring cause — the tolerant decode + `.bak` fixes ship
+    first.**
+- **PERSISTENCE + MULTI-SLOT SAVES — DONE (native app).** The game persists so a
+  player picks up where they left off, with up to 3 named save slots.
+  - **`Persistence.swift`**: a `Codable` `GameSnapshot` captures the PERSISTENT
+    state only — identity (name/tail code), economy + all the Finance
+    reconciling accumulators, `playerBalance`/`tick`, owned aircraft
+    (`AircraftSave`: tail/type/origin-dest/state-index+tick/cycles/route/leased/
+    maint/crewId), routes + closed routes (`RouteSave` incl. full `history` so the
+    ROUTES P&L/chart survive a reload), per-family crew pools (`CrewSave`:
+    status-as-int/dutyTicks/restTicksLeft), reserve counts, finance snapshots,
+    camera, fired milestones, `stressTestCount`. Background (competitor) traffic,
+    the in-flight event state, and the used market are **NOT** persisted — they
+    regenerate on load, which keeps the snapshot small (~1KB/save) and the
+    restore robust. `CrewStatus.saveCode` maps sidelined→available on reload (the
+    labor action itself isn't persisted).
+  - **`Simulation.snapshot()` / `restore(from:)`** live IN Simulation.swift so
+    they can set `private(set)` state. `restore` rebuilds crew pools → routes →
+    owned aircraft (airport-by-code lookup, re-rolls each leg's revenue), then
+    resets transient state (`currentEvent = .normal`, clears the decision queue,
+    re-provisions + decrements slots per open route, re-seeds the insurance bill
+    tick) and re-applies `stressTestCount`. Verified round-trip last session (a
+    restored sim keeps ticking + earning), and live this session (loading a slot
+    restored the exact $16.0M balance).
+  - **Slots (max 3, a DELIBERATE cap — designer):** enough to try a few
+    strategies, not so many saves become throwaway save-scum (which would gut the
+    bankruptcy stakes). `GameStore` is slot-based (`savegame_<n>.json`):
+    `save(_:slot:)`/`load(slot:)`/`clear(slot:)`/`slotInfos()` (lightweight
+    summaries for the menu)/`firstFreeSlot`/`anySave`. Migrates a legacy
+    single-file `savegame.json` into slot 0 once. `GameSnapshot.savedAtEpoch`
+    (stamped at save time) drives the "saved Xm ago" labels.
+  - **`SaveSlotsView`** = the load / slot-picker menu: shown at cold launch when
+    ANY save exists, and again on QUIT. Each saved slot shows airline/day/cash/
+    fleet/routes + relative save time and loads in place; each empty slot starts
+    a fresh airline there (dashed card); per-slot Delete with a two-tap confirm.
+  - **`ContentView` tracks `currentSlot`** — autosave-on-background
+    (`scenePhase != .active`) and the SAVE button both target it; naming a fresh
+    airline claims `firstFreeSlot`; bankruptcy clears that slot and returns to the
+    menu if other airlines remain (else the naming screen). LOAD always builds a
+    FRESH `Simulation()` + bumps `gameID` (so the `.task(id:)` run loop restarts
+    on the restored instance, no residue from a prior game) — same restart family
+    as the bankruptcy path.
+  - **SAVE / QUIT buttons** (NetworkView, flushed right on the cash line, per
+    designer): SAVE persists to the current slot with a "Game saved" flash; QUIT
+    auto-saves then returns to the load menu. Both are `onSave`/`onQuit` closures
+    from ContentView.
+  - Verified live end-to-end in the Simulator: launch→menu (real path, driven by
+    on-disk saves), tap a slot→loads the exact game, SAVE/QUIT render, QUIT→
+    auto-save→menu with updated timestamps.
+
+- **FIRST-PLAY TUTORIAL — DONE (native app).** `Tutorial.swift`: 5 coach cards
+  (`tutorialSteps`) — goal → open your first route → Fleet → Crews → Ops/Finance
+  — each tagged with the tab it describes. `TutorialCard` is a BOTTOM-DOCKED card
+  (progress dots, Skip, Next/"Start playing") that deliberately does NOT dim the
+  screen, so the section behind stays visible as the player reads. As they tap
+  Next, ContentView advances the step AND switches to that step's tab, building
+  the mental model of where things live. **TRIGGER: it runs whenever the player
+  NAMES a fresh airline** (NOT when Continuing a save — that's correctly no
+  walkthrough). The old "seen once, ever" UserDefaults gate (`hasSeenTutorial_v*`)
+  was REMOVED — it kept the walkthrough from re-showing for returning testers who
+  saw it on an earlier build (designer-reported TWICE); it's skippable, so
+  re-showing on each new game is fine. `TutorialState` still exists but is no
+  longer read for gating. Verified live (set the seen flag true → walkthrough
+  still appears on a new airline).
+
+## Decided — iCloud save sync (cross-device, per Apple ID)
+
+- **BUILT — saves sync across a player's own devices via iCloud key-value
+  store (`NSUbiquitousKeyValueStore`), keyed to the device's Apple ID.**
+  Player idea: continue the same game on iPhone ↔ iPad. Chosen approach
+  (over CloudKit / Game Center `GKSavedGame`) for simplicity: our saves
+  are tiny Codable JSON (~1–7 KB × 3 slots), far under KVS's 1 MB cap, and
+  there's NO in-app login — it piggybacks on whatever Apple ID is signed
+  into the device's iCloud (zero account system to build).
+- **Offline-first: local Documents files stay the source of truth the app
+  reads/writes** (everything works with no iCloud account — verified: the
+  simulator has none, and the app launches straight to the load menu with
+  the local save intact, no crash). iCloud is a MIRROR layer on top:
+  `GameStore.save` also writes the slot to KVS; `clear` removes it.
+- **Reconcile = most-recent-EVENT-wins per slot (save OR delete).**
+  `GameStore.reconcileAction(localEpoch:cloudSaveEpoch:tombstoneEpoch:)` is a
+  PURE, unit-tested function (14/14 headless) returning
+  `.adoptCloud/.pushLocal/.deleteLocal/.none`: the newest `savedAtEpoch` save
+  wins UNLESS a delete-tombstone is strictly newer than every save (then the
+  slot is removed). Ties favor the save (keep data — safe direction).
+  `reconcileCloud()` runs at cold launch (ContentView `.onAppear`,
+  BEFORE the `anySave` check so a save made on another device already shows
+  in the menu) and on `NSUbiquitousKeyValueStore.didChangeExternallyNotification`
+  (another device saved while this one is running → merge + rebuild the
+  load menu via a `cloudGen` `.id` bump). Every `GameSnapshot` already
+  stamped `savedAtEpoch`, so conflict resolution was almost free.
+- **Entitlement**: `com.apple.developer.ubiquity-kvstore-identifier` =
+  `$(TeamIdentifierPrefix)$(CFBundleIdentifier)` in the (previously empty)
+  entitlements file. **MANUAL STEP THE DESIGNER MUST DO ONCE (I can't):**
+  enable the **iCloud → Key-value storage** capability in Xcode → Signing
+  & Capabilities. Simulator builds sign fine without it (ad-hoc), but a
+  DEVICE build / TestFlight ARCHIVE will fail code-signing on the
+  entitlement until the App ID / provisioning profile includes iCloud.
+- **DELETE TOMBSTONES (resurrection fixed).** Deleting a slot removes the
+  cloud save AND writes a dated tombstone (`savegame_slot_N_deleted` = epoch)
+  to iCloud. Reconcile treats a delete as an event competing on recency with
+  saves, so a delete newer than every save removes the slot on all devices
+  (no resurrection), while starting a NEW game in that slot writes a save
+  newer than the tombstone that correctly wins (`mirrorToCloud` also clears
+  the stale tombstone on save). Data is only removed when a delete is
+  genuinely the most-recent action for the slot.
+- **PARTIALLY VERIFIED ON REAL HARDWARE (3 Aug 2026) — the cloud round-trip
+  works.** A delete-and-reinstall on a real iPhone (TestFlight, build 36) brought
+  the saved game BACK. Deleting an app wipes its Documents container, so the save
+  could only have come from iCloud KVS — which proves `mirrorToCloud` really
+  writes, and `reconcileCloud()` really adopts on a fresh install with no local
+  file. That closes the "does KVS actually work on device" half.
+  **STILL UNVERIFIED: true CROSS-DEVICE sync** (iPhone↔iPad on one Apple ID) —
+  same-device restore doesn't exercise a second device racing the same slot, which
+  is where the merge/tombstone logic earns its keep (that part is 7/7 headless).
+  Also still verified: offline-first no-crash launch with no iCloud account.
+- **BREAK-GLASS: CloudKit was considered and DELIBERATELY DECLINED (2026-07-27,
+  designer asked "should we upgrade to CloudKit?"). Stay on KVS.** The current stack
+  (local Codable JSON in Documents as source of truth + `NSUbiquitousKeyValueStore`
+  mirror) is well-matched to what this app IS: single-player, ~1–7 KB saves × 3 slots,
+  no account system, no sharing/server-queries/push. CloudKit's strengths (large data,
+  cross-user sharing, queries, push-on-change) are all things this app doesn't use, so
+  migrating would take on a full cloud-DB dependency for zero benefit — and a storage-
+  layer rewrite of a WORKING save system on a shipping app is exactly where save-loss
+  regressions get reintroduced (the opposite of the goal). Two things to keep straight:
+  (1) **CloudKit would NOT have fixed the original lost-saves-on-new-build bug** — that
+  was a `Codable` decode failure, and the fix (tolerant `decodeSafe` decoders) is
+  transport-agnostic; switching sync layers buys nothing there. (2) The genuinely
+  valuable open step is NOT CloudKit but **validating the current KVS cross-device sync
+  on two real devices** (only the headless merge logic is verified) — don't rewrite a
+  system not yet confirmed inadequate.
+  - **THE ONE TRIGGER to revisit:** the KVS **1 MB total quota** (across all keys) is
+    the only hard ceiling CloudKit would lift. Already engineered around (`Route.history`
+    capped at 60 + `mirrorToCloud` skips the KVS write above ~900 KB); today a save is
+    ~21 KB, enormous headroom. So the trigger is specific — a real save creeping toward
+    ~1 MB from future persisted-state growth. Glance at save size as you add persisted
+    fields; until it approaches the cap, this is a non-issue.
+  - **IF the trigger is ever hit, the least-risky path is NOT a SwiftData +
+    `NSPersistentCloudKitContainer` rewrite.** Keep the local Codable files as source of
+    truth AND the tolerant decoders, and swap ONLY the mirror transport: one `CKRecord`
+    per slot holding the same JSON blob, in place of a KVS key. That's a contained sync-
+    layer change that preserves the offline-first + decode-tolerance guarantees, instead
+    of re-architecting the whole persistence model.
+
+## Decided — iPad Adaptation (native app; universal, one codebase)
+
+Designer wanted a genuinely iPad-DESIGNED experience, not a stretched phone
+app ("with all the extra space it'll just make the game better"). Built
+code-first with screenshot iteration — designer explicitly decided **NO iPad
+Figma frames were needed** after seeing it ("I don't see anything that needs
+major changes"). Verified live on the iPad Pro 13" simulator (both themes,
+both orientations) incl. the full open-a-route→acquire flow.
+
+- **Already universal — no new target.** `TARGETED_DEVICE_FAMILY = "1,2"` and
+  all iPad orientations were already set from the template, so the app always
+  RAN on iPad; the work was purely adaptive LAYOUT, not a port. iPhone is
+  completely untouched — every fork is gated on
+  `@Environment(\.horizontalSizeClass) == .regular` (`PadLayout.isPad(hSize)`
+  in `AdaptiveLayout.swift`, the one shared predicate). Compact width = the
+  existing iPhone layout verbatim.
+- **Sidebar rail replaces the bottom tab bar on iPad** (`SkySidebar.swift`,
+  `SkySidebarRail`). Reuses the SAME `SkyTabIcon` glyphs, active/inactive
+  tints, and Ops badge as `SkyTabBar` — so it stays visually consistent, just
+  vertical. Width 232. Header = the `AppLogo` badge LARGE and centered above a
+  centered two-line "Airline / Architect" wordmark (designer's explicit call).
+  ContentView picks `SkySidebarRail` (regular) vs `SkyTabBar` (compact) in
+  `adaptiveShell`; the tab content is shared via a `content` @ViewBuilder.
+- **All list screens are FULL-WIDTH single column on iPad, NOT multi-column
+  grids.** A multi-column grid was built first (2-up portrait / 3-up
+  landscape) and REJECTED by the designer twice: Fleet/Marketplace went
+  full-width so the aircraft art could be BIG (marketplace image capped at
+  340pt tall on iPad), then Finance + Ops + Crews followed for consistency
+  ("I don't like how there are big gaps between cards" — the gaps were
+  LazyVGrid row-height staggering when a short card sits next to a tall one).
+  Net: `PadLayout.cardColumns` was built then DELETED as dead code — every
+  list is a plain `LazyVStack`/`VStack` at full content width on both idioms.
+  Only `PadLayout.isPad` survives.
+- **Landscape Network = map + docked side rail** (the flagship interaction the
+  designer loved). In `NetworkView`, gated to iPad LANDSCAPE only via a
+  `GeometryReader` (`wide = width > height`) — portrait iPad + iPhone keep the
+  panels FLOATING over the map (a tall screen has no room for a 380pt rail).
+  When wide, the body is an `HStack { mapCard(sideDocked: true) | sidePanelColumn }`;
+  the map keeps its control/speed bars and stays fully live (all airports
+  tappable) while whatever panel would have overlaid it — Acquire / Routes /
+  Hire / route-confirm / aircraft tooltip / airport card — docks into a 380pt
+  right rail instead. `sideDocked` swaps the map overlay's `panelMiddle` for a
+  `Spacer`. Verified end-to-end: open route with no spare → rail swaps from the
+  confirm panel to Acquire (route stays pending) → buy → route auto-opens with
+  the jet assigned and flying, balance deducted, rail dismisses.
+  - **SUPERSEDED (designer, on seeing it in play): the rail no longer reserves
+    space when idle — the map now fills the full landscape width.** The reserved
+    gutter read as "the map didn't expand" after rotating. The flinch it existed
+    to prevent is now solved a better way: the MAP is always laid out at the FULL
+    available width and the card simply shows a narrower window onto it when a
+    panel docks (`mapCard(mapWidth:cardWidth:)` — map at `full`, card clipped to
+    `full − 390`). So docking CLIPS the map's right edge instead of resizing it,
+    which means the world-scale never recomputes and the map never rescales.
+    Verified on the iPad simulator: LAX sits at the identical x/scale idle vs
+    docked. The control/speed bars are attached AFTER the card frame, so they
+    size to the VISIBLE width and never get clipped. `hasSidePanel(_:)` decides
+    whether anything is docked. The ORIGINAL note, for history:
+  - **(Historical) The rail's 380pt width was RESERVED PERMANENTLY, even
+    when nothing was docked** — the `sidePanelColumn` is always in the HStack at
+    `.frame(width: 380)`, empty (page background) when idle. This was a real QA
+    finding (independent code review during the RC pass): docking a panel used
+    to NARROW the map card, which recomputes the map's `worldScale` (=
+    `min(width/worldW, height/worldH)`, width-limited since the world is ~390°
+    wide) → the whole map visibly "flinched"/rescaled every time a panel opened
+    or an aircraft was selected. Reserving the width keeps the map card a
+    constant size so it never rescales. Tradeoff the designer accepted: the map
+    is always a bit narrower in landscape (a ~380pt right margin when idle). The
+    OLD approach (conditionally adding the column via a now-removed
+    `hasSidePanel`) is what caused the flinch — don't reintroduce it.
+  - **EXCEPTION the designer requested: the route-PICK hints (Step One / Step
+    Two) float over the map as a chip, they do NOT take the rail** — you're
+    tapping the map to pick airports, so the instruction belongs on it. Only
+    the CONFIRM step (step 3, with buttons) docks in the rail.
+    `isRouteConfirm` gates the rail; `routePickHintText` (single source, also
+    consumed by the iPhone `routeFlowPanel`) drives the floating chip in the
+    map overlay.
+- **Fleet = list + detail side-by-side on iPad landscape** (`fleetSplitLayout`),
+  50/50 split (`.frame(maxWidth:.infinity)` on both columns — designer bumped
+  it from an initial fixed-400pt list "for better visual balance"). Left =
+  status bar + fleet list; right = the selected aircraft's detail, defaulting
+  to the FIRST owned aircraft until one is tapped (`detailAC = owned.first{
+  id==detailID } ?? owned.first` — no state mutation). The tapped card gets a
+  blue selection ring (`fleetCard(_:selected:)`, `fleetList(selectedID:)`).
+  `FleetDetailView` gained `embedded: Bool` — hides its own header (cash line +
+  back chevron + title) in the split since the list side already carries the
+  header; portrait/iPhone keep the tap-to-push full-screen detail unchanged.
+  Only My Fleet splits — Marketplace stays full-width. The portrait tap-to-push
+  animates: the detail slides in from the trailing edge / list slides off
+  (`.move` + opacity, `.easeInOut(0.3)`), keyed on `detailID` ONLY so a rotation
+  (which flips `split`) stays instant instead of sliding.
+- **Screenshot capture gotcha (for the next session driving the Simulator):**
+  `xcrun simctl io … screenshot` captures the RAW framebuffer, so in landscape
+  the PNG comes out rotated 90°/180° depending on which way the device was
+  rotated (cmd+Right vs cmd+Left give opposite handedness). Rotate the file for
+  viewing with `sips -r 90` or `-r 270` (whichever lands upright) — the app
+  itself is fine, it's purely a capture artifact.
+- **Not adapted (deliberate, designer OK'd):** the naming/paywall/tutorial
+  modals still float centered (functional on iPad, not restyled); portrait
+  iPad Network uses the floating-overlay panels rather than the rail.
+
+## Decided — Release Candidate & QA pass
+
+- **The app is being treated as a RELEASE CANDIDATE (universal iPhone + iPad;
+  build 21 = RC2).** Build history this stretch: 12–14
+  (pre-iPad polish), 15 (cash precision + "need $X more" hint), 16 (iPad
+  adaptation), 17 (portrait Fleet slide transition), 18 (map-flinch fix, RC1),
+  19 (Hubs & Clubs + region selection + leisure destinations + playtest fixes
+  — archived, superseded before upload), 20 (region carousel — archived,
+  also superseded before upload), 21 (RC2: everything above + island basemap
+  geometry, player-build control-bar layout with DEV toggles compiled out of
+  Release, region-carousel peek polish, Africa expansion + South Asia trio,
+  Japan-to-10 + Central Asia — 373 airports), 22 (cold-launch splash
+  route-network reveal at the 1.25× tempo, naming-screen fit pass — smaller
+  badge / 44pt fields / fits unscrolled on iPhone 17 Pro, "Central America &
+  The Caribbean" card label, South America +10 — 383 airports), 23 (tappable
+  Route Opportunities → one-tap map preview + open, turboprop tier — Beech
+  1900D / ATR 42-600 / Dornier 328-110 / Dash 8-200 (shortest-field, reaches
+  St. Barths), Canary→Africa region + Azores stays Europe + early loan pay-off;
+  merged via PR #1), 24 (iCloud cross-device save sync with delete tombstones +
+  the iCloud Key-value-storage capability now enabled/provisioned, iPad
+  responsiveness fix — throttled UI heartbeat, pending-route staffing reason in
+  the Ops incentive box), 25 (Marketplace category filter (box-style, per-class
+  type counts) + Price/Seats/Range sort; My Fleet category + Owned/Leased +
+  Seats/Range filters). Each
+  TestFlight cut = bump `CURRENT_PROJECT_VERSION` (6 configs) → archive → upload.
+  - **CORRECTION (2026-08-06): the upload is SCRIPTABLE — the old "Claude opens
+    the Organizer but can't upload" note was wrong.** Build 38 was exported,
+    validated and uploaded end-to-end from the CLI using the Postmark Digital ASC
+    API key (staged at `~/.appstoreconnect/private_keys/AuthKey_25FXKWL48U.p8`,
+    key `25FXKWL48U`, issuer `55d522ad-1376-4704-a13d-3961750a4327` — the same
+    defaults `ASCTools/asc.py` uses). The chain, which is the one documented in
+    PostmarkOps' `ARCHITECT_FAMILY.md` §4:
+    ```
+    xcodebuild -exportArchive -exportOptionsPlist (method=app-store-connect,
+        teamID=D2PVU8X5Q7, signingStyle=automatic) -allowProvisioningUpdates
+        -authenticationKeyPath/-KeyID/-KeyIssuerID
+    xcrun altool --validate-app -f <ipa> -t ios --apiKey … --apiIssuer …
+    xcrun altool --upload-app   -f <ipa> -t ios --apiKey … --apiIssuer …
+    ```
+    ⚠️ `altool` can't take an explicit key PATH — the `.p8` must be staged in
+    `~/.appstoreconnect/private_keys/`. A build takes ~5 min to appear in
+    `asc.py builds <appId>` after "UPLOAD SUCCEEDED"; an empty list right after
+    uploading is normal, not a failure. Creating the VERSION record, attaching the
+    build, and submitting for review are still designer-side in ASC.
+- **A three-part RC QA pass was run and is CLEAN** (the designer owns the 4th
+  part — on-device feel/fun playtest, which no automated check can cover):
+  1. **Independent code review** of the iPad changes → safe to ship, no
+     must-fix issues (no crashes, no iPhone regressions, no stuck state). Its one
+     finding (the map-flinch) is FIXED (reserved rail width, above).
+  2. **Headless economy regression** (`scratchpad/main.swift`, compile the real
+     `Sim/*.swift` + `Persistence.swift` with `swiftc -O`; entry file MUST be
+     named `main.swift`) → **525/525 checks, 0 failures.** Asserts the master
+     Finance cash invariant (`startingCapital + revenue − fees − opCost −
+     leaseCost − insurance − maintenance − acquisition − routeSpend − hedgeSpend
+     + saleProceeds + offerIncome + loanProceeds − debtService == playerBalance`)
+     holds through every money-moving action, 10 long randomized games (0
+     bankruptcies under competent play), and a forced bankruptcy→liquidation.
+     Trim tick volume (≤~6M ticks) or it exceeds a 5-min run cap. LoanOffer ids
+     are `small`/`medium`/`large` (not "fleet"). This harness is the proven net
+     for any future economy change — re-run it.
+  3. **iPad visual sweep** with a populated game → clean across tabs/orientations
+     /themes. (A "empty detail pane" scare in the Fleet split was a rotation
+     transient, not a bug — the split's `detailAC` defaults to the first owned
+     aircraft.)
+- **APP STORE SCREENSHOT HARNESS (recreate, don't reinvent).** 40 shots (20
+  iPhone + 20 iPad, 10 light + 10 dark each) are driven by
+  `scratchpad/capture.sh`: it boots both simulators, installs the Debug build,
+  and for each of 10 named shots relaunches the app with `SIMCTL_CHILD_SHOT=<name>`
+  then `simctl io screenshot`s into the designer's Desktop folders. The app side
+  is a set of **TEMPSHOT blocks that are deliberately NOT committed** — grep
+  `TEMPSHOT` and strip them all before any real commit. They are: a `#if DEBUG`
+  `devSetBalance` on Simulation (playerBalance is `private(set)`); a
+  `seedForShot(_:)` in ContentView's `.onAppear` that names the airline, buys a
+  flagship fleet, opens real long-haul routes, HIRES CREW, runs ~62k ticks, then
+  clears `maint` and picks the tab; and small `SHOT`-driven defaults in FleetView
+  (segment/category/detail + a `ScrollViewReader` that scrolls Marketplace to
+  the 787). Hard-won details: (a) **hire 3+ crew per owned family** — a bundled
+  single crew leaves aircraft sitting in rest holds, which shows as GROUNDED with
+  ~24 cycles instead of FLYING with ~150; (b) **clear `ac.maint` then tick again**
+  so nothing reads GROUNDED red in a marketing shot; (c) the tail code must not
+  collide with a real IATA code or `nameAirline` silently falls back to the
+  default (`MQ` = Envoy, rejected; `MR` is free); (d) **gate the `devToggles` row
+  on `SHOT`** — Pro/Demand (DEV) are `#if DEBUG` so they're absent from Release,
+  but the screenshot build IS Debug, and they appeared in the first pass; (e)
+  allow ~16s per shot (the seed's tick loop is slow), and dismiss `celebrations`
+  or a milestone toast lands over the UI.
+- **Screenshot/verification gotchas for the Simulator (recurring this session):**
+  (a) `xcrun simctl io … screenshot` captures the RAW framebuffer, so LANDSCAPE
+  comes out rotated 90°/180° — `sips -r 90` or `-r 270` to view upright (the app
+  is fine). (b) computer-use CLICKS on the Simulator started intermittently
+  landing on the macOS menu bar (opening Window/Integrate/Help menus) — a real
+  input glitch; keys (rotation, Escape) still worked. Work around by seeding the
+  target `tab`/state and driving via `simctl` rather than clicks; a Simulator
+  restart may clear it.
+- **TIME AWAY FROM THE APP NEVER BECOMES SIM TIME (designer-reported playtest
+  bug, fixed).** Two holes: (a) QUIT-to-menu left the sim ticking behind the
+  SaveSlotsView (milestone toasts fired over the saved-game screen — the run
+  loop is keyed on `gameID`, which QUIT doesn't change); (b) backgrounding let
+  the `ContinuousClock` accumulator bank the whole suspension and drain it at
+  50 catch-up ticks per 8ms wake after resume. Fix: `Simulation.isPaused`
+  (transient, not persisted — set on QUIT/menu/background via ContentView,
+  cleared by fresh instances on load/new; run() zeroes the accumulator while
+  paused so unpausing never fast-forwards) PLUS a `min(deltaMs, 250)` per-wake
+  clamp in `run()` as a structural guarantee. NOTE: this is distinct from the
+  design's "no player-facing pause DURING play" — that still holds; this only
+  stops the world while the player isn't looking at it.
+- **Playtest quick wins (same batch):** fleet status boxes are tappable list
+  FILTERS (ring in the box's colour, tap-again/Total clears); the detail
+  leg-progress bar rides an airplane icon at the fill tip (leg bar only);
+  `topRouteOpportunities` samples each tier's top-8 (was deterministic top-2 —
+  every new game showed identical markets). Queued bigger items live in
+  `TASKS.md`: region selection at start, Hawaii+Caribbean "leisure
+  destination" airports with a fare premium, and `HUBS_AND_CLUBS_SPEC.md`.
+- **REGION SELECTION AT START — BUILT (designer playtest request).** The naming
+  screen asks "WHICH REGION DO YOU WANT TO START IN?" — 7 chips in the
+  designer's wording/order (Africa, Asia, Australia/New Zealand, Central
+  America, Europe, North America, South America), North America default.
+  `Airline.PlayerRegion` maps the 7 player choices onto the 10 internal carrier
+  regions (NA = us+canada+mexico; Asia folds in middleEast — not offered as its
+  own start; oceania = the whole South Pacific). `Simulation.homeRegion`
+  (persisted in GameSnapshot as rawValue; nil/legacy saves → NA) drives FOUR
+  things: (1) default map framing — `Simulation.frame(for:)`, where NA keeps
+  the proven CONUS frame and every other region gets the padded bounding box of
+  its airports; `configure()`/`resetCamera()` now use the instance `homeFrame`,
+  and `applyHomeFraming()` re-fits on region change or viewport change; (2)
+  spare bases — `homeBaseAirports` = home airports INSIDE the frame, which
+  generalizes the old "no ANC/HNL bases" visibility rule to every region; (3)
+  `topRouteOpportunities`; (4) airport recruitment offers. ALL former
+  `conusAirports` uses are replaced (that pool is gone). FOCUS NOT FENCE: the
+  player can still open routes anywhere on the globe. Verified 57/57 headless
+  (per-region pools, frames, in-region spares/opportunities, save/load
+  round-trip, legacy default) + live (Europe start frames Europe with its
+  region colours). Naming screen now scrolls (the picker adds height).
+- **CARIBBEAN CARRIER REGION — BUILT (1.1.x). The Caribbean islands are now their
+  OWN internal carrier region** (`Airline.Region.caribbean`), split out of Central
+  America. Prompted by the start-region parity measurement (see
+  `aa-1.1.x/RegionParityProbe.swift`): the finding was NO early traps/cakewalks —
+  every region's starter routes are profitable — with Central America/Caribbean the
+  one low-ceiling outlier (genuinely smaller markets, data-accurate). The one cheap,
+  non-fudging polish there was the roster: Caribbean airports used to draw
+  Copa/Avianca/Volaris (`centralAmericaRoster`), which read repetitive/wrong for
+  inter-island flying. Now `caribbeanRoster` = 6 real carriers (Caribbean Airlines
+  BW, Bahamasair UP, Cayman Airways KX, interCaribbean JY, Winair WM, Sunrise S6),
+  per-type eligibility mapped to the game fleet (ATR 72→`AT46`; Twin Otter/Dash-8→
+  `DH8B` — note DH8B is the only type that serves St. Barths' 2,000ft strip, so
+  Winair's Twin Otters land there realistically). Wiring (all touched — a new
+  `Region` case makes every non-exhaustive switch a COMPILE error, which caught them):
+  `caribbeanCodes` split from `centralAmericaCodes`; `region()`/`roster(for:)`/
+  `corridors`/`allRegions` updated; `realCodes` gains the 6 codes (tail-code
+  collision guard); `Competitor.swift` `regionLabel` (+"Caribbean", Central America
+  relabeled from "Central America & Caribbean") and its HARDCODED `generateAll`
+  region list (NOT `allRegions` — a real gotcha; it must be hand-updated or Caribbean
+  carriers never appear in Market Intelligence). **`PlayerRegion.centralAmerica`
+  ("Central America & The Caribbean") now spans `[.centralAmerica, .caribbean]`**, so
+  the start's framing / spare bases / opportunities / offers are UNCHANGED (still
+  covers the islands). Cross-region legs (Caribbean↔Panama/US) still mix in
+  Copa/Avianca/US carriers via `pick`'s endpoint-region combining, so the mainland
+  hubs' real Caribbean reach is preserved. Background-spawn (`pickBackgroundRegion`
+  uses `allRegions`) and map colours (basemap-layer-keyed, not Region) needed no
+  change — Caribbean islands still render in the Central America map hue.
+  Persistence-safe (internal `Region` isn't persisted; the player's `homeRegion`
+  rawValue is unchanged). Verified 18/18 headless (`aa-1.1.x/CaribbeanVerify.swift`:
+  roster shape, region split, weighted draws never yield mainland carriers, domestic
+  Caribbean legs draw Caribbean carriers, every type resolves, realCodes guard, CA
+  start spans both regions, background traffic actually flies Caribbean carriers on
+  Caribbean airports, Market Intelligence includes them deterministically) + clean
+  full app build.
+- **LEISURE DESTINATIONS — BUILT (designer playtest request).** 26 new airports
+  (343 total): Hawaii neighbors (LIH/OGG/ITO/KOA), the Caribbean primaries per
+  the designer's territory list (SJU STT NAS PLS GCM EIS AXA SXM SBH ANU SKB
+  DOM UVF SVD GND BGI AUA CUR BON POS), MLE Maldives + SEZ Seychelles. Real
+  lat/lon and real runways/passenger counts; fee/ground-stop figures are
+  tier-based ESTIMATES (same confidence tier as the LatAm set, flagged in
+  code). `Airport.leisureCodes` (29 — includes existing MRU/NAN and PPT by the
+  same island-leisure logic; Mexican beach airports CUN/CZM/SJD/PVR
+  deliberately NOT leisure yet). TWO designer-specified mechanics, deliberately
+  opposed: fares on any route touching a leisure code run ×1.15
+  (`leisureFareMultiplier`, in `rollRevenue`'s fareMult stack) while OPENING a
+  leisure route carries a flat **$500k establishment surcharge**
+  (`leisureOpeningSurcharge`, in `routeOpeningCost` — automatically surfaces in
+  the route-confirm panel and slot-buyback values). Bigger buy-in, richer
+  payback; both numbers are DESIGNED pacing.
+  **LEISURE OPENING RETUNED (1.1.x): was a ×1.75 multiplier, now a flat $500k
+  surcharge.** A measurement pass (scratchpad `LeisureMeasure.swift`, real Sim
+  headless) found the ×1.75 was INVISIBLE: the base opening cost is ~$85k, so
+  ×1.75 added only ~$63k, recouped in 2-5 flights — no "buy-in" at all, and since
+  the +15% leisure fare has ZERO load/elasticity cost, leisure was a mild free
+  lunch (a small-island route netted about the same as a mainland route to a
+  huge hub). Designer chose "make the buy-in bite" (keep the fare reward, make
+  reaching an island a real capital commitment). The flat $500k makes opening a
+  leisure route ~$580k (≈7× a ~$85k mainland route), recouped in ~17 flights on a
+  strong island (LAX-OGG) to ~26-49 on a thin one — vs 3-7 for mainland — while
+  the +15% fare still pays off long-term. The fare multiplier is UNCHANGED (the
+  reward stays). The surcharge doesn't touch per-flight economics, so a
+  poorly-matched leisure route (an oversized jet on a thin short island) just
+  hurts more — on-intent. Cash invariant verified unaffected (opening cost was
+  already a `totalRouteSpend` term; the change is amount-only). Tune the one
+  constant if the bite feels off; a recurring island ops surcharge was the
+  considered alternative (deferred — "capital commitment" = upfront). Carrier regions: Caribbean islands
+  now have their OWN carrier region (see "CARIBBEAN CARRIER REGION" below — the
+  "future refinement" is BUILT; they no longer ride Central America's
+  Copa/Avianca); SJU/STT stay US-region (territories, same principle
+  as GUM); MLE→asia, SEZ→africa. REAL-RUNWAY HONESTY: SBH (2,119 ft) and EIS
+  (4,642 ft) are genuinely jet-unservable — turboprop-only in reality; they
+  render + host background flavor and are a future turboprop-type hook, NOT a
+  data error. Verified 75/75 headless + live (Central America start now frames
+  the whole Caribbean; the label declutterer fans the Lesser Antilles cluster
+  automatically).
+- **SEASONALITY — BUILT (1.1.x LOD realism; calendar-driven off `monthOfYear` =
+  `(tick / ticksPerMonth) % 12`, a 12-month/30-day sim year).** Two features:
+  - **#2 Seasonal weather.** `tickWeather`'s ground-stop onset probability is now
+    multiplied by `seasonalWeatherFactor(ap)` — a per-airport CLIMATE ZONE
+    (`computeWeatherZone`: hurricane / northWinter / southWinter / monsoon / mild,
+    by region + latitude, cached in `weatherZoneByCode`) × a 12-month curve.
+    Hurricane belt (Caribbean/CentralAm + US/Mexico lat 10-31) peaks Sep; northern
+    winter (lat ≥ 37) peaks Jan; southern winter (lat ≤ −33) peaks Jul; South/SE
+    Asia monsoon peaks Jul-Aug. **Each curve AVERAGES ~1.0 so the ANNUAL ground-stop
+    total stays calibrated — seasonality REDISTRIBUTES disruptions, it doesn't add
+    them.** The ops-log/tooltip reason is seasonal too ("Hurricane hold at MIA" in
+    Sep, "Winter storm", "Monsoon"). Magnitudes are DESIGNED pacing (tunable).
+  - **#3 Seasonal leisure yield.** In `rollRevenue`, a leisure route's fare gets
+    `× leisureSeasonCurve[monthOfYear]` on top of the ×1.15 premium — island fares
+    peak in NORTHERN winter (snowbirds), dip in summer. Implemented as a fare-YIELD
+    swing (not a demand modifier — dodges the 0.92 load cap and is always
+    effective); averages ~1.0 so the buy-in tuning holds ON AVERAGE while a leisure
+    route becomes a genuine seasonal bet.
+  - Verified 28/28 headless (`aa-1.1.x/SeasonVerify.swift`): zone classification,
+    factors peak in the right months, curves average ~1.0, empirical MIA onsets
+    peak in hurricane season, and a leisure route earns 1.61× more in winter than
+    summer while a non-leisure control stays flat (1.03×). Cash-invariant-safe
+    (amounts change, accounting doesn't). Clean full app build.
+- **DAY/NIGHT TERMINATOR + NIGHT CURFEWS + WEATHER GLYPHS + FLAVOR (1.1.x LOD
+  realism/delight batch — #4/#6/#7).**
+  - **Day/night terminator (#4).** `MapView.drawNightShade` paints a soft night
+    band on the half of the globe where the sun is below the horizon, sweeping west
+    as sim-time advances (subsolar longitude = `180 − (tick % 1440)/1440 × 360`).
+    Longitude-based nightness `max(0, −cos(lon − subLon))`, drawn as ~60 vertical
+    strips per wrap-tile UNDER the live network (dims the geography, aircraft glow
+    over it). `maxDark` 0.42 dark / 0.12 light, deep-twilight-blue. NO seasonal
+    polar tilt (a future refinement) — the phase is arbitrary (the sim has no UTC
+    reference); it just sweeps. Verified live (clear gradient across CONUS).
+  - **Real night curfews (#4).** `Airport.curfews` = 27 real, web-researched +
+    adversarially-verified airports with legally-enforced night curfews (LHR/LGW/
+    STN, FRA/ORY/ZRH/MUC/BER/DUS/HAM/GVA/BUD, SYD/ADL/OOL/WLG/ZQN, ITM/FUK, TLV,
+    YTZ/YYZ, CGH/SDU, SNA/SAN/SJC), each a LOCAL window (minutes-of-day, wraps
+    midnight). `tickCurfews()` sets `ap.curfew` from local time (derived from
+    longitude, same subsolar convention as the terminator); `Aircraft.advance`
+    gates DEPARTURES on `origin.curfew` (reusing the weather-hold path — no
+    take-offs during the local night; arrivals NOT gated, to avoid ugly 6-hour
+    holding patterns). A curfewed airport shows a moon glyph + the window on its
+    card. Real operational cost: a curfew route completes measurably fewer flights.
+    Verified 7/7 headless (`aa-1.1.x/CurfewVerify.swift`): LHR active ~420 min/day,
+    JFK never, NO deadlock (44 flights/14 days), throughput < a control (44<47),
+    cash invariant intact. Curfew data from a RESEARCH WORKFLOW (parallel
+    web-capable agents by region + an adversarial fact-check pass; all 27 game
+    curfews passed).
+  - **Weather glyph (#7).** `MapView` draws a glyph on a ground-stopped airport
+    typed by the seasonal reason — `hurricane` / `snowflake` / `cloud.heavyrain.fill`
+    / `cloud.fill`, and `moon.stars.fill` (indigo) for an active curfew.
+  - **Flavor (#6).** `AircraftType.flavor` (35 lines — 747 "Queen of the Skies",
+    A380 "Superjumbo", 787 "Dreamliner", DH8B "The short-field island hopper";
+    shown in Fleet detail) and `Airport.destinationFlavor` (50 evocative one-liners
+    for leisure islands + marquee cities; shown in the airport card). Both from the
+    research workflow's flavor agents. Purely cosmetic.
+- **ISLAND BASEMAP GEOMETRY — ADDED (designer-reported: Caribbean airports sat
+  on empty ocean).** The original Natural Earth 110m extraction drops small
+  islands, so every island-airport group lacked land: the whole Caribbean
+  (Cuba/Bahamas/Hispaniola/Jamaica/PR + the full Lesser Antilles arc down to
+  Trinidad, incl. Aruba/Curaçao/Bonaire and Guadeloupe/Martinique sliced from
+  FRANCE's multipolygon), Maldives, Seychelles, Mauritius, Tahiti/Society
+  Islands, Guam, Canary Islands + Azores (sliced from Spain/Portugal), and —
+  found while fixing — FRENCH GUIANA (part of France, so the South America
+  extraction had a real coastline gap). Sources: NE 50m for big islands, NE 10m
+  for small ones; rings APPENDED to the EXISTING Basemap.json region keys
+  (caribbean→centralAmerica, MLE→asia, SEZ/MRU→africa, Tahiti→australia,
+  GUM→nation, Canary/Azores→europe) so ZERO Swift changes were needed — each
+  group inherits its region's map hue automatically. KEY SUBTLETY: Tahiti's
+  rings are stored at lon+360 (matching PPT's +210° stored-longitude wrap
+  convention) — extract-time shift, don't "fix" the data. Basemap.json ~80KB →
+  254KB. Verified live: Central America start shows the full Caribbean arc with
+  airports on land; oceania start shows Tahiti under PPT.
+  - **NEWFOUNDLAND ADDED + BERMUDA (BDA) new leisure destination (designer-reported:
+    YYT sat on empty ocean).** Same gap class as above: the whole island of
+    Newfoundland was MISSING from the `canada` layer (no coastline ring reached
+    east of −54°; YYT/St. John's is at −52.75), so it floated. Fix: Newfoundland's
+    455-pt ring (NE 50m land, 2dp) appended to `canada`; Bermuda's 73-pt ring (NE
+    **10m** — the 8-pt 50m ring clipped the airport's eastern St. David's tip)
+    appended to `centralAmerica`. Both verified via point-in-polygon (YYT/BDA sit
+    INSIDE their rings) against the exact rings now in Basemap.json; the basemap
+    projects through the same `GeoProjection` as airports so they can't drift.
+    Basemap.json → 284KB. **Bermuda the airport** (BDA, L.F. Wade Intl, 32.36/
+    −64.68, real single 9,713 ft runway, ~1M pax) added to `Airport.all` /
+    `AirportInfo` / `leisureCodes` (fare ×1.15, opening +$500k surcharge) / `centralAmericaCodes`
+    (its carrier region + basemap hue — a mid-Atlantic British territory, really
+    US/UK-served, bucketed with the western-Atlantic leisure islands for
+    consistency, the same approximation the Caribbean uses). Verified 6/6 headless
+    (resolves, coords, leisure, AirportInfo, region, a carrier picks — AA for
+    BDA↔JFK) + clean build. **Live map screenshot of the two landmasses is
+    pending** (default framing is CONUS; showing NE Canada / mid-Atlantic needs a
+    map pan, i.e. Simulator taps — the designer was remote on iPad this session).
+  - **FULL FLOATER AUDIT (designer request: "any OTHER airports not on a
+    landmass?").** A repeatable point-in-polygon audit (`scratchpad/audit.py`) of
+    all 384 airports against every basemap ring (582, all 10 layers, antimeridian
+    wrap-aware — note `states` nests one level deeper than the other layers).
+    Found 4 more missing-island floaters and fixed them by appending NE-land rings
+    to the matching layer: **PMI** Palma de Mallorca (was 194 km offshore → 50m
+    Mallorca → `europe`), **RTB** Roatán (59 km → 10m Bay Islands ×3 →
+    `centralAmerica`), **CZM** Cozumel (17 km → 10m → `mexico`), **BAH** Bahrain
+    (42 km → 10m main island → `asia`; the airport is on Muharraq islet, absent
+    from NE, so it lands 5.4 km off — visually on Bahrain at map scale). Post-fix
+    audit: **zero missing-landmass floaters.** The ONLY two airports still >12 km
+    from a drawn coast are **HRG (Hurghada) and SSH (Sharm El Sheikh)** — both on
+    the Egyptian/Sinai MAINLAND, ~14–18 km off the game's coarse Red Sea coastline
+    (a coastline-simplification artifact, NOT a missing landmass; would need a
+    finer Egypt coastline to close, deferred as low-value). Re-run `audit.py` after
+    any airport/basemap change.
+  - **AMENDMENT (designer request): Canary Islands moved europe→AFRICA, Azores
+    stays europe.** The islands were originally lumped `Canary/Azores→europe`
+    (basemap key) purely because both were "sliced from Spain/Portugal" — but
+    the Canaries sit off the Moroccan coast and belong in the Africa region.
+    Three coordinated changes: (1) the 7 Canary rings (lat ~27-29, lon ~-18…-13)
+    were moved from the `europe` to the `africa` key in Basemap.json (europe
+    93→86, africa 81→88 rings) so they render in the Africa AMBER hue #FFB700
+    (was europe purple #A561FF); the 9 Azores rings (lat ~37-39.7) stay in
+    `europe`/purple. (2) `LPA` (Gran Canaria) moved `europeCodes`→`africaCodes`
+    in Airline.swift, so its background carrier draws from the Africa roster;
+    `PDL` (Ponta Delgada, Azores) stays europe. (3) Binter Canarias (code NT,
+    E195 — the Canaries' real carrier) moved europeRoster→africaRoster to follow
+    LPA; Azores Airlines (S4) stays europe. Identifying the rings is trivial by
+    coordinate range (they're the last 16 rings appended to europe) — see the
+    one-off Python filter in git history if this needs redoing.
+- **Competitive-Traffic slider split into its OWN box; DEV toggles compiled out
+  of Release (designer request).** The old `devControls` container mixed the
+  player-facing TRAFFIC slider with the Pro(DEV)/Demand(DEV) toggles — so
+  TestFlight players saw dev switches, and hiding them would have left a gap.
+  Now `trafficBox` (slider alone, ships everywhere, sits snug under the speed
+  bar) + `devToggles` (Pro/Demand, wrapped in `#if DEBUG` at the call site —
+  absent from Release builds entirely, not just hidden). Verified in a real
+  Release-configuration build.
+- **SOUTH AMERICA EXPANSION — DONE (designer: "next 10 by size"). 373 → 383
+  airports.** Added FOR CWB FLN BEL CCS MAO CUZ VIX CGB BAQ — strictly the
+  next tier by annual passengers, which lands 7 Brazilian regionals (accurate:
+  Brazil's domestic market is huge) plus Caracas, Cusco, Barranquilla. Real
+  lat/lon + runway/pax data; fees tier-estimated to the existing SA entries.
+  NOTE for a future pass: Venezuela is now in, but Paraguay (ASU), Uruguay
+  (MVD), and Bolivia (VVI/LPB) are still unrepresented — their largest
+  airports fall below this size cut; add them if country coverage matters
+  more than the strict ranking. Verified 27/27 headless.
+- **ASIA EXPANSION — DONE (designer list). 363 → 373 airports.** Japan grew
+  3 → 10 (designer: "Japan is large enough for 10"): added FUK CTS OKA ITM
+  NGO KOJ SDJ alongside the existing HND/NRT/KIX — fees calibrated to the
+  high HND/NRT tier; HND↔CTS and HND↔FUK correctly come out as
+  widebody-grade trunk demand (they're two of the world's busiest routes).
+  Central Asia: ASB (Ashgabat), TAS (Tashkent), ALA (Almaty) — largest in
+  Turkmenistan/Uzbekistan/Kazakhstan. TPE was already in the game (checked,
+  not duplicated). OKA (Okinawa) joined the leisure set (32 total) — Japan's
+  island-beach destination, same principle as Hawaii. Okinawa's island
+  geometry added to the asia basemap layer (110m Japan is main-islands only).
+  Verified 32/32 headless + live Asia-start screenshot.
+- **AFRICA EXPANSION + SOUTH ASIA TRIO — DONE (designer list). 343 → 363
+  airports.** Parsed the designer's top-40 African airports list against the
+  existing roster (23 already in game), added the 17 missing: ZNZ FIH MPM HRE
+  MIR TNR DJE BFN LUN LBV KAN CKY PLZ EDL BSK SID DZA — plus the largest
+  airport in Bangladesh (DAC Dhaka), Nepal (KTM Kathmandu), and Bhutan (PBH
+  Paro). Real lat/lon + runways/passengers; fees are tier ESTIMATES calibrated
+  to the existing Africa entries (same confidence tier as LatAm/leisure).
+  Region sets: 17 → africaCodes, 3 → asiaCodes. LEISURE grew 29 → 31: ZNZ
+  (Zanzibar) + SID (Sal, Cape Verde) added by the same island-leisure
+  principle as NAS/PPT/MRU — flag if that extension isn't wanted.
+  REAL-RUNWAY HONESTY (same principle as SBH/EIS): PBH Paro (7,431 ft valley
+  strip, daylight/VFR-only in reality — modeled with a high ground-stop rate)
+  and DZA Mayotte (6,345 ft) block widebodies; PLZ Gqeberha (6,496 ft) too.
+  Island basemap geometry added in the same pass (Cabo Verde — NE names it
+  "Cabo Verde" not "Cape Verde" — Mayotte via a France bbox slice, Zanzibar +
+  Pemba via a Tanzania bbox slice) → africa layer. Verified 74/74 headless
+  (count/dupes/regions/rosters/leisure/runway-blocks/demand/home-pool
+  framing) + live Africa-start screenshot with every new airport on land.
+- **GameKit (leaderboards/achievements) — still DEFERRED, reaffirmed this
+  session.** Designer's friend suggested it; decision was to skip for now (it's a
+  no-architectural-risk bolt-on). If revisited: rank on EFFICIENCY not
+  accumulation (fastest-to-a-milestone / score-at-fixed-sim-day), NOT raw net
+  worth (the sim is time-decoupled + 25× speed → raw net worth rewards grind).
+  Achievements map ~1:1 to the existing milestone system. GameKit's aggregate
+  achievement/leaderboard completion rates are useful balance signal but NOT
+  gameplay telemetry — for that, a privacy-first SDK (TelemetryDeck) is the right
+  tool, and the headless balance-sim is better still for PRE-launch tuning.
+
+## Decided — Competitor Acquisition (1.1; step 1 of 5 BUILT)
+
+Full design in **`ACQUISITIONS_SPEC.md`**. Prompted by testers reporting the
+game goes flat past **$1B net worth** — a new route moves net worth by a
+fraction of a percent, so the reward curve dies.
+
+- **The feature is deliberately an INTEGRATION CHALLENGE, not an asset
+  purchase.** Designer's framing: untangling double-covered routes, crew
+  seniority fights, and inherited inefficiency should introduce *real peril*.
+  Calibration target: a well-managed acquisition pays back in **24–36
+  sim-months**; a passively-held one **never does**. That gap IS the feature —
+  if the A/B ever shows passive holding also paying back inside 36 months, the
+  numbers are wrong. Rejected alternative: "spend $X, receive planes" is the
+  verb that already stopped being rewarding, at a bigger number.
+- **INVERTED GUARDRAIL vs Hubs & Clubs — do not copy that one here.** Hubs
+  measured "rivals on player routes roughly halved" as a SUCCESS. For
+  acquisitions the identical measurement is a **FAILURE**: eating competitors
+  removes the late-game pressure that makes the endgame interesting. Every
+  completed acquisition must make SURVIVORS more aggressive (a multiplier on
+  `competitorEntryDailyProbability`). Winning must not mean less game.
+- **Real airline names: KEPT.** The trademark concern was raised and then
+  explicitly walked back as over-cautious — text-only reference is already
+  shipping and is the defensible end of the spectrum. Holding: no logos or
+  liveries, and no real brands in App Store metadata (why Boeing/Airbus are
+  excluded from the keywords).
+- **OWNERSHIP MODEL — SUBSIDIARY, DECIDED (designer): "you now own the airline
+  and it keeps FLYING under their original flag."** An acquired carrier is never
+  erased or repainted; it operates as a subsidiary under player ownership. This
+  is a fiction call that directly serves the hardest guardrail above — **the map
+  never empties**, because consolidation removes a *competitor*, not a *carrier*.
+  Consequences (see `ACQUISITIONS_SPEC.md` for the full list): inherited tails
+  KEEP their original airline code (a Delta jet stays `N123DL`, not renumbered
+  to the player's 2-letter code); the map needs a THIRD aircraft colour state
+  (owned-mainline vs owned-subsidiary vs competitor — a subsidiary is yours but
+  flies its own flag, and today's two states can't express that); reputation
+  blends only PARTIALLY (a full blend would let a bought carrier's bad service
+  instantly tank the mainline score — partial is both more realistic and gives
+  the player a reason to invest in fixing it); and subsidiaries STAY in Market
+  Intelligence flagged as owned, which quietly turns the scouting list into a
+  portfolio view.
+- **Game-appropriate scaling is a stated PRINCIPLE, not a shortcut** (designer,
+  on the competitor financials): scaling fleets/revenue to the game's own economy
+  "reinforces that this is a game" rather than importing real-world financials.
+  Apply the same instinct to acquisition prices and integration costs.
+
+### Step 3 — integration burden: BUILT and BALANCE-VERIFIED (12-seed sweep)
+
+**Target met.** 12 seeds × 3 arms, 36 months, arms restored from one shared
+snapshot per seed. Payback on NET WORTH (month-0 drop = price − assets received
+= the deal's true cost). **Passive: $3.74M/mo, 13.5-year payback. Managed:
+$9.69M/mo, 5.8-year payback.** A shrewd operator lands at the low end of the
+designer's 5–10 window; passive holding struggles past 10. The **2.6×
+managed/passive gradient held across every tuning round** — that consistency is
+what says the skill expression is real.
+
+- `acquisitionControlPremium` = **0.25**, SIZED BY THE SWEEP (0.80 → 22.9-year
+  median payback). It is the single constant that sets payback: the deal's true
+  cost is (premium × liquidation value) + goodwill.
+- **Pricing builds on `fleetLiquidationValue`, never `estimatedValue` alone.** A
+  loss-making carrier has NEGATIVE goodwill, which pushed estimatedValue below
+  its own fleet value — the old `estimatedValue × 1.3` priced a carrier BELOW
+  what its aircraft fetch (measured: ~$1,890M of aircraft for $2,051M). Buy,
+  liquidate, profit. The floor is now structural.
+- **⚠️ SYSTEMATIC: cross-region acquisitions ALWAYS fail.** The value-destroying
+  seeds were the same 3 in both arms and all bought Air Canada (Canada carrier,
+  US player) — every same-region target paid back. An out-of-region carrier's
+  hubs and routes sit outside the player's network: no overlap, no hub synergy,
+  no connecting traffic. Realistic and worth KEEPING, but currently an invisible
+  trap — it belongs in stage-1 due diligence as a headline risk (designer's
+  preferred route over gating), not something discovered by losing a billion.
+
+**SWEEP METHODOLOGY — reuse it, and don't repeat these:** single-seed
+measurement is worthless (identical code gave +$23.2M/mo and −$5.6M/mo on
+consecutive runs); arms must share ONE `GameSnapshot` or they buy different
+carriers; rationalisation must filter unserved PAIRS not AIRPORTS; both arms must
+be crewed to ~2.2/aircraft or they're structurally loss-making and the control
+flattens; and measure NET WORTH not cash, because cash payback penalises
+reinvestment. The sweep binary takes seeds as argv and runs 6-way in parallel.
+
+### CONSOLIDATION PRESSURE — BUILT (14/14 headless)
+
+The map-never-empties guardrail. Acquiring a competitor removes it from every
+player route (demand recovers), halving rivals-on-routes; without a counter the
+endgame goes quiet exactly when it should heat up. Scales with
+`subsidiaries.count`: entry rate ×(1 + 0.12/acq), competition cap 3→4→5 (capped),
+exit rate damped (survivors dig in), and an acquired carrier is excluded from the
+entrant pool (you never compete against yourself). This is the INVERSE of the
+Hubs & Clubs guardrail, which counted rivals-halved as SUCCESS — here it's the
+failure.
+
+**KEY MEASUREMENT LESSON:** a first sizing (0.5/acq) looked like a 7× overshoot
+(16.7 → 114 rivals) but that was total COUNT across different route totals (8 vs
+~58). Per-contested-route DENSITY was 2.46 vs 2.47 — identical. The market
+self-regulates to an equilibrium set by the cap and entry/exit rates, so the
+entry multiplier barely moves steady-state density; consolidation's real teeth
+are the RAISED CAP and STICKINESS. Always measure density, never total count.
+
+### Step 4 — TWO-STAGE DUE DILIGENCE: BUILT (23/23 headless + live)
+
+Designer's framing: what you can see depends on how far into the deal you are.
+
+- **`CompetitorProfile.fleetManifest(seed:)`** derives the real per-aircraft ages
+  deterministically, and **`inheritFleet` now uses it** — so stage-2 books are
+  exactly the fleet inherited (verified airframe-for-airframe). Ages are no
+  longer rolled at acquisition time.
+- **Stage 1** (free): wide renewal band, "LIKELY needing renewal", ESTIMATE chip,
+  cross-region warning. Sees only the published AVERAGE age, so it cannot know
+  the spread — that gap IS the uncertainty and is not to be "fixed".
+- **Stage 2** (`openBooks`, 0.4% of estimated value, min $250k, persisted): tight
+  band from the manifest, exact aged count, VERIFIED chip. Can reveal a bill
+  WORSE than the estimate.
+- **Scenarios** calibrated from the 12-seed sweep's per-aircraft rates
+  (`perAircraftManagedMonthly` 290k / `perAircraftPassiveMonthly` 112k, BEFORE
+  age drag), scaled by age drag and region fit. Cross-region → "never breaks
+  even" in every scenario, which surfaces the systematic trap.
+- **RENEWAL IS CAPITAL REQUIRED, NOT A SCENARIO DEDUCTION.** An early version
+  subtracted it and made every deal unpayable: renewal is an asset swap (sell
+  old, buy new), roughly net-worth neutral, and the calibration rates already
+  include a renewing operator. Don't re-add it.
+- **Scenarios are CENTRED on the sweep, not inflated around it** (designer: "not
+  always rosy"). An earlier version used `base × 1.45` / `passive × 0.55`, which
+  put the best case 45% above anything measured. The anchors ARE the
+  measurements now: Well run = managed rate, Struggling = passive rate, Expected
+  = midpoint. Medians land at 4.8/7.0/12.5 (stage 1) and 6.1/8.8/15.8 (stage 2)
+  against sweep references of 5.8 managed / 13.5 passive.
+- **Carrier quality is SPLIT 60/40 public/private, so a better carrier costs
+  more.** `carrierQuality(for:seed:)` (takes the PROFILE — an earlier convenience
+  overload that omitted it silently assumed average and was removed as a trap):
+  60% tracks margin + service (the public story that also drives `askingPrice`
+  via goodwill), 40% is a private residual only stage 2 reads. Correlation of
+  public quality with real quality = **0.88** (was −0.14 when it was a bare
+  random draw — diligence was a lottery). Publicly strong carriers price at
+  ~1.6–2.2× fleet metal; loss-makers sit at the 1.25× floor. Stage 1 reads the
+  public half (`publicQualityEstimate`); stage 2 learns the residual, which
+  moves the picture down about as often as up. A viable in-region route always
+  exists.
+
+### Step 3 — the mechanics
+
+Mechanics are complete and verified (27/27 headless). The first measured
+economic run **fails the calibration target and needs a designer call before any
+tuning** — full table + diagnosis in `ACQUISITIONS_SPEC.md` §MEASURED ECONOMICS.
+
+- **`Integration`** (Acquisition.swift) + the lifecycle in Simulation.swift:
+  18-month window, monthly bill (1.5% of price), seniority dispute (9 months, or
+  settle for 8%), disputed families, bills paid. `integrationInProgress` is now
+  REAL, so a second acquisition is blocked while one runs.
+- **Seniority dispute** sidelines 35% of each crew family flown by BOTH airlines
+  (reuses `.sidelined`; never yanks crew mid-flight) and is RE-APPLIED each tick,
+  because crew released from a flight return `.available` and the dispute would
+  otherwise drain away. Settling returns every sidelined crew immediately.
+- **Double coverage**: `overlapDemandMultiplier` splits a pair's demand across
+  every player route serving it, × `overlapCoordination`, which eases 0.70→0.92
+  across the integration and then HOLDS AT THE FLOOR. Time never reaches 1.0 —
+  only closing/reassigning one of the pair clears it.
+- **Inherited routes are BIASED (45%) toward airports the player already
+  serves.** Caught by the harness: with purely random hub-anchored generation the
+  first target produced ZERO overlapping pairs and ZERO disputed families, so the
+  entire burden was inert and a player could cherry-pick frictionless targets.
+  You buy a competitor *because* they fly where you fly.
+- **MEASURED RESULT (1 seed, 3 arms from an identical restored state):** neither
+  passive nor managed ever pays back in 36 months, and **MANAGED LOSES TO
+  PASSIVE** — the inverse of the intent. The integration bill is 27% of the
+  purchase price (1.5%/mo × 18mo, never multiplied out in the spec) and accounts
+  for ~¾ of the loss; the settlement (8%) is nearly pure cost; overlap relief is
+  too shallow to fund it. **Underneath all of that: this game's aircraft take
+  ~8 years to pay back individually (real prices vs. the locked ~6-hr cycle), so
+  an airline priced at fleet value cannot pay back in 24–36 months at any
+  integration tuning.**
+- **HARD CONSTRAINT for any repricing:** the price must ALWAYS exceed the fleet's
+  in-game `fleetMarketValue`, or the player buys a carrier and liquidates its
+  fleet at a profit — pure arbitrage, the worst available failure mode.
+- **A/B METHODOLOGY TRAP worth keeping:** the first run was invalid because each
+  `Simulation` rolls its OWN `competitorSeed`, so the arms bought *different*
+  carriers at different prices. Arms must be restored from one shared
+  `GameSnapshot`. A second bug in the same run: the rationalization helper
+  filtered for unserved AIRPORTS, which finds nothing once an inherited network
+  covers the country — it must filter for unserved PAIRS.
+
+### Step 2 — transaction + inheritance: BUILT (NOT SHIPPABLE ALONE)
+
+⚠️ **Step 2 on its own IS the design the spec rejects** — spend money, receive
+assets, pure upside. It reads as a money printer until step 3 (the integration
+burden) lands. Do NOT ship a build with acquisitions enabled and step 3 missing.
+
+- **`Sim/Acquisition.swift`** holds the TYPES + pure read-only logic
+  (`Subsidiary`, `AcquisitionBlock`, gate constants, `askingPrice`,
+  `acquisitionBlock`). The MUTATING core lives in Simulation.swift
+  ("Competitor acquisition" MARK) because everything it touches
+  (`playerBalance`/`aircraft`/`playerRoutes`/`hubs`/crew pools/`reputation`) is
+  `private(set)` to that file — same reason the Hubs & Clubs core lives there.
+- **Gate**: net worth ≥ $1B, carrier must be in `relevantCompetitors`, one
+  integration at a time (inert until step 3), **lifetime cap 3**, price
+  escalation ×1.0/1.4/1.9. `askingPrice` = `estimatedValue × 1.30 × escalation`
+  (control premium — you never buy a company at book).
+- **Inheritance**: fleet (real ages spread around the carrier's stated average,
+  **tails KEEP the carrier's own code** — a Delta jet stays `N…DL`), routes
+  (hub-anchored, in-region, **free but they consume slots**, capped at the
+  aircraft inherited so nothing lands unstaffed, and gated by the real
+  `routeBlock` range/runway check), hubs, and crew.
+- **SPEC AMENDMENT — inherited aircraft come WITH crew.** The spec originally
+  said unfamiliar types arrive with no crew; that's wrong on realism (you
+  acquire the airline's people too) and would flood the alert queue at close.
+  The merger's pain is the SENIORITY fight, which is step 3's job and bites into
+  exactly this inherited pool.
+- **Rival removal** clears the carrier from every `Route.competitors` (demand
+  recovers immediately — the one instant, legible reward); unrelated rivals
+  survive, and `competitionLevel` stays consistent with the list.
+- **Reputation blends PARTIALLY**, weighted by relative fleet size and **capped
+  at 0.5** so a subsidiary can never swing the mainline score by a majority.
+- **Finance invariant EXTENDED** with `− totalAcquisitionPrice` (as
+  `PeriodFigures.airlineAcquisition`, distinct from `acquisition`, which is
+  aircraft purchases). `FinanceSnapshot`/`FinanceSave` carry it too (optional →
+  legacy-safe). **Any future harness must include this term.**
+- **Persistence**: `subsidiaries` + `totalAcquisitionPrice` on GameSnapshot, and
+  `subsidiaryCode` on `AircraftSave`/`RouteSave` — all optional/nil-safe.
+  Subsidiaries restore BEFORE the fleet so an inherited aircraft can resolve its
+  carrier's name.
+- **`#if DEBUG devInjectCash(_:)` is a TEST HOOK** (reaching $1B through the real
+  economy takes sim-years). Injections are TRACKED via `devInjectedCash` so the
+  cash invariant accounts for them explicitly rather than being excused.
+  Verified absent from a real Release binary (`strings` → 0).
+- Verified **51/51 headless** (gate refusal moves no cash, exact price
+  deduction, invariant after acquisition AND after 20k ticks, full-fleet
+  inheritance, tails keep the carrier code, every inherited route flyable by its
+  assigned aircraft and none unstaffed, crew present for every inherited type,
+  hubs transferred, partial-only reputation blend, re-acquire refused, price
+  escalation, rival removal with unrelated rivals surviving, save/load
+  round-trip, legacy-save load) + live in the Simulator (offer state showing
+  $106.0M → $137.9M asking = exactly the 1.30× premium; post-acquisition
+  "continues to fly under its own flag").
+- **A harness lesson worth keeping:** the restore invariant check initially
+  failed, and the fix was to assert the gap equals EXACTLY the untracked test
+  injection rather than to relax the check — which is what proved persistence
+  was actually correct instead of merely passing.
+
+### Step 1 — competitor scouting: BUILT
+
+- **`Sim/Competitor.swift`**: `CompetitorProfile` (fleet + composition + age,
+  routes/cities/hubs, revenue/margin/load factor/service score, trend,
+  `estimatedValue`) and `CompetitorIntel.generateAll(seed:airports:)`. 140
+  profiles from the 142-entry roster (2 skipped: the Independent Operator
+  fallback + a cross-roster duplicate).
+- **DISCLOSURE PRINCIPLE (designer):** a profile shows what a PUBLIC FILING
+  would show — real airlines' topline performance is open to scrutiny. Never
+  per-route P&L. That boundary deliberately leaves due diligence as a later
+  layer that reveals what the topline hides.
+- **Numbers derive from REAL game data**, not invented: the airline's real
+  `types`, real `AircraftType` seats/prices/weights, the real
+  `FareModel.farePerSeat`, and its real region's airports. Fleets are GAME-scale
+  (4–60), not real-world scale — a real major flies ~900 aircraft, which would
+  price an acquisition beyond any reachable net worth. Roster `weight` (market
+  share) drives relative size.
+- **Determinism via ONE persisted field.** `Simulation.competitorSeed`
+  (`GameSnapshot.competitorSeed`, optional → legacy saves roll a fresh seed and
+  simply gain a market). Profiles are NOT persisted — they regenerate exactly
+  from the seed, which keeps saves small AND stops a player re-rolling a
+  carrier's books by quitting without saving.
+- **A real bug the determinism check caught (inspection would not have):**
+  summing revenue/fleet-value by iterating `fleetByType` — a Dictionary — made
+  the last bits of the result vary between two generations from the SAME seed,
+  because Dictionary iteration order isn't stable across instances and float
+  addition isn't associative. 44 of 140 profiles differed. Both loops now
+  iterate `.sorted(by: key)`. **Any future derived-from-seed value must sum in a
+  sorted order** or the regenerate-on-load guarantee silently breaks.
+- **NAV PATTERN (designer decision): drill-down full-screen views use the
+  BACK-ARROW mechanic (a leading `chevron.left` header, within-tab, tab bar
+  stays visible — the AIRCRAFT DETAIL / `FleetDetailView` pattern), NOT a
+  `fullScreenCover` + trailing-X modal.** Converted `CompetitorIntelView`
+  (Market Intelligence) and `GoPublicView` (IPO): FinanceView now shows them
+  state-driven (`showIntel`/`showIPO`) in a `Group` that PUSHES in from the
+  trailing edge (`.move(edge: .trailing)`, main content slides to `.leading`),
+  exactly like FleetView↔FleetDetailView. Their headers dropped the
+  `xmark.circle.fill` for a leading back chevron (Intel's steps
+  carrier-profile → list → out to Finance via the one chevron). EXCEPTIONS that
+  stay MODAL: the Alerts modal (designer-excluded) and the Paywall (an
+  interstitial overlay, not a drill-down). Apply the back-arrow pattern to any
+  future full-screen drill-down.
+- **`CompetitorIntelView.swift`**, presented from FINANCE (evaluating a rival is
+  an investment question) via a MARKET INTELLIGENCE card. List → carrier detail
+  (back-arrow nav, see the NAV PATTERN note above).
+  **Scouting is deliberately UNGATED** — it isn't behind the $1B threshold:
+  public information is public, it enriches the world for every player, and it
+  gives the endgame something visible to aim at.
+- `Simulation.relevantCompetitors` scopes the list to the player's home region
+  plus anywhere they've opened a route (~25 carriers on a US start, not 140);
+  `rivalsOnMyRoutes` drives the red CONTESTING YOU chip.
+- **CONSEQUENCE WORTH KNOWING: roster `types` data is now PLAYER-VISIBLE.**
+  Previously `Airline.types` only decided which livery a background aircraft
+  wore — invisible. The carrier profile now itemizes a fleet ("Airbus A320 ×12,
+  Boeing 737 MAX 8 ×9"), so any roster inaccuracy is directly readable by a
+  player who knows airlines. Spot-check `types` when touching the roster.
+- Verified **1278/1278 headless** (`swiftc -O` on the real `Sim/*.swift` +
+  `Persistence.swift`): bit-exact determinism, seed round-trip, legacy-save
+  load, per-profile sanity across all 140, valuation reachability at the $1B
+  gate (min ~$80M · median ~$730M · max ~$5B — a real ladder), lossmaking and
+  shrinking carriers both present, region scoping. Plus live in the Simulator,
+  both themes.
+
+## Decided — Go Public / IPO (1.1; ALL 5 steps BUILT — feature COMPLETE)
+
+Full design in **`GO_PUBLIC_SPEC.md`**. A SECOND capital route beside loans
+(designer, mid-flight): list the airline, sell equity for cash, live with a
+living stock price + (later steps) activists and a board. The deliberate opposite
+of a loan — no repayment, but you sell control and gain a permanent audience.
+
+- **DESIGNER DECISIONS (locked):** board can OUST you (a 2nd game-over path, step
+  4); the string is BOTH growth and dividends; unlock at **$500M net worth**; NO
+  float cap — dilution is self-priced (the ouster trigger accelerates the more you
+  sell, step 4).
+- **NET-WORTH INTERACTION (designer raised, poked, KEPT):** IPO proceeds are real
+  cash and net worth carries NO liability for the public's stake, so going public
+  RAISES net worth and can move a $500M player toward the $1B acquisition gate —
+  intended (real airlines IPO to fund acquisitions), and not a pure exploit
+  because dilution + board risk are the sticky cost. The balance sweep must
+  confirm it doesn't make organic growth pointless.
+
+### Step 1 — model + IPO + ticker: BUILT (30/30 headless + live)
+
+- **`Sim/GoPublic.swift`** = `PublicCompany` + valuation/gate/control-risk (pure);
+  the mutating `goPublic`/`tickStockPrice`/sentiment live in Simulation.swift
+  ("Public company" MARK) because they touch private(set) state — same split as
+  Acquisition.swift.
+- **Price model:** `marketCap = netWorth × valuationMultiple(1.8) × marketSentiment`;
+  `sharePrice = marketCap / sharesOutstanding`. **Share count is FIXED**
+  (`ipoShares` = gateCap / $25 ref ≈ 36M), so the IPO PRICE SCALES WITH SIZE
+  (designer): a gate airline lists ~$25–31, a 10× bigger one ~$300. Proceeds still
+  come off `float × preMoneyCap`, never the price. **Price is mostly EARNED** —
+  sentiment (reputation + net-worth trend + active event + wiggle, clamped
+  [0.5,1.6]) is seasoning, not the meal.
+- **IPO-YEAR VOLATILITY (designer):** a new issue's first 12 months are turbulent
+  and unforgiving — an `ipo` factor (1→0 over `ipoVolatilityMonths`=12) amplifies
+  the random swing (up to 3×), heightens sensitivity to performance (the
+  "pressure to perform"), and loosens the momentum (0.5→0.8), then it settles into
+  a seasoned stock. Verified ~6× the settled std-dev in year one, decaying, still
+  bounded.
+- **Ticker** rides next to CASH in NetworkView's header (designer's explicit ask):
+  SYMBOL ▲/▼ $price, green above the IPO price / red below. `displaySharePrice`
+  eases per sim-day so it animates. The cash LABEL shortens to "Cash:" when public
+  so the row doesn't wrap (a real layout fix — the ticker crowded the line).
+- **Float has NO hard cap** (designer): the IPO slider shows live dilution risk
+  tiers (`controlRisk`) with plain-language consequences, since below majority the
+  board (step 4) gets dangerous.
+- **Finance:** a GO PUBLIC card (gated, shows "$X to go" when locked) → the IPO
+  flow; once listed, a PUBLIC COMPANY card (live price, stake, market cap, raised).
+  `totalEquityRaised` is a capital-IN term in the master cash invariant + cash-flow
+  card. All state persists nil-safe (pre-IPO saves load private).
+- **`sanitizeTicker`** = uppercase letters, ≤4. No real-ticker collision check
+  (tickers don't carry the airline-code trademark risk).
+- Verified **30/30 headless** (gate refusal moves no cash, exact proceeds,
+  CASH INVARIANT through IPO + 6 months public, sentiment bounded, price alive,
+  control-risk tiers, save/load round-trip, legacy-save loads private) + live
+  (ticker next to cash, the IPO flow with the dilution warning + live deal
+  summary).
+- **(Step 1 was "not shippable alone" — pure upside. Steps 2–5 below add the
+  levers, activists, the board, and the balance pass that make it a real tradeoff.
+  The feature is COMPLETE, and the live tap-through that gated a beta cut is now
+  DONE too — see the live-tap-through note at the end of this section.)**
+
+### Step 2 — levers (dividends / buybacks / secondary): BUILT (37/37 headless)
+
+The three ways a listed airline manages the market, in the Finance FUNDING →
+PUBLIC card. Pure read-side option math in GoPublic.swift; the mutating actions
+in Simulation.swift ("levers" MARK). `PublicCompany.sharesOutstanding` is now a
+`var` (buybacks retire shares, secondaries mint them).
+
+- **Pay dividend** (`payDividend(yield:)`) — a special dividend at 2/5/8% of the
+  share price, charged on the PUBLIC FLOAT only (the player's own portion is a
+  wash, never moved). Costs cash, lifts sentiment immediately (capped +0.15), and
+  resets the dividend-drought clock. Will also end an activist campaign (step 3).
+- **Buy back stock** (`buyBackShares(floatFraction:)`) — repurchase 10/25/50% of
+  the float at the current price and RETIRE it: `sharesOutstanding` shrinks so the
+  player's STAKE rises (playerShares unchanged) and the activist fuel (float)
+  shrinks. Expensive when the price is high.
+- **Secondary offering** (`secondaryOffering(fraction:)`) — mint new shares = 5/10/
+  20% of current shares at the price: raises cash now, DILUTES the stake (raises
+  board-ouster risk, step 4). Proceeds join `totalEquityRaised` (same capital-in
+  term as the IPO). Raises little when the price is depressed — the realistic
+  penalty for needing cash in a downturn.
+- **The "string" is now BOTH** (locked decision): the GROWTH half was already in
+  sentiment (net-worth trend); step 2 adds the INCOME half — a dividend-drought
+  penalty in `nextSentiment()` (grace 6 sim-months, then −0.03/mo up to −0.25),
+  reset by paying a dividend. So skipping dividends indefinitely sinks the price.
+- **Finance invariant EXTENDED** with two capital-out terms: `totalDividendsPaid`
+  + `totalBuybackSpend` (both persisted nil-safe; added to `FinanceSnapshot` /
+  `FinanceSave` / `PeriodFigures.capitalOut`; new "Dividends paid" / "Share
+  buybacks" / "Equity raised" ledger rows in the breakdown, shown when public).
+  **Any future harness MUST include `− totalDividendsPaid − totalBuybackSpend`.**
+- Verified **37/37 headless** (`scratchpad/TestMain.swift`, real Sim/*.swift):
+  exact dividend/buyback/secondary math, stake rises on buyback + falls on
+  secondary, shares shrink/grow, sentiment lifts on dividend, the cash invariant
+  holds after every lever + a refused (unaffordable) dividend, gating (a private
+  airline refuses all three), and a save/load round-trip.
+
+### Step 3 — activist investors: BUILT (60/60 headless, cumulative)
+
+The mid-tier threat. Reuses the `decisionQueue` card pattern (like slot/hub
+offers) with a new `.activist` kind + `ActivistDemand` payload; the persisted
+campaign state is `ActivistCampaign` (in GoPublic.swift, `Codable`).
+
+- **Trigger:** the price closing BELOW its IPO price for `activistTriggerMonths`
+  (3) consecutive sim-months (`monthsBelowIPO`, checked in the monthly
+  `tickActivistsMonthly` off `tickStockPrice`). An above-IPO month resets the
+  counter outright. Then an activist takes a `activistInitialStake` (10%) stake
+  and pushes a demand card.
+- **Demands** escalate: round 0 = pay a special dividend (5%), round 1 = a share
+  buyback (25% of float), round 2+ = CLOSE the worst money-losing route
+  (`worstLosingRoute`, by `cumulativeNet`) — falling back to a dividend when the
+  player has no losing route.
+- **Comply** (`resolveActivistComply`) forces the action via the step-2 levers
+  (or `closeRouteUnderPressure`, a no-proceeds archival mirroring slot-buyback
+  teardown). The card STAYS if the action is unaffordable/undoable, so the player
+  can address it another way. Complying ends the campaign + a small relief rally
+  (`activistStandDownRelief` +0.08).
+- **Refuse** (`resolveActivistRefuse`) grows the activist's stake
+  (`activistStakeGrowth` +5%), drops sentiment (`activistRefuseSentimentHit`
+  −0.10), and increments `escalation` — **which is what step 4's board reads.**
+- **Two ways out besides comply:** paying ANY dividend via the step-2 lever ends
+  the campaign (the spec's "fastest way"), and a price recovering above IPO makes
+  the activist give up (rewards just running the airline well). An active campaign
+  also drags sentiment (−0.08, deepening 0.06/escalation) in `nextSentiment`.
+- **Persisted** nil-safe (`activistCampaign` + `monthsBelowIPO`); the demand CARD
+  is transient and regenerates from the campaign next month, like other offers.
+  No new cash-invariant terms (comply routes through the step-2 levers' terms).
+- Card is RED (`megaphone.fill`) in the Alerts modal + Ops Needs-Attention.
+- Verified **60/60 headless** (cumulative): trigger after a sustained slump,
+  the dividend→buyback→dividend demand progression, refuse escalates + grows the
+  stake, comply ends it and charges exactly, a recovering price ends it, save/load
+  persists the campaign, and the cash invariant holds through every path.
+
+### Step 4 — the board (ouster = game over): BUILT (78/78 headless, cumulative)
+
+The top-tier threat, per the LOCKED decision (Teeth — the board can OUST you, a
+second game-over path beside bankruptcy).
+
+- **`boardPressure`** (0…1, persisted) builds ONLY when BOTH: the player is below
+  majority control (`boardControlThreshold` 0.5) AND performance is poor (price
+  below IPO, or an active activist campaign). `tickBoardMonthly` (off
+  `tickStockPrice`, after activists). At 1.0 → `oustByBoard()`.
+- **Majority control (≥50%) is TOTAL immunity** — you hold the votes; pressure can
+  never build. This is the legible, avoidable rule ("keep your stake above 50% or
+  perform"). Good performance while diluted also keeps pressure at 0 (it only
+  builds on poor performance).
+- **The trigger ACCELERATES with dilution** (spec): rate = 0.06 + 0.22·dilution +
+  0.05·min(escalation,4) per month, where dilution = (0.5 − stake)/0.5. At the
+  majority margin it's ~a year of poor performance; near-total dilution, a few
+  months. Activist escalation (step 3's `escalation`) feeds it directly.
+- **Ouster** sets `oustedByBoard` AND flips `isBankrupt`, so ALL the existing
+  game-over plumbing (autosave-skip, tick guards, restart-to-menu) applies
+  unchanged — only the recap differs. `tickStockPrice` now also guards `!isBankrupt`
+  so the market freezes at game over.
+- **Recap:** `GameOverView` gained a `Cause` (bankruptcy / boardOuster) — the
+  ouster screen reads "OUSTED · the board voted to remove you…" with a
+  `person.crop.circle.badge.xmark` icon; ContentView passes the cause off
+  `oustedByBoard`. **Visceral warning:** the Finance PUBLIC card shows a red
+  "Board patience" bar (Watching → Weighing your removal) once pressure builds
+  below majority.
+- **Persisted** nil-safe (`boardPressure`, `oustedByBoard`); no new cash-invariant
+  terms (ouster moves no cash).
+- Verified **78/78 headless** (cumulative): ouster of a diluted + poor-performing
+  player (flags + pressure ceiling), majority immunity, good-performance immunity,
+  recovery by buying back to majority calms the board, pressure persists, and the
+  cash invariant holds throughout.
+
+### Step 5 — balance pass: DONE (probe validates all guarantees; constants KEPT)
+
+`scratchpad/BalanceMain.swift` (a separate probe binary on the real Sim/*.swift)
+answers the spec's three questions + the dilution self-pricing. **A real balance
+hole was found and fixed here:** the board originally acted only on POOR
+performance, so a well-run but heavily-diluted airline was immune — and since net
+worth carries no liability for the public's stake, mass secondary offerings were
+near-free cash. Fixed by making heavy dilution itself a slow board risk even when
+performing (the `0.14·dilution − 0.10` good-performance term added to
+`tickBoardMonthly` — modest holders decay to safe; below ~15% ownership the board
+slowly sours regardless). Findings (constants VALIDATED, not changed):
+
+- **Equity is a real, distinct route vs debt.** A SAFE IPO (≤50% float, majority
+  kept) raises up to ~$450M cash (≈0.9× net worth — far more than a loan, never
+  repaid) but tops the airline out at ~$950M net worth, JUST UNDER the $1B
+  acquisition gate. Crossing needs real growth or accepting board risk (>50%
+  float) — so going public accelerates the mid-game without making organic growth
+  pointless (the net-worth-interaction concern the spec flagged).
+- **Avoidably survivable:** majority holders and well-run diluted airlines are
+  never ousted (24-mo probe).
+- **Mismanagement costs you:** 30% stake + a sub-IPO price → ousted at month 7,
+  identically across 3 runs (stable vs economic-event randomness), with a
+  multi-month warning window (not instant).
+- **Dilution self-priced:** 10% stake even while performing builds real board
+  pressure (0.22) — selling ~everything isn't free, and you keep almost none of
+  future growth.
+- `valuationMultiple` 1.8 gives sane prices ($25/share at the gate, ~$250 at 10×).
+
+### LIVE TAP-THROUGH — DONE (supersedes "STILL PENDING"; the pre-beta gate is CLEARED)
+
+The earlier note here said the whole feature was headless-verified only, because the
+designer was remote from an iPad and the Mac `request_access` dialog couldn't be
+approved. **That gate is now closed: every Go Public surface has been DRIVEN on the
+iPhone 17 Pro simulator, in BOTH themes, and every number reconciled on screen.** No
+defects found — the 78/78 headless suite had it right.
+
+- **The IPO flow (light).** Gated card → "List the airline to raise capital"; the flow's
+  arithmetic ties out exactly ($620M net worth × 1.8 = **$1,116.0M** valuation, 25% =
+  **$279.0M** raised, "cash after listing" **$899.0M** — which is what the header then
+  read). `sanitizeTicker` verified AT THE FIELD: a 5th letter is rejected and the
+  `.characters` keyboard is already uppercase. Dragging the float slider past majority
+  flips the summary red — "You keep 32% · **Minority — little protection**" — which is
+  the visceral dilution warning the designer asked for. Listing fired the `went_public`
+  milestone toast ("You're publicly traded! The airline rings the opening bell.") and
+  the ticker card came up at **$31.00**, inside the spec's predicted $25–31 at the gate.
+- **The three levers (light), each exact.** Dividend 5% → **−$14.7M**; buyback 25% of
+  float → **−$73.5M** and the stake rose **75.0% → 80.0%**; secondary +10% → **+$110.3M**
+  and the stake fell **80.0% → 72.7%**, with "Raised (IPO + secondary)" moving
+  $279.0M → $389.3M. Every chip repriced off the new float immediately.
+  **Worth knowing — a price move between render and tap is CORRECT, not a bug.** The 5%
+  dividend chip read −$13.9M and charged −$14.7M, because one sim-day elapsed while the
+  screen sat there and `displaySharePrice` eased $31.00 → $32.67 (12% of the gap to
+  target, per `sharePriceEasing`). The levers transact at the LIVE price, and post-IPO
+  the price climbs on its own because the proceeds raise net worth — the documented
+  net-worth interaction, visible.
+- **The activist card (dark), BOTH paths.** Red `megaphone.fill` card, round-0 dividend
+  demand, "An activist holds 10% and wants change", ask **$10.0M** (= 5% × the depressed
+  $18.60 price × the 10.8M float shares). **Refuse** → card cleared, **cash unchanged**,
+  one new ops entry (the escalation). **Comply** → **exactly −$10.0M**, card cleared, and
+  TWO new ops entries — the dividend and the "activist stands down", which is the
+  signature of `payDividend` → `endActivistCampaign(.dividend)`.
+- **The board (dark).** The Finance PUBLIC card showed the red **"Board patience"** bar
+  nearly full and labelled **"Weighing your removal"** at a 25% stake / −40.0% vs IPO,
+  and then — in the SAME run — the **OUSTED** recap dropped over it: the
+  `person.crop.circle.badge.xmark` badge, "Test Air's board voted to remove you. Losing
+  majority control while the share price languished cost you the airline.", the recap
+  stats, and "Start a New Airline". The second game-over path, on screen.
+
+**`-devScenario <publicGate|listed|activist|ouster>` — the harness that made it possible,
+and it is COMMITTED (like `-backdropTest`, not a throwaway seed).** `Simulation.DevScenario`
++ `devSeed(_:)` live in `Simulation.swift` under `#if DEBUG`, next to `devInjectCash` —
+they have to be in that file to write `private(set)` state and call the private monthly
+ticks. ContentView reads the arg and skips splash/load-menu/naming straight to FINANCE.
+Two details are load-bearing:
+- **`currentSlot` deliberately stays nil**, so a seeded session can never autosave over a
+  real save. Confirmed by accident and then on purpose: the app got backgrounded mid-run
+  and wrote nothing.
+- **`.ouster` brings the monthly board tick forward to `tick + 240` (~60s at 1×), not 60.**
+  The "Board patience" bar only exists BEFORE the removal, so the window has to be long
+  enough to navigate to FUNDING and still watch the ouster land. At 60 ticks the recap beat
+  us to the screen twice.
+
+**SIMULATOR GOTCHAS (both cost real time; neither is an app bug):**
+- **Typing via the automation `text` action repeatedly kicked the app to the background**
+  (a sibling Architect app came forward instead), even with the caret visibly in the field.
+  The reliable fix is the SOFTWARE keyboard — `defaults write com.apple.iphonesimulator
+  ConnectHardwareKeyboard -bool false`, restart the Simulator app, then TAP the keys. That
+  also tests the path a real player uses. (Reverted to default afterwards; killing the
+  Simulator app re-boots a different default device, so re-`boot` the one you installed to.)
+- **The input channel dies mid-session** — the already-documented glitch. It shows up as
+  `Input send … timed out; the simulator likely rebooted`, `machPortNotConnected`, or a tap
+  that silently does nothing. A lost tap is indistinguishable from a no-op button, so
+  **re-screenshot before concluding a control is broken** — a "failed" Refuse turned out to
+  be a dropped tap, and the state was intact when the app was foregrounded again (same PID).
+  Prefer one decisive tap per screenshot over tap bursts.
+
+## Decided — Hubs & Clubs (built to the designer-reviewed spec)
+
+- **The full mechanic from `HUBS_AND_CLUBS_SPEC.md` is BUILT (native app) —
+  sim core, every economic hook, persistence, and 5 UI surfaces, in one
+  pass.** Player idea (from real United Clubs membership): establish HUBS
+  (unlocks at 5 routes touching an airport) and build CLUBS/lounges at
+  operating hubs. Designer's guardrail, verbatim intent: hub+club must NOT
+  be a money printer.
+- **Sim core** (Simulation.swift, "Hubs & Clubs" MARK): `Hub` struct
+  (Codable) in `hubs: [code: Hub]`; `rivalHubs: [code: rivalName]`;
+  status is COMPUTED from live route count — `hubOperating` (≥5 routes),
+  `hubUnderstaffed` (<5: benefits suspend, bills continue — the
+  overextension trap). Costs anchor to the airport's REAL
+  `annualPassengers`, RETUNED DOWN from the spec draft by the mandatory
+  balance A/B (see the Balance bullet below — the draft numbers made the
+  hub a pure value-sink): establish `$1.5M + $60k×paxM` (floor $2M, cap
+  $8M), labor `$25k + $8k×routes`/mo, club build `$1M + $40k×paxM` (cap
+  $5M), rent `$20k + $0.8k×paxM`/mo. Monthly billing rides the same
+  recurring cadence as insurance/leases (`tickHubBilling`,
+  `nextHubBillTick`). Decommission returns $0 (designer decision); the
+  ONLY way to recoup is a rival's buyout offer (`tickHubOffers`, daily —
+  1.5%/day healthy at 60% of establish cost, 8%/day at 35% when
+  UNDERSTAFFED, vultures circling). Selling is PERMANENT: the airport
+  becomes a rival hub (+50% competitor entry there, can never re-hub it,
+  club closes). Blue `.hubOffer` decision card (`HubOffer` payload,
+  aircraft-nil pattern like `.offer`).
+- **Economic hooks (final, post-A/B values)**: demand 15%/spoke at an
+  operating hub vs 8% base, SAME +80% cap (`hubDemandMultiplier` — NOTE:
+  on a 10+ spoke network the BASE rate already saturates the cap, so this
+  lever is worth ~nothing at scale; that finding is why the hub carries a
+  fare lever now, see below); HUB FARE +3% on hub-touching routes
+  (`hubFareMultiplier`, in `rollRevenue` — the hub's one benefit that
+  scales with operation size; a deliberate AMENDMENT to the spec's strict
+  lever separation, sized so the hub roughly pays for itself); fees at
+  the hub −20% landing / −35% gate (`legEconomics`, player only); MX
+  base: AOG standard repair 135 ticks (−25%) and repairs −20% at
+  hub-touching routes (both resolvers); crew rest ×0.8 when released on a
+  hub route; fortress: −50% competitor entry on hub-touching routes, +50%
+  at sold (rival) hubs (`tickCompetition`); slot-buyout premium WAIVED at
+  your operating hub (`routeOpeningCost`). Club (requires operating hub):
+  +4% fare on top of the hub's +3% (`clubFareMultiplier` — the SPLIT
+  total ≈7.1% is LOWER than the spec draft's club-only 6→8% experiments),
+  reputation FLOOR `40 + 5×clubs` cap 60 (`reputationFloor`, dings clamp
+  to it), competition share floor 0.35 vs 0.2
+  (`Route.competitionShare(reputation:shareFloor:)`), and an FFR-surge
+  liability −2%/club on fares (redemption exposure). Milestones:
+  `first_hub` + `first_club`.
+- **Persistence**: `hubs`/`rivalHubs`/`totalHubSpend`/`totalHubLabor`/
+  `totalClubRent` as OPTIONAL GameSnapshot fields (nil-safe for pre-hub
+  saves — the established pattern), FinanceSave gains optional
+  hubSpend/hubLabor/clubRent; restore re-seeds `nextHubBillTick`. The
+  master Finance cash invariant now includes `− totalHubSpend −
+  totalHubLabor − totalClubRent` — extended in the regression harness the
+  same session (any future harness must include these three terms).
+- **UI surfaces**: airport card (`AirportInfoCard`, sim passed in) —
+  eligibility progress ("Hub eligibility n/5 routes"), CREATE A HUB /
+  BUILD CLUB actions with real costs, gold "Your hub — operating" or red
+  "UNDERSTAFFED (n/5 routes)" status + labor/rent rows, purple rival-hub
+  notice; map badges in `MapView.drawAirports` — gold double ring
+  (operating), dim single ring (understaffed), purple ring `#D767FF`
+  (rival hub); Ops "Hubs & Clubs" box (per-hub status/bills + rival
+  entries); Finance rows ("Hub operations" + "Club rent" in overhead,
+  "Hubs & clubs built" in capital); Alerts modal hub-offer card
+  (Sell·+$X / Decline) with the permanence warning.
+- **HUBS PANEL (NETWORK) + per-hub ROUTE-OPPORTUNITY drawers (native app;
+  designer request) — DONE, built, not yet live-verified.** Two hub-centric
+  navigation surfaces added once the player has ≥1 hub:
+  - **NETWORK gains a 5th control-bar item "Hubs"** (`NetPanel.hubs`), shown ONLY
+    when `!sim.hubs.isEmpty` (otherwise dead weight). Opens `HubsPanel.swift`
+    (styled like RoutesPanel; docks in the iPad rail via the existing
+    `hasSidePanel` = `panel != .none`). Lists each hub with the flights (open
+    routes touching it) originating there — spoke code + aircraft tail +
+    profitable/building chip. ONE hub renders expanded; MULTIPLE hubs are
+    COLLAPSIBLE DRAWERS grouped by hub (a lone hub isn't collapsible) so a big
+    network isn't one long scroll. barButton `minimumScaleFactor` 0.8→0.7 so 5
+    labels still fit a narrow phone.
+  - **OPS Route Opportunities gains per-hub drawers.** The flat cross-tier list
+    stays the DEFAULT; below it, once a hub exists, a "BY HUB" section shows a
+    collapsible "From <HUB>" drawer per hub. Expanding runs
+    `sim.hubRouteOpportunities(from:)` (top unserved dests FROM the hub, demand
+    already includes the hub bonus) — computed lazily, only when open. The
+    opportunity row was extracted to a shared `oppRow(_:)` (flat list + drawers
+    reuse it); tapping still previews on the map via `onPreviewRoute`.
+  - New sim helpers (Simulation.swift, after `topRouteOpportunities`):
+    `hubCodes` (sorted), `hubRoutes(_:)` (open routes touching a hub, newest
+    first), `hubRouteOpportunities(from:limit:)` (home-pool candidates, hub-boosted
+    demand, top-N). Compiles clean; the RouteOpportunity/demand APIs matched.
+    NOT yet driven live (the feature needs an established hub, which the
+    Simulator tap-glitch blocks this session — a real hub-having tester can
+    exercise it immediately).
+- **HUB PAYBACK CHART (NETWORK ▸ Hubs drawer) — DONE (1.1.x).** Each hub's
+  drawer now shows a "HUB P&L" payback line — the direct analog of the Routes
+  `RouteProfitChart`: cumulative net of the routes the hub concentrates,
+  measured against the hub's facility cost, with a dashed $0 break-even, red
+  below / mint above (split at each crossing), and a mint recoup marker +
+  "Recouped in ~N mo · <date>" caption. **FRAMING (deliberate, labelled in the
+  subtitle "routes through DEN − hub & club costs"):** this is the hub-as-a-whole
+  bet (spoke-route net minus facility cost), NOT the hub's isolated MARGINAL
+  uplift — that's an unmeasurable counterfactual (the routes earn with or without
+  the hub). Labelled so a player can't misread it as "the hub prints money."
+  - **Data model — new, because a hub carried NO per-airport time series** (`Hub`
+    only had establishedTick/hasClub/clubOpenedTick, and hub costs were GLOBAL
+    totals). Added `Simulation.HubLedger` (per hub: establishCost + clubBuildCost
+    + laborPaid + rentPaid running totals, + a `[HubSnapshot]` of monthly
+    {tick, spokeNet, facilityCost}). `hubSpokeNet(_)` sums cumulativeNet over open
+    + closed routes touching the code; `hubFacilityCost(_)` sums the ledger;
+    `hubPaybackNow(_)` is the live trailing point. A monthly snapshot appends in
+    `tickHubBilling`; the establish "hole" seeds at `establishHub`.
+  - **CASH INVARIANT UNTOUCHED — the ledger only RECORDS spend already deducted
+    and tracked globally** (`totalHubLabor`/`totalClubRent`/`totalHubSpend`), so
+    it adds NO new cash flow. Do not add ledger terms to the invariant.
+  - **Legacy/acquisition-safe:** `hubLedgers` persists as an optional
+    GameSnapshot field (nil in pre-ledger saves); on restore any hub missing a
+    ledger is backfilled (establishCost from the formula). Acquisition-inherited
+    hubs (`inheritHubs`) get a ledger via `ensureHubLedger`. Monthly snapshots
+    are CAPPED (`maxHubSnapshots = 120`, oldest dropped — deliberately bounded
+    after the unbounded-`Route.history` save-crash).
+  - **`HubProfitChart` (HubsPanel.swift)** is theme-aware (dark mint/red +
+    light #10B981/#D70000) and takes `tick: sim.displayTick` as a CHANGING VALUE
+    INPUT — the documented Canvas-freeze avoidance (a stable `route`/`sim`-only
+    input freezes the Canvas; this is the same fix RouteProfitChart uses).
+  - **Verified:** 36/36 headless (`aa-1.1.x/HubChartMain.swift` — ledger accrual
+    == formula × billed months, snapshot cap, spokeNet/facilityCost math,
+    invariant residual == exactly the un-persisted `devInjectCash` after
+    save/load, legacy backfill, decommission drops the ledger) PLUS the explicit
+    payback SERIES printed for a well-crewed flying fleet: −$6.2M establish hole
+    → crosses $0 between month 1–2 → climbs to +$152M by month 24 (exercises red
+    → recoup marker → mint → "Recouped" caption). PLUS live in the Simulator,
+    BOTH THEMES (renders, no freeze, correct break-even/labels/subtitle). NOTE:
+    an UNATTENDED or crew-limited run shows the line DESCENDING (spoke net stalls
+    on unresolved AOG/crew holds while facility cost climbs) — that's an honest
+    depiction of a starved hub, not a bug; a well-crewed flying fleet climbs and
+    recoups (per the harness series).
+- **Verification (all clean)**: 70/70 headless hub/club suite (lifecycle,
+  exact cost formulas, billing, suspension-and-revert, sale/decommission,
+  persistence round-trip incl. legacy saves, AOG-at-hub timer 135 +
+  −20% cost, invariant at every step) — the suite drives the REAL player
+  API only (buys used jets + takes loans to fund it; `playerBalance` is
+  private(set), which is by design); 3,100/3,100 economy regression
+  (every-action invariant, 20 games × 3 sim-years, forced bankruptcy);
+  9 visual fixtures on the iPad simulator (all five surfaces, operating +
+  understaffed + pre-hub states, exact on-screen numbers verified against
+  the formulas — Finance showed "Hubs & clubs built −$4,715,000" = OKC's
+  $3M floor + $1.715M club exactly).
+- **Balance A/B (the spec's mandatory pre-ship gate) — PASSED, after
+  real iteration that changed BOTH the harness and the game's numbers.**
+  Autopilot plays 36 sim-months per game: competent, strategy-neutral
+  daily decision handling + weekly expansion (cheapest-effective USED jet,
+  up-gauged by projected filled-seats-per-$M so the hub's demand bonus can
+  actually convert to gauge — without up-gauging the bonus dies against
+  the 0.92 LF cap on small jets and the A/B is meaningless). The DECISIVE
+  test is the ISOLATION A/B — the SAME DEN-spoke network with vs without
+  the hub (the spec's original sprawl-vs-hub framing conflates the hub
+  mechanic's value with the PORTFOLIO cost of concentrating at one
+  airport, which is a real strategic tradeoff the game keeps). FINAL
+  (6 seeds/arm, 36mo): hub marginal value **+0.7%**, hub+club **−3.7%**,
+  with the defensive perks visible (rivals-on-routes roughly HALVED,
+  reputation pinned at 100) — not a printer, not a trap, resilience +
+  identity as specced. History that got here: the spec-draft numbers
+  measured **−41%** (hub) — a pure value-sink, because early capital
+  compounds ~3-4× over 3 years and the draft hub had no benefit that
+  scales (its demand bonus saturates at the +80% cap the BASE network
+  effect already reaches at 10+ spokes). Fix: cheaper hub (see Costs),
+  deeper fee discounts, and a +3%/+4% hub/club SPLIT of a REDUCED total
+  fare premium. Also: three successive AUTOPILOT bugs produced false
+  readings first (hub arm never establishing because jets ate the cash;
+  sprawl's pair pool bled dry by a diagnostic that consumed a pair per
+  check; nearest-first spokes flying cheap short legs) — when an A/B looks
+  wildly out of band, audit the autopilot before touching game numbers.
+  The separate sprawl-vs-hub strategy A/B still shows concentration
+  trailing a cherry-picked national network (portfolio effect, working as
+  intended); the harness lives at the session scratchpad's `ab.swift`.
+- **A pre-existing flaw found DURING hub verification, fixed in the same
+  pass**: Route Opportunities could suggest a class that can't fly the
+  route (playtest fixture showed EWR↔Hilo, 4,235nm, tagged "Regional
+  jet"). `suggestedClass(demand:distanceNM:)` now bumps the tier UP until
+  the tier's real max range (computed from `AircraftType.all`) covers the
+  distance.
+
+## Decided — Personalized livery (1.3; MERGED to `main` 18 Aug, build 44 uploaded)
+
+**Full design + implementation detail: `LIVERY_SPEC.md` (now on `main`).** Summarised here
+only so a session reading CLAUDE.md alone knows the feature exists — the full livery code +
+`aa-livery/` tooling are on `main` as of the 18 Aug merge.
+
+- The player picks a font, a 2-colour palette, a tail emblem and the fuselage text; every
+  side-view illustration wears a **PAINTED TAIL** (fin filled in the secondary colour,
+  emblem in white, both clipped to a per-type fin mask) plus titles on the window line
+  with `.blendMode(.multiply)` so the artwork's own windows punch through the letters.
+- **Fin masks are traced FROM THE ARTWORK, not approximated.** A polygon has straight
+  edges; a real fin has a curved leading edge and rounded tip, so polygons left unpainted
+  slivers and read as the wrong shape. Tooling in `aa-livery/` (`trace_fin.py`,
+  `trim_stab.py`, `extend_fin_base.py`, `fin_probe.py`, `contact_sheet.py`).
+- **FLEET REPAINT is a real capital decision:** itemized per-type quote, real-world cost
+  bands, a paint-shop QUEUE (2 aircraft at a time, so program length scales with fleet
+  size — 20 aircraft ≈ 103 days), and the **lost-revenue opportunity cost** shown
+  alongside the paint bill (usually the larger number). `totalRepaintSpend` is a
+  capital-out term in the cash invariant; the lost revenue deliberately is NOT (it is
+  income that never arrives, not a charge).
+- **Existing players get their first livery FREE** (`liveryChosen`, persisted): a
+  pre-livery save restores with default indices, so that player's fleet already wears a
+  livery they never picked — billing them a repaint for the initial choice would charge
+  them for what every new player gets free at naming.
+
+## Decided — Airport recruitment offers spread across destinations (1.2.1)
+
+- **A PAYING CUSTOMER reported all 35 of his airport incentives were routes into ATL.**
+  Not weighting — the destination was DETERMINISTIC. `tickAirportOffers` picked it with
+  `hubs.first(where: { servedCodes.contains($0.code) ... })` on a list sorted by traffic
+  DESCENDING, i.e. always the single busiest airport in the player's network. Reproduced
+  at 26/26 = 100% on a seeded big-hub airline.
+- **Why it hid for so long:** the ORIGIN was randomized (19 distinct origins in the
+  repro), so offers look varied one at a time. It only reads as broken when you see a
+  LIST of them, which is exactly what the customer's screenshot showed.
+- **Fix:** weighted random over all candidates — `weight = sqrt(annualPassengers)`
+  (compresses the spread so a mega-hub is favoured without swamping mid-size stations),
+  **×3** if the player already serves it, **×0.35** if not (a low-weight tail keeps
+  brand-new markets appearing). The hub bias is intentional and PRESERVED — an airport
+  courting you wants a link to your network.
+- **Measured over ~2,000 sim-days:** top destination 100% → **12%**, distinct
+  destinations 1 → **30+**, share landing on a served hub **60%**. That last number is
+  the one to watch on any retune — below it the offers stop feeling connected to the
+  player's network; at 100% you're back to this bug.
+- Guarded by `aa-1.1.x/OfferSpreadVerify.swift`, **validated against the PRE-FIX code**
+  (it fails 3 of 5 checks there) — a guard that only passes on the new code proves
+  nothing.
+
+## Decided — Gameplay pack (1.4 candidate; branch `gameplay-lever-pack`)
+
+Five features from a designer-requested critical gameplay review (the thesis:
+excellent SIM, thin GAME — the player's role was investor-spectator with no verb
+between purchases and no reason to return tomorrow). All built in one pass,
+verified 17/17 (fare) + 19/19 (quest/briefing) headless + full app build.
+
+- **FARE LEVER (per-route fare positioning) — the new core verb.** Every open
+  route's detail card (RoutesPanel) has 5 pills: Discount 0.85 · Value 0.925 ·
+  Standard 1.0 · Premium 1.075 · Flagship 1.15 (`Route.fareLevel`, default 2 =
+  Standard → ZERO behavioral change for existing saves/harnesses). Demand
+  responds via ASYMMETRIC elasticity (`fareDemandResponse`: raise e=1.35, cut
+  e=1.15) — the design that keeps it from being globally solvable: a raise is
+  net-negative on an UNCAPPED route (f^(1−e) < 1) but pure margin on a
+  demand-CAPPED trunk (the shed pax were never boarding); a cut is
+  ~revenue-neutral but fills thin routes AND defends competition share
+  (`fareShareShifts`: discount ×1.08 … flagship ×0.94, applies only when rivals
+  are on the route). So the right level depends on demand-vs-seats + contest
+  state: overfull trunk → Premium/Flagship, contested → Discount, mismatch →
+  loss. Applied in `rollRevenue` (fare side in the fareMult stack, demand side
+  in the demand block); revenue still rolls at scheduling, so a change takes
+  effect next leg. Persisted (`RouteSave.fareLevel`, optional → legacy saves =
+  Standard). Cash-invariant-neutral (amounts only). `Simulation.routeEditSeq`
+  is the observable bump the panel re-renders on (Route isn't @Observable).
+  **HARNESS METHODOLOGY worth reusing (`aa-1.1.x/FareVerify.swift`, 17/17):**
+  economic events fire ~15%/day and poison any sequential A/B — so the
+  behavioral checks run a capped trunk + an uncapped thin route in the SAME sim
+  SIMULTANEOUSLY and measure RATIOS normalized by a both-Standard baseline;
+  events/wiggle/reputation cancel across routes. Competition is zeroed each
+  tick by the harness and a phase touched by the rival fare-war event is
+  discarded and re-collected. Also note: FlightRecord.id is the GLOBAL flight
+  index — phase windows use history-count offsets, not id filters.
+- **SESSION BRIEFING (the re-entry hook).** Loading a save with real progress
+  shows a one-tap "OPS BRIEFING / Welcome back to <airline>" card
+  (`SessionBriefingView`, ContentView overlay) with the top-5 most actionable
+  items from `Simulation.briefingItems()` (pure read, sim layer): insolvency
+  countdown → pending decisions → activist/board → unstaffed offer-route
+  deadlines → understaffed hubs → active event → routes within ~8 avg-legs of
+  recouping → a calm "all quiet" fallback. NOT a replay of missed events — no
+  sim time passes while closed (the documented pause rule); it's a status
+  re-orientation. Skipped when the one-time livery prompt has the stage, and
+  for empty starts.
+- **FIRST QUEST (directed first session).** `seedFirstQuest()` pushes a
+  guaranteed, curated airport recruitment offer for a brand-new airline —
+  smaller home-region airport → bigger one, 200–900nm, demand 40–220/day (a
+  turboprop/RJ fills it — teaching plane-to-market matching), 21-day expiry,
+  "first customer" pitch text. Reuses the REAL offer machinery: accept with no
+  fleet opens the route PENDING (fee waived, bonus banked, 14-day staffing
+  clock), and buying a capable aircraft auto-staffs it — the existing
+  fulfillment flow does all the work. Called from ContentView's new-game flow
+  NEXT TO `randomizeCalendarStart()`, NOT from nameAirline — the same
+  convention that keeps headless harnesses deterministic. Tutorial step 2
+  rewritten to point at the bell/offer. Known accepted gap: quit before
+  accepting and the offer doesn't regenerate on reload (decisionQueue isn't
+  persisted) — random offers resume, and the 21-day window makes it rare.
+- **GAME CENTER — achievements + efficiency leaderboards (`GameCenter.swift`,
+  view layer like Feedback/Telemetry; sim stays framework-free).** Achievements
+  map 1:1 onto the milestone ladder via `Celebration.key` (new field) reported
+  from ContentView's celebration onChange; a loaded save back-fills via
+  `syncAchievements(firedMilestoneKeys)` (idempotent). Leaderboards follow the
+  long-standing "rank EFFICIENCY, not accumulation" rule: `aa.fastest_100m`
+  (sim-days to $100M, ascending — submits when nw_100000000 fires) and
+  `aa.networth_day365` (net worth when the NEW `year_one` milestone fires at
+  day 365; firedMilestones' persistence makes both once-per-save). Auth waits
+  for the splash to dismiss. Entitlement `com.apple.developer.game-center`
+  added. **The ASC config is DONE via the API** (`aa-1.1.x/gc_setup.py` +
+  `gc_upload_images.py`, idempotent; 29 achievements at 840 pts with a shared
+  gold-ring badge, 2 leaderboards, `gameCenterAppVersion` enabled on 1.4 —
+  see `GAMEKIT_SETUP.md`).
+  - **ENTRY POINT: NONE in 1.4, deliberately (builds 45→48 — the GC saga).**
+    Family finding (FC Architect's device A/B, 21 Aug; FCA shipped the same
+    posture in its build 35): an app that shipped to the App Store BEFORE its
+    GC integration existed (AA 1.0–1.3, FCA 1.0–1.1.1) carries a stale
+    server-side app-presence record that makes GameKit's own dashboard open
+    EMPTY. Never-released VA works — 3-for-3 confirms the server-side cause.
+    Every client-side workaround lost on the designer's device: Apple's
+    `GKAccessPoint` rocket (empty / never appeared), a custom trophy button
+    presenting `GKGameCenterViewController(.achievements)` (grid opens, then
+    DEAD-ENDS — its nav root is the poisoned dashboard), `.pageSheet` (iOS
+    forces GC full-screen, no swipe-down). So 1.4 is reporting-only; players
+    see achievements via AA's milestone toasts + the Apple Games app.
+    `setAccessPointActive` is a hard-off stub with the story at the site.
+    **The `gameCenterAppVersion` record enabled at submit is the heal
+    mechanism** (the artifact FCA found missing on both apps). AFTER 1.4 IS
+    LIVE: verify the rocket on device, then re-enable the standard
+    `GKAccessPoint` in a 1.4.1 on the load menu AND the naming screen (a fresh
+    install never sees the load menu — build 46's miss). No custom hacks.
+  - **CORRECTION + FIX — 1.4.1 (build 49), 2026-08-23. The "release heals it"
+    prediction above was WRONG, and FC Architect found the real fix.** After 1.4
+    went LIVE the designer checked the App-Store build on-device: the Apple Games
+    dashboard was STILL EMPTY for AA (VA visible as the control, no rocket). So a
+    public GC-carrying release + working reporting is NOT sufficient on its own to
+    wake the stale record — 1.4 already reported (builds 45–47 confirmed "First Jet
+    earned, 29 counted") yet stayed poisoned. **The actual trigger (FC Architect's
+    device A/B, cross-app message 2026-08-23): a real `GKAchievement.report` →
+    `GKAchievement.loadAchievements` ROUND-TRIP from a signed-in device. The moment
+    the LOAD half ran, FCA appeared in the Apple Games app and its native
+    `GKAccessPoint` populated cleanly.** AA reported but NEVER loaded — `GameCenter.swift`
+    had `report(...)` and no `loadAchievements` anywhere. That missing half is why
+    AA (already live + reporting) stayed empty while the theory predicted a heal.
+    **1.4.1 ships the wake fix + the `atLaunchScreen` wiring, but the ROCKET STAYS
+    OFF — settled by an on-device test, 2026-08-23. (Build 49 = rocket-ON, the one
+    that was tested; build 50 = the shippable rocket-OFF re-stub, since ASC can't
+    reuse a build number. 49 is dead in ASC — attach 50.)** Build 49 was driven on
+    a real device (TestFlight, signed in as mdspike) and the
+    result SPLIT: the wake `loadAchievements` round-trip WORKS (AA now shows in the
+    Apple Games app "Now Playing", the in-app achievements pill reads 3/29, and the
+    Apple Games achievements grid renders our real badges — Border Crosser / City
+    Pair / First Jet — with dates; the stale-record poison is GONE) **but the
+    native `GKAccessPoint` rocket STILL opens a BLANK in-app dashboard.** FC
+    Architect confirmed the IDENTICAL split on FCA (record woken, Apple Games
+    populated, rocket's in-app `GKGameCenterViewController` still blank; a device
+    restart did not clear it). So the blank in-app dashboard is a SEPARATE GameKit
+    issue from the stale record, affecting BOTH apps, and it is NOT fixable by how
+    we present the VC. Leading theory (FCA): the in-app dashboard reads a STORE-SIDE
+    GC declaration that only propagates after a GC-carrying version is RELEASED
+    (FCA 1.2 live ~2 days, still blank → slow or gated; AA has never released a GC
+    version), so it may start working on its own — re-check the plain rocket on
+    device ~1 week after AA's first GC release with NO new build. **NET for build
+    49: ship the wake (real win — Apple Games now populated) with NO in-app GC entry
+    point; the rocket is re-stubbed OFF.** So 49's actual changes: (1)
+    `GameCenter.wakeAccountRecord()` — the `loadAchievements` round-trip after auth
+    (KEPT — proven to work); (2) `setAccessPointActive` back to a hard-off stub (the
+    `atLaunchScreen` + `active && isAuthenticated` wiring is documented at the site
+    for a clean re-enable once the dashboard is confirmed populating); (3)
+    `ContentView.atLaunchScreen` (load menu OR naming OR livery) — kept, harmless
+    with the stub, and the correct wiring for a future re-enable. DO NOT re-add the
+    dead client-side workarounds (trophy button, `.pageSheet`, floating Done) — FCA
+    re-confirmed they fight the same condition and lose. TWO open probes feeding a
+    possible 1.4.2: FCA is testing a `GKGameCenterViewController(state: .achievements)`
+    button vs the rocket's `.dashboard` state (if `.achievements` populates while
+    `.dashboard` is blank, that's a real button to add); and both apps re-check the
+    plain rocket in ~1 week for the store-side-propagation theory. Until an entry
+    point is CONFIRMED populating on device, neither app ships one.
+- **RIVAL FLAVOR + FREE-TIER DEPTH TEASER.** `tickRivalFlavor()` (daily 5%)
+  logs cosmetic MARKET ops events about real `relevantCompetitors` profiles —
+  a rival IPOs, expands a hub, courts a merger, posts results — so the world
+  visibly plays the endgame systems (and the names match Market Intelligence;
+  owned subsidiaries excluded). Zero sim effect. For FREE users only, the Ops
+  Events card footer adds one tappable line ("Your rivals build hubs, go
+  public, and buy airlines. So can you — unlock the full game" → paywall) —
+  the events SHOW the depth, the line names the door (`OpsView.isPro`/
+  `onUpgrade`).
+- **ContentView's body chain hit the type-checker budget** when the briefing +
+  Game Center hooks landed ("unable to type-check this expression in
+  reasonable time") — fixed by splitting the modifier chain in two
+  (`stageOne` = shell + tasks/onChanges through the tutorial overlay; `body` =
+  stageOne + the modal overlays). If it trips again, split further — don't
+  fight it with inline closures (extracting closure bodies to funcs was NOT
+  enough on its own).
+- **BUY FOR / TRANSFER TO A SUBSIDIARY (paying-player request: "add planes to
+  an airline I've acquired") — BUILT in the same pack (15/15 headless,
+  `aa-1.1.x/SubFleetVerify.swift`).** `Simulation.purchaseFor` is a TRANSIENT
+  purchase intent (like `pendingAssignment` — not persisted, resets on load):
+  the shared `BuyForSelector` ("Buying for: <airline> ▾", shown only when
+  `!subsidiaries.isEmpty`) sits in BOTH acquire surfaces (Network Acquire
+  panel + Fleet Marketplace) and writes it; `makePurchasedAircraft` reads it
+  and builds the sub's FLAG tail (`registrationPrefix + n + IATA code`, the
+  same rule `inheritFleet` uses — an Air Canada sub purchase tails `C…AC`) +
+  sets `subsidiaryCode`/`airlineName`. Buy/lease/used all route through it; an
+  unknown code falls back to mainline. IDENTITY ONLY — economics, crew pools,
+  route machinery, and the Finance invariant are untouched (verified). The
+  intent is STICKY until changed, and that's safe because the selector always
+  displays the current target in both panels. **`assignAircraft(_:toSubsidiary:)`
+  is the escape hatch** (Fleet detail "TRANSFER WITHIN GROUP" menu, shown only
+  when subs exist) — without it a purchase under the wrong flag is an
+  irreversible dead end. Transfers keep the REGISTRATION (`Aircraft.tail` is
+  `let`, `tailHash` seeds per-tail variation; intra-group transfers keeping
+  registrations is realistic anyway) and move only operator identity. UI: the
+  fleet card + detail show the operator in the competitor purple `#D767FF`,
+  and a subsidiary's aircraft renders WITHOUT the player livery (it flies its
+  own flag — `showLivery: subsidiaryCode == nil`). Persistence already existed
+  (`AircraftSave.subsidiaryCode`); a sub-bought aircraft round-trips.
+  **MAP COLOR (corrected note):** the map keys aircraft color on
+  `airlineName != nil` (MapView ~line 349), so subsidiary aircraft render in
+  the COMPETITOR purple `#D767FF` — coherent with the Fleet views' purple
+  operator labels ("flies its own flag"), but a sub is indistinguishable from
+  a RIVAL on the map. The spec's dedicated third colour state still doesn't
+  exist; build it if that ambiguity ever bites.
+- **LIVE SIMULATOR DRIVE — DONE (all six surfaces, iPhone 17 Pro sim).** The
+  full first-run arc: naming → livery → tutorial (rewritten step 2 shows) →
+  bell badge 1 → the quest card ("Thunder Bay, ON wants your airline", YQT ↔
+  JFK, bonus + 14-day clawback copy) → accept (fired the first_intl milestone
+  toast, exercising the GameCenter.reportMilestone hook) → buy B1900 → the
+  pending route AUTO-STAFFED and flew. FARE pills rendered in the route
+  detail (the quest route ran 89% load — a textbook Flagship case), tap
+  flipped Standard→Flagship instantly with the hint updating; no flicker/
+  dropped-tap (the documented panel-bug class did not recur). Save→Quit→
+  reload showed the OPS BRIEFING card ("Welcome back to New Airline · Day 4"
+  + the calm fallback). Ops tab showed the free-tier teaser line + the
+  Airport Incentives box tracking the quest ("In service · +$159k bonus ·
+  opening waived $107k"). The free-tier cap correctly intercepted a buy with
+  the paywall at 51/6. Subsidiary UI driven via the new COMMITTED `-devScenario
+  subfleet` (kept, like the livery scenarios — the $1B gate is unreachable by
+  hand): "Buying for:" selector in the Marketplace (menu ✓ Air Tina /
+  Air Canada, STICKY across tabs), bought a B1900 for Air Canada → `C52AC`
+  tail + purple "Air Canada" label + bare-metal illustration; TRANSFER WITHIN
+  GROUP → back to mainline → the Air Tina livery painted itself back on,
+  operator line gone, registration kept. Game Center auth ran silently
+  unauthenticated all session (no sheet on the sim, nothing blocked — the
+  degradation contract). The designer's real-device TestFlight pass (builds
+  45–47) confirmed auth + reporting ("Signed in as mdspike", 29 achievements
+  counted, "First Jet" earned) and surfaced the entry-point saga above.
+
+## Decided — Tech Ops modernization (secret hygiene + observability parity; 2026-08-24)
+
+A Postmark Tech Ops cross-app audit (`PostmarkOps/TECH_OPS.md` + `ARCHITECT_FAMILY.md`)
+found Airline — the family's *source material* — BEHIND its own siblings on the exact
+RevenueCat/TelemetryDeck patterns they copied from it. All plumbing + observability, NO
+gameplay change. Done on branch `tech-ops-modernization` (off `main`), items 1–3. **The
+severity is hygiene + parity, NOT a leak** — the `appl_` RC key and the TelemetryDeck app
+ID are publishable CLIENT keys, safe in a shipped binary. A committed `test_` key WOULD be
+a real leak (Vineyard shipped that once) — AA has none.
+
+- **RevenueCat key externalized + Test Store path + `isConfigured` guards.** The hardcoded
+  `appl_` key is GONE from `Store.swift`. It now flows `Secrets.xcconfig` (GITIGNORED —
+  added to `.gitignore` first) → `baseConfigurationReference` on the app target's Debug +
+  Release configs (hand-edited pbxproj — Golf was the closer template, both hand-authored
+  pbxproj) → Info.plist `$(REVENUECAT_API_KEY)` → `Bundle.main.object(forInfoDictionaryKey:)`.
+  `Secrets.xcconfig.example` (placeholders) IS committed as the template. `Store.resolveKey(...)`
+  is a PURE, testable picker: a `test_` key is honoured only in a DEBUG build launched with
+  `-useTestStore`, and REFUSED in Release (the SDK `fatalError`s on a `test_` key in Release —
+  refusing turns that launch crash into the same inert "purchases unavailable" state a missing
+  key produces). **The four `guard Self.isConfigured` gates (start/refresh/purchase/restore)
+  shipped WITH the no-key early return as ONE change** — porting the early return WITHOUT the
+  guards turns a keyless build from silently-inert into a CRASH on launch (`Purchases.shared`
+  traps when never configured; this bit Golf). ⚠️ **AA has NO `test_` key yet** — the slot stays
+  the placeholder (`resolveKey` treats it as unset), so simulator purchases can't be exercised
+  until the designer pastes the Test Store key from the RevenueCat dashboard (Apps ▸ Test Store ▸
+  Show key) into the gitignored `Secrets.xcconfig`. Founding pricing (compile-time `foundingUntil`,
+  two products) is UNCHANGED — it was already correct.
+- **TelemetryDeck: `isDriven` guard + externalized app ID + linkage test.** Signals used to
+  fire on EVERY launch, so dev/QA/gallery/screenshot runs polluted the live funnel.
+  `Telemetry.isDriven(arguments:defaults:)` now gates `configure()` (nothing is even queued in
+  a driven session). It checks BOTH AA's DEBUG launch hooks (`-devScenario`, `-freshFlow`,
+  `-liveryGallery`/`-liveryPreview`, `-galleryName`/`-galleryPalette`/`-galleryType`,
+  `-backdropTest`/`-backdropMode`/`-backdropLight`/`-backdropOpacity`, `-hideControls`) AND a
+  persisted `debugProKey` — the latter is FUTURE-PROOFING: AA's DEV Pro toggle is
+  `store.isPro.toggle()` (in-memory), so nothing writes that flag today, but the guard is
+  already correct for the day a persisted "unlock Pro for testing" affordance lands (an arg
+  list alone can't see a persisted fake entitlement, which would emit a fabricated healthy
+  funnel forever — FC/Vineyard's documented trap). The app ID is externalized the same pipeline
+  as the RC key (no hardcoded UUID left). `AirlineArchitectTests/TelemetryTests.swift` (XCTest —
+  the family model; AA's other tests use Swift Testing, both frameworks coexist) adds
+  `testTelemetryDeckIsActuallyLinked`, a COMPILE-TIME proof the package is really linked to the
+  target — the exact silent no-op AA shipped once (`Package.resolved` listing it proves nothing
+  about linkage). 9/9 pass.
+- **MetricKit crash/hang visibility (the family-wide gap — AA had NONE).** TelemetryDeck ships
+  no crash capture, so AA — a shipped app — was blind to its own crash/hang rate (the audit
+  found MetricKit in 1 of 10 apps). `CrashReporter.swift` ported VERBATIM from Flight Ops
+  Architect (the family reference): an `MXMetricManager` subscriber routes crash/hang TYPE ONLY
+  (signal/exception/termination codes + OS version, NEVER a call stack — same privacy rule as
+  Telemetry) to `Telemetry.errorOccurred(...)`, so a driven session reports nothing and a real
+  crash lands in the Errors dashboard bucket. Subscribed once from `AirlineArchitectApp.init()`
+  AFTER `Telemetry.configure()`, guarded on `!isDriven`. View layer only (`Sim/` stays
+  framework-free). `MXMetricManagerSubscriber` confirmed present in the Release binary. NOTE:
+  MetricKit is NOT real-time — the OS delivers diagnostics on a LATER launch (often the next,
+  sometimes batched ~24h), so this is "how often / what kind", not a live alert.
+  - **VERSION-AT-OCCURRENCE tagging — ADDED (3 Sep 2026, in the 1.7 batch; prompted by a real
+    reading of the TD Errors dashboard).** The `detail` field (→ `TelemetryDeck.Error.message`,
+    groupable) used to carry OS version only; it now carries **build-at-occurrence + OS** via a
+    shared `Subscriber.triage(_ meta:)` — e.g. `"b52 · 18.5"`, from `metaData.applicationBuildVersion`
+    (both crash + hang paths). WHY: MetricKit delivers a diagnostic on a LATER launch, so
+    TelemetryDeck's own auto-attached app version is the version RECEIVING the report, not the one
+    that crashed/hung — which is EXACTLY why the `hang.under3s` count was unreadable (a pre-1.4.2
+    hang draining in on 1.6 looks like a fresh 1.6 hang; the doc's own "attribution stays fuzzy"
+    caveat). `applicationBuildVersion` is the build the event OCCURRED on, so grouping the Errors
+    dashboard by message finally separates STALE (b39/b41) from LIVE (b55+). Privacy unchanged (a
+    build number + OS string, still no stack/symbols). Does NOT fix the current counts (those events
+    already shipped OS-only detail) — it makes FUTURE counts readable, first arriving once 1.7 is
+    live and an affected device relaunches. Debug xcodebuild clean. The observed errors that
+    triggered this: `hang.under3s` ×39 (95%) + `crash.sig9.exc10.code0.rbsterminatecontext-domain-10`
+    ×2 (5%) — the crash decodes as a **RunningBoard domain-10/FRONTBOARD watchdog SIGKILL** (launch/
+    resume took too long), the crash-side sibling of the hangs; low volume (2), no symbolicated stack
+    available (ASC `diagnosticSignatures` are empty for every AA build — install base below Apple's
+    aggregation threshold, so ASC crash logs are a dead end for this app; TD's TYPE-only slug is all
+    there is).
+- **NOT done, deliberately:** (item 4, optional) `Sim/AircraftIcon.swift` + `Sim/SVGPath.swift`
+  import SwiftUI, technically breaking "`Sim/` is framework-free" — but the headless harnesses
+  already EXCLUDE those two files (`grep -vE 'AircraftIcon|SVGPath'`), so they still compile
+  UF-free; moving the two rendering helpers to a `Views/`/`Rendering/` group is cosmetic hygiene,
+  left as a judgment call (moving files in a synchronized-group project can ripple the harness
+  exclude patterns). **ArchitectKit clock migration is explicitly OFF the list** — AA is the elder
+  the package was extracted FROM; an accepted divergence, don't migrate without the Chef's say-so.
+- **App-init order is now Store → Telemetry → CrashReporter.** All three build clean (Debug +
+  Release). **MERGED to `main` and combined with the GC wake fix into ONE 1.4.1 / build 51**
+  (both `game-center-1.4.1` and `tech-ops-modernization` merged; build 50, the GC-only cut, is
+  superseded — attach build 51). Test Store path is LIVE-VERIFIED (the designer pasted the real
+  `test_` key; a `-useTestStore` Debug launch logged RevenueCat's "Using a Test Store API key").
+
+## Decided — Crew training pipeline + the Training Center (8 Sep 2026; on `main`, unreleased)
+
+Full design + the designer's 5 answers: `aa-1.1.x/CREW_TRAINING_SCOPE.md`. Designer ask: make
+training real-world in TIMELINES; an acquired aircraft comes with ONE crew and the next must be
+HIRED AND TRAINED; mid-game, build your own training center (early game = contracting out to a
+FlightSafety/CAE-style third party); expand CREWS with real detail on how crews are trained,
+scheduled and deployed — **without** "assign every crew to every flight" tedium.
+
+- **Two hiring doors per family** (`hireCrew(family:mode:)`): a **RATED hire** (already
+  type-rated — 10 days of IOE, 2× the course price) or a **NEW HIRE** (45 days of initial type
+  training at 1.25×, plus a 0–10-day class-slot wait at the contractor). A crew in training is
+  NOT assignable. The bundled crew that arrives with an aircraft stays line-ready — the ask was
+  that the SECOND crew costs you time, not that the first one strands the aircraft.
+- **Currency is per-crew and rolling, not a family-wide card.** `Crew.currencyDays = 180`; a
+  rolling auto-recurrent policy (**default ON**) books each crew a 4-day course inside a 30-day
+  window before expiry, at 15% of the hire basis. Off (or unaffordable) → the crew goes
+  **`.lapsed`** and must REQUALIFY at 1.6×. This replaced the old family-wide `.training`
+  decision card, and those cards moved OFF Ops onto the Crews tab.
+- **Coverage readout** (designer decision 4, chosen from three options): a RATIO plus a plain
+  verdict, against `coverageContinuousRatio = 1.9` crews per aircraft for continuous cover
+  (1.5 = thin). Provider is named **"Global Aviation Training"** (decision 5).
+- **THE TRAINING CENTER** — one facility at an operating hub, one full-flight **sim bay** per crew
+  family. In-house courses are **0.4×** the contract price and **30d/2d** instead of 45d/4d, with
+  no class-slot wait; a bay seats **4** and the contractor takes the overflow, so an under-built
+  center never dead-ends. `totalTrainingCenterSpend` is a NEW cash-invariant capital term (it
+  joins the invariant expression, `FinanceSnapshot`, `FinanceSave` and `PeriodFigures.capitalOut`).
+- ⚠️ **THE RECURRENT CONCURRENCY CAP *IS* THE BAY CAPACITY for a family with a bay — do not
+  restore a pool-fraction cap there.** The A/B probe caught the first version making a BIGGER
+  fleet save LESS: the cap scaled with pool size (20%) while a bay seats 4, so every wave pushed
+  its surplus to the contractor at FULL price and 16 aircraft paid back worse than 12. Urgent
+  about-to-lapse crews still bypass the cap to the contractor — that's the safety valve.
+- **⚠️ REPRICED TO REAL SIMULATOR COST — this REVERSES the original "costs are GAME-SCALED"
+  call.** The draft deliberately shrank the facility to $750k and bays to $1.25–2.5M because the
+  game's training VOLUME can't amortize real prices (a 16-aircraft narrowbody family only
+  generates ~$1.3M of course fees a year). The designer overrode that with real figures — *"an
+  airline training center equipped with 10 commercial jet simulators will cost between $160
+  million and $260 million… because airline-grade simulators cost as much as real airplanes, the
+  massive capital goes into the devices, not the building"* — so: **facility $35M**, **bay $22M
+  widebody / $18M narrowbody / $12M turboprop-RJ**, opex **$150k/mo facility + $85k/mo per bay**.
+  The bay gate went **6 → 20 aircraft** (`simBayMinAircraft`) in the same pass; the old gate was
+  incoherent at real prices.
+- **PAYBACK COUNTS CREW TIME, NOT JUST COURSE FEES** (the designer's "value the time. i think
+  this will be a good teaching item"). At real prices the fee saving alone can NEVER repay a bay
+  (~92 A320s, ~1,006 Dash-8s), which made the payback line read "never" even when owning the sim
+  was obviously right — it was measuring the wrong thing. Airlines buy simulators for THROUGHPUT
+  and CONTROL. So the ledger also books the crew-DAYS an in-house course returns to the line
+  (20 on a type rating incl. the avoided class-slot wait, 2 on every recurrent), valued by two
+  properties that keep it honest rather than invented:
+  1. **A crew-day is DERIVED**: the family's own `dailyNet` per flying aircraft (the same helper
+     MX uses for forgone revenue) ÷ `coverageContinuousRatio`. Zero for a family that isn't
+     flying or isn't profitable — you can't lose revenue you were never earning.
+  2. **It is scaled by whether crew is the BINDING constraint** (`crewShortfallFactor`, 0 with
+     deep cover → 1 with nothing line-ready). A returning crew that flies nothing it wasn't
+     already flying is worth nothing, and the ledger says so.
+  The Crews card shows the SPLIT (course savings · crew time returned · facility + bays · running
+  costs) because that asymmetry IS the teaching point. Bookkeeping only — no cash moves, invariant
+  untouched (asserted).
+- **⚠️ PRICES WALKED BACK 8 Sep — TWO CORRECTIONS, and this is NOT a reversal of the real-pricing
+  decision.** Designer direction: *"walk prices back toward game scale BUT not too far, because game
+  scale on new a/c purchases IS real world — I don't want to skew things just because sim centres are
+  expensive."* Both corrections apply the designer's own source properly and leave every DEVICE price
+  inside the real $12–22M band:
+  1. **The facility was pricing a TEN-BAY CAMPUS.** The source's $30–40M / 60–75k sq ft is for ten
+     simulators — the old code comment even said "a 10-bay centre comes to $35M + 10×$18M = $215M" —
+     but the player builds a ONE-to-four bay centre and paid for all ten halls. Facility is now an
+     **$8M shell**; each bay carries its own ~6k sq ft high-bay hall (~$3M at $400–600/sq ft) folded
+     into `simBayCost`: **WB $21M / NB $17M / TP-RJ $13M**. The ten-bay total still lands inside the
+     cited band ($8M + 10×$17M = $178M), and an NB bay is ~23% of this game's $74M A320 — the real
+     device-to-aircraft relationship, which is precisely what the designer did not want skewed.
+  2. **Bay opex was the heavy-utilization rate.** $85k/mo (~$1M/yr) is a sim run ~20 hrs/day and is
+     mostly VARIABLE (instructors, wear, spares). This game's bay runs a handful of courses a month,
+     so it costs the FIXED side: **$30k/mo** (maintenance contract, recurrent QTG certification, the
+     hall). Facility opex $150k → $35k/mo.
+  Measured effect (large arm, 45×A320, 60 months): **−$48.1M → −$21.8M → −$16.9M**, a 65% cut in the
+  shortfall. ⚠️ **Run-to-run variance is large** — that same arm's fee savings came out $8.2M / $5.3M
+  / $4.1M across three runs of an identical configuration, because course volume rides on random
+  events and crew availability. **Never tune off a single run.**
+- **✅ THE THROUGHPUT BUG IS FIXED (10 Sep 2026) — course-fee capture went 32% → 101–112%, and
+  crews stopped lapsing entirely.** The auto-recurrent scheduler's eligibility filter was
+  `pool.filter { $0.status == .available && … }`, so it only ever saw crews idle AT THAT INSTANT. A
+  crew flies ~55% of the time and rests besides, so most of a family was never considered on any
+  daily pass, and one that happened to be flying when its currency window closed was never
+  scheduled at all — it **LAPSED instead of training**, then had to requalify at 1.6×. The
+  scheduler's own comment ("4 seats churn far faster than the fleet comes due; nobody lapses
+  waiting") assumed crews were REACHABLE; they weren't.
+  **The fix reaches a crew at the moment it actually is reachable, on two paths that share one
+  booking helper (`sendToRecurrent`) so the cap, pricing and ledger can't drift apart:**
+  the daily sweep now also sees **RESTING** crews (they're on the ground, and `startCourse` zeroes
+  duty/rest anyway), and **`releaseCrew` offers a landing crew to recurrent BEFORE it goes back on
+  the line** — the one guaranteed opportunity for a crew that flies continuously. The release hook
+  is checked BEFORE the rest branch on purpose: a course zeroes duty/rest and outlasts a rest
+  period, so the downtime is spent productively. Bookings from both paths are tallied and reported
+  as ONE daily Ops line rather than one per crew.
+  **Measured, and it is not just a training-centre matter:**
+  · course-fee capture **32% (best arm) / 10% (crew-thin) → 101%, 101%, 102%, 112%** across all four
+  probe arms — every crew's every recurrent now runs in-house when a bay exists. (Slightly over 100%
+  because the probe's "ceiling" is an estimate of expected recurrent count, not an exact bound —
+  read it as "fully captured", not as a precise ratio.)
+  · in an ORDINARY game with **no** training centre, 540 sim-days × 19 crews: **3 lapse events and 3
+  requalifications → 0 and 0**, with flights unchanged (14,328 vs 14,370 cycles). So a normal
+  player stops paying 1.6× requalification premiums for crews the scheduler simply never looked at.
+  · the "stretched" arm's crew-TIME value finally registers (+$12.5M, +$198k/crew) because crews
+  now complete courses instead of lapsing.
+  **⚠️ THE REMAINING SHORTFALL IS PRICE, AND PRICE IS SETTLED — DO NOT CUT IT.** With throughput
+  fixed the centre still doesn't fully repay (best arm −$7.7M at 5 years), and the next cut would
+  have to go below real device cost, the one thing the designer ruled out. That is now a deliberate
+  "prestige/throughput purchase", not an unexamined gap.
+- **`TrainingCenterABProbe` is a MEASUREMENT tool, not a pass/fail gate** (its old 6/8/12/16-aircraft
+  arms can't even build a bay at the 20 gate, and its thresholds were set against $750k facility
+  costs). It asserts only what must hold regardless of tuning — the ledger identity and payback
+  improving with fleet size — and PRINTS the payback table plus the capture rate. Read
+  `CREW_TRAINING_SCOPE.md` before tuning anything here.
+- **THE LEDGER IS THE A/B** (methodology worth reusing): every in-house course books
+  `contract price − in-house price`, so `payback` is exactly the delta vs. a contract-only twin
+  with the same course volume. Economic events, AOG and weather all cancel because they never
+  touch the ledger — no two-sim A/B, no event poisoning (the FareVerify lesson).
+- **Harness traps that cost two false failures:** on a FLYING fleet a graduated crew goes straight
+  `.onDuty`, so assert `isLineReady`, not `.available`; and a cash-delta assertion also contains a
+  day of flight revenue plus the monthly opex, so measure a training charge via `maintenanceSpend`
+  minus the ledger's opex delta (or park the fleet, as test 5 does).
+- **THE CHIEF PILOT — a persona atop CREWS** (designer asked "is that too much of a crutch?" and
+  then said build him). **Capt. Morgan Ellis** reads the pipeline that already exists and says what
+  it MEANS: per-family outlooks (`crewOutlook(family:)` → shortfall / in-training block / lapse
+  risk / healthy). He exists because the designer couldn't tell a PERMANENT crew shortfall from a
+  block merely sitting in training. **He advises; he never acts** — that's the line that keeps him
+  from being a crutch. Portrait: `Resources/Brand/ChiefPilot.png` (512×512, MJ v8).
+- Verified: `CrewPipelineVerify` 63/63, `TrainingCenterVerify` **75/75** (test 9 covers the crew-time
+  value), regressions + free-tier probe + full build + German clean.
+
+## Decided — Acquisition, competitor-hub and buyback repairs (8 Sep 2026; on `main`, unreleased)
+
+Four gameplay issues the designer hit in one acquisition playthrough. Three fixed here; the fourth
+(MX/training automation at a 200-plane scale) is deliberately deferred to its own session.
+
+- **Real carriers hub where they REALLY hub** (*"Air France hubbing out of LHR is very odd"*). Root
+  cause was NOT missing data — competitor hubs were DERIVED from "busiest airport in the region",
+  so any European carrier could hub anywhere in Europe. `Airline.hubs` is now a real, fact-checked
+  field on **all 141 roster entries** (Air France CDG/NCE, Lufthansa FRA/MUC, Copa PTY…), and
+  `Competitor.profile(for:region:…)` uses the carrier's own hubs filtered to the region, falling
+  back to region's-busiest ONLY when a carrier has none there. `CarrierHubVerify` **650/650**.
+  Same standing caveat as the rest of the roster: real hubs change and nothing here detects it.
+- **⚠️ ACQUIRED FLEETS ARRIVED GROUNDED — `inheritFleet` was the ONE owned-aircraft path that never
+  called `seedMXState`.** The designer bought open books that said no renewal or capex was needed,
+  and at close every aircraft was grounded needing a D check. Every tail defaulted to "due at 0
+  cycles". Measured before the fix: 8/8 grounded, **$83.5M of forced MX = 24% of the purchase
+  price**. **RULE: any code path that creates an OWNED aircraft must seed its MX state** — buy,
+  lease, used, inherit, and anything added later.
+- **A subsidiary now shows its LIVE numbers.** The reported "the finance report keeps showing
+  pre-acquisition numbers forever" is half true by design — that panel is the SCOUTING topline,
+  which never moves. Fixed by adding, for owned subsidiaries only, a **CURRENT PERFORMANCE** box
+  computed live (`subsidiaryFinancials`) and relabelling the old topline **"AT ACQUISITION"**.
+  Attribution needed an operator of record, so `assign` stamps `r.subsidiaryCode` from the
+  aircraft the first time a route is staffed (`flights == 0`), and `openBooks` now refuses a
+  carrier you already own. `AcquisitionMXVerify` **33/33**.
+- **Buyback offers price off EARNING POWER, not sunk cost** (*"why would I ever sell a highly
+  profitable hub at 30% of my cost, or give back a slot for less than a month's profit?"*). A
+  healthy hub now fetches **0.90–1.40× establish cost** (the 0.35× vulture price survives, but only
+  when the hub is UNDERSTAFFED), and a slot offer is **3–8× that route's trailing monthly net**
+  (`trailingMonthlyNet`). **The gate that matters is the exploit check, not the price:** a
+  shared-snapshot A/B (both arms restored from ONE `GameSnapshot` so events cancel) has accept-every-
+  offer finishing **$210M BEHIND** decline-every-offer. `BuybackPricingProbe` 7/7.
+- **Routine MX no longer pins the sim at 1×.** `.mxCheck` is now the one decision kind exempt from
+  auto-slow (`Decision.Kind.warrantsAutoSlow`). Measured on a 200-plane fleet before the fix: **34%
+  of wall-clock at 5× and 91% at 100×** spent snapped back to 1× — exactly matching the designer's
+  report. Scheduled maintenance is planned work; it should not interrupt the clock the way an AOG
+  or an activist does.
+- ⏭️ **NOT FIXED — issue 4, MX + training automation at scale.** The card VOLUME is untouched.
+  Build `aa-1.1.x/MX_BASES_SCOPE.md` (all 5 decisions already confirmed) in its own session, and fix
+  the day-conversion bug found while measuring: four sites in Simulation.swift convert cycles→days
+  at a hardcoded **2 cycles/sim-day** when the engine flies **~3.52**, so every MX date the player
+  sees is ~76% too far out.
+
+## Decided — Ops drawers, alert chips and centring (8 Sep 2026; on `main`, unreleased)
+
+- **Every Ops box is a collapsible DRAWER** so a player can scroll fast. State lives on the sim
+  (`opsCollapsedSections`, `Sim/OpsSection.swift`), is PERSISTED, and legacy saves restore all-open.
+  **An alert auto-opens its own box** (`Decision.Kind.opsSection` maps `.mxCheck` → maintenance,
+  `.hubOffer` → hubs, etc.) so the player never hunts for what's shouting at them.
+- **A red CHIP carries the count on any drawer holding something that needs attention** — a
+  collapsed drawer must never hide an alert. (Designer: *"put attention-needing alerts in a red
+  chip so they aren't lost."*)
+- **The auto-slow gives the player's SPEED BACK** once every card that arrived while slowed has
+  cleared (`autoSlowRestoreSpeed` / `autoSlowPendingIDs`). A speed the player picks themselves, or
+  a card that pre-dated the slow, never fights it.
+- **The MX list sorts NEAREST DATE (most urgent) FIRST**, and the row's displayed check is the same
+  check the sort used (`mxNearestCheck`). `OpsTweaksVerify` 43/43.
+- **Modals centre in the CONTENT COLUMN, not the whole window.** On iPad the sidebar rail made the
+  Alerts modal, the auto-slow banner and the milestone toast all read off-centre.
+  `.centredInContentColumn(isPadLayout)` (SkySidebar.swift) is the shared helper — use it for any
+  future centred overlay.
+- **The graduation-cap icon is the designer's Figma art app-wide** (node 158:862, via
+  `MilestoneIconArt`), keeping the existing light/dark tints.
+
+## Decided — MX lives on FLEET, not Ops (9 Sep 2026; shipped in 1.8.0)
+
+- **The MX program moved from an Ops drawer to a third Fleet segment: My Fleet · Marketplace ·
+  Maintenance.** This is the placement confirmed in `aa-1.1.x/MX_BASES_SCOPE.md` §3.4. WHY: Ops is
+  the ALERTS screen, and on a 200-plane fleet a per-aircraft due list becomes most of that page —
+  which is the designer's original complaint that maintenance ate a third of their time at 5× and
+  nearly all of it faster. Maintenance is fleet ADMINISTRATION, not a disruption; it belongs beside
+  the fleet you already go there to think about.
+- **`MaintenanceView.swift` owns the whole flow** — due list, row cap, Details (cost with the
+  overdue surcharge broken out, downtime, forced-grounding clock), the C/D like-size coverage
+  picker, suspend-route, and the cover-confirm banner. It moved VERBATIM; only the chrome changed
+  (a section card instead of a collapsible drawer), and "Acquire a replacement" now switches to the
+  sibling Marketplace SEGMENT rather than jumping tabs.
+- **Ops keeps only what is an ALERT**: the C/D and overdue `.mxCheck` cards already in Needs
+  Attention, plus ONE tappable summary row — "Maintenance · N due · M in shop · Fleet ›" — keeping
+  the red count chip so a player scanning Ops still sees the state. The Ops Maintenance box is gone.
+- **The jump uses a `pendingMaintenance` intent adopted in FleetView's `.onAppear`**, a sibling of
+  `pendingMarketplace`. This follows the standing rule: an intent set BEFORE a tab switch cannot
+  rely on `.onChange`, because the switch RECREATES the view — the exact bug that made
+  ASSIGN-TO-NEW-ROUTE silently no-op once.
+- **NOT built, and still the rest of that scope:** the auto-A-check policy toggle, maintenance
+  BASES (line stations / hangar bases), and the contract-MRO provider line. All five decisions are
+  confirmed — this move was only the placement. **The move cut the screen real estate; it did NOT
+  cut the CARD VOLUME**, which is what the designer actually asked for. That's the auto-A work.
+- Driven on the iPad simulator: the segment renders nearest-date-first with the actionable checks at
+  the head, Ops shows the one-line row with its chip, and tapping it lands on Fleet with Maintenance
+  already selected.
+- Same session, unrelated: the Chief Pilot's **"+N more families below" was a dead `Text`** — a
+  player tapped it and nothing happened, fairly, since it named a destination. It is now a real
+  button that scrolls to the first family that didn't fit in the top four (ScrollViewReader +
+  per-family `.id`).
+
+## Decided — Maintenance automation & the maintenance network (9 Sep 2026; on `main`, unreleased)
+
+The rest of `aa-1.1.x/MX_BASES_SCOPE.md` (phases 1 and 2 — §3.4's placement shipped in 1.8). This is
+the answer to the player report that maintenance ate a third of their time at 5× and nearly all of
+it faster. Moving MX to Fleet ▸ Maintenance cut the SCREEN REAL ESTATE; this cuts the CARD VOLUME,
+which is what they actually asked for.
+
+- **⚠️ AUTO A CHECKS, DEFAULT ON — and the measurement is the whole argument.** A 60-aircraft fleet
+  over 180 sim-days pushed **243 MX cards, and 100% of them were A checks** (`MXVolume` probe). A
+  checks recur every 150 cycles ≈ 43 sim-days, so a 180-plane fleet is due one every few sim-HOURS,
+  and there is no decision in them — nobody defers an A check. With the policy on, a due A check is
+  serviced at the gate and the whole day is rolled into ONE Ops line. Measured after:
+  **243 → 0 cards, with flights unchanged** (35,895 → 35,777, inside noise) — the work still
+  happens, it just stops asking. C and D still push cards: they are real planning events with real
+  downtime and the coverage flow, and they are RARE, so the alert load collapses to the checks that
+  deserve a look. Toggle on FLEET ▸ MAINTENANCE; OFF restores the per-aircraft card.
+  **`tickAutoAChecks` is guarded to ONCE PER SIM-DAY** — it walks the fleet asking each aircraft for
+  its most-urgent check, and a per-tick O(fleet) scan on the main-thread tick loop is the exact
+  shape of the 1.7 hang. **A pre-base save restores with the policy ON**, deliberately: the card
+  volume is what an existing airline was complaining about.
+- **CONTRACT MRO is the default provider: +25% on every check, and a 0–7-day hangar-slot wait on
+  C/D.** The wait is a BOOKING, not a shop state — the aircraft keeps flying and goes in on the
+  date, the fee is charged once at booking (so shop entry must not charge again), and a booked
+  aircraft is exempt from the MX card AND from force-grounding. Punishing a player for the hangar
+  queue after they did the right thing would be the obvious trap. `mxSlotWaitDays` is DETERMINISTIC
+  per aircraft+check so the quote a player reads is the quote they get.
+- **YOUR OWN BASES remove both.** Two tiers at an operating hub or any airport with ≥3 of your
+  routes: a **line station** ($4M + $60k/mo, A checks only) and a **hangar base** ($18M narrowbody /
+  $45M widebody-capable, + $250k/mo, adds C/D). Base work is **−30% cost, −25% downtime, no slot
+  wait**, and **an A check at a base is OVERNIGHT — zero lost legs**, the realism the feedback
+  described. A hangar line holds **2 aircraft in C/D at once**; past that the work overflows to the
+  MRO at its premium and wait — an under-built network costs money, never dead-ends.
+  **NETWORK COVERAGE is the strategic lever**: a routed aircraft uses a base only if its ROTATION
+  touches that airport (that is where it overnights), so a hub-and-spoke network gets near-total
+  coverage from one base and a scattered one does not.
+  `mxBaseCovering` picks off a SORTED list — Dictionary iteration order is not stable across
+  instances, and picking a provider off an unsorted sequence would make the same save behave
+  differently on reload (the competitor-profile determinism bug, which cost a session once).
+- **`totalMXBaseSpend` is a NEW cash-invariant capital term.** Base opex and every check fee keep
+  flowing through `totalMaintenanceCheckSpend`, so only the build needed its own line. Any future
+  harness must include it.
+- **Per-base payback ledger** (`MaintenanceBase.MXBaseLedger`, snapshots capped at 120 — the
+  unbounded-history save-crash lesson): fees saved + **flying days returned**, valued at what the
+  aircraft actually earns per day, so a grounded, spare or loss-making aircraft books nothing. Same
+  honesty property as the Training Centre's crew-time value, and the same reason it exists — the fee
+  saving alone does not explain why an airline builds a hangar.
+- **⚠️ THE CYCLES→DAYS BUG — every maintenance DATE the player saw was ~76% too far out.** Four
+  sites converted cycles to sim-days at a hardcoded `2` while the engine flies **1440/409 ≈ 3.52**
+  (measured: ~3.3 on a real fleet). Now ONE derived constant, `Simulation.mxCyclesPerSimDay`, off
+  `legCycleTicks`, so it follows the flight cycle instead of drifting. **This was not only cosmetic**
+  — `mxDaysPastDue` feeds the C/D calendar grace, so a "25-day" grace really ran ~44 days; it now
+  means what it says. `MXCoverageVerify` had the SAME hardcoded `2` in its own test setup and went
+  red — the harness was asserting behaviour derived from the same bad constant, so it now derives it
+  too (82/82).
+- Verified: **`MXBaseVerify` 86/86** (auto-A on/off, C/D still ask, provider pricing both ways,
+  build cost + invariant, overnight A checks, tier capability, hangar capacity + overflow, network
+  coverage, the slot-wait booking end to end, persistence, a legacy save, and 120 sim-days producing
+  ZERO MX cards) · **`MXBaseABProbe` 7/7** · MXCoverage 82/82 · RoundTrip 13/13 · SaveCompat 12/12 ·
+  AcquisitionMX 31/31 · OpsTweaks 43/43 · soak · Debug AND Release builds · German clean.
+  **Driven live on the iPad sim** (`-devScenario mxbase`, committed): the policy card and both
+  toggle states, the provider line flipping from "Contract MRO" to "Contract MRO + 1 of your own",
+  the bases card with all three tier buttons, a C-check Details view reading "contract MRO (+25%) ·
+  ~7 days · hangar slot in ~2 days — it keeps flying until then", and then the payoff — after one
+  sim-day the list went **3 due → 1 due** (only the C check left), **0 in shop**, and the base
+  ledger read "Fees saved $71k · Time returned $65k · $3.9M to recoup · 2 checks so far".
+
+### The balance gate — the hangar passes as specced, the line station deviates (flagged)
+
+`aa-1.1.x/MXBaseABProbe.swift`, 36 sim-months. **The method is the reusable part: the base's own
+ledger IS the A/B** (each check books contract-minus-base plus the days returned), so there is no
+two-sim comparison for economic events to poison — the trap that invalidated the first acquisition
+run. Full table in `MX_BASES_SCOPE.md` §7.
+
+- **The HANGAR BASE meets the gate exactly**: −$7.99M at 6 aircraft, +$22.74M at 20, +$87.02M at 54.
+  A real fleet-size threshold.
+- **THE LINE STATION GATES ON NETWORK SHAPE, NOT FLEET SIZE — measured, raised, and CONFIRMED BY
+  THE DESIGNER (10 Sep 2026): KEEP THE $4M PRICE. This is now a decided design property, not a
+  deviation to fix.** A SCATTERED network never pays one back at any size (−$0.5M…−$0.8M — the
+  strategic pull the spec wanted, arriving on the other axis), but a CONCENTRATED one pays it back
+  from ~4 served aircraft, and you cannot build until 3 routes concentrate at an airport. So the
+  line station is the cheap ON-RAMP — an unlock that rewards concentrating a network — and the
+  $18M/$45M HANGAR is the real fleet-size decision. Value is ~$1.64M per served aircraft per 3
+  years, about two-thirds of it the flying DAY an A check no longer costs.
+  **Do not "fix" this by raising `mxBaseBuildCost(.lineStation)`, and do not re-flag it as a failed
+  balance gate.** The alternatives were priced and declined: ~$14M would move break-even to ~10
+  aircraft, and reopening §6 decision 2 (all auto-A checks zero-downtime) would gut the station's
+  value entirely. If a future change makes it dominant in some new way, that is a fresh finding —
+  re-measure with `MXBaseABProbe` and raise it again rather than assuming this call still covers it.
+- ⏭️ **STILL NOT BUILT** (phase 3, optional): selling hangar capacity to other airlines, subsidiary
+  fleets using your bases, engine shop visits.
+
+### `MXProbe`: the AOG counter is FIXED, and the balance check is GREEN again (10 Sep 2026)
+
+**The counter was broken and is now fixed (10 Sep 2026).** Both arms used a single FLEET-WIDE edge
+test — `if inMaint > 0 && !prevMaint { aog += 1 }` — so on a 14-aircraft fleet, once ANY aircraft was
+grounded the flag stayed true until they were ALL clear and every overlapping AOG collapsed into one
+count. It read **5 in both arms** across two sim-years. `countAOGOnsets` now counts each aircraft's
+OWN false→true transition (an airworthiness directive grounds a whole type at once, and each of
+those IS a separate incident); it allocates nothing and is cheaper than the `filter {}.count` it
+replaced. **Four self-checks now guard the instrument itself** (three simultaneous groundings count
+as three · a still-grounded aircraft isn't re-counted · a repair alone counts nothing · the same
+aircraft grounding again is a new incident) — all four would have failed on the old counter. The
+`aog += 0` no-op in the deferred arm is gone, and that arm now reports its own MX spend, which was
+the decisive missing number.
+
+**With a working instrument the verdict still fails, and now you can see exactly why:**
+
+```
+SERVICED: MX spend $87.9M  AOGs 112  netWorth $4558M
+DEFERRED: MX spend $50.5M  AOGs 115  netWorth $4599M
+  → deferring saves $37.4M of MX and buys 3 extra AOGs (+3%)
+```
+
+The net-worth gap ($41M) is almost exactly the MX fees deferring avoids ($37.4M). **So the deferral
+penalty is real but negligible: ~3 extra breakdowns against $37M saved.** The AOG coupling is not
+missing — it is just far too small to matter, and a second run put it at +8%, so it is noisy at that
+scale too. This is NOT caused by the maintenance-automation work: pristine HEAD fails the same check
+($4,577M vs $4,610M), so it is already broken in 1.8.0, which is in review, and **the 1.7 record of
+"MX sweep 6/6" is stale** — same class as the OpsTweaks 39/43 below.
+
+**⚠️ RE-MEASURED AT 20 RUNS (10 Sep 2026): THE GAP IS NOT NOISE. It is a confirmed defect —
+deferring all maintenance is strictly better, in EVERY run.**
+
+```
+SERVICED  $912M ± 2M   ·   DEFERRED  $920M ± 2M     (per-run net worth, 20 runs)
+gap −$8M (−0.9%) · standard error $1M · −15.3 SE · serviced won 0/20 pairings
+deferring saves $149.3M of MX and buys 8 extra AOGs (+2%)
+```
+
+The per-run spread is tiny (±$2M on $912M, 0.2%), so a 0.9% gap is enormous against it. **An earlier
+5-run read of this as possibly noise-prone was wrong** — these runs are far more deterministic than
+that assumed, and the correct reading is 15 sigma. Per run: the deferrer pays **$10.1M** of MX
+against the servicer's **$17.6M**, and buys about **0.4 extra AOGs**. The whole $8M gap is the
+maintenance bill avoided.
+
+**THE LEVER WAS THE OVERDUE COST SURCHARGE, NOT THE AOG MULTIPLIER — and the fix is IN
+(`mxOverdueCostSurcharge` 2.5 → 5.0, designer direction, 10 Sep 2026).** The hard-grounding window
+already fired, so a deferrer did pay, just for fewer and dearer checks; their bill simply had to
+clear the servicer's. Re-measured at 20 runs, and it lands:
+
+```
+              MX spend      AOGs    net worth/run
+SERVICED      $351.6M       452     $912M ± 2M
+DEFERRED      $404.4M       522     $909M ± 1M
+gap +$3M (+0.4%) · 8.4 SE · serviced beat deferred in 20/20 pairings   → 10/10 ALL GREEN
+```
+
+Deferring now costs **MORE** maintenance than servicing, not less (−$52.8M of "saving"), because the
+same forced checks are billed at double, and the deferrer also takes **+15% more AOGs** — so both
+channels now push the same way. The direction is decisively reversed (was 0/20 serviced wins at
+2.5×, now 20/20) and the margin is deliberately modest, which is right: deferral should be a losing
+gamble, not a catastrophe.
+
+**Two things worth knowing about the 5× number.** (1) It is well TARGETED rather than broadly
+punitive: with the auto-A policy ON (the default) a normal player's A checks are serviced at the
+gate and never go overdue at all, so the surcharge bites almost exclusively the player who ignores a
+C or D card — which is exactly the behaviour it exists to price. (2) The +15% AOG rise in the
+deferred arm was not predicted and is not fully explained here; the serviced arm's count barely
+moved (451 → 452), so it is a real difference in the deferring arm rather than global drift. Noted
+rather than rationalised.
+
+⚠️ **Re-measure with `MXProbe.swift 20` after ANY change to this constant** — five runs cannot
+resolve the effect, which is how the original breakage went unnoticed all the way through 1.8.
+
+### Two harness/localization bugs found in passing — both were silently wrong
+
+- **⚠️ 15 GERMAN KEYS WERE DEAD.** Route-label strings in `simLocalizationTables` were written with
+  `\\u{FE0E}` (four backslashes in the file → the literal text `\u{FE0E}`) while the call sites use
+  `\u{FE0E}` (the real U+FE0E character), so the keys never matched and German players saw English
+  for every one. Fixed, and fixing it exposed the second half: two spellings of the SAME string then
+  collided, and **a duplicate key in a Swift dictionary literal is a runtime TRAP** (the compiler
+  warns; nobody reads warnings). `LocCheck` in the scratchpad asserts a German string actually
+  resolves — a `de==en` diff cannot see this class, and neither can `de-findgaps.py`, which only
+  scans the VIEW layer's stringsdata. **Every Sim-layer `L()` string now has German** (21 added, of
+  which 10 pre-dated this session).
+- **`OpsTweaksVerify` test 3 had been silently red at HEAD (39/43, while the handoff recorded
+  43/43).** It bought two A320s to get two crew shortages, but since the crew-training pipeline made
+  a bundled crew line-ready on arrival, two A320s put two ready crews in ONE pool and the shortage
+  never happened. Fixed by giving the two aircraft different crew families, and by making the older
+  card an AOG (a CREW card heals itself when its crew finishes rest — the test was racing its own
+  setup). Genuinely 43/43 now. Same lesson as the last session's silent no-ops: **a recorded pass is
+  not a pass.**
+
+## Decided — Integration is VISIBLE now, and the settle lever is wired (12 Sep 2026; on `main`, unreleased)
+
+A paying customer emailed: *"I bought a Airline as a Child from my own and now my question is How I
+Can fully integrate this Airline because I cant buy another one. It says I should fully integrate the
+other First."* **The answer is that there is nothing to do — integration completes on ELAPSED TIME
+alone (18 sim-months, `integrationEndTick`), so the honest reply is "raise the sim speed"** (32 min at
+100×, 2.2 h at 25×). But the question was entirely the game's fault, and the audit found two real
+gaps behind it:
+
+- **⚠️ NO VIEW READ `activeIntegration`. AT ALL.** The 18-month window, the monthly bill, the
+  seniority dispute and the settlement price were all live sim state with **zero** UI surface — the
+  ONLY thing the player ever saw was the refusal text when they tried to buy a second carrier. A
+  mechanic the player cannot see is a mechanic they will email you about.
+- **⚠️ `settleSeniority()` had ZERO CALL SITES anywhere in the codebase.** The "settle the dispute
+  for 8% of the price" lever — built, tested, persisted, balanced — was **unreachable**. The
+  sidelined crews could only be waited out. This is the second time an orphaned sim lever has been
+  found by a customer question rather than by a harness (see ASSIGN TO NEW ROUTE, which was a bare
+  tab switch): **a headless harness calls the sim API directly, so it can never notice that no
+  VIEW does.**
+
+### What shipped
+
+- **OPS ▸ INTEGRATION — a new drawer** (`OpsSection.integration`, inserted after `fuelHedge`, shown
+  only while `sim.integrationInProgress`). Subsidiary name · a progress bar · the monthly
+  integration bill · and the **plain-language line the customer's email asked for**: *"Completes on
+  its own in about N months — there's nothing to finish early. Raise the sim speed to get there
+  sooner."* Adding a case to `OpsSection` is safe by construction: it's absent from every old save's
+  `opsCollapsedSections`, so the drawer defaults OPEN for existing players — which is what you want
+  for a drawer that exists to answer a question.
+- **The dispute block + a green `Settle now · $X` button** calling `sim.settleSeniority()`, shown
+  only while a dispute is live. Names the sidelined crew count and the days remaining, so the choice
+  (pay 8% now vs. fly short-crewed for up to 9 months) is legible before committing.
+- **`beginIntegration` calls `opsAutoOpen(.integration)`**, so closing an acquisition opens the box
+  that explains what just started — the same auto-open contract every other Ops alert follows.
+- **New read-only sim readouts** (`Sim/Acquisition.swift`, after `integrationInProgress`):
+  `integrationMonthsRemaining` · `integrationProgress` · `seniorityDaysRemaining` ·
+  `senioritySidelinedCount` · `canSettleSeniority` · `pendingSenioritySettlement`. Pure computed
+  properties over `activeIntegration`; no new state, no new persisted field, cash invariant
+  untouched (settling already routed through the existing charge path).
+- **The REFUSAL text now carries the duration** (`CompetitorIntelView`): *"You're still integrating
+  <name> — about N more months. It completes on its own; Ops ▸ Integration tracks it."* The old copy
+  told the player to do something and named no way to do it, which is exactly what produced the
+  email.
+
+### Verified
+
+`AcquisitionMXVerify` **ALL GREEN with all four sections stamped A+B+C+D** (sections C and D are
+new: the readouts, the auto-open, the countdown, the refusal copy, then settle-specific coverage —
+exact charge, crews returned, no double-settle, the integration SURVIVES settling, cash invariant,
+and completion on elapsed time alone) · RoundTrip 13/13 · SaveCompat 12/12 (`OpsSection` is
+persisted) · OpsTweaks 43/43 · Release build clean · 15 German entries added for the new OpsView
+strings.
+
+⚠️ **CITE THIS HARNESS BY ITS SECTION ROLL-CALL, NEVER BY ITS TOTAL.** Section A emits **2 checks
+per inherited aircraft**, and the acquired carrier varies with `competitorSeed` (rolled fresh per
+`Simulation()`), so the identical code legitimately prints **53, 56 or 63**. A count is therefore
+worthless as evidence that a section ran — which is exactly how the bug below hid. `printResult()`
+now prints `sections A+B+C+D` and **FAILS on any missing stamp**.
+
+⚠️ **A HARNESS DEFECT FOUND AND FIXED IN THE SAME PASS — section D was reporting GREEN while never
+executing.** Its first cut searched the 12 cheapest carriers for one that happened to dispute and,
+on a miss, ran `check(true, "(skipped)")` then returned: **53/53 ✅ with the entire settle-lever
+coverage silently absent.** This is this codebase's documented worst harness bug class (see the
+`RotationVerify`/`MXCoverageVerify` silent no-ops), reached by a different route — not a binary that
+prints nothing, but a SKIP THAT COUNTS AS A PASS. Two reasons the search kept missing:
+`disputed` = the player's MAINLINE families ∩ the target's, so a lone A320 only disputes an
+A320-family operator; **and `applySeniorityDispute` sidelines `round(pool.count × 0.35)`, which is
+ZERO for a one-crew pool** — so even a genuine family overlap sidelined nobody and
+`pendingSenioritySettlement` read nil. The setup is now DERIVED rather than searched (pick the
+target FIRST, then buy 3 aircraft in a family IT flies — overlap by construction, pool big enough to
+sideline ≥1) and **a skip is a FAIL**. **RULE: never add a `check(true, "(skipped)")` escape hatch.
+If a section cannot set itself up, that is a failure, not a pass.**
+**The roll-call was VALIDATED AGAINST SABOTAGE, not just observed to pass** (the `OfferSpreadVerify`
+lesson — a guard that only passes on the fixed code proves nothing): re-introducing the old
+skip-as-pass in a throwaway copy printed `sections A+B+C ❌ 1 FAILED`. That run also totalled **42**
+against the fixed code's 56, which is the seed-dependence above demonstrating itself.
+
+**DRIVEN LIVE on the iPad Air 13" sim** (`-devScenario integ`, committed — the $1B acquisition gate
+is unreachable by hand): the card rendered "Integration · 18 mo left / Allegiant Air / Completes on
+its own in about 18 months… / Integration bill −$764k/mo / Seniority dispute · 270 days left / 5
+crews are sidelined…", and tapping **Settle now · $4.8M** moved cash **$19.605B → $19.600B**,
+replaced the dispute row with "Seniority settled — all crews are back on the line.", dropped Needs
+Attention **9 → 1**, and correctly left the integration itself running at 18 mo left.
+
+**RELEASE-BINARY CHECK, and a grep result that looks alarming but isn't:** `strings` on a Release
+build finds **`-devScenario` twice** (as it does `-backdropTest` and `-liveryGallery` — one shared,
+pre-existing pattern, not new). That is an inert orphaned string literal, NOT a live dev backdoor:
+the things that would make it reachable are all absent — `DevScenario` type metadata **0**, every
+raw value (`publicGate` / `ouster` / `mxbase` / `legacyPlayer` / `sellrep` / `integ`) **0**, and
+`devInjectCash` / `cashInvariantResidual` **0**. Check the ENUM AND ITS RAW VALUES, not the argument
+name, when verifying a dev hook is compiled out.
+
+⚠️ **`-devScenario integ` needed a throwaway-probe-then-acquire approach**: the first cut iterated
+the competitor list and bought the first carrier it could afford, which was an "Independent
+Operator" with no crew families in common — so no dispute ever arose and the settle button never
+appeared. A scenario that seeds the wrong state is worse than no scenario, because the missing UI
+looks like a bug in the UI.
+
+### One localization trap found in passing
+
+`de-findgaps.py` only scans the VIEW layer, so the Sim-layer `L()` check is a separate scan — and it
+reports `'%@ ↔︎ %@'` as a gap. **It is NOT one.** The catalog carries that string in its escaped
+spelling (`"%@ ↔\u{FE0E} %@"`), which is the IDENTICAL string at runtime — verified by comparison,
+not assumed. The scanner's regex simply cannot equate the two spellings. Do not "fix" it by adding
+the literal-spelling key back: that reintroduces a **duplicate key in a Swift dictionary literal,
+which is a runtime TRAP** (it was removed for exactly that reason earlier in the same session).
+
+## Decided — The 1.7 hang fixes (8 Sep 2026; branch `hang-fixes-1.7.1`)
+
+TelemetryDeck reported **`hang.under3s` ×43**, a first-ever **`hang.3to10s` ×1**, and
+**`crash.sig9.exc10.code0.rbsterminatecontext-domain-10` ×3** on the shipping app —
+that slug is a RunningBoard/FRONTBOARD **watchdog SIGKILL**, i.e. launch or resume took
+too long, so the crash and the hangs are the SAME defect at different severities. A
+five-lens hunt with adversarial verification produced 9 confirmed findings; all were
+fixed. **The root cause is a PAIR, and 1.7 shipped both halves:**
+
+- **⚠️ `run()`'s catch-up drain was capped in TICKS, not TIME — and that cap is
+  unreachable below 100×.** At ≤25× the interval is ≥10ms so 50 ticks is ≥500ms of sim
+  time and the loop always drains. At the **100× added in 1.7** the interval is 2.5ms,
+  so 50 ticks is only **125ms of sim time — UNDER the 250ms input clamp**. Once
+  per-tick cost `c` exceeded ~2.34ms on the device, the accumulator refilled faster
+  than it drained and the loop **pinned at the cap indefinitely**: a permanent
+  ~125–250ms non-yielding main-thread block. Fixed with a **wall-clock budget**
+  (`Simulation.maxDrainMs = 6`, sized against the 8ms sleep → ~43% worst-case duty),
+  checked every 8th tick to keep clock reads off the hot path, plus
+  `accumulatorMs = min(accumulatorMs, intervalMs)` so no wake can bank a backlog the
+  device cannot pay off. **A speed multiplier is a REQUEST, not a contract — a device
+  that cannot sustain 100× now runs the world slower instead of freezing.** That clamp
+  only ever SHRINKS the accumulator, so it strengthens the documented "time away from
+  the app never becomes sim time" guarantee. **Do NOT "fix" a future recurrence by
+  raising the 250ms clamp, removing the isPaused reset, or deleting 100×** — the defect
+  was the tick-counted cap, not the multiplier.
+- **⚠️ `assignSpareToPendingRoutes()` ran an O(routes × fleet) scan on EVERY tick,
+  behind the WRONG GUARD.** It asked whether *a spare exists*, not whether *a route is
+  pending* — then evaluated two O(fleet) `contains` passes per route, almost always
+  finding nothing. Rewritten to ONE fleet pass building `staffed`/`reserved` id sets
+  (`Route.id` is `Int`, not UUID), then an O(routes) set-lookup loop behind the guard
+  that was actually wanted. **Measured A/B** (`aa-1.1.x/TickCostProbe.swift`, same
+  machine, `git show main` vs. the fix): 250 routes / 285 aircraft **0.575 → 0.291
+  ms/tick (49%)**; with 80 idle spares **0.495 → 0.232 (53%)**; growth for a ×178
+  routes×fleet increase **×11.0 → ×5.3**. ⚠️ **At ≤120 routes the win is inside the
+  noise** — an early probe run at that scale appeared to REFUTE the fix. Measure at
+  250+ or you will draw the wrong conclusion.
+  - **Why it only started biting in 1.7: the MX program creates idle spares by
+    design.** `serviceMXWithCoverage` nils `assignedRouteId` on an aircraft entering
+    the shop, and `isIdleSpare` does not exclude `inMXShop` — so a jet sitting out a
+    21-day D check counts as an idle spare for its whole downtime, and on a large
+    fleet the guard is permanently open. Before 1.7 a tidy player could hold zero
+    spares and the scan stayed off.
+  - **The two findings COMPOUND**: the scan sets `c`, and `c` decides whether the
+    drain collapses. Neither alone produces a >250ms block; together they do.
+- **`closedPlayerRoutes` was UNBOUNDED — the same bug class as the uncapped
+  `Route.history` that caused the build-27 save crash**, left open on the other side.
+  A closed route carries up to `Route.maxHistory` (60) flight records ≈ **13.2KB**, so
+  a long-running airline crossed the ~900KB iCloud KVS limit at **~68 closed routes**
+  (silently ending cross-device sync) and 4MB at ~310 (degrading the load menu and
+  putting a full decode on the launch path). Now capped at **`maxClosedRoutes = 40`**,
+  drop-oldest, funnelled through ONE private `archiveRoute(_:)` so a future seventh
+  call site cannot bypass it, and trimmed on restore (`suffix`) so an existing
+  oversized save self-heals. ⚠️ **THIS IS A VISIBLE PRODUCT CHANGE, AND IT IS THE
+  DESIGNER'S CALL — CONFIRMED 9 Sep 2026 ("clear closed routes at 40").** The standing
+  rule elsewhere in this file is that routes are "archived, not deleted" so a route that
+  never recouped stays reviewable; beyond 40 closures the OLDEST now leave the Routes
+  panel. That partial reversal is deliberate and approved, not an oversight — the
+  alternative was an unbounded list that silently kills iCloud sync at ~68 closed
+  routes. One constant if it ever needs revisiting.
+- **`loadSlot()` was the LAST synchronous full-save decode on the main thread** (the
+  1.4.2/1.4.3 async save + slot-decode work missed it) and the only decode path with
+  no size guard. Now `GameStore.loadAsync` on the EXISTING `saveQueue` (a second queue
+  would race `migrateLegacyIfNeeded`'s file moves). Deliberately still has NO size cap:
+  refusing an oversized save would strand it forever, and the documented self-heal
+  depends on the load succeeding. A `loadingSlot` re-entrancy guard is load-bearing —
+  unlike the idempotent `slotInfosAsync`, this REPLACES game state, so two completions
+  would let the last writer win and could leave `currentSlot` naming a different save
+  than `sim` holds (the next autosave would then overwrite the wrong slot).
+- **`AirportPhoto.image(for:)` was the only uncached image loader in the app**, called
+  from a `GeometryReader` body that evaluates at least twice per appearance — so every
+  airport tap re-read AND re-decoded a 1456×816 hero JPEG on the main thread (~9ms
+  here, ~25ms on an A15), and 1.6/1.7 grew that set to 117 heroes. Now an `NSCache`
+  (not a dictionary — this app already has a watchdog-kill symptom and NSCache evicts
+  under pressure), **keyed on the RESOLVED BUNDLE NAME, never the airport code** (384
+  airports share 9 archetypes; code-keying would multiply retained bitmaps ~13×), with
+  **misses memoized separately** — omitting that leaves the 3–6-lookup `Bundle.path`
+  loop running every layout pass for the ~276 airports with no city file, the classic
+  silent half-fix.
+- **Cold launch decoded a 2.3MB backdrop PNG behind the splash**, which is fully
+  opaque and covers it for ~2.6s. Now `showSplash ? nil : coldLaunchBackdrop` at the
+  two splash-covered sites — the decode moves out of the watchdog-policed launch
+  window. (`LiveryDesignView` comes after naming, never under the splash, so it stays
+  unconditional.)
+- **Selecting an aircraft subscribed the ENTIRE NetworkView body to raw `sim.tick`** —
+  the fourth instance of this codebase's documented churn bug. Fixed with the file's
+  own leaf-isolation pattern (`LiveTooltip`, plus `LiveCash` for the cash figure,
+  which invalidated the same body on every settled leg). ⚠️ `AircraftTooltip` must
+  keep receiving a CHANGING value input or it hits the opposite documented bug and
+  freezes at selection time.
+- **`OpsView` has no `LazyVStack` anywhere**, so the Maintenance drawer eagerly built
+  one row per owned aircraft, rebuilt at the 5Hz `displayTick`. Capped at 12 rows plus
+  a "Show all N" toggle — safe ONLY because `mxFleet` sorts nearest-date-first, and the
+  slice always includes `expandedMXTail` so an open Details view cannot vanish
+  mid-interaction. The alert chip still counts the FULL fleet.
+- **⚠️ TWO HARNESSES WERE SILENTLY NO-OPING IN THE REPO.** `RotationVerify` and
+  `MXCoverageVerify` define `@MainActor func main()` with no top-level
+  `MainActor.assumeIsolated { main() }`, so they compiled to binaries that ran and
+  printed NOTHING — and an empty run reads like a pass if you only grep for "FAIL".
+  Each session had been re-adding the line to its `/tmp` copy instead of the source.
+  Fixed at the source; they really do run **55/55** and **81/81**. `SaveCompatVerify`
+  was separately DEAD (compile error): it referenced `GameSnapshot.crewTrainingDue`,
+  removed when the crew-training pipeline replaced the family-wide recurrent card — so
+  the regression net for the SAVE-LOSS bug class had been dark since 8 Sep. Repaired
+  to `crewAutoRecurrent`; **12/12**. **If a harness prints nothing, suspect this before
+  suspecting the code.**

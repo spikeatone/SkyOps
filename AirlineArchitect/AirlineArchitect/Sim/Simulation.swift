@@ -4626,6 +4626,13 @@ final class Simulation {
     /// sweep put the continuous-coverage break-even at ~1.8 (a crew flies ~55% of
     /// the time); 2.1 is the locked steady ratio.
     static let coverageContinuousRatio = 1.9
+    /// Exponent on the crew-scarcity factor that values a crew-day returned early
+    /// (see `crewShortfallFactor`). 1.0 = linear (the original); 0.5 = square root,
+    /// which steepens the near-zero end to match this sim's documented crew CLIFF
+    /// without moving either endpoint. The ONE knob for "what is a crew-day worth" —
+    /// re-run `TrainingCenterABProbe` (multiple runs; variance is large) after any
+    /// change, and keep it in (0, 1]: above 1 would flatten the band that matters.
+    static let crewScarcityCurve = 1.0
     static let coverageThinRatio = 1.5
 
     enum CrewHireMode { case rated, newHire }
@@ -5299,13 +5306,33 @@ final class Simulation {
     /// from 0 (comfortably staffed) to 1 (no line-ready crew at all). That is also
     /// the honest lesson the payback chart teaches — owning the simulator pays most
     /// exactly when you are stretched.
+    ///
+    /// ⚠️ THE CURVE IS CONVEX, NOT LINEAR (raised 12 Sep 2026, designer: "raise the
+    /// crew day value a bit"), and the justification is THIS SIM'S OWN documented
+    /// crew cliff — see the `crewsPerAircraft = 2.1` sweep: crew shortage is BIMODAL
+    /// with a sharp edge, because "any timing cluster starts a shortage that CASCADES
+    /// into a permanent fleet-wide jam". So being 10% short does NOT cost 10% of your
+    /// flying; it costs disproportionately more. A LINEAR ramp therefore understated
+    /// the marginal crew-day in the 1.5–1.9-coverage band a competent player actually
+    /// occupies (factor 0.05–0.2 → it booked almost nothing), while a course in
+    /// progress is itself what pulls line-ready cover down into that band. Raising
+    /// `crewScarcityCurve` steepens the near-zero end; 0.5 (a square root) roughly
+    /// triples the factor at a 10% shortfall.
+    ///
+    /// BOTH ENDPOINTS ARE UNCHANGED, on purpose — they are asserted by
+    /// `TrainingCenterVerify` test 9 and are the honesty property, not tuning:
+    /// deep cover still books EXACTLY zero (0^k == 0) and a family with nothing
+    /// line-ready still books the full value (1^k == 1). Do not replace this with a
+    /// floor or a flat multiplier: either makes a deeply-covered airline book value
+    /// for crew it did not need, which is the thing this factor exists to prevent.
     private func crewShortfallFactor(family: String) -> Double {
         let n = ownedCount(family: family)
         guard n > 0 else { return 0 }
         let ready = Double((crewPoolsByFamily[family] ?? []).filter { $0.isLineReady }.count)
         let target = Double(n) * Simulation.coverageContinuousRatio
         guard target > 0 else { return 0 }
-        return min(1, max(0, (target - ready) / target))
+        let shortfall = min(1, max(0, (target - ready) / target))
+        return pow(shortfall, Simulation.crewScarcityCurve)
     }
 
     /// Book the value of the days an in-house course saves against the contract

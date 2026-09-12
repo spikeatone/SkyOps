@@ -39,7 +39,6 @@ struct Airline {
         .init(name: "United Airlines",   code: "UA", weight: 17, types: ["A319","A320","A321NEO","B737700","B737800","B739","MAX8","MAX9","B773","B788","B789","B78J"], hubs: ["ORD", "DEN", "IAH", "EWR", "SFO", "IAD", "LAX", "GUM"]),
         .init(name: "Alaska Airlines",   code: "AS", weight: 6,  types: ["B737700","B737800","B739","MAX8","MAX9","B789","E175"], hubs: ["SEA", "HNL", "PDX", "ANC", "SAN", "LAX"]),
         .init(name: "JetBlue Airways",   code: "B6", weight: 5,  types: ["A320","A321","A321NEO","A220300"], hubs: ["JFK", "BOS", "FLL", "MCO", "SJU", "LAX"]),
-        .init(name: "Spirit Airlines",   code: "NK", weight: 3,  types: ["A319","A320","A320NEO","A321","A321NEO"]),
         .init(name: "Frontier Airlines", code: "F9", weight: 3,  types: ["A319","A320","A320NEO","A321","A321NEO"], hubs: ["DEN", "LAS", "MCO", "PHL", "ATL", "TPA", "PHX", "MIA", "DFW", "CLE", "CVG", "MDW", "ORD", "SJU"]),
         .init(name: "Allegiant Air",     code: "G4", weight: 2,  types: ["A319","A320","MAX8"], hubs: ["LAS", "FLL", "CVG", "BNA", "IND", "PIT", "GRR", "DSM"]),
         // Regional-brand liveries (American Eagle / Delta Connection / United Express)
@@ -469,7 +468,13 @@ struct Airline {
     static let realCodes: [String: String] = [
         // Roster carriers (US + international) — the ones the game actually paints
         "AA": "American Airlines", "DL": "Delta Air Lines", "WN": "Southwest Airlines",
-        "UA": "United Airlines", "AS": "Alaska Airlines", "NK": "Spirit Airlines",
+        "UA": "United Airlines", "AS": "Alaska Airlines",
+        // NK is KEPT here on purpose even though Spirit was removed from the roster
+        // (it ceased all passenger operations May 2026). `realCodes` is deliberately a
+        // SUPERSET of the roster — a brand-collision guard, not a roster mirror — and
+        // NK still reads as Spirit to any player who knows airlines. Cheap to keep,
+        // and it also stops `randomTailCode` painting NK on an Independent Operator.
+        "NK": "Spirit Airlines",
         "OO": "SkyWest Airlines", "YX": "Republic Airways", "MQ": "Envoy Air",
         "QX": "Horizon Air", "OH": "PSA Airlines", "AF": "Air France",
         "LH": "Lufthansa", "BA": "British Airways", "EK": "Emirates",

@@ -159,10 +159,15 @@ QUESTION"). `TrainingCenterABProbe` is now a measurement tool, not a gate.
       (and say so in the UI) · raise crew-day value or days saved · or give the centre a non-fee,
       non-time benefit. Prices themselves are settled: not below real device cost.
 
-### Spirit Airlines is still in the US roster
+### ✅ DONE 12 Sep — Spirit Airlines REMOVED from the US roster
 Flagged 8 Sep while fact-checking carrier hubs: Spirit ceased all passenger operations in May 2026.
 Same class as the Air France A380 correction — the roster has no mechanism to notice.
-- [ ] Designer call: remove Spirit, or keep it as a period-accurate carrier.
+- [x] **Designer's call 12 Sep: remove it.** US roster 15 → 14 carriers, weight 112 → 109; the
+      entry is gone from `Airline.roster` only. No type orphaned (verified by script — A320neo now
+      resolves to Frontier alone, which is realistically right post-Spirit, the same class as
+      "A340 → 100% Lufthansa"). **`NK` stays in `realCodes`** — that map is a deliberate superset
+      (brand-collision guard for the player's tail code), and keeping it also stops
+      `randomTailCode()` painting NK on an Independent Operator.
 
 ### German localization — SCOPED (28 Aug); a MARKET-ENTRY bet, not a demand response
 TelemetryDeck shows German = 16% of preferred language (#2 after English 76%, 10× Spanish). Full
