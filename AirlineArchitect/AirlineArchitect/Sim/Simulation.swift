@@ -1648,6 +1648,11 @@ final class Simulation {
         /// queue. The `mx` scenario deliberately scatters its routes (it exists for
         /// the C/D coverage flow), which makes every airport base-ineligible.
         case mxbase
+        /// A LIVE MERGER INTEGRATION, so the OPS ▸ Integration drawer and its
+        /// settle button can actually be driven. The $1B acquisition gate is
+        /// unreachable by hand, which is exactly why the settle lever shipped
+        /// without a button and nobody noticed for a release.
+        case integ
     }
 
     func devSeed(_ scenario: DevScenario) {
@@ -1735,6 +1740,44 @@ final class Simulation {
             //    Network tab (or via the Acquire button) to then cover the 787.
             if let a = AircraftType.all.first(where: { $0.id == "A320" }) { _ = buyAircraft(a); _ = buyAircraft(a) }
             pendingMaintenance = true     // land on FLEET ▸ MAINTENANCE
+            return
+        }
+        if scenario == .integ {
+            // A player-sized mainline (so crew families OVERLAP and a real seniority
+            // dispute fires), then buy the cheapest carrier we can reach. THROWAWAY.
+            nameAirline("Air Tina", tailCode: "TN")
+            setLivery(fontIndex: 0, paletteIndex: 0, tailArtIndex: 1, text: "AIR TINA")
+            devInjectCash(20_000_000_000)
+            for code in ["ORD", "SEA", "LAX"] {
+                guard let t = AircraftType.all.first(where: { $0.id == "A320" }),
+                      let ac = buyAircraft(t), let o = airport("DEN"), let d = airport(code) else { continue }
+                _ = openRoute(from: o, to: d, using: ac)
+            }
+            for fam in ownedFamilies {
+                let want = Int(Double(ownedCount(family: fam)) * 2.5) + 2
+                while crewCount(family: fam) < want { if hireCrew(family: fam) == nil { break } }
+            }
+            // Pick a target that actually DISPUTES (overlapping type ratings), so the
+            // settle button is on screen rather than the already-settled state.
+            // You cannot un-acquire, so probe in a THROWAWAY sim first and only then
+            // buy for real — the same shape the harness uses.
+            let targets = relevantCompetitors.sorted { askingPrice(for: $0) < askingPrice(for: $1) }
+            func disputes(_ t: CompetitorProfile) -> Bool {
+                let probe = Simulation()
+                probe.configure(viewport: CGSize(width: 400, height: 800))
+                probe.nameAirline("Probe", tailCode: "PB")
+                probe.devInjectCash(20_000_000_000)
+                for code in ["ORD", "SEA", "LAX"] {
+                    guard let ty = AircraftType.all.first(where: { $0.id == "A320" }),
+                          let ac = probe.buyAircraft(ty), let o = probe.airport("DEN"),
+                          let d = probe.airport(code) else { continue }
+                    _ = probe.openRoute(from: o, to: d, using: ac)
+                }
+                guard probe.acquire(t) else { return false }
+                return probe.pendingSenioritySettlement != nil
+            }
+            let pick = targets.prefix(20).first(where: disputes) ?? targets.first
+            if let pick { _ = acquire(pick) }
             return
         }
         if scenario == .mxbase {
@@ -2010,6 +2053,11 @@ final class Simulation {
             : L("Seniority dispute across %@ crew families.", disputed.count)
         logOps(.disruption, L("Integration underway"),
                L("%@ integration runs %@ months. %@", p.name, months, disputeNote))
+        // Open the OPS ▸ Integration drawer on close. The Ops feed entry above says
+        // "runs 18 months" exactly once and then scrolls out of a 40-entry feed, so
+        // the drawer is the only place that keeps answering "how much longer?" —
+        // which is the question a blocked customer actually had.
+        opsAutoOpen(.integration)
     }
 
     /// Sideline a fraction of each disputed family's crew. Reuses the labor-action

@@ -6057,6 +6057,113 @@ resolve the effect, which is how the original breakage went unnoticed all the wa
   setup). Genuinely 43/43 now. Same lesson as the last session's silent no-ops: **a recorded pass is
   not a pass.**
 
+## Decided — Integration is VISIBLE now, and the settle lever is wired (12 Sep 2026; on `main`, unreleased)
+
+A paying customer emailed: *"I bought a Airline as a Child from my own and now my question is How I
+Can fully integrate this Airline because I cant buy another one. It says I should fully integrate the
+other First."* **The answer is that there is nothing to do — integration completes on ELAPSED TIME
+alone (18 sim-months, `integrationEndTick`), so the honest reply is "raise the sim speed"** (32 min at
+100×, 2.2 h at 25×). But the question was entirely the game's fault, and the audit found two real
+gaps behind it:
+
+- **⚠️ NO VIEW READ `activeIntegration`. AT ALL.** The 18-month window, the monthly bill, the
+  seniority dispute and the settlement price were all live sim state with **zero** UI surface — the
+  ONLY thing the player ever saw was the refusal text when they tried to buy a second carrier. A
+  mechanic the player cannot see is a mechanic they will email you about.
+- **⚠️ `settleSeniority()` had ZERO CALL SITES anywhere in the codebase.** The "settle the dispute
+  for 8% of the price" lever — built, tested, persisted, balanced — was **unreachable**. The
+  sidelined crews could only be waited out. This is the second time an orphaned sim lever has been
+  found by a customer question rather than by a harness (see ASSIGN TO NEW ROUTE, which was a bare
+  tab switch): **a headless harness calls the sim API directly, so it can never notice that no
+  VIEW does.**
+
+### What shipped
+
+- **OPS ▸ INTEGRATION — a new drawer** (`OpsSection.integration`, inserted after `fuelHedge`, shown
+  only while `sim.integrationInProgress`). Subsidiary name · a progress bar · the monthly
+  integration bill · and the **plain-language line the customer's email asked for**: *"Completes on
+  its own in about N months — there's nothing to finish early. Raise the sim speed to get there
+  sooner."* Adding a case to `OpsSection` is safe by construction: it's absent from every old save's
+  `opsCollapsedSections`, so the drawer defaults OPEN for existing players — which is what you want
+  for a drawer that exists to answer a question.
+- **The dispute block + a green `Settle now · $X` button** calling `sim.settleSeniority()`, shown
+  only while a dispute is live. Names the sidelined crew count and the days remaining, so the choice
+  (pay 8% now vs. fly short-crewed for up to 9 months) is legible before committing.
+- **`beginIntegration` calls `opsAutoOpen(.integration)`**, so closing an acquisition opens the box
+  that explains what just started — the same auto-open contract every other Ops alert follows.
+- **New read-only sim readouts** (`Sim/Acquisition.swift`, after `integrationInProgress`):
+  `integrationMonthsRemaining` · `integrationProgress` · `seniorityDaysRemaining` ·
+  `senioritySidelinedCount` · `canSettleSeniority` · `pendingSenioritySettlement`. Pure computed
+  properties over `activeIntegration`; no new state, no new persisted field, cash invariant
+  untouched (settling already routed through the existing charge path).
+- **The REFUSAL text now carries the duration** (`CompetitorIntelView`): *"You're still integrating
+  <name> — about N more months. It completes on its own; Ops ▸ Integration tracks it."* The old copy
+  told the player to do something and named no way to do it, which is exactly what produced the
+  email.
+
+### Verified
+
+`AcquisitionMXVerify` **ALL GREEN with all four sections stamped A+B+C+D** (sections C and D are
+new: the readouts, the auto-open, the countdown, the refusal copy, then settle-specific coverage —
+exact charge, crews returned, no double-settle, the integration SURVIVES settling, cash invariant,
+and completion on elapsed time alone) · RoundTrip 13/13 · SaveCompat 12/12 (`OpsSection` is
+persisted) · OpsTweaks 43/43 · Release build clean · 15 German entries added for the new OpsView
+strings.
+
+⚠️ **CITE THIS HARNESS BY ITS SECTION ROLL-CALL, NEVER BY ITS TOTAL.** Section A emits **2 checks
+per inherited aircraft**, and the acquired carrier varies with `competitorSeed` (rolled fresh per
+`Simulation()`), so the identical code legitimately prints **53, 56 or 63**. A count is therefore
+worthless as evidence that a section ran — which is exactly how the bug below hid. `printResult()`
+now prints `sections A+B+C+D` and **FAILS on any missing stamp**.
+
+⚠️ **A HARNESS DEFECT FOUND AND FIXED IN THE SAME PASS — section D was reporting GREEN while never
+executing.** Its first cut searched the 12 cheapest carriers for one that happened to dispute and,
+on a miss, ran `check(true, "(skipped)")` then returned: **53/53 ✅ with the entire settle-lever
+coverage silently absent.** This is this codebase's documented worst harness bug class (see the
+`RotationVerify`/`MXCoverageVerify` silent no-ops), reached by a different route — not a binary that
+prints nothing, but a SKIP THAT COUNTS AS A PASS. Two reasons the search kept missing:
+`disputed` = the player's MAINLINE families ∩ the target's, so a lone A320 only disputes an
+A320-family operator; **and `applySeniorityDispute` sidelines `round(pool.count × 0.35)`, which is
+ZERO for a one-crew pool** — so even a genuine family overlap sidelined nobody and
+`pendingSenioritySettlement` read nil. The setup is now DERIVED rather than searched (pick the
+target FIRST, then buy 3 aircraft in a family IT flies — overlap by construction, pool big enough to
+sideline ≥1) and **a skip is a FAIL**. **RULE: never add a `check(true, "(skipped)")` escape hatch.
+If a section cannot set itself up, that is a failure, not a pass.**
+**The roll-call was VALIDATED AGAINST SABOTAGE, not just observed to pass** (the `OfferSpreadVerify`
+lesson — a guard that only passes on the fixed code proves nothing): re-introducing the old
+skip-as-pass in a throwaway copy printed `sections A+B+C ❌ 1 FAILED`. That run also totalled **42**
+against the fixed code's 56, which is the seed-dependence above demonstrating itself.
+
+**DRIVEN LIVE on the iPad Air 13" sim** (`-devScenario integ`, committed — the $1B acquisition gate
+is unreachable by hand): the card rendered "Integration · 18 mo left / Allegiant Air / Completes on
+its own in about 18 months… / Integration bill −$764k/mo / Seniority dispute · 270 days left / 5
+crews are sidelined…", and tapping **Settle now · $4.8M** moved cash **$19.605B → $19.600B**,
+replaced the dispute row with "Seniority settled — all crews are back on the line.", dropped Needs
+Attention **9 → 1**, and correctly left the integration itself running at 18 mo left.
+
+**RELEASE-BINARY CHECK, and a grep result that looks alarming but isn't:** `strings` on a Release
+build finds **`-devScenario` twice** (as it does `-backdropTest` and `-liveryGallery` — one shared,
+pre-existing pattern, not new). That is an inert orphaned string literal, NOT a live dev backdoor:
+the things that would make it reachable are all absent — `DevScenario` type metadata **0**, every
+raw value (`publicGate` / `ouster` / `mxbase` / `legacyPlayer` / `sellrep` / `integ`) **0**, and
+`devInjectCash` / `cashInvariantResidual` **0**. Check the ENUM AND ITS RAW VALUES, not the argument
+name, when verifying a dev hook is compiled out.
+
+⚠️ **`-devScenario integ` needed a throwaway-probe-then-acquire approach**: the first cut iterated
+the competitor list and bought the first carrier it could afford, which was an "Independent
+Operator" with no crew families in common — so no dispute ever arose and the settle button never
+appeared. A scenario that seeds the wrong state is worse than no scenario, because the missing UI
+looks like a bug in the UI.
+
+### One localization trap found in passing
+
+`de-findgaps.py` only scans the VIEW layer, so the Sim-layer `L()` check is a separate scan — and it
+reports `'%@ ↔︎ %@'` as a gap. **It is NOT one.** The catalog carries that string in its escaped
+spelling (`"%@ ↔\u{FE0E} %@"`), which is the IDENTICAL string at runtime — verified by comparison,
+not assumed. The scanner's regex simply cannot equate the two spellings. Do not "fix" it by adding
+the literal-spelling key back: that reintroduces a **duplicate key in a Swift dictionary literal,
+which is a runtime TRAP** (it was removed for exactly that reason earlier in the same session).
+
 ## Decided — The 1.7 hang fixes (8 Sep 2026; branch `hang-fixes-1.7.1`)
 
 TelemetryDeck reported **`hang.under3s` ×43**, a first-ever **`hang.3to10s` ×1**, and

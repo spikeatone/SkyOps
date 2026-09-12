@@ -74,6 +74,7 @@ struct OpsView: View {
                         // so Needs Attention moving down doesn't hide anything.
                         opportunitiesGroup
                         fuelHedgeGroup
+                        if sim.integrationInProgress { integrationGroup }
                         if !opsDecisions.isEmpty { needsAttentionGroup }
                         if sim.ownedCount > 0 { maintenanceSummary }
                         if !sim.incentedRoutes.isEmpty { incentivesGroup }
@@ -290,6 +291,88 @@ struct OpsView: View {
         .buttonStyle(.plain)
     }
 
+
+
+    // MARK: Integration (a merger in progress)
+    /// ⚠️ THE SURFACE THAT DIDN'T EXIST. `activeIntegration` was read by NO view, so
+    /// a player mid-merger could not see how long was left, and the acquisition
+    /// block said only "One at a time." A paying customer emailed asking how to
+    /// "fully integrate" their first subsidiary — the answer is that you wait, and
+    /// nothing on screen said so. This box says it, counts down, and finally holds
+    /// the one real lever (`settleSeniority`) that shipped with no button anywhere.
+    ///
+    /// Placed directly after the two actionable boxes and ABOVE the long status
+    /// groups: it only exists while a merger runs, and it carries a decision that
+    /// EXPIRES (the dispute lapses on its own at 9 months, taking the settle option
+    /// with it), so it should not be buried under Needs Attention on a big fleet.
+    private var integrationGroup: some View {
+        let _ = sim.displayTick
+        let monthsLeft = sim.integrationMonthsRemaining
+        let name = sim.activeIntegration?.subsidiaryName ?? ""
+        let bill = sim.activeIntegration?.monthlyBill ?? 0
+        let progress = sim.integrationProgress
+        let sidelined = sim.senioritySidelinedCount
+        let disputeDays = sim.seniorityDaysRemaining
+        let settlement = sim.pendingSenioritySettlement
+        return drawer(.integration, "Integration", trailing: {
+            Text(monthsLeft == 1 ? "1 mo left" : "\(monthsLeft) mo left")
+                .font(.karla(13, .semibold)).foregroundStyle(secondary)
+        }) {
+            Text(name).font(.karla(16, .heavy)).foregroundStyle(primary)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(isDark ? Color.white.opacity(0.12) : Color(skyHex: 0xE6E6E6))
+                    Capsule().fill(Sky.brightBlue).frame(width: max(4, geo.size.width * progress))
+                }
+            }
+            .frame(height: 8)
+            // THE line the support email was missing. Say plainly that waiting is
+            // the mechanic, so "how do I finish this?" stops being a question.
+            Text("Completes on its own in about \(monthsLeft) months — there's nothing to finish early. Raise the sim speed to get there sooner.")
+                .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Text("Integration bill").font(.karla(13)).foregroundStyle(secondary)
+                Spacer()
+                Text("−\(compact(bill))/mo").font(.karla(13, .bold)).foregroundStyle(secondary)
+            }
+
+            if let days = disputeDays, let cost = settlement {
+                Divider().overlay(cardBorder.opacity(0.4))
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("Seniority dispute").font(.karla(14, .bold)).foregroundStyle(Sky.red)
+                    Spacer(minLength: 6)
+                    Text(days == 1 ? "1 day left" : "\(days) days left")
+                        .font(.karla(13, .semibold)).foregroundStyle(secondary)
+                }
+                Text(sidelined == 1
+                     ? "1 crew is sidelined while the two seniority lists are merged."
+                     : "\(sidelined) crews are sidelined while the two seniority lists are merged.")
+                    .font(.karla(12)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+                Button {
+                    Feedback.impact(.light)
+                    if sim.settleSeniority() { Feedback.success() }
+                } label: {
+                    Text(sim.canSettleSeniority
+                         ? "Settle now · \(compact(cost))"
+                         : "Settle now · need \(compact(cost))")
+                        .font(.karla(13, .bold)).foregroundStyle(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 9)
+                        .background(sim.canSettleSeniority ? Sky.coreGreen : Color.gray.opacity(0.4))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+                .buttonStyle(.plain)
+                .disabled(!sim.canSettleSeniority)
+                Text("Ends the dispute today and puts every sidelined crew back on the line.")
+                    .font(.karla(11)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Seniority settled — all crews are back on the line.")
+                    .font(.karla(12)).foregroundStyle(Sky.coreGreen)
+            }
+
+            Text("Where both airlines fly the same city pair those routes split passengers between them. Closing or reassigning one of each duplicate is the main way a merger pays off.")
+                .font(.karla(11)).foregroundStyle(secondary).fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
     // MARK: Competition (rival carriers on the player's routes)
     private var competitionGroup: some View {

@@ -365,8 +365,9 @@ struct ContentView: View {
                 store.isPro = true   // dev scenarios inject billions + exercise gated features — don't let the free cap/paywall block them
                 showSplash = false
                 // FLEET for the livery + maintenance scenarios, else FINANCE.
-                tab = (scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer
-                       || scenario == .mx || scenario == .mxbase) ? 1 : 4
+                if scenario == .integ { tab = 3 }                       // OPS — the integration drawer
+                else { tab = (scenario == .fleet || scenario == .bigfleet || scenario == .legacyPlayer
+                              || scenario == .mx || scenario == .mxbase) ? 1 : 4 }
                 // legacyPlayer stands in for "continued a pre-livery save", so it
                 // shows the same one-time prompt loadSlot would (ignoring the seen
                 // flag, so the harness is repeatable).

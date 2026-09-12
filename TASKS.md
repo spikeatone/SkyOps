@@ -55,6 +55,42 @@ CLAUDE.md "Decided — The 1.7 hang fixes"; measured A/B in `aa-1.1.x/TickCostPr
       error id** — the build tag only appears under message grouping. `b57` events judge the fix;
       b39–b56 is stale drainage. Baseline: hang.under3s ×43, hang.3to10s ×1, watchdog crash ×3.
 
+### ✅ DONE 12 Sep — integration is VISIBLE, and the settle lever is wired
+A paying customer emailed asking HOW to "fully integrate" a bought subsidiary, because the game
+refused a second acquisition and told them to finish the first. **There was nothing to do** —
+integration completes on elapsed time alone (18 sim-months: 32 min at 100×, 2.2 h at 25×) — but the
+question was the game's fault. Detail in CLAUDE.md "Decided — Integration is VISIBLE now".
+- [x] **NO VIEW READ `activeIntegration`** — the window, bill, dispute and settlement price were all
+      live sim state with ZERO UI. Now an **OPS ▸ INTEGRATION drawer** (`OpsSection.integration`,
+      auto-opened by `beginIntegration`; absent from old saves' collapsed set so it defaults OPEN)
+      with the subsidiary, a progress bar, the bill, the dispute, and the plain line the email
+      asked for: *"Completes on its own in about N months — there's nothing to finish early."*
+- [x] **`settleSeniority()` had ZERO CALL SITES anywhere** — built, tested, persisted, balanced, and
+      unreachable. Now a green **`Settle now · $X`** button. ⚠️ **Second orphaned lever found by a
+      customer question rather than a harness** (see ASSIGN TO NEW ROUTE): a headless harness calls
+      the sim API directly, so it can NEVER notice that no view does. Reachability needs a live drive.
+- [x] Six new read-only readouts on `Sim/Acquisition.swift`; the refusal copy now names the duration
+      and where to watch it. No new persisted state, cash invariant untouched.
+- [x] **Driven live on the iPad Air 13" sim** (`-devScenario integ`, committed): Settle now · $4.8M
+      moved cash $19.605B → $19.600B, returned all 5 sidelined crews, Needs Attention 9 → 1, and
+      correctly left the integration running at 18 mo left.
+- [x] ⚠️ **A HARNESS DEFECT FOUND AND FIXED IN THE SAME PASS — `AcquisitionMXVerify` section D was
+      reporting GREEN while never executing.** Its setup searched the 12 cheapest carriers for one
+      that happened to dispute and, on a miss, ran `check(true, "(skipped)")` — the documented
+      worst bug class here: 53/53 ✅ with the settle coverage silently absent. Two causes: the
+      dispute needs the player's MAINLINE family to intersect the target's (a lone A320 only
+      disputes an A320 operator, and `competitorSeed` rerolls per `Simulation()`), AND
+      `applySeniorityDispute` sidelines `round(pool.count * 0.35)` = **ZERO for a one-crew pool**.
+      Setup is now DERIVED (pick the target first, buy 3 aircraft in a family IT flies), a skip is a
+      **FAIL**, and `printResult()` prints a **SECTION ROLL-CALL** (`sections A+B+C+D`) that fails on
+      any missing stamp — validated against sabotage, which printed `sections A+B+C ❌ 1 FAILED`.
+      ⚠️ **And the TOTAL is not evidence either:** section A emits 2 checks per inherited aircraft and
+      the carrier varies with `competitorSeed`, so the same code prints 42/53/56/63. **Check the
+      roll-call, not the count and not the ✅.**
+- [ ] **STILL OWED: send the customer reply.** Draft written, not sent — awaiting the designer's go.
+      Should say integration finishes on its own, give both speed figures, and mention that the next
+      build shows a live countdown in Ops.
+
 ### ⏭️ NEXT SESSION — MX + TRAINING AUTOMATION AT SCALE (designer issue #4, deferred on purpose)
 Designer, 8 Sep: *"For my 200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and
 near all-time at anything faster. This really needs to be automated via maintenance bases or

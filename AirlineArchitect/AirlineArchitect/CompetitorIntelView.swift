@@ -421,7 +421,11 @@ struct CompetitorIntelView: View {
             return "Acquisitions unlock at $1B net worth — \(compactMoney(needed)) to go."
         case .alreadyOwned:          return "Already part of your group."
         case .integrationInProgress(let name):
-            return "You're still integrating \(name). One at a time."
+            // The duration is the whole answer here: integration finishes on elapsed
+            // time alone, so a bare "one at a time" reads as "you did something
+            // wrong" and sent a paying customer to support asking how to finish it.
+            let left = sim.integrationMonthsRemaining
+            return "You're still integrating \(name) — about \(left) more months. It completes on its own; Ops ▸ Integration tracks it."
         case .lifetimeCapReached(let cap):
             return "You've acquired \(cap) carriers — no regulator will approve another."
         case .cannotAfford(let needed):

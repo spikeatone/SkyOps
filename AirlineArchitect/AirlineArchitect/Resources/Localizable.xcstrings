@@ -741,6 +741,16 @@
         }
       }
     },
+    "%lld crews are sidelined while the two seniority lists are merged.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Crews sind freigestellt, während die beiden Senioritätslisten zusammengeführt werden."
+          }
+        }
+      }
+    },
     "%lld crews grounded on lapsed currency — requalify to get them back on the line": {
       "localizations": {
         "de": {
@@ -767,6 +777,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld umkämpfen derzeit eine deiner Routen."
+          }
+        }
+      }
+    },
+    "%lld days left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Tage übrig"
           }
         }
       }
@@ -837,6 +857,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld einsatzbereit für %lld Flugzeuge · %@ pro Flugzeug"
+          }
+        }
+      }
+    },
+    "%lld mo left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Mon. übrig"
           }
         }
       }
@@ -1182,12 +1212,32 @@
         }
       }
     },
+    "1 crew is sidelined while the two seniority lists are merged.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Crew ist freigestellt, während die beiden Senioritätslisten zusammengeführt werden."
+          }
+        }
+      }
+    },
     "1 crew lapsed — can't fly until requalified": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "1 Crew mit abgelaufener Lizenz – flugunfähig bis zur Requalifizierung"
+          }
+        }
+      }
+    },
+    "1 day left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Tag übrig"
           }
         }
       }
@@ -1208,6 +1258,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 Drehkreuz"
+          }
+        }
+      }
+    },
+    "1 mo left": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Mon. übrig"
           }
         }
       }
@@ -2792,6 +2852,16 @@
         }
       }
     },
+    "Completes on its own in about %lld months — there's nothing to finish early. Raise the sim speed to get there sooner.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird in etwa %lld Monaten von selbst abgeschlossen — vorzeitig beenden ist nicht möglich. Erhöhe die Sim-Geschwindigkeit, um schneller dorthin zu kommen."
+          }
+        }
+      }
+    },
     "Confirm": {
       "localizations": {
         "de": {
@@ -3618,6 +3688,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Betriebsende"
+          }
+        }
+      }
+    },
+    "Ends the dispute today and puts every sidelined crew back on the line.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beendet den Streit noch heute und bringt jede freigestellte Crew zurück in den Dienst."
           }
         }
       }
@@ -4488,6 +4568,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Versicherungsprämien"
+          }
+        }
+      }
+    },
+    "Integration": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integration"
+          }
+        }
+      }
+    },
+    "Integration bill": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Integrationskosten"
           }
         }
       }
@@ -7195,6 +7295,26 @@
         }
       }
     },
+    "Seniority dispute": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senioritätsstreit"
+          }
+        }
+      }
+    },
+    "Seniority settled — all crews are back on the line.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seniorität geregelt — alle Crews sind zurück im Dienst."
+          }
+        }
+      }
+    },
     "Serves %lld aircraft · %lld of %lld hangar slots free": {
       "localizations": {
         "de": {
@@ -7271,6 +7391,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gewartet von"
+          }
+        }
+      }
+    },
+    "Settle now · %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt beilegen · %@"
+          }
+        }
+      }
+    },
+    "Settle now · need %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt beilegen · %@ nötig"
           }
         }
       }
@@ -8503,6 +8643,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Was auf dem Rumpf steht — meist eine Kurzform deines Namens."
+          }
+        }
+      }
+    },
+    "Where both airlines fly the same city pair those routes split passengers between them. Closing or reassigning one of each duplicate is the main way a merger pays off.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo beide Airlines dasselbe Städtepaar fliegen, teilen sich diese Routen die Passagiere. Eine der doppelten Routen zu schließen oder neu zuzuweisen ist der wichtigste Weg, damit sich eine Fusion auszahlt."
           }
         }
       }

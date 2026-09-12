@@ -5,7 +5,7 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 10 September 2026._
+_Snapshot: 12 September 2026._
 
 **► ⭐⭐⭐ 1.8.0 (build 57) IS LIVE — APPROVED and `READY_FOR_SALE` (confirmed via the ASC API,
 10 Sep 2026). Next new build = 58+.** The whole chain ran from the CLI: bumped 1.7.0→1.8.0 / 56→57
@@ -24,6 +24,48 @@ that field at 4000 and the first draft was 4571, which would have truncated the 
 mid-sentence). German re-scanned against a fresh build: clean but for the 2 known DEBUG-only livery
 strings. **4.3(a) note: Vineyard Architect is now APPROVED**, so the verifiable-titles line names
 three independently-approved titles rather than two.
+
+**► ⭐⭐ INTEGRATION IS VISIBLE NOW, AND THE SETTLE LEVER IS WIRED — built 12 Sep, on `main`,
+NOT in a build.** A paying customer emailed asking *how* to "fully integrate" the subsidiary they'd
+bought, because the game refused a second acquisition and told them to finish the first. **The
+answer is that there was nothing to do** — integration completes on ELAPSED TIME alone (18
+sim-months), so the honest reply is "raise the sim speed" (32 min at 100×, 2.2 h at 25×). But the
+question was the game's fault, and the audit found two real gaps:
+⚠️ **NO VIEW READ `activeIntegration`. AT ALL.** The window, the monthly bill, the seniority dispute
+and the settlement price were all live sim state with ZERO UI surface — the only thing the player
+ever saw was the refusal text.
+⚠️ **`settleSeniority()` had ZERO CALL SITES anywhere.** The "settle for 8%" lever — built, tested,
+persisted, balanced — was unreachable; the sidelined crews could only be waited out. **Second time
+an orphaned sim lever has surfaced via a customer question rather than a harness** (see ASSIGN TO
+NEW ROUTE). A headless harness calls the sim API directly, so it can never notice that no VIEW does.
+Shipped: a new **OPS ▸ INTEGRATION drawer** (`OpsSection.integration`, auto-opened by
+`beginIntegration`, defaults OPEN on old saves since the case is absent from their persisted
+collapsed set) with the subsidiary, a progress bar, the bill, the dispute, and the plain-language
+line the email asked for — *"Completes on its own in about N months — there's nothing to finish
+early. Raise the sim speed to get there sooner."* — plus the green **`Settle now · $X`** button, six
+new read-only readouts on `Sim/Acquisition.swift`, and a refusal text that now names the duration
+AND where to watch it. No new persisted state; cash invariant untouched.
+Verified: **`AcquisitionMXVerify` ALL GREEN, sections A+B+C+D all stamped** (C and D are new) ·
+RoundTrip 13/13 · SaveCompat 12/12 (`OpsSection` is persisted) · OpsTweaks 43/43 · Release build
+clean · 15 German entries added.
+⚠️ **A HARNESS DEFECT FOUND IN THE SAME PASS: `AcquisitionMXVerify` section D was GREEN while never
+executing.** It searched the 12 cheapest carriers for one that happened to dispute and on a miss ran
+`check(true, "(skipped)")` — **53/53 ✅ with the whole settle-lever coverage absent.** Same worst
+class as the `RotationVerify`/`MXCoverageVerify` silent no-ops, via a different route: a SKIP THAT
+COUNTS AS A PASS. Setup is now derived (pick the target first, buy 3 aircraft in a family IT flies)
+and a skip is a FAIL. ⚠️ **And do NOT cite this harness by its total** — section A emits 2 checks per
+inherited aircraft and the carrier varies with `competitorSeed`, so the same code prints 53/56/63.
+`printResult()` now prints a SECTION ROLL-CALL and fails on a missing stamp. **Check the roll-call,
+not the ✅.** **DRIVEN LIVE on the iPad Air 13" sim** (`-devScenario integ`, committed): tapping
+Settle now · $4.8M moved cash $19.605B → $19.600B, returned all 5 sidelined crews, dropped Needs
+Attention 9 → 1, and correctly left the integration itself running at 18 mo left.
+⚠️ **STILL OWED: the reply to the customer.** Draft written; not sent — the designer hasn't said to
+send it. It should say integration finishes on its own, give the two speed figures, and mention that
+the next build shows a live countdown in Ops.
+⚠️ **A localization FALSE POSITIVE to not "fix":** the Sim-layer `L()` scan reports `'%@ ↔︎ %@'` as a
+German gap. It is not one — the catalog carries the escaped spelling `"%@ ↔\u{FE0E} %@"`, the
+IDENTICAL string at runtime (verified by comparison). Re-adding the literal-spelling key
+reintroduces a **duplicate key in a Swift dictionary literal, which is a runtime TRAP**.
 
 **► THE 1.7 HANG FIXES — merged to `main`, shipping IN 1.8.0.**
 TelemetryDeck on the LIVE app: `hang.under3s` ×43, a first-ever `hang.3to10s` ×1, and

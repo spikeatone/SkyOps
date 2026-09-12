@@ -184,6 +184,52 @@ extension Simulation {
     /// them would hide it.
     var integrationInProgress: Bool { activeIntegration != nil }
 
+    // MARK: Integration readouts (for the OPS ▸ Integration drawer)
+    //
+    // ⚠️ WHY THESE EXIST. An integration completes on ELAPSED TIME ALONE — there is
+    // no action that finishes it early — and for a long time nothing in the view
+    // layer read `activeIntegration` at all. The duration was announced once, in an
+    // Ops feed entry that scrolls away, and the acquisition block then said only
+    // "One at a time." A paying customer wrote in asking how to "fully integrate"
+    // their first airline, because the game blocked them without ever saying that
+    // waiting WAS the answer. These turn that state into something displayable.
+
+    /// Sim-months left before the active integration completes (0 when none).
+    /// Rounded UP, so it only reads "0 months" once it genuinely finishes.
+    var integrationMonthsRemaining: Int {
+        guard let ig = activeIntegration else { return 0 }
+        return max(0, (ig.endTick - tick + Simulation.ticksPerMonth - 1) / Simulation.ticksPerMonth)
+    }
+    /// How far through the integration, 0…1 — the progress bar's fill.
+    var integrationProgress: Double {
+        guard let ig = activeIntegration else { return 0 }
+        let span = Double(ig.endTick - ig.startTick)
+        guard span > 0 else { return 1 }
+        return min(1, max(0, Double(tick - ig.startTick) / span))
+    }
+    /// Sim-days until the seniority dispute lapses on its own. nil once settled
+    /// (or with no integration), which is also what hides the settle button.
+    var seniorityDaysRemaining: Int? {
+        guard let ig = activeIntegration, !ig.isSettled else { return nil }
+        return max(0, (ig.seniorityExpiryTick - tick + 1439) / 1440)
+    }
+    /// Crew actually sidelined by the dispute right now — the cost the player can
+    /// SEE, and the number that makes settling feel worth its price.
+    var senioritySidelinedCount: Int {
+        guard let ig = activeIntegration, !ig.isSettled else { return 0 }
+        return ig.disputedFamilies.reduce(0) { n, fam in
+            n + (crewPoolsByFamily[fam]?.lazy.filter { $0.status == .sidelined }.count ?? 0)
+        }
+    }
+    /// Can the player end the dispute now? Mirrors `settleSeniority`'s own guards
+    /// so the button can never be offered when the call would refuse.
+    var canSettleSeniority: Bool {
+        guard let ig = activeIntegration, let cost = ig.senioritySettlementCost else { return false }
+        return playerBalance >= cost
+    }
+    /// The settlement price, or nil when there is nothing to settle.
+    var pendingSenioritySettlement: Int? { activeIntegration?.senioritySettlementCost }
+
     func isSubsidiary(_ code: String) -> Bool { subsidiaries.contains { $0.code == code } }
 
     /// The asking price for a carrier: its estimated value plus a control

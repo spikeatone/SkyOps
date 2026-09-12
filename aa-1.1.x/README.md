@@ -157,12 +157,36 @@ group never compiles them into the build.
   `.available`), and course COST can't be measured by cash delta while flights are settling — read
   `maintenanceSpend` minus the ledger's opex, or park the fleet.
 - **`AcquisitionMXVerify.swift`** — the acquisition bugs from the designer's playthrough (8 Sep
-  2026), **33/33**. The headline: `inheritFleet` was the ONE owned-aircraft path that never called
-  `seedMXState`, so every inherited tail defaulted to "due at 0 cycles" and the whole fleet arrived
-  GROUNDED needing D checks the open books had said weren't coming (measured 8/8 grounded, $83.5M =
-  24% of the purchase price in forced MX at close). Also covers the live subsidiary P&L
-  (`subsidiaryFinancials` over routes stamped with an operator of record), `openBooks` refusing a
-  carrier you already own, and the cash invariant through a full acquisition.
+  2026) plus the integration-visibility work (12 Sep). **Cite it by its SECTION ROLL-CALL
+  (`sections A+B+C+D`), NOT by its total** — section A emits 2 checks per inherited aircraft and the
+  acquired carrier varies with `competitorSeed`, so the same code prints 53, 56 or 63. The headline: `inheritFleet` was
+  the ONE owned-aircraft path that never called `seedMXState`, so every inherited tail defaulted to
+  "due at 0 cycles" and the whole fleet arrived GROUNDED needing D checks the open books had said
+  weren't coming (measured 8/8 grounded, $83.5M = 24% of the purchase price in forced MX at close).
+  Also covers the live subsidiary P&L (`subsidiaryFinancials` over routes stamped with an operator
+  of record), `openBooks` refusing a carrier you already own, and the cash invariant through a full
+  acquisition. **Sections C and D (12 Sep) guard the integration UI's data contract**: the new
+  read-only readouts (`integrationMonthsRemaining` / `integrationProgress` /
+  `seniorityDaysRemaining` / `senioritySidelinedCount` / `canSettleSeniority` /
+  `pendingSenioritySettlement`), `beginIntegration` auto-opening the Ops drawer, the countdown the
+  refusal copy quotes, and then the settle lever end to end — exact charge, every sidelined crew
+  returned, no double-settle, **the integration SURVIVES settling** (settling the dispute is not
+  finishing the integration — a real trap, since both live on the same `Integration` value), the
+  cash invariant, and completion on ELAPSED TIME alone. ⚠️ Section B must keep
+  `sim.mxAutoServiceAChecks = false`: with auto-A on (the default since 1.8) there is no A-card left
+  to observe and the test goes red for the wrong reason.
+  ⚠️ **Neither this nor any headless harness could have caught the bug the customer found** — that
+  `settleSeniority()` had no CALL SITE and no view read `activeIntegration`. A harness drives the sim
+  API directly, so an orphaned lever looks perfectly healthy to it. Reachability needs a live drive.
+  ⚠️ **AND SECTION D ITSELF SHIPPED GREEN WHILE NEVER RUNNING (fixed 12 Sep).** Its first cut
+  searched the 12 cheapest carriers for one that happened to dispute and on a miss ran
+  `check(true, "(skipped)")` then returned — **53/53 ✅ with all the settle coverage absent.** Two
+  causes: `disputed` = the player's MAINLINE families ∩ the target's (a lone A320 only disputes an
+  A320 operator, and `competitorSeed` rerolls per `Simulation()`), and `applySeniorityDispute`
+  sidelines `round(pool.count × 0.35)` = **ZERO for a one-crew pool**. Setup is now DERIVED (target
+  first, then 3 aircraft in a family IT flies) and a skip is a FAIL, and `printResult()` fails on any
+  missing section stamp. **RULE for every harness here: never write a `check(true, "(skipped)")`
+  escape hatch — a section that cannot set itself up has FAILED, not passed.**
 - **`CarrierHubVerify.swift`** — real-world hub accuracy (8 Sep 2026), **650/650**. Asserts every
   one of the 141 roster carriers has at least one hub, that each hub is a real airport code, and —
   the actual fix — that `Competitor.profile` reports the carrier's OWN hubs when any lie in the

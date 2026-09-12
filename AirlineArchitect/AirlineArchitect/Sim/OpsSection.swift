@@ -10,8 +10,12 @@
 
 import Foundation
 
+/// ⚠️ ADDING A CASE IS SAFE: `restore` reads the persisted set with
+/// `compactMap(OpsSection.init(rawValue:))`, so an unknown raw value is dropped
+/// and a save written before the case existed simply doesn't list it — which
+/// leaves the new drawer OPEN, the right default for one the player hasn't met.
 enum OpsSection: String, CaseIterable, Codable, Hashable {
-    case reputation, opportunities, fuelHedge, needsAttention, maintenance, incentives, hubs, competition, events
+    case reputation, opportunities, fuelHedge, integration, needsAttention, maintenance, incentives, hubs, competition, events
 }
 
 extension Simulation.Decision.Kind {
