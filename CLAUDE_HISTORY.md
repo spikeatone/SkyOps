@@ -5776,3 +5776,608 @@ fixed. **The root cause is a PAIR, and 1.7 shipped both halves:**
   the regression net for the SAVE-LOSS bug class had been dark since 8 Sep. Repaired
   to `crewAutoRecurrent`; **12/12**. **If a harness prints nothing, suspect this before
   suspecting the code.**
+
+---
+
+## Resolved items (moved from CLAUDE.md "Open" list, 2026-09-12)
+
+> These bullets lived under CLAUDE.md's "Open / not yet decided" heading but described work
+> already RESOLVED / BUILT / SHIPPED (or were stale claims since corrected). Moved here verbatim
+> to keep CLAUDE.md's open list to genuinely-open questions. Where a bullet carried an *active
+> rule* (e.g. the persistence persisted/not-persisted spec, the roster re-verification note), a
+> tight version of that rule was kept in CLAUDE.md and points back here.
+
+- ~~Xcode project shell doesn't exist yet~~ **RESOLVED long ago (stale line
+  removed as a claim).** The Xcode project exists and the app has SHIPPED through
+  1.1 (build 33, public debut) — `AirlineArchitect/AirlineArchitect.xcodeproj`,
+  SwiftUI, file-system-synchronized groups. This bullet was a leftover from the
+  pre-native planning era; kept only as a marker of how far the project has come.
+- **Persistence — BUILT (native app), and NOT via SwiftData.** Went with a
+  plain Codable snapshot to disk (JSON), not SwiftData/Core Data — the sim state
+  is a self-contained object graph that serializes cleanly, and a single-slot
+  save doesn't need a database. `Persistence.swift` has `GameSnapshot` (+ per-
+  aircraft/route/crew/finance sub-structs) and `GameStore` (save/load/clear to
+  Documents/savegame.json). `Simulation.snapshot()` exports and
+  `Simulation.restore(from:)` imports (both live IN Simulation.swift so they can
+  set the `private(set)` state). ONLY persisted: identity, balance, tick, all
+  economy accumulators, PURCHASED aircraft, open+closed routes (with history),
+  crew pools/reserves, finance snapshots, camera, firedMilestones, the traffic
+  count. NOT persisted (regenerated on load): background/competitor traffic
+  (`setFleetSize(savedCount)`), live event effects (reset to Normal), the used
+  market (re-inited), airport ground-stops (cleared), slots (re-provisioned then
+  decremented per open route). Aircraft reference type-by-id and airport-by-code;
+  crew reconstruct by their per-family id. ContentView autosaves on scenePhase !=
+  .active (background/quit) and, on cold launch, shows `ResumePromptView`
+  (Continue / Start a New Airline) if a save exists — bankruptcy and "new
+  airline" clear the save. Verified: JSON round-trip (7KB) restores every field
+  exactly AND the restored sim keeps running/earning (29 new flights, balance
+  advancing). SwiftData model classes are still present but unused; this
+  supersedes the "SwiftData returns in Phase 5" plan.
+- **ROUTE COMPETITION — BUILT (native app), a first real version.** Rival
+  carriers now REACT to the player: `tickCompetition()` (daily) has rivals ENTER
+  the player's PROFITABLE, established (≥8-day-old) routes — up to 3 per route,
+  ~6%/day, chasing the traffic — and occasionally EXIT (churn, ~2%/day). Each
+  rival SPLITS the route's demand via `Route.competitionShare(reputation:)` =
+  `1/(1 + level × (0.6 − 0.3·rep/100))`, floored at 0.2 — so 2 rivals at rep 70 ≈
+  −44% demand. A strong REPUTATION both defends share (the factor shrinks with
+  rep) AND deters entrants (entry rate halves at rep 100). Applied in `rollRevenue`
+  for owned aircraft only. Entries/exits log to the Ops feed (MARKET) naming a
+  Big-Four/ULCC rival; a dedicated Ops "Competition" box lists contested routes +
+  rivals + the demand hit. Persisted (`competitionLevel`/`competitors` on Route).
+  Verified 8/8 headless + live. STILL NOT modeled (deliberate, future): rivals
+  competing for SLOTS at open time, or having their own economy/network — this is
+  demand-share competition on the player's routes, which is the impactful, visible
+  slice. The background-traffic airline NAMES are still separate cosmetic identity.
+- **PLAYER COMPETITION ACTIONS — BUILT (native app; designer request). Three
+  route-level marketing levers on each Ops "Competition" row, a real
+  spend-to-fight-rivals loop.** All three are UPFRONT MARKETING spend and a NEW
+  capital-out term in the Finance cash invariant (`totalMarketingSpend`, "Marketing"
+  ledger row) — timed per-route effects in a "player promotions" section of
+  Simulation.swift:
+  - **Ad campaign** ($80k + $150·demand, 14 days): +15% demand, SCALED BY THE
+    ECONOMY (`× currentEvent.loadMultiplier` — a recession dampens it, a boom
+    amplifies it, so it's not always worth the spend). No fare change.
+  - **Fare war** ($150k + $300·demand, 21 days): fare ×0.80 (less per-seat) +
+    share ×1.25 AND — designer's call — **drives rivals off faster** (rival exit
+    prob ×3 on that route in `tickCompetition`). The aggressive reclaim lever.
+  - **Loyalty push** ($250k + $400·demand, 45 days): sticky share ×1.20, no fare
+    cut — the priciest/longest DEFENSIVE bookend. Cost ladder ad<fare<loyalty.
+  - State: `playerFareWarUntil`/`adCampaignUntil`/`loyaltyPushUntil` ([routeId:
+    expiryTick], persisted nil-safe), `tickPromotions()` daily cleanup. Actions
+    `startFareWar`/`launchAdCampaign`/`startLoyaltyPush` (afford + not-active gated;
+    fare war also requires a rival). Effects live in `rollRevenue`'s fare/demand
+    stack. UI: 3 buttons per contested row (`promoActions`); active shows "Nd left".
+    Loyalty purple is theme-aware (`#C79CFF` dark / `#6E43A6` light — the light
+    lavender washes out on white). Verified **22/22 headless** (cash invariant holds
+    after every action + 90 sim-days, marketing spend exact, cost ladder, broke-guard,
+    save/load round-trip) via a `cashInvariantResidual()` DEBUG test hook (kept —
+    a reusable invariant guard, like `devInjectCash`; absent from Release) + live.
+  - The hub drawers (Network ▸ Hubs) ALSO gained a "Route Opportunities" subsection
+    (mirrors Ops ▸ Route Opps via `sim.suggestRoute`); Ops ▸ Route Opps gained
+    per-hub "BY HUB" drawers (`hubRouteOpportunities(from:)`).
+- **The airline roster IS region-aware (full narrative).** There are 8 region
+  rosters in `Airline.swift` (`canadaRoster`/`mexicoRoster`/`centralAmericaRoster`/
+  `caribbeanRoster`/`southAmericaRoster`/`africaRoster`/`europeRoster`/`asiaRoster`
+  + the US default) with per-region airport-code Sets and `region()`/`roster(for:)`/
+  `pick(...)` classification — so background carriers match the leg's region. This
+  bullet was PARTLY stale — the "no region mechanism at all / single fixed
+  US-weighted list" claim was corrected. **The active rule (kept in CLAUDE.md):**
+  each roster is a hand-curated literal with no self-updating mechanism; roster
+  corrections (e.g. the Alaska Airlines update) get applied because someone reported
+  and independently verified them — treat every roster entry as due for eventual
+  re-verification.
+- **REPUTATION — BUILT (native app).** A service-quality stat (0–100, starts 70)
+  that feeds back into demand. FALLS when the operation fails passengers (an
+  aircraft grounded −4 at AOG-hold start, a flight held for crew −2) and RECOVERS
+  slowly through flights completed cleanly (+0.15 each). `reputationDemandMultiplier`
+  = `0.85 + 0.30·rep/100` (0.85 at rep 0 · 1.0 at rep 50 · 1.15 at rep 100), applied
+  to owned-aircraft demand in `rollRevenue`. It ALSO defends market share vs
+  competitors (see ROUTE COMPETITION above). Dedicated Ops "Reputation" box: score
+  bar + tier (Poor/Fair/Good/Excellent) + signed demand %. Persisted. The feedback
+  loop: bad service → fewer pax → less revenue → harder to recover. Resolves the
+  original-design-brief reputation item (demand curves + hub effect were already
+  built).
+- **HUB / NETWORK EFFECT — BUILT (native app).** Concentrating routes through
+  an airport now pays: `Simulation.hubDemandMultiplier(originCode:destCode:
+  excludingRouteId:)` gives a route `+hubBonusRate` (8%) demand per OTHER player
+  route touching either endpoint, capped at `hubBonusCap` (+80%). So a coherent
+  hub-and-spoke network beats scattered point-to-point (connecting passengers).
+  Applied in `rollRevenue` for the player's own aircraft only (background traffic
+  isn't part of the player's network); `excludingRouteId` stops a route counting
+  itself. Folded into the `routeDailyDemand`/`projectedLoadFactor` UI helpers and
+  shown as a "Hub bonus +X%" row in the route-confirm panel. Verified: 2 routes
+  out of DEN give each DEN route +16%, an isolated pair stays ×1.00.
+- **MICRO-INTERACTIONS / DELIGHT PASS — BUILT (native app; designer request for
+  polish + "surprise and delight").** New `Delight.swift` holds the shared
+  primitives: a `Motion` enum of standard spring curves (glide / pop / toast) so
+  everything animates consistently; a `Pressable` ButtonStyle (`.pressable()`) —
+  scale+fade on press — applied to the control-bar / speed-bar / eye buttons; a
+  `PlaneFlyBy` easter egg; and the `MilestoneToast`. Wired in: (1) the Cash-on-
+  hand value is a rolling counter (`.contentTransition(.numericText())`); (2) the
+  Network control-bar panels, route-flow, tooltip and airport card GLIDE in/out
+  (move+opacity transitions driven by `.animation(Motion.glide, value:)` on the
+  overlay stack); (3) MILESTONE CELEBRATIONS — `Simulation` queues one-time
+  `Celebration`s (first flight, fleet 5/10/25, net worth $50M/$100M/$250M/$500M/
+  $1B — thresholds ABOVE the $30M start so they're real growth, and a route
+  recouping its opening cost from `settleLeg`); ContentView shows the first as a
+  gold-rimmed toast that glides down from the top and auto-dismisses (3.6s). Fired
+  once each via a `firedMilestones` Set; `checkMilestones()` runs in the tick
+  loop. **The badge now uses app-aesthetic SF SYMBOLS (not emoji), tinted gold:**
+  `Celebration.symbol` (airplane / airplane.departure / trophy.fill /
+  chart.line.uptrend.xyaxis / airplane.circle.fill). For a ROUTE milestone (a
+  route recouping), `Celebration.originCode`/`destCode` drive a city-pair line
+  rendered with the ⇄ `arrow.left.arrow.right` icon between the codes (matches the
+  Figma "RT Route Arrows" 61:4824 + the Ops boxes) instead of a unicode ↔ in the
+  title string. **MILESTONE LADDER EXPANDED (1.1.x):** added first_route,
+  routes 5/10/25, first_intl (first cross-`Airline.region` route), regions_4/7
+  (distinct regions served — a "spread" reward), flights_100 (a beat between
+  first_flight and 1,000), first_widebody, iconic SBH/PPT (you EARN St. Barths —
+  it's DH8B-only — and Tahiti; both use `beach.umbrella.fill` + the city-pair
+  render), first_subsidiary (acquisition) and went_public (IPO). All one-time via
+  `firedMilestones`, spread across the whole game arc so they're not spammy.
+  Verified 43/43 headless (`aa-1.1.x/RegDelightVerify.swift`) that each fires on
+  its trigger. NOTE the 3-slot `celebrations` display cap: a burst that fires >3
+  in ONE tick (e.g. a cash-injected test that trips the whole net-worth ladder at
+  once) drops the earliest from the toast QUEUE — a display cap, not a
+  fire-failure (they're still in `firedMilestones`); real play fires them on
+  separate ticks. (4) MAP ROUTE-OPEN RIPPLE — `routeOpenPulse` (set in `openRoute`) drives
+  two staggered expanding rings at both endpoints in `MapView.drawRoutePulse`
+  (tick-driven over 48 ticks, no SwiftUI animation — the Canvas already redraws
+  each tick; speed-dependent, acceptable). (5) EASTER EGG — tapping the "NETWORK"
+  title zips a ✈️ across the header in an arc (`PlaneFlyBy`, replayed via `.id`).
+  Milestone toast verified visually; the rest are standard SwiftUI transitions.
+- **COLD-LAUNCH SPLASH — BUILT (designer request, "route-network reveal"
+  chosen over a Star Wars-style logo fly-in).** `SplashView.swift`: ~2.6s on a
+  brand-navy sky with a faint night grid — four dashed great-circle arcs draw
+  themselves in the game's own colours (climb green / cruise blue / descent
+  amber / competitor purple; the ArcShape reuses the in-game 12%-of-distance
+  bulge proportion), destination endpoints pulse like the route-open ripple,
+  then the logo badge springs in at the naming screen's badge position (soft
+  crossfade handoff) with a "Build the sky." tagline — WORDING IS MINE, not
+  designer-supplied; swap the string if wanted. Tap anywhere skips; Reduce
+  Motion collapses it to a static network + calm logo fade. Shown once per
+  process launch (ContentView `showSplash`, zIndex 10 over the load menu /
+  naming screen). Verified via timed simulator frame captures.
+- **SUPERSEDED AGAIN (2026-08-09) — the cold-launch backdrop is now a full-bleed
+  AERIAL RUNWAY scene, and the blend-mode approach below is GONE.** The designer
+  supplied FOUR pre-rendered assets — one per (idiom × theme): iPhone dark (a
+  charcoal photo of a runway with a queue of airliners taxiing to line up) / iPhone
+  light (the same scene as a graphite sketch on off-white) / iPad dark / iPad light
+  (the same recomposed for 4:3). Figma `Airline-Architect-Production` nodes 122:4882
+  (iPhone dark) / 122:4883 (iPhone light) / 122:4881 (iPad dark) / 122:4887 (iPad
+  light). Files: `Resources/Brand/LaunchBackdrop{Dark,Light}.png` (phone) +
+  `LaunchBackdropPad{Dark,Light}.png` (iPad); the old single `LaunchBackdrop.png` /
+  `LaunchBackdropPad.png` were DELETED.
+  - **No more blend mode.** Each asset is already theme-correct, so `ArchitectArt.art(regular:dark:)`
+    picks the right one and it's drawn DIRECTLY (the `BackdropBlend` `.multiply`/`.colorInvert().screen`
+    modifier is removed). `ArchitectBackdrop`'s public API (`opacity`, `forcedScheme`) is unchanged, so
+    callers (SplashView/AirlineNamingView/SaveSlotsView, all via ContentView's `coldLaunchBackdrop`) are
+    untouched.
+  - **ALWAYS `.fill` (full-bleed), NOT `.fit` — and the 0.98 inset is GONE.** These are opaque full-frame
+    photos, so ANY margin (the old iPad `.fit` letterbox in landscape, or the 0.98 inset) exposed the
+    image's rectangular EDGE against the page background — a visible seam the designer flagged ("I can see
+    the image edges"). `.fill` covers every pixel so there's no edge. iPad PORTRAIT is an exact fit (4:3
+    art on 4:3 canvas, no crop); iPad LANDSCAPE center-crops the diagonal runway scene (keeps the focal
+    runway + queue) — verified edge-free in both themes.
+  - **Opacity: dark 0.25, light 0.42** (`darkOpacity`/`lightOpacity`). Light is HIGHER on purpose — the
+    graphite-on-white sketch reads fainter at a given opacity than the dark photo-on-navy, so it needs
+    more to land with equal presence (designer: "bump up light, it's too faint"). Both idioms share the
+    single `lightOpacity` via `coldLaunchBackdrop = isDark ? darkOpacity : lightOpacity`, so iPad-light ==
+    iPhone-light by construction (designer: "white iPad opacity needs to match white iPhone").
+  - Verified live on iPhone (dark+light) and iPad Pro 13" (portrait + LANDSCAPE, both themes) — all six
+    full-bleed with no visible edges. The `-backdropTest` harness still works (it uses the same
+    `ArchitectBackdrop`). Everything below in this bullet describes the OLD pencil-sketch blend approach —
+    kept for history but NO LONGER how it works.
+- **(HISTORICAL) 2026-08-03 — the cold-launch backdrop was an AVIATION PENCIL
+  SKETCH, not the drafting-tools motif.** The designer replaced the tools still
+  life with an aviation sketch (airliner + control tower + pilot's cap) on the
+  naming/splash/load-menu screens (new Figma `1:2` light / `1:456` dark).
+  `Resources/Brand/ArchitectTools.png` → `LaunchBackdrop.png` (a grayscale pencil
+  drawing on WHITE), and `ArchitectBackdrop` was rewritten: it's now **FULL-BLEED**
+  (the old rotation/scale/`centre`/`tint`/`figmaOpacity` API is GONE) and adapts
+  the one grayscale source to each theme with a **BLEND MODE** that preserves the
+  pencil shading — `.multiply` on light (drops the white ground → faint gray
+  sketch), `.colorInvert()` + `.screen` on dark (→ faint light sketch on navy).
+  New API: `ArchitectBackdrop(opacity:forcedScheme:)` — the splash passes
+  `forcedScheme: .dark` (always navy); naming/load-menu read the environment
+  scheme. **Opacity settled at 0.25 for BOTH themes** (`lightOpacity` =
+  `darkOpacity` = 0.25 — device-tuned down from an initial 0.40/0.35, which the
+  designer judged as competing with the UI; the designer picked 0.25 as the sweet
+  spot for both). Callers dropped the tint arg; `ArchitectBackdropLayer` was
+  removed (unused). The **cross-series portability is GONE** — AA's launch art is
+  aviation-specific now, so the sibling apps (Golf/Vineyard) keep the tools motif
+  independently.
+  - **TWO ASSETS, ONE PER IDIOM (the designer rendered a dedicated iPad version).**
+    The phone art is a TALL composition; on the wide iPad canvas it cropped the
+    airliner's wings, so the designer re-rendered it 4:3 (Figma `116:4932` "on
+    white", 1086×1448 — matching the iPad's PORTRAIT aspect) with the full wingspan
+    in frame. `LaunchBackdropPad.png` ships alongside `LaunchBackdrop.png` and is
+    picked by **horizontal size class** (`ArchitectArt.backdropImage` /
+    `.backdropImagePad`). Scaling the phone art was tried first and rejected — a
+    purpose-composed asset beats any fit/scale compromise.
+  - **Phone = `.fill`, iPad = `.fit` at `regularScale` 0.98.** The pad art shares
+    the iPad's PORTRAIT aspect, so at ~0.98 portrait is effectively full-bleed while
+    LANDSCAPE stays contained — one constant covers both orientations, no
+    orientation branching. **A `.fill` on iPad is WRONG in landscape**: it scales the
+    drawing up to cover the width and crops the tower/cap off (the designer flagged
+    exactly this). 0.98 = 0.85 +15%, the designer's call after seeing 0.85.
+  - **The "on white" source drives BOTH themes** through the blend — the designer's
+    separate "on dark" export (`116:4936`) was NOT needed. Ask for on-white renders.
+  - **GOTCHA — `⌘⇧A` (Toggle Appearance) does nothing while `-backdropTest` is up.**
+    `ArchitectBackdropTestView` PINS the scheme via `.preferredColorScheme(...)` off
+    the `-backdropLight` arg, which overrides the system appearance. Relaunch with/
+    without `-backdropLight` to switch themes there; the real app screens follow the
+    environment normally.
+  - Verified live on iPhone (naming light+dark, load menu) and iPad (naming
+    light+dark, portrait AND landscape).
+  Everything below in this bullet describes the OLD tools motif and its
+  geometry/opacity/portability — kept for history but NO LONGER how it works.
+- **(HISTORICAL) ARCHITECT'S-TOOLS BRAND MOTIF — BUILT (designer, Figma `90:4819` "home - dark").
+  A faint drafting-tools still life behind the cold-launch screens, intended as a
+  COMMON VISUAL THEME ACROSS THE WHOLE ARCHITECT SERIES** (Airline Architect, Golf
+  Course Architect, Vineyard Architect…). `ArchitectBackdrop.swift` +
+  `Resources/Brand/ArchitectTools.png` (T-square, mechanical pencil, compass —
+  white line art on alpha, 892×1200).
+  - **DELIBERATELY PORTABLE:** the file depends on nothing app-specific, so reusing
+    it in a sibling app is "copy 1 Swift file + 1 PNG." The art is drawn as a
+    **template** image, so a sibling can `tint:` it to its own brand colour with no
+    re-export. `ArchitectBackdrop.figmaOpacity` (0.10) is the single tuning knob.
+  - **The Figma-export gotcha applied again** (same as the aircraft illustrations):
+    `download_assets`' `export` bakes in an opaque frame background — the **rawImages**
+    entry is the transparent source. Node 90:4876 returns TWO raws that are the same
+    art at 1× and ¼×; the Figma "mask group" is the image masking its own alpha, so
+    only the artwork is needed and the mask is just `.clipped()`.
+  - **Geometry is FRACTIONAL, not fixed points** — the Figma frame is 440 wide, real
+    devices are 402/430/iPad-wide, so hard-coding would drift off-screen. Art width =
+    `1.371 × container width` (603.274/440), centre at `(0.368, 0.578)`, rotation 30°.
+    Figma's own numbers were verified before porting: a 603.274×811.579 box rotated
+    30° gives a bounding box of 928.23×1004.47, matching the file's stated
+    928.24×1004.485.
+  - **WIRED INTO ALL THREE COLD-LAUNCH SURFACES** — `SplashView`, `AirlineNamingView`,
+    and `SaveSlotsView` each gained an optional `backdropOpacity` (nil = off) and each
+    draws its OWN instance. **They are NOT a single shared layer, on purpose:** the
+    geometry is a pure function of container size, so all three land pixel-identically
+    and the tools hold still across every handoff — while each screen keeps its own
+    opaque background. ContentView passes `ArchitectBackdrop.figmaOpacity`. The splash
+    draws it over its navy sky and UNDER the route arcs, so the intro animation plays
+    on top of the motif (the designer's sequencing idea, and they signed it off live).
+  - **BOTH THEMES, ONE PNG — the light treatment is BUILT** (supersedes the earlier
+    "dark theme only / light is an open designer call" note). Because the art is drawn
+    as a `.template` image it's tinted at draw time, so the same asset serves both:
+    **white line-work on the dark page, `Sky.darkBlue` #4E67A0 brand ink on the light
+    one** — drafting pencil on vellum rather than a grey smudge. `ContentView`
+    supplies `coldLaunchBackdrop` (opacity) + `coldLaunchTint`; `AirlineNamingView`
+    and `SaveSlotsView` take a `backdropTint`. The SPLASH always uses white because
+    it's always navy regardless of theme. (`Sky.darkBlue` was promoted to a named
+    token in the same pass — the hex was already used inline in several places.)
+  - **THE TWO OPACITIES ARE DIFFERENT ON PURPOSE — do not "unify" them.** Dark ink on
+    white carries further than white line-art on #2B303D, so equal alpha does NOT read
+    equal: `figmaOpacity` 0.10 (dark, the Figma value) vs `lightOpacity` **0.08**.
+    Tuned by eye on device over the REAL naming screen — 0.06 vanished entirely, 0.12
+    began competing with the form fields, 0.08 sits behind the content the way the
+    dark 0.10 does. Verified live on the naming screen AND the real no-arg light cold
+    launch (load menu).
+  - **CROSS-SERIES: AA's light 0.08 is DELIBERATE, not an outlier to "unify" (revisited
+    2026-07-24, designer confirmed — KEEP 0.08).** The sibling apps have genuinely
+    DIVERGED, on more than one axis, so there is no single series standard to conform to:
+    AA = 0.08 light (`Sky.darkBlue` ink) / 0.10 dark; Golf Course Architect = 0.10 BOTH
+    themes (`Palette.darkGreen` ink, one `resolvedOpacity` = `figmaOpacity`); Vineyard =
+    0.10 light / **0.18** dark. Two reasons matching GCA's number would be WRONG, not
+    consistent: (1) the series was already non-uniform BEFORE this (Vineyard's 0.18 dark),
+    each app tuned to its own pages; (2) the LIGHT INK COLOURS differ (AA medium blue
+    #4E67A0 vs GCA deep green), so identical alpha does NOT read as identical presence — a
+    lighter ink reads fainter at the same opacity. AA's 0.08 was device-tuned to AA's own
+    light naming screen (above); bumping it to 0.10 would re-enter the range the on-device
+    tuning already rejected as competing with the form fields. So this is settled, not a
+    pending cosmetic call — do not re-flag it as "the one number that differs across the
+    series."
+  - **A harness bug worth remembering (it masqueraded as a design finding):** the
+    test view's naming/sequence modes called `AirlineNamingView(backdropOpacity:)`
+    without passing the tint, so it defaulted to `.white` → white ink on a white page
+    → "the light treatment doesn't work." The SHIPPING path was correct the whole
+    time. When a preview harness wraps a real view, thread EVERY styling input
+    through it, or the harness will lie to you.
+  - **NOTE on view API:** `backdropOpacity` is declared BEFORE the trailing closure
+    (`onLaunch`/`onDone`) on both views so the trailing-closure call style still
+    compiles — reordering the memberwise init is the whole reason.
+  - **DEBUG harness:** `ArchitectBackdropTestView.swift`, reached with the
+    `-backdropTest` launch arg (`#if DEBUG`, compiled out of Release). Three modes
+    (`-backdropMode motif|naming|sequence`) plus live opacity/angle/scale sliders, so
+    the treatment can be dialled in on-device instead of round-tripping through Figma;
+    `-backdropOpacity <n>` / `-backdropLight` (preview the light ink treatment) /
+    `-hideControls` seed it for screenshots. **The Simulator's
+    input channel died mid-session (the documented glitch), so modes are reachable by
+    launch arg rather than taps** — keep that pattern for any future harness.
+  - Verified live on the iPhone 17 Pro sim: motif alone, the naming screen, and the
+    REAL no-arg cold launch (splash → load menu) all render it; the designer watched
+    the intro animation play over it and approved. Caveat worth knowing: `simctl io
+    screenshot` takes ~1s, and the splash is only ~3.3s including cold start, so
+    catching a mid-animation frame by polling is unreliable — the live attached panel
+    is the honest way to judge the motion.
+- **HAPTICS + SUBTLE SFX — BUILT (native app; designer request, extends the
+  delight layer).** `Feedback.swift` (UIKit/AVFoundation, VIEW layer only — the
+  Sim layer stays framework-free for the headless harness, so every trigger is a
+  SwiftUI action or an `.onChange` on observed sim state). Deliberately RESTRAINED
+  per designer direction ("don't cartoon it up"): light haptics on the big
+  moments, and exactly ONE sound — a short jet whoosh reserved for the flagship
+  moment (acquiring an aircraft). Triggers: acquire aircraft (buy/lease/used) →
+  success haptic + jet whoosh (`NetworkView.handleBought` + the three `FleetView`
+  marketplace buttons); open route → medium impact (`openConfirmedRoute .success`);
+  milestone celebration → success haptic + `Resources/Sounds/milestone.wav`
+  congrats chime (designer-supplied, `MilestoneSound`, fired from the SAME
+  `celebrations.first?.id` change as the badge toast, so chime + badge are synced);
+  new decision/alert → warning haptic
+  (`onChange decisionQueue.count` increasing); bankruptcy → error haptic; sell →
+  light impact (Alerts sell + Fleet-detail sell). `JetSound` PREFERS a real bundled
+  recording (`jet`/`jet_takeoff` .caf/.wav/.m4a/.mp3) over the synthesized fallback.
+  **REAL RECORDINGS NOW SHIPPED (designer-supplied):** `Resources/Sounds/jet.wav`
+  (Jet Overhead, 3.5s) is used on aircraft acquisition; the synthesized whoosh
+  (band-passed noise swept 2200→400 Hz) is now the FALLBACK only. Files in
+  `Resources/Sounds/` flatten into the app root (like the fonts), so
+  `Bundle.main.url(forResource:"jet",withExtension:"wav")` finds them — confirmed
+  in the built `.app`. TIMBRE/level are the designer's call on-device; swap the
+  file to change the sound (no code change). Four clips now ship in
+  `Resources/Sounds/`: `jet.wav` (acquire aircraft), `now_boarding.wav` (open
+  route), `milestone.wav` (milestone), `new_crew.wav` (hire crew). Single-clip
+  players are a shared `ClipSound(resource:volume:)`; `Feedback.crewHired()`
+  (success haptic + `new_crew`) fires at all three hire sites (Crews tab, Network
+  ADD CREW panel, CREW alert card's Hire option).
+  - **AUDIO SESSION CATEGORY — was `.ambient`, now `.playback` + `.mixWithOthers`
+    (real fix).** On-device testing FELT the haptics but heard NOTHING: `.ambient`
+    is muted by the hardware ring/silent switch, and the test device was on silent.
+    `.playback` makes the cues audible regardless of the ringer (a game the player
+    opened should still make its sounds), while `.mixWithOthers` still lets their
+    music keep playing. `GameAudio.prepareAmbientSessionOnce()` (shared by JetSound
+    + GateAnnouncement) sets it. If a silent-switch-respecting option is ever
+    wanted, that's the one line to flip back.
+  - **"NOW BOARDING" GATE CALL (native app; designer spitball, shipped).** Opening
+    a route plays a gate-style "now boarding" call. **REAL RECORDING NOW SHIPPED:**
+    `Resources/Sounds/now_boarding.wav` (1.4s, designer-supplied) is played via
+    `AVAudioPlayer` in `GateAnnouncement`. The on-device TTS path (in the player's
+    own airline name — "Aster Air, now boarding.") is now the FALLBACK only, used
+    if the recording is missing. Reserved for route-open only (a deliberate,
+    infrequent action — a nod, not a nag), under the shared `.playback` session.
+    Swap the file to change the call (no code change); the recording is generic
+    (not airline-specific), which is the designer's choice.
+- **Pinch-zoom — BUILT in the native app (this bullet was stale; it described
+  the browser prototype).** `NetworkView` drives the camera with a real
+  `MagnifyGesture` (anchored at pinch start) + `DragGesture` pan, and the designer
+  confirmed it live ("pan feels great, as does pinch"); max zoom is `cameraMaxZoom`
+  60. See "Pan/zoom camera + airport labels" in the Native iOS Port section. The
+  BROWSER prototype still uses scroll-wheel zoom (no touch gesture) — that's the
+  only place this note still applies.
+- **Label cluster detection — FIXED in the native app (this bullet described the
+  browser prototype, now stale for native).** `MapView` recomputes clusters against
+  CURRENT on-screen distance EVERY FRAME (see "Label declutter — DONE, better than
+  the prototype" in the Native iOS Port section), so fanned clusters un-fan
+  automatically once zoom gives labels room. The static-once-at-startup behavior
+  this bullet warned about only remains in the BROWSER prototype.
+- **Bankruptcy / failure state — BUILT (native app).** Negative
+  `playerBalance` now starts a 14-sim-day grace countdown (`insolventSinceTick`,
+  `bankruptcyGraceTicks`, an Ops warning logged; actions are still blocked as
+  before). `tickSolvency()` (in the tick loop) runs the countdown; when it
+  expires, `forcedLiquidation()` sells owned-outright aircraft most-valuable-first
+  until solvent, then hands back leased jets (no proceeds, but stops the bills),
+  and if the fleet empties while still negative → `isBankrupt = true` (GAME OVER).
+  `sellAircraft` was refactored to share a `liquidate(_,proceeds:)` teardown so a
+  leased return is a $0-proceeds liquidation. `GameOverView` is a modal recap
+  (days operated / routes flown / flights) with "Start a New Airline", which
+  resets by `sim = Simulation()` + bumping `gameID`; ContentView's run loop is now
+  `.task(id: gameID)` so the old sim's loop cancels (run() checks
+  `Task.isCancelled`) and the new instance starts fresh (naming screen returns).
+  Verified headlessly: a healthy 2-aircraft operator never false-bankrupts; a
+  player who leases a $200M widebody with no revenue goes negative day 0 and
+  bankrupts exactly at day 14 (grace) after the leased jet is returned with
+  nothing left to sell. The browser prototype has no failure state.
+- **Route-opening cost and starting capital are REAL; the Phase-C/D marketing
+  + airport-incentive layers are now BUILT too — this bullet was STALE, corrected.**
+  An earlier version said "player-funded route marketing and the airport-incentive-
+  offer mechanic ... are still not built (Phase C/D); only the A/B foundation
+  shipped." That is no longer true (both shipped; the claim contradicted the
+  detailed BUILT notes elsewhere in this file). Player route marketing = the
+  per-route ad-campaign / fare-war / loyalty-push levers on each Ops "Competition"
+  row (`startFareWar`/`launchAdCampaign`/`startLoyaltyPush` in Simulation.swift,
+  `totalMarketingSpend` in the Finance invariant — see "PLAYER COMPETITION ACTIONS
+  — BUILT" below). Airport incentives = the `.airportOffer` recruitment-offer card:
+  waived opening cost + signing bonus, a 14-day fulfillment deadline, and bonus
+  clawback on forfeit (`incentiveWaived`/`incentiveBonus`/`fulfillByTick` in
+  Route.swift + Simulation.swift — see "#18 AIRPORT RECRUITMENT OFFER — DONE"). So
+  the whole route-opening area (A/B foundation AND the C/D marketing/incentive
+  layers) is shipped.
+- **Routes profitability chart — RESOLVED (native app).** The designer's goal
+  (an app view charting profitability over time, seeing exactly when a route
+  became profitable) is built — see `RouteProfitChart` in the Native iOS Port
+  section. The browser prototype still lacks it; this is native-app only.
+- `README.md` — CHECKED (2026-07-22): there is NO `README.md` at the repo root
+  (`ls` confirms). The old `TASKS.md` "Repo scaffolded" reference to one was
+  aspirational, never real. Not worth creating one — HANDOFF.md + this file +
+  HANDOFF.md already orients a cold session. Resolved; stop re-flagging it.
+  (NEXT_SESSION_PROMPT.md was retired 2026-09-12 — HANDOFF.md is the single start-here doc.)
+  (This bullet used to cite RELEASE_STATUS.md, which has since been deleted.)
+
+---
+
+## Archived: NEXT_SESSION_PROMPT.md (retired 2026-09-12)
+
+> Retired because it duplicated HANDOFF.md as a second start-here doc and had gone stale — its "YOUR JOB: Issue #4" order was already COMPLETE and shipped in 1.8.0 (see HANDOFF.md "ISSUE 4 IS COMPLETE", 10 Sep). A fresh session read this stale prompt and nearly rebuilt a done feature. HANDOFF.md is now the single start-here doc, per the SESSION_DOCS standard. Kept verbatim for the record:
+
+```markdown
+# NEXT SESSION PROMPT
+
+Paste the block below into a fresh session. Everything above the line is context
+for whoever is doing the pasting; the block itself is written to be understood
+cold, with no memory of this conversation.
+
+**Read first:** `HANDOFF.md` (one-read orientation) → `CLAUDE.md` (the persistent
+design/technical record; it wins on any disagreement).
+
+_Written 9 September 2026, at the end of the session that: diagnosed the live
+TelemetryDeck `hang.under3s` signal down to two compounding root causes and fixed
+nine findings; repaired three harnesses that turned out not to be running at all;
+repriced the training centre to real simulator cost and then proved it still
+doesn't pay back; moved MX from Ops to its own Fleet segment; and shipped ALL of it
+plus the previously-unreleased 8 Sep work as **1.8.0 (build 57)**, submitted for
+review. **The release is done; the next session builds issue #4.**_
+
+---
+
+## The prompt
+
+> You're picking up **Airline Architect** (repo dir is `SkyOps`; the app was renamed).
+> Read `HANDOFF.md` first, then `CLAUDE.md`. Tree is clean on `main`, all pushed.
+>
+> **RELEASE STATE (verify, don't trust this snapshot):**
+> `cd ~/Architect\ Universe/~PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"`
+> - **1.7.0 (build 56) is LIVE.** **1.8.0 (build 57) was SUBMITTED 9 Sep** and auto-releases on
+>   approval. Next new build = **58+**.
+> - 1.8 is a big feature release: multi-city rotations · crew training + Training Centre + Chief
+>   Pilot · MX moved to Fleet ▸ Maintenance · four gameplay fixes · eight hang fixes.
+> - ⚠️ **App Review 4.3(a) is account-wide** — every submission leads its notes with the §1
+>   studio-context block. Reuse `aa-1.1.x/app-review-notes-1.8.0.txt` and bump the version line.
+>   **ASC caps that field at 4000 characters** — check before pasting (1.8's is 3975; the first
+>   draft was 4571 and would have truncated the argument mid-sentence). Vineyard Architect is now
+>   approved, so the verifiable-titles line names three titles.
+>
+> **YOUR JOB: ISSUE #4 — MX AND TRAINING AUTOMATION AT SCALE.** The designer's words:
+> *"For my 200-plane fleet the maintenance stuff takes up 1/3 of my time at 5×, and near all-time at
+> anything faster. This really needs to be automated via maintenance bases or something as it's very
+> tedious. Same with training."*
+>
+> Part of it already landed and part of it hasn't — know the difference before you start:
+> - ✅ DONE: routine MX no longer pins the sim at 1× (`.mxCheck` is exempt from auto-slow); the
+>   Chief Pilot distinguishes a real crew shortfall from a block sitting in training; and MX moved
+>   OFF the alerts screen into **Fleet ▸ Maintenance** (`MaintenanceView.swift`).
+> - ❌ NOT DONE, and this is the actual ask: **the CARD VOLUME.** Moving MX cut the screen real
+>   estate, not the number of decisions.
+>
+> Build the rest of `aa-1.1.x/MX_BASES_SCOPE.md` — **all five decisions are already confirmed, so
+> don't re-litigate them:**
+> 1. **Auto A checks default ON** — no cards, an Ops event only; toggle lives on Fleet ▸ Maintenance.
+>    This is the single biggest cut to card volume; do it first.
+> 2. **Contract MRO as the default provider** — +25% cost and a 0–7-day C/D slot wait.
+> 3. **Maintenance bases** — line stations ($4M) and hangar bases ($18–45M) at an operating hub OR
+>    any airport with ≥3 of your routes; 2-aircraft C/D capacity per hangar line.
+> 4. **Overnight at a base/hub line station = zero lost legs** (the existing 1-day downtime applies
+>    elsewhere).
+> 5. Placement — already shipped in 1.8.
+>
+> ⚠️ **FIX THIS BUG IN THE SAME PASS.** Four sites in `Sim/Simulation.swift` (~lines 3715 / 3773 /
+> 3827 / 3879, each commented "~2 cycles/sim-day") convert cycles→days at a hardcoded **2** when the
+> engine actually flies **~3.52**, so **every maintenance date the player sees is ~76% too far out.**
+> Make it one shared constant and re-run `MXCoverageVerify`.
+>
+> ⚠️ **The bases need the mandatory balance A/B** (the Hubs lesson, and the Training Centre lesson
+> right after it): a base must be a value-sink for a small fleet and pay back for a big one — a
+> threshold, never dominant. `aa-1.1.x/TrainingCenterABProbe.swift` is the closest template, and
+> `MX_BASES_SCOPE.md` §3.5 notes bases and the Training Centre are the same shape and should share
+> one `Facility` model and one probe.
+>
+> **ALSO OPEN, smaller (ask the designer which they want):**
+> - **The Training Centre still never pays back**, at any fleet size. Two price corrections already
+>   landed (the facility was pricing a TEN-bay campus; bay opex was the heavy-utilization rate) and
+>   took the shortfall from $48.1M to $16.9M, but the remaining gap is **throughput, not price**: the
+>   probe's capture-rate diagnostic shows only **32%** of available course-fee savings are realised
+>   (10% on a crew-thin family). Root cause is one line — the auto-recurrent scheduler filters
+>   `status == .available`, so it only ever sees crews idle at that instant; a crew that is flying
+>   when its currency window closes is never scheduled and **lapses instead of training**. That also
+>   means crews lapse more than intended in EVERY game. Fixing it (queue on-duty/resting crews for
+>   their next release) should move payback to ~9 years, the same timescale as buying an aircraft
+>   here. **Do NOT cut prices again** — the next cut goes below real device cost, which the designer
+>   ruled out.
+> - **Spirit Airlines ceased all passenger operations in May 2026** but is still in the US roster.
+>   Designer call: remove, or keep as period-accurate.
+>
+> **AFTER 1.8 GOES LIVE — the telemetry that judges the hang work.** Re-read the TelemetryDeck
+> Errors dashboard **grouped by MESSAGE, not error id.** Since 1.7 every MetricKit report carries
+> build-at-occurrence tagging (`b57 · 18.5`), and the dashboard row groups by error id, so the build
+> tag only shows if you group by message. `b57` events are the ones that judge the fixes; anything
+> tagged b39–b56 is stale drainage. Baseline before the fixes: `hang.under3s` ×43, `hang.3to10s` ×1,
+> `crash.sig9…rbsterminatecontext-domain-10` ×3.
+>
+> **THE STANDING CONCERN:** the UI/"does it feel right" half that no harness reaches. It found the
+> ASSIGN-TO-NEW-ROUTE no-op, the SLC artwork bug, and — this session — a Chief Pilot control that
+> looked tappable and did nothing. It keeps paying. Drive the app.
+>
+> **HOW THIS CODEBASE VERIFIES (don't skip):** every sim change gets a headless harness in
+> `aa-1.1.x/` (compile the real `Sim/*.swift` with `swiftc`, excluding AircraftIcon/SVGPath and
+> adding `RepaintVerifyStubs.swift`; entry file MUST be `main.swift`) + the soak (`SoakMain.swift`,
+> ~7 min for 6 seeds) + `RoundTripVerify.swift` (save path) + a Debug `xcodebuild` + a live
+> Simulator drive of any new UI.
+> ⚠️ **A HARNESS THAT PRINTS NOTHING IS NOT A PASS.** `RotationVerify` and `MXCoverageVerify` both
+> defined `main()` and never called it, so they compiled to binaries that ran silently — which reads
+> exactly like a clean run if you only grep for "FAIL". `SaveCompatVerify` was separately dead on a
+> compile error, so the regression net for the SAVE-LOSS bug class was dark for a week. All three
+> are fixed; if a harness prints nothing, suspect this before suspecting the code.
+> **German:** the app ships `de` — any NEW user-facing string needs a translation, and the ONLY
+> reliable gap check is `DD=<derivedDataRoot> python3 aa-1.1.x/de-findgaps.py` **after a Debug build
+> that actually contains your change** (a stale DerivedData once reported 21 missing strings as
+> clean). Expected residue: 2 DEBUG-only livery-gallery strings.
+>
+> **Simulator warnings:** tap coordinates are in POINTS, not screenshot pixels — the attach call
+> reports the coordinate space. Small text targets (a bare `Text` button) are easy to miss; if two
+> taps do nothing, re-screenshot before concluding the control is broken. Sibling Architect apps
+> steal focus; LANDSCAPE captures come out rotated (`sips -r 90`/`-r 270`). `-devScenario`
+> (`publicGate|listed|activist|ouster|fleet|bigfleet|legacyPlayer|subfleet|mx`) seeds otherwise-
+> unreachable states — `mx` is a routed fleet staged at distinct MX due-states.
+
+---
+
+## Useful commands
+
+```bash
+# review status
+cd ~/Architect\ Universe/~PostmarkOps/ASCTools && python3 asc.py GET "/v1/apps/6790569697/appStoreVersions?limit=3"
+
+# headless harness pattern (entry file MUST be main.swift AND must call main())
+cd AirlineArchitect/AirlineArchitect
+mkdir -p /tmp/h && cp ../../aa-1.1.x/MXCoverageVerify.swift /tmp/h/main.swift
+swiftc -O -DDEBUG $(ls Sim/*.swift | grep -vE 'AircraftIcon.swift|SVGPath.swift') \
+  Persistence.swift ../../aa-1.1.x/RepaintVerifyStubs.swift /tmp/h/main.swift -o /tmp/h/run && /tmp/h/run
+
+# per-tick main-thread cost vs fleet/route count (the hang-fix guard).
+# ⚠️ measure at 250+ routes — below ~120 the effect is inside the noise.
+cp ../../aa-1.1.x/TickCostProbe.swift /tmp/h/main.swift   # then compile as above
+
+# German gap scan (the ONLY reliable check — after a Debug build containing your change)
+DD=<your -derivedDataPath root> python3 aa-1.1.x/de-findgaps.py
+
+# release chain, scriptable end-to-end (see CLAUDE.md "upload is SCRIPTABLE"):
+#   xcodebuild archive → -exportArchive → altool --validate-app → altool --upload-app
+#   → create version record → attach build → What's New → review notes → Game Center → submit
+```
+```
+
+## Archived from HANDOFF.md — 1.2-era next-session notes (2026-09-12)
+
+_Moved out of HANDOFF.md's "## NEXT" section during a freshness pass. These describe
+1.2-era work that has since shipped (personalized livery went LIVE in 1.3 / build 44,
+19 Aug 2026) or 1.1.3-era monetization-signal watching. Kept verbatim for reference;
+NOT current direction. The current next-work is the ⭐-flagged items at the top of
+HANDOFF.md (integration Ops countdown + settle lever riding build 58+)._
+
+> **⭐ IN-FLIGHT FEATURE: personalized aircraft LIVERY** (surprise-&-delight). A
+> designer-approved prototype lives on the **`livery-prototype`** branch (pushed to
+> origin), NOT on `main` — the player's airline name is painted on the fuselage (window-
+> line titles with the windows cutting through them) + a recolourable tail emblem, all
+> palette-driven. **`git checkout livery-prototype` and read `LIVERY_SPEC.md`** (on that
+> branch). The designer set the next-session plan: **(1) normalize the 5 tail emblem PNGs
+> (trim to artwork bounds + centre), (2) build the livery creation flow** (2-colour +
+> emblem picker on the naming screen, persistence, wire into Fleet/Acquire). Keep `main`
+> clean until 1.2 is live; ship the livery as its own later version.
+
+_Historical (1.2-era) monetization-watch notes, kept for reference:_
+
+1. **Read the monetization signals (give them ~2 weeks).** (a) RevenueCat
+   **trial→paid conversion** — trials start NOW (store-level), but conversion after the
+   3 days is the number that matters. (b) TelemetryDeck **`Paywall.shown` ÷
+   `Game.started`** (production view = Test Mode OFF) + the `Hub.established` share —
+   does the 1.1.3 free-cap change (3/2 → 6/5) fix conversion. (c) The next pricing lever
+   (`PRICING_EXPERIMENT_SPEC.md`) is a RevenueCat A/B, GATED on ~1k paywall-views/week —
+   not yet.
+2. **The standing "never played end-to-end" concern** — the UI/"does it feel right"
+   half no harness can reach. It found the ASSIGN-TO-NEW-ROUTE no-op and the
+   SLC-artwork bug in the last two sessions; it keeps paying.
+3. **Resort's telemetry pointer**, once its vertical-slice pass lands (it was
+   deliberately skipped mid-flight). Verify the target linkage, don't trust a callback.
+
+Low priority: the explicit Restore Purchases button, and true cross-device iCloud sync.

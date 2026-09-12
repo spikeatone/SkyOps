@@ -832,35 +832,47 @@ changes the team id, it's pinned in 6 configs in the pbxproj.
   volume too low. Watch trial→paid conversion; ⚠️ the offer expires 2026-12-31 unless
   extended (can't edit — delete + recreate). Full decision/mechanics: `PRICING_EXPERIMENT_SPEC.md`.
 
-## NEXT — see `NEXT_SESSION_PROMPT.md`
+## NEXT (ranked, as of 12 Sep 2026)
 
-> **⭐ IN-FLIGHT FEATURE: personalized aircraft LIVERY** (surprise-&-delight). A
-> designer-approved prototype lives on the **`livery-prototype`** branch (pushed to
-> origin), NOT on `main` — the player's airline name is painted on the fuselage (window-
-> line titles with the windows cutting through them) + a recolourable tail emblem, all
-> palette-driven. **`git checkout livery-prototype` and read `LIVERY_SPEC.md`** (on that
-> branch). The designer set the next-session plan: **(1) normalize the 5 tail emblem PNGs
-> (trim to artwork bounds + centre), (2) build the livery creation flow** (2-colour +
-> emblem picker on the naming screen, persistence, wire into Fleet/Acquire). Keep `main`
-> clean until 1.2 is live; ship the livery as its own later version.
+> **The live picture:** 1.8.0 (build 57) is LIVE / `READY_FOR_SALE`. A large body of
+> verified work sits on `main` NOT yet in a build (integration Ops surface + settle lever,
+> the crew-training capture fix, MX automation + maintenance network, Chief Pilot, the four
+> gameplay fixes, rotations, hang fixes). **The next new build is 58+**, and cutting it is
+> the near-term move. Detail on each item is in the ⭐ sections at the TOP of this file;
+> this is the ranked to-do that falls out of them.
 
-The prioritised brief for the next session lives in **`NEXT_SESSION_PROMPT.md`** —
-a paste-ready block written to be understood cold. In short:
+1. **CUT BUILD 58 — and it carries a PROMISE.** A paying customer was told (12 Sep, by the
+   designer) that the next build adds the live Ops integration countdown + the early
+   seniority settlement. Both are built, verified, and driven live on device, but sit on
+   `main`. They shouldn't linger — this build has a customer waiting on it. Everything else
+   on `main` (crew training, MX automation/network, Chief Pilot, rotations, the 1.7 hang
+   fixes) rides the same build. Bump `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION` (6
+   configs) → archive → export → validate → upload → attach → What's New (en-US + de-DE) →
+   App Review notes (§1 studio block, reuse the latest and bump the version line) → Game
+   Center per-version checkbox → submit. The whole chain is scriptable from the CLI (it ran
+   end-to-end for 1.6/1.7/1.8).
+2. **ONE VISIBLE PRODUCT CALL STILL NEEDS THE DESIGNER'S NOD before/at that build:**
+   `maxClosedRoutes = 40` — beyond 40 closures the OLDEST route leaves the Routes panel,
+   which contradicts CLAUDE.md's "archived, not deleted". One constant to raise if the
+   designer wants full history kept. (See the 1.7-hang-fixes ⭐ block above.)
+3. **THE TRAINING-CENTRE PAYBACK GAP IS NOW PRICE, and the designer already settled it**
+   (don't cut device prices below real cost). The throughput half was FIXED 10 Sep (capture
+   32% → ~101–112%). If anyone reopens training-centre balance, re-measure with the probe as
+   a MEASUREMENT tool, not a gate — and read the tables as ranges (variance across runs is
+   large).
+4. **VERIFY-BY-DRIVING remains the recurring catch.** Two orphaned sim levers
+   (ASSIGN-TO-NEW-ROUTE, then `settleSeniority()`) reached customers because a headless
+   harness calls the sim API directly and can never notice that no VIEW does. When you add a
+   sim lever, confirm a view actually reaches it.
 
-1. **Read the monetization signals (give them ~2 weeks).** (a) RevenueCat
-   **trial→paid conversion** — trials start NOW (store-level), but conversion after the
-   3 days is the number that matters. (b) TelemetryDeck **`Paywall.shown` ÷
-   `Game.started`** (production view = Test Mode OFF) + the `Hub.established` share —
-   does the 1.1.3 free-cap change (3/2 → 6/5) fix conversion. (c) The next pricing lever
-   (`PRICING_EXPERIMENT_SPEC.md`) is a RevenueCat A/B, GATED on ~1k paywall-views/week —
-   not yet.
-2. **The standing "never played end-to-end" concern** — the UI/"does it feel right"
-   half no harness can reach. It found the ASSIGN-TO-NEW-ROUTE no-op and the
-   SLC-artwork bug in the last two sessions; it keeps paying.
-3. **Resort's telemetry pointer**, once its vertical-slice pass lands (it was
-   deliberately skipped mid-flight). Verify the target linkage, don't trust a callback.
+> The old `NEXT_SESSION_PROMPT.md` was retired 2026-09-12 (its "Issue #4" order shipped in
+> 1.8.0). The 1.2-era next-session notes that used to sit here (personalized LIVERY —
+> shipped LIVE in 1.3 / build 44 long ago — and the 1.1.3 monetization-signal watching)
+> were moved to **CLAUDE_HISTORY.md → "Archived from HANDOFF.md — 1.2-era next-session
+> notes (2026-09-12)"** so they can't be mistaken for current direction.
 
-Low priority: the explicit Restore Purchases button, and true cross-device iCloud sync.
+Low priority (unchanged, still valid): the explicit Restore Purchases button, and true
+cross-device iCloud sync.
 
 ## Standing conventions (unchanged, still bite)
 
@@ -907,7 +919,8 @@ Low priority: the explicit Restore Purchases button, and true cross-device iClou
 
 ## Orientation for a cold reader
 
-0. **`NEXT_SESSION_PROMPT.md`** — the paste-ready brief for what to do next.
+0. **This file's ⭐ items (top)** — the current next-work. (The old
+   `NEXT_SESSION_PROMPT.md` was retired 2026-09-12; see CLAUDE_HISTORY.md if you need it.)
 1. `CLAUDE.md` — the persistent design/technical context. Long because it's thorough.
 2. `APP_STORE_DESCRIPTION.md`, then the big feature specs (`GO_PUBLIC_SPEC.md`,
    `ACQUISITIONS_SPEC.md`, `HUBS_AND_CLUBS_SPEC.md`) — all COMPLETE.
