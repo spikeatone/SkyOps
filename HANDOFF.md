@@ -7,8 +7,9 @@ CLAUDE.md, CLAUDE.md wins.
 
 _Snapshot: 12 September 2026._
 
-**► ⭐⭐⭐ 1.9.0 (build 58) IS SUBMITTED — `WAITING_FOR_REVIEW` (submitted via the ASC API, 12 Sep 2026,
-auto-releases on approval). Next new build = 59+.** The whole chain ran from the CLI: bumped
+**► ⭐⭐⭐ 1.9.0 (build 58) IS LIVE — APPROVED and `READY_FOR_SALE` / `READY_FOR_DISTRIBUTION` (approved
+12 Sep 2026, ~11:00 PDT, same day it was submitted; rolling out over ≤24h). Next new build = 59+.**
+The whole chain ran from the CLI: bumped
 1.8.0→1.9.0 / 57→58 (6 configs) → archive (ARCHIVE SUCCEEDED, 1.9.0/58) → export → validate
 (VERIFY SUCCEEDED) → upload (UPLOAD SUCCEEDED, **Delivery UUID `b3521401-9259-4095-bc30-97813abdb384`**,
 79.8 MB) → build 58 attached → en-US + de-DE What's New set → App Review notes set (3961 chars, §1
