@@ -231,9 +231,24 @@ struct NetworkView: View {
     /// cost the whole rail.
     private var isRouteConfirm: Bool {
         switch routeMode {
-        case .confirm, .confirmRotation, .pickAircraft: return true
+        // `.rotate` (tapping cities to build a multi-stop loop) MUST be here: it is
+        // what shows the side rail on iPad, and the rail is the ONLY place the rotate
+        // control bar — with its Done button — renders. Without it, iPad players
+        // building a rotation saw only the map hint ("… tap another, or Done") and no
+        // Done button anywhere; a customer reported trying to tap the word "Done" in
+        // the instruction text (14 Sep 2026). On iPhone the panel floats at the bottom
+        // of the map instead, so it was iPad-only.
+        case .confirm, .confirmRotation, .pickAircraft, .rotate: return true
         default: return false
         }
+    }
+
+    /// True while tapping cities to build a multi-stop rotation. The side rail shows
+    /// the rotate control bar in this state, so the map's own hint chip is suppressed
+    /// to avoid duplicating the instruction (see the mapCard overlay).
+    private var isRotating: Bool {
+        if case .rotate = routeMode { return true }
+        return false
     }
 
     /// The pick-step instruction that floats over the map (nil outside pick steps).
@@ -396,7 +411,12 @@ struct NetworkView: View {
                 // Step Two) float over the map as a chip instead of taking the rail
                 // — you're tapping the map, so the instruction belongs on it.
                 if sideDocked {
-                    if let hint = routePickHintText {
+                    // The pick-step instruction floats over the map as a chip — you're
+                    // tapping the map, so the guidance belongs on it. EXCEPT while
+                    // building a rotation (`.rotate`): there the side rail now shows the
+                    // full rotate control bar, which already carries this same hint plus
+                    // the Done/Undo/Abandon buttons, so a map chip would just duplicate it.
+                    if let hint = routePickHintText, !isRotating {
                         HStack(alignment: .top, spacing: 0) {
                             routeHint(hint).frame(maxWidth: 460)
                             Spacer(minLength: 0)

@@ -2802,6 +2802,16 @@
         }
       }
     },
+    "Close this base? No refund.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Basis schließen? Keine Erstattung."
+          }
+        }
+      }
+    },
     "Closed · %@": {
       "localizations": {
         "de": {
@@ -3408,6 +3418,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ablehnen"
+          }
+        }
+      }
+    },
+    "Decommission base": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basis stilllegen"
           }
         }
       }
@@ -5373,6 +5393,16 @@
         }
       }
     },
+    "Net · now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Netto · jetzt"
+          }
+        }
+      }
+    },
     "Network": {
       "localizations": {
         "de": {
@@ -6940,6 +6970,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Umsatzverlust am Boden"
+          }
+        }
+      }
+    },
+    "Revenue · now": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umsatz · jetzt"
           }
         }
       }
@@ -8537,6 +8577,16 @@
         }
       }
     },
+    "Upgrade to %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upgrade auf %@"
+          }
+        }
+      }
+    },
     "Upkeep (age)": {
       "localizations": {
         "de": {
@@ -8553,6 +8603,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "GEPRÜFT"
+          }
+        }
+      }
+    },
+    "Version %@ (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@ (%@)"
           }
         }
       }
@@ -9443,6 +9503,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "· OK"
+          }
+        }
+      }
+    },
+    "· at acquisition": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· bei Übernahme"
           }
         }
       }

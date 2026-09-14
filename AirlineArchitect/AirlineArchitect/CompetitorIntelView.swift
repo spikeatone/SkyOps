@@ -130,11 +130,26 @@ struct CompetitorIntelView: View {
                     Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(secondary.opacity(0.7))
                 }
-                HStack(spacing: 14) {
-                    stat("Fleet", "\(p.fleetSize)")
-                    stat("Routes", "\(p.routeCount)")
-                    stat("Revenue", String(localized: "\(compactMoney(Int(p.annualRevenue)))/yr"))
-                    stat("Margin", marginLabel(p), p.operatingMargin < 0 ? red : Sky.coreGreen)
+                // A subsidiary you own reports its LIVE book once it has flown a leg
+                // under your flag — the list used to show only the frozen
+                // pre-acquisition topline, which read as "my profitable sub still shows
+                // its old poor numbers" (customer report, 14 Sep 2026). The frozen
+                // topline stays in the detail's "AT ACQUISITION" box.
+                if sim.isSubsidiary(p.id), let f = sim.subsidiaryFinancials(p.id), f.flights > 0 {
+                    HStack(spacing: 14) {
+                        stat("Fleet", "\(f.aircraft)")
+                        stat("Routes", "\(f.routesOpen)")
+                        stat("Revenue · now", compactMoney(f.revenue))
+                        stat("Net · now", compactMoney(f.net),
+                             f.net < 0 ? red : Sky.coreGreen)
+                    }
+                } else {
+                    HStack(spacing: 14) {
+                        stat("Fleet", "\(p.fleetSize)")
+                        stat("Routes", "\(p.routeCount)")
+                        stat("Revenue", String(localized: "\(compactMoney(Int(p.annualRevenue)))/yr"))
+                        stat("Margin", marginLabel(p), p.operatingMargin < 0 ? red : Sky.coreGreen)
+                    }
                 }
             }
             .padding(12)
@@ -227,7 +242,7 @@ struct CompetitorIntelView: View {
             // Fleet
             box {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("FLEET").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                    sectionHeader("FLEET", p)
                     line("Aircraft", "\(p.fleetSize)")
                     line("Average age", p.averageFleetAgeLabel)
                     ForEach(p.fleetByType.sorted { $0.value > $1.value }, id: \.key) { id, n in
@@ -246,7 +261,7 @@ struct CompetitorIntelView: View {
             // Network
             box {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("NETWORK").font(.karla(12, .bold)).foregroundStyle(titleColor)
+                    sectionHeader("NETWORK", p)
                     line("Routes", "\(p.routeCount)")
                     line("Cities served", "\(p.citiesServed)")
                     line("Hubs", p.hubCodes.joined(separator: " · "))
@@ -471,6 +486,20 @@ struct CompetitorIntelView: View {
 
     private func marginLabel(_ p: CompetitorProfile) -> String {
         String(format: "%@%.1f%%", p.operatingMargin < 0 ? "−" : "+", abs(p.operatingMargin) * 100)
+    }
+
+    /// A detail section header. For an owned subsidiary the Fleet/Network boxes show
+    /// the FROZEN scouted profile (e.g. 8 scouted routes, of which you inherited only
+    /// as many as the aircraft that came with the deal), so tag them "· at acquisition"
+    /// — the live counts live in the CURRENT PERFORMANCE box above. This stops the
+    /// scouted 8 vs. inherited 5 reading as a bug.
+    @ViewBuilder private func sectionHeader(_ title: LocalizedStringKey, _ p: CompetitorProfile) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(title).font(.karla(12, .bold)).foregroundStyle(titleColor)
+            if sim.isSubsidiary(p.id) {
+                Text("· at acquisition").font(.karla(10)).foregroundStyle(secondary)
+            }
+        }
     }
 
     private func trendColor(_ t: CompetitorProfile.Trend) -> Color {
