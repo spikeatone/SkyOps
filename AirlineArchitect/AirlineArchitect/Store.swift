@@ -135,6 +135,16 @@ final class Store {
     /// the RevenueCat entitlement when configured; a local flag otherwise.
     var isPro = false
 
+    #if DEBUG
+    /// A `-devScenario` (or another DEBUG harness) sets this to unlock Pro without a
+    /// real purchase. WITHOUT it, RevenueCat's live `customerInfoStream` fires shortly
+    /// after launch, finds no active entitlement, and clobbers the dev flag back to
+    /// false — which silently paywalled every route-flow verification on the sim (found
+    /// 14 Sep 2026 while trying to reproduce the iPad rotation bug). `apply()` refuses
+    /// to downgrade `isPro` while this is on. Release builds never see it.
+    var devProOverride = false
+    #endif
+
     /// Purchase-flow UI state (paywall reads these).
     var purchasing = false
     var purchaseError: String?
@@ -274,7 +284,13 @@ final class Store {
     }
 
     private func apply(_ info: CustomerInfo) {
-        isPro = info.entitlements[Self.entitlementID]?.isActive == true
+        let entitled = info.entitlements[Self.entitlementID]?.isActive == true
+        #if DEBUG
+        // Never let the live entitlement stream downgrade a dev-scenario unlock.
+        isPro = entitled || devProOverride
+        #else
+        isPro = entitled
+        #endif
         hasActiveSubscription = !info.activeSubscriptions.isEmpty
     }
 

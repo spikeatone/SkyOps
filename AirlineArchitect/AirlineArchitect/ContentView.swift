@@ -362,7 +362,11 @@ struct ContentView: View {
             }
             if let scenario = Self.devScenario {
                 sim.devSeed(scenario)
-                store.isPro = true   // dev scenarios inject billions + exercise gated features — don't let the free cap/paywall block them
+                // dev scenarios inject billions + exercise gated features — don't let the free cap/paywall block them.
+                // devProOverride keeps it on: without it RevenueCat's customerInfoStream clobbers isPro back to
+                // false a moment after launch (found while trying to drive the iPad route flow, 14 Sep 2026).
+                store.devProOverride = true
+                store.isPro = true
                 showSplash = false
                 // FLEET for the livery + maintenance scenarios, else FINANCE.
                 if scenario == .integ { tab = 3 }                       // OPS — the integration drawer
