@@ -332,6 +332,66 @@ func main() {
         check(led.monthly.count <= MaintenanceBase.maxSnapshots, "14: …and stay capped")
     }
 
+    // ── 15. UPGRADE a line station to a hangar in place — charge the DIFFERENCE,
+    //       keep the ledger; and DECOMMISSION frees the airport, no refund. The
+    //       escape hatch for the player who built line stations everywhere for
+    //       seamless A checks and lost the hangar option (customer report, 14 Sep). ─
+    do {
+        let sim = newSim()
+        var jets: [Aircraft] = []
+        for code in ["ORD", "SEA", "LAX"] { if let a = routed(sim, "A320", "DEN", code) { jets.append(a) } }
+        check(sim.buildMXBase(at: "DEN", tier: .lineStation), "15: line station built")
+
+        // Only a line station offers upgrades, and the price is the build-cost gap.
+        let ups = sim.mxBaseUpgradeTiers(at: "DEN")
+        check(ups.count == 2, "15: a line station offers exactly the two hangar tiers")
+        check(ups.contains { $0.tier == .hangarNarrow
+                && $0.cost == Simulation.mxBaseBuildCost(.hangarNarrow) - Simulation.mxBaseBuildCost(.lineStation) },
+              "15: the narrow-hangar upgrade costs the difference")
+        check(ups.contains { $0.tier == .hangarWide
+                && $0.cost == Simulation.mxBaseBuildCost(.hangarWide) - Simulation.mxBaseBuildCost(.lineStation) },
+              "15: the widebody-hangar upgrade costs the difference")
+
+        // Run a C check due BEFORE the upgrade — the line station can't take it.
+        guard let j = jets.first else { check(false, "setup 15"); printResult(); return }
+        forceDue(sim, j, .c)
+        check(sim.mxBaseCovering(j, kind: .c) == nil, "15: before upgrade, a C check can't use the line station")
+
+        // Upgrade to a narrow hangar: charge exactly the difference, keep the ledger.
+        let ledgerBefore = sim.mxBases["DEN"]!.ledger.buildSpend
+        let cash = sim.playerBalance
+        let diff = Simulation.mxBaseBuildCost(.hangarNarrow) - Simulation.mxBaseBuildCost(.lineStation)
+        check(sim.upgradeMXBase(at: "DEN", to: .hangarNarrow), "15: the upgrade succeeds")
+        check(sim.mxBases["DEN"]?.tier == .hangarNarrow, "15: the tier is now a hangar")
+        check(cash - sim.playerBalance == diff, "15: exactly the DIFFERENCE was charged (\(diff))")
+        check(sim.mxBases["DEN"]?.ledger.buildSpend == ledgerBefore + diff, "15: the ledger folds in the extra capital")
+        check(sim.cashInvariantResidual() == 0, "15: cash invariant holds through an upgrade")
+        check(sim.mxBaseCovering(j, kind: .c) == "DEN", "15: NOW the C check is covered in-house")
+
+        // No upgrades offered off a hangar (a wide hangar is a different building).
+        check(sim.mxBaseUpgradeTiers(at: "DEN").isEmpty, "15: a hangar offers no in-place upgrade")
+
+        // Decommission: no refund, invariant untouched, airport eligible again.
+        let cashPre = sim.playerBalance, spendPre = sim.totalMXBaseSpend
+        check(sim.decommissionMXBase(at: "DEN"), "15: the base decommissions")
+        check(sim.mxBases["DEN"] == nil, "15: it's gone")
+        check(sim.playerBalance == cashPre, "15: no refund — the capital is sunk")
+        check(sim.totalMXBaseSpend == spendPre, "15: …so totalMXBaseSpend is unchanged")
+        check(sim.cashInvariantResidual() == 0, "15: cash invariant holds through a decommission")
+        check(sim.mxBaseEligible("DEN"), "15: DEN can be built on again")
+        check(!sim.decommissionMXBase(at: "DEN"), "15: decommissioning nothing is a no-op")
+
+        // The whole loop survives a save/load: build → upgrade → persists as a hangar.
+        let sim2 = newSim()
+        for code in ["ORD", "SEA", "LAX"] { routed(sim2, "A320", "DEN", code) }
+        sim2.buildMXBase(at: "DEN", tier: .lineStation)
+        sim2.upgradeMXBase(at: "DEN", to: .hangarWide)
+        let snap = sim2.snapshot()
+        let sim3 = Simulation(); sim3.configure(viewport: CGSize(width: 400, height: 800))
+        sim3.restore(from: snap)
+        check(sim3.mxBases["DEN"]?.tier == .hangarWide, "15: an upgraded base persists as its new tier")
+    }
+
     printResult()
 }
 

@@ -4335,12 +4335,65 @@ final class Simulation {
     /// caught once already.
     var mxBaseList: [MaintenanceBase] { mxBases.values.sorted { $0.code < $1.code } }
 
-    /// Can a base be built here? An operating hub, or any airport carrying at least
-    /// `mxBaseMinRoutes` of the player's routes — the designer's "hub or other
-    /// strategic location". One base per airport (upgrade by rebuilding is out of
-    /// scope; pick the tier you need).
+    /// Can a NEW base be built here? An operating hub, or any airport carrying at
+    /// least `mxBaseMinRoutes` of the player's routes — the designer's "hub or other
+    /// strategic location". One base per airport: a code that already holds a base is
+    /// not eligible to BUILD, but a line station there can be UPGRADED in place to a
+    /// hangar (see `mxBaseUpgradeTiers`/`upgradeMXBase`) — the escape hatch for the
+    /// player who built line stations everywhere for seamless A checks and then found
+    /// the hangar option gone (a real customer report, 14 Sep 2026).
     func mxBaseEligible(_ code: String) -> Bool {
         mxBases[code] == nil && (hubOperating(code) || routesAt(code) >= Simulation.mxBaseMinRoutes)
+    }
+
+    /// The hangar tiers a base already at `code` can UPGRADE to, cheapest-first, with
+    /// the price = the DIFFERENCE in build cost (you already paid for what's there).
+    /// Only a LINE STATION upgrades — a hangar is already the heavy-check tier, and a
+    /// narrow→wide "upgrade" is a physically different building, not a bigger one
+    /// (matching `Tier.canHandle`), so it is a fresh decision, not an upgrade. Empty
+    /// unless a line station sits here.
+    func mxBaseUpgradeTiers(at code: String) -> [(tier: MaintenanceBase.Tier, cost: Int)] {
+        guard let b = mxBases[code], b.tier == .lineStation else { return [] }
+        let have = Simulation.mxBaseBuildCost(b.tier)
+        return [MaintenanceBase.Tier.hangarNarrow, .hangarWide].map {
+            ($0, max(0, Simulation.mxBaseBuildCost($0) - have))
+        }
+    }
+
+    /// Upgrade the line station at `code` to a hangar tier, charging only the build-cost
+    /// DIFFERENCE (designer's call). The base keeps its ledger, opened tick and payback
+    /// history — it is the same base doing more, not a new one — so its ROI chart stays
+    /// continuous. Cash-invariant safe: the difference is added to `totalMXBaseSpend`
+    /// exactly as it is deducted from the balance.
+    @discardableResult
+    func upgradeMXBase(at code: String, to tier: MaintenanceBase.Tier) -> Bool {
+        guard var b = mxBases[code], b.tier == .lineStation, tier.handlesHeavyChecks else { return false }
+        let diff = max(0, Simulation.mxBaseBuildCost(tier) - Simulation.mxBaseBuildCost(b.tier))
+        guard playerBalance >= diff else { return false }
+        playerBalance -= diff
+        totalMXBaseSpend += diff
+        b.tier = tier
+        b.ledger.buildSpend += diff
+        mxBases[code] = b
+        logOps(.structural, L("%@ upgraded to %@ at %@",
+                              Simulation.mxBaseTierName(.lineStation), Simulation.mxBaseTierName(tier), code),
+               L("Now handles heavy checks in-house · %@", dollars(diff)),
+               airportCode: code)
+        return true
+    }
+
+    /// Decommission (close) the base at `code`. The capital is sunk — no refund, the
+    /// same as demolishing it (designer's call) — so the invariant is untouched: nothing
+    /// moves. The airport becomes eligible to build again. For the player who put a base
+    /// at the wrong airport, or who wants the slot back after a network reshape.
+    @discardableResult
+    func decommissionMXBase(at code: String) -> Bool {
+        guard let b = mxBases.removeValue(forKey: code) else { return false }
+        if mxBases.isEmpty { nextMXBaseBillTick = 0 }
+        logOps(.structural, L("%@ decommissioned at %@", Simulation.mxBaseTierName(b.tier), code),
+               L("Maintenance here returns to the contract MRO."),
+               airportCode: code)
+        return true
     }
 
     /// Airports the player could put a base at, busiest-first and bounded — a big

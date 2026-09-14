@@ -76,11 +76,31 @@ struct SaveSlotsView: View {
             }
             .padding(24)
             .frame(maxWidth: 420)
+
+            // Subtle build stamp, bottom of the page. Overlaid rather than in the
+            // centred stack so it pins to the bottom edge and never shifts the card.
+            VStack {
+                Spacer()
+                Text(Self.versionLabel)
+                    .font(.karla(11))
+                    .foregroundStyle(secondary.opacity(0.6))
+                    .padding(.bottom, 10)
+            }
         }
         // No in-app Game Center entry point for now — see the note in
         // GameCenter.swift (stale-record poisoning; revisit after 1.4 is live).
         .onAppear { reloadSlots() }
     }
+
+    /// "Version 1.9.0 (58)" from the bundle. Read once — the Info.plist values are
+    /// `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`, so this tracks the build with
+    /// no manual edit. Falls back gracefully if either key is somehow missing.
+    static let versionLabel: String = {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info?["CFBundleVersion"] as? String ?? "—"
+        return String(localized: "Version \(short) (\(build))")
+    }()
 
     @ViewBuilder
     private func slotRow(_ index: Int, info: SlotInfo?) -> some View {

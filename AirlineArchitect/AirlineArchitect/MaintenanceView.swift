@@ -46,6 +46,8 @@ struct MaintenanceSection: View {
     /// Reveals the full MX list past `mxRowCap`.
     @State private var mxShowAll = false
     @State private var coverBanner: (sub: String, covered: String, route: String, days: Int)? = nil
+    /// The base code awaiting a decommission confirmation (a destructive, no-refund action).
+    @State private var decommissionCode: String? = nil
 
     var body: some View {
         let _ = sim.displayTick   // keep ETAs/shop countdowns live
@@ -531,6 +533,50 @@ struct MaintenanceSection: View {
                  : String(localized: "\(compactMoney(-l.payback)) to recoup · \(l.checksDone) checks so far"))
                 .font(.karla(11, .semibold))
                 .foregroundStyle(l.payback >= 0 ? Sky.coreGreen : secondary)
+
+            // Upgrade a line station to a hangar in place — you pay only the
+            // difference, and the base keeps its payback history.
+            let upgrades = sim.mxBaseUpgradeTiers(at: b.code)
+            if !upgrades.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(upgrades, id: \.tier.rawValue) { u in
+                        let ok = sim.playerBalance >= u.cost
+                        Button {
+                            Feedback.impact(.light)
+                            sim.upgradeMXBase(at: b.code, to: u.tier)
+                        } label: {
+                            VStack(spacing: 1) {
+                                Text(String(localized: "Upgrade to \(Simulation.mxBaseTierName(u.tier))"))
+                                    .font(.karla(10, .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                                Text("+\(compactMoney(u.cost))").font(.karla(10))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity).padding(.vertical, 6)
+                            .background(ok ? Sky.brightBlue : Color.gray.opacity(0.4))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }.buttonStyle(.plain).disabled(!ok)
+                    }
+                }
+            }
+
+            // Decommission — destructive, no refund. Two-tap confirm inline.
+            if decommissionCode == b.code {
+                HStack(spacing: 6) {
+                    Text("Close this base? No refund.").font(.karla(11)).foregroundStyle(secondary)
+                    Spacer(minLength: 4)
+                    Button(String(localized: "Cancel")) { decommissionCode = nil }
+                        .font(.karla(11, .semibold)).foregroundStyle(secondary).buttonStyle(.plain)
+                    Button(String(localized: "Confirm")) {
+                        Feedback.impact(.medium)
+                        sim.decommissionMXBase(at: b.code)
+                        decommissionCode = nil
+                    }
+                    .font(.karla(11, .bold)).foregroundStyle(Sky.red).buttonStyle(.plain)
+                }
+            } else {
+                Button(String(localized: "Decommission base")) { decommissionCode = b.code }
+                    .font(.karla(11, .semibold)).foregroundStyle(Sky.red).buttonStyle(.plain)
+            }
         }
         .padding(.vertical, 4)
     }
