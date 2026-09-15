@@ -126,6 +126,11 @@ struct GameSnapshot: Codable {
     var aircraft: [AircraftSave] = []
     var routes: [RouteSave] = []
     var closedRoutes: [RouteSave] = []
+    /// Researched-but-unopened route plans (the "Plans" shelf). nil in pre-plans
+    /// saves → []. Pure data — plans hold no money, so nothing here touches the
+    /// cash invariant.
+    var plans: [RoutePlan]? = nil
+    var nextPlanId: Int? = nil
     var crewPools: [String: [CrewSave]] = [:]
     var reserveCrews: [String: Int] = [:]
     /// Per-family auto-recurrent policy; nil/absent = all ON. (The pre-pipeline
@@ -394,6 +399,8 @@ extension GameSnapshot {
         aircraft = c.decodeSafe(.aircraft, default: [])
         routes = c.decodeSafe(.routes, default: [])
         closedRoutes = c.decodeSafe(.closedRoutes, default: [])
+        plans = c.decodeSafeOpt([RoutePlan].self, .plans)
+        nextPlanId = c.decodeSafeOpt(Int.self, .nextPlanId)
         crewPools = c.decodeSafe(.crewPools, default: [:])
         reserveCrews = c.decodeSafe(.reserveCrews, default: [:])
         crewAutoRecurrent = c.decodeSafeOpt([String: Bool].self, .crewAutoRecurrent)

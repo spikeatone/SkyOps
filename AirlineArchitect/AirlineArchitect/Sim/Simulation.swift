@@ -2694,6 +2694,27 @@ final class Simulation {
     /// Open + closed routes, newest first (for the ROUTES panel).
     var allRoutes: [Route] { (playerRoutes + closedPlayerRoutes).sorted { $0.openedTick > $1.openedTick } }
 
+    // MARK: - Route plans (researched, not yet opened — the "Plans" shelf)
+
+    /// Researched-but-unopened routes the player parked for later. Pure data (see
+    /// `RoutePlan`): saving one moves NO money, so it never touches the cash
+    /// invariant — the deliberate contrast to `createRoute`, which charges a cost.
+    private(set) var plans: [RoutePlan] = []
+    private var nextPlanId = 1
+
+    /// Park a researched route on the Plans shelf. `stops` is `[origin, dest]` for
+    /// a pair or 3–5 codes for a loop. No cost, no cap check — the free-tier route
+    /// cap bites only when a plan is actually OPENED, not when it is researched.
+    func savePlan(stops: [String]) {
+        guard stops.count >= 2 else { return }
+        plans.append(RoutePlan(id: nextPlanId, stops: stops, savedTick: tick))
+        nextPlanId += 1
+        logOps(.structural, L("Route plan saved · %@", RoutePlan(id: 0, stops: stops, savedTick: 0).label),
+               L("Researched and parked — open it from Network ▸ Routes when you're ready."))
+    }
+
+    func deletePlan(id: Int) { plans.removeAll { $0.id == id } }
+
     /// "Day N · HH:MM" from a tick (1 tick = 1 sim-minute).
     static func simDate(fromTick t: Int) -> String {
         let day = t / 1440 + 1
@@ -2962,6 +2983,65 @@ final class Simulation {
         if let rw = origin.info?.longestRunwayFt, rw < minRw { return .runway(origin.code) }
         if let rw = dest.info?.longestRunwayFt, rw < minRw { return .runway(dest.code) }
         return nil
+    }
+
+    // MARK: - Route research (preview a pair BEFORE committing an aircraft)
+
+    /// Can this TYPE physically fly this pair? MIRRORS `routeBlock` exactly (range +
+    /// runway, missing runway data = not blocked), so the research panel's fits/
+    /// doesn't-fit list agrees with what the confirm step will allow. `RouteResearchVerify`
+    /// asserts the equivalence for every type × a sample of pairs.
+    func typeCanFly(_ t: AircraftType, from a: Airport, to b: Airport) -> Bool {
+        let nm = Int(a.greatCircleNM(to: b).rounded())
+        if nm > t.rangeNM { return false }
+        let minRw = t.minRunwayFt
+        if let rw = a.info?.longestRunwayFt, rw < minRw { return false }
+        if let rw = b.info?.longestRunwayFt, rw < minRw { return false }
+        return true
+    }
+
+    /// Every type split into those that can and can't fly the pair — for the
+    /// research panel's "what can fly it" list.
+    func flyableTypes(from a: Airport, to b: Airport) -> (can: [AircraftType], cannot: [AircraftType]) {
+        var can: [AircraftType] = [], cannot: [AircraftType] = []
+        for t in AircraftType.all { typeCanFly(t, from: a, to: b) ? can.append(t) : cannot.append(t) }
+        return (can, cannot)
+    }
+
+    /// The flyable type with the highest projected daily net — what the panel
+    /// leads with. nil if nothing can fly the pair (both runways too short, etc.).
+    func bestFitType(from a: Airport, to b: Airport) -> AircraftType? {
+        flyableTypes(from: a, to: b).can
+            .max { projectedDailyNet($0, from: a, to: b) < projectedDailyNet($1, from: a, to: b) }
+    }
+
+    /// Projected round-trip daily net for a TYPE not yet owned, built from the SAME
+    /// per-leg inputs as `legEconomics`/`settleLeg` (distance-based fare × pax,
+    /// stage-length op cost, weight/body fees) so the research number matches what
+    /// the route will actually earn ON DAY ONE. Grounded in the player's current
+    /// reputation (a known input), but a FRESH-ROUTE estimate: it deliberately omits
+    /// what can't be known before the route exists — above all the competition-share
+    /// haircut rivals inflict once they enter a profitable route (up to −80%), plus
+    /// the per-flight ±10% spread, the hub fee discount, age/hold burn and lease
+    /// bills. So it reads as "at entry, before rivals" — label it that way in the UI.
+    func projectedDailyNet(_ t: AircraftType, from a: Airport, to b: Airport) -> Int {
+        let nm = a.greatCircleNM(to: b)
+        // Reputation is knowable now and scales demand exactly as settle does; fold
+        // it in so the estimate tracks a poorly-run vs well-run airline. Recompute the
+        // load off rep-adjusted demand (still capped at maxLoadFactor by Demand.loadFactor).
+        let demand = Demand.dailyOneWay(a, b)
+            * hubDemandMultiplier(originCode: a.code, destCode: b.code)
+            * reputationDemandMultiplier
+        let lf = Demand.loadFactor(seats: t.seats, dailyOneWay: demand)
+        let pax = Double(t.seats) * lf
+        let revenue = pax * FareModel.farePerSeat(distanceNM: nm)
+        let blockMin = t.bodyType.blockMinutes(forNM: nm)
+        let opCost = blockMin * Double(t.holdCostPerTick)
+        let landing = b.landingFeePerKlb * (Double(t.mlwLbs) / 1000)
+        let gate = Double(t.bodyType.usesWidebodyGateFee ? b.gateFeeWidebody : b.gateFeeNarrowbody)
+        let perLeg = revenue - opCost - landing - gate
+        let legsPerDay = 1440.0 / Double(Simulation.legCycleTicks)
+        return Int((perLeg * legsPerDay).rounded())
     }
 
     /// Create the Route (charge cost, consume slots, log). Shared by openRoute
@@ -6987,6 +7067,8 @@ final class Simulation {
         }
         s.routes = playerRoutes.map(routeSave)
         s.closedRoutes = closedPlayerRoutes.map(routeSave)
+        s.plans = plans.isEmpty ? nil : plans
+        s.nextPlanId = nextPlanId
         s.crewPools = crewPoolsByFamily.mapValues { $0.map {
             CrewSave(id: $0.id, status: $0.status.saveCode, dutyTicks: $0.dutyTicks, restTicksLeft: $0.restTicksLeft,
                      readyTick: $0.readyTick, provider: $0.trainingProvider?.rawValue,
@@ -7174,6 +7256,9 @@ final class Simulation {
         // itself on its next load (the same self-heal an oversized pre-1.1 save
         // gets). `suffix` keeps the most recent closures, matching drop-oldest.
         closedPlayerRoutes = s.closedRoutes.suffix(Simulation.maxClosedRoutes).map(restoreRoute)
+        // Route plans (pure data — no economics stored, recomputed live).
+        plans = s.plans ?? []
+        nextPlanId = s.nextPlanId ?? ((plans.map(\.id).max() ?? 0) + 1)
 
         // Owned fleet (rebuild; background traffic regenerates below).
         let byCode = Dictionary(airports.map { ($0.code, $0) }, uniquingKeysWith: { a, _ in a })
