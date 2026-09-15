@@ -871,6 +871,16 @@
         }
       }
     },
+    "%lld of %lld types": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld von %lld Mustern"
+          }
+        }
+      }
+    },
     "%lld open": {
       "localizations": {
         "de": {
@@ -1742,6 +1752,16 @@
         }
       }
     },
+    "Aircraft that fit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passende Flugzeuge"
+          }
+        }
+      }
+    },
     "Airframe Life": {
       "localizations": {
         "de": {
@@ -1938,6 +1958,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kaufpreis"
+          }
+        }
+      }
+    },
+    "Assign an aircraft": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flugzeug zuweisen"
           }
         }
       }
@@ -2248,6 +2278,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unter der Mehrheit — der Vorstand kann handeln"
+          }
+        }
+      }
+    },
+    "Best fit": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passendstes"
           }
         }
       }
@@ -3772,6 +3812,16 @@
         }
       }
     },
+    "Estimate for a fresh route, before rivals enter.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schätzung für eine neue Strecke, bevor Wettbewerber einsteigen."
+          }
+        }
+      }
+    },
     "Europe": {
       "localizations": {
         "de": {
@@ -5163,6 +5213,16 @@
         }
       }
     },
+    "Min runway": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Min. Startbahn"
+          }
+        }
+      }
+    },
     "Mind your fleet": {
       "localizations": {
         "de": {
@@ -5363,6 +5423,16 @@
         }
       }
     },
+    "Net / day at entry": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Netto / Tag bei Start"
+          }
+        }
+      }
+    },
     "Net Income": {
       "localizations": {
         "de": {
@@ -5549,6 +5619,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Derzeit keine Flugzeuge %@."
+          }
+        }
+      }
+    },
+    "No aircraft in the game can fly this pair — the runways are too short or it's out of range for every type.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Flugzeug im Spiel kann dieses Paar fliegen — die Startbahnen sind zu kurz oder es liegt für jedes Muster außerhalb der Reichweite."
           }
         }
       }
@@ -6300,6 +6380,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "TILGEN"
+          }
+        }
+      }
+    },
+    "PLAN A ROUTE · nothing spent yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STRECKE PLANEN · noch nichts ausgegeben"
           }
         }
       }
@@ -7184,12 +7274,32 @@
         }
       }
     },
+    "Save to plans": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu Plänen hinzufügen"
+          }
+        }
+      }
+    },
     "Saved %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Gespeichert %@"
+          }
+        }
+      }
+    },
+    "Saved to plans · %@ → %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu Plänen hinzugefügt · %@ → %@"
           }
         }
       }

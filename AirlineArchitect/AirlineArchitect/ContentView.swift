@@ -681,6 +681,11 @@ enum RouteMode: Equatable {
     case off
     case pickOrigin
     case pickDest(String)
+    // RESEARCH-FIRST (14 Sep 2026, customer request): pick origin → dest → see the
+    // whole preview (distance, runway, demand, economics, which types fit) with NO
+    // aircraft committed and NO money spent, THEN assign an aircraft. `.research`
+    // sits between `.pickDest` and `.confirm`.
+    case research(String, String)           // origin, dest — the preview panel
     case confirm(String, String)
     // Multi-city rotation flow (Phase 2). Aircraft-first: pick the spare, then
     // tap cities in order (each appends a stop), then confirm the loop.
@@ -889,6 +894,114 @@ struct AircraftProfileCard: View {
     }
 }
 
+
+/// RESEARCH panel — the FIRST thing you see after picking a city pair, BEFORE any
+/// aircraft or money is committed (customer request, 14 Sep 2026: "I ought to be
+/// able to plan/preview the route before obtaining an aircraft"). Shows distance,
+/// min runway, demand, the best-fit type's projected round-trip economics, and how
+/// many types can fly it. "Assign an aircraft" moves into the existing commit flow;
+/// "Save to plans" parks it (free) on the Plans shelf; nothing here spends money.
+struct RouteResearchPanel: View {
+    let sim: Simulation
+    let origin: Airport
+    let dest: Airport
+    let onAssign: () -> Void
+    let onSavePlan: () -> Void
+    let onCancel: () -> Void
+
+    private let netGreen = Color(skyHex: 0x87ED7A)
+    private let netRed   = Color(skyHex: 0xFF9292)
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xE6E6E6) }
+    private var primaryC: Color   { isDark ? .white : .black }
+    private var labelC: Color     { isDark ? .white : Color(skyHex: 0x64748B) }
+    private var secondaryC: Color { isDark ? Sky.lightBlue.opacity(0.8) : Color(skyHex: 0x64748B) }
+    private var green: Color      { isDark ? netGreen : Color(skyHex: 0x10B981) }
+    private var red: Color        { isDark ? netRed : Color(skyHex: 0xD70000) }
+    private var amber: Color      { Color(skyHex: 0xFFB300) }
+
+    var body: some View {
+        let nm = Int(origin.greatCircleNM(to: dest).rounded())
+        let (can, _) = sim.flyableTypes(from: origin, to: dest)
+        let best = sim.bestFitType(from: origin, to: dest)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("PLAN A ROUTE · nothing spent yet")
+                .font(.karla(10, .bold)).kerning(1).foregroundStyle(secondaryC)
+            HStack(spacing: 8) {
+                Text(origin.code).font(.karla(20, .heavy)).foregroundStyle(primaryC)
+                Image(systemName: "arrow.right").font(.system(size: 14, weight: .bold)).foregroundStyle(primaryC)
+                Text(dest.code).font(.karla(20, .heavy)).foregroundStyle(primaryC)
+                Spacer(minLength: 0)
+            }
+            infoRow("Distance", "\(nm.formatted()) nm", primaryC)
+            if let best {
+                infoRow("Min runway", "\(best.minRunwayFt.formatted()) ft", primaryC)
+            }
+            if sim.useDemandModel {
+                infoRow("Est. demand", String(localized: "\(sim.routeDailyDemand(origin, dest).formatted()) pax/day"), primaryC)
+                let hubBonus = sim.hubBonusPercent(originCode: origin.code, destCode: dest.code)
+                if hubBonus > 0 {
+                    infoRow("Hub bonus", String(localized: "+\(hubBonus)% (connecting traffic)"), green)
+                }
+            }
+            if let best {
+                let lf = sim.projectedLoadFactor(seats: best.seats, from: origin, to: dest)
+                let net = sim.projectedDailyNet(best, from: origin, to: dest)
+                infoRow("Best fit", "\(best.name)", primaryC)
+                infoRow("Projected load", "\(Int((lf * 100).rounded()))%",
+                        lf >= 0.7 ? green : (lf >= 0.45 ? amber : red))
+                infoRow("Net / day at entry", "\(net < 0 ? "−" : "")\(Currency.symbol)\(abs(net).formatted())",
+                        net < 0 ? red : green)
+                Text("Estimate for a fresh route, before rivals enter.")
+                    .font(.karla(10)).foregroundStyle(secondaryC)
+            } else {
+                Text("No aircraft in the game can fly this pair — the runways are too short or it's out of range for every type.")
+                    .font(.karla(12)).foregroundStyle(red).fixedSize(horizontal: false, vertical: true)
+            }
+            if best != nil {
+                infoRow("Aircraft that fit", "\(can.count) of \(AircraftType.all.count) types", secondaryC)
+            }
+
+            Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
+
+            HStack(spacing: 8) {
+                confirmButton("Assign an aircraft", disabled: best == nil, action: onAssign)
+                confirmButton("Save to plans", disabled: false, action: onSavePlan)
+            }.frame(height: 32)
+            confirmButton("Abandon", disabled: false, action: onCancel)
+                .frame(height: 32)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
+    }
+
+    private func infoRow(_ label: LocalizedStringKey, _ value: String, _ valueColor: Color) -> some View {
+        HStack {
+            Text(label).font(.karla(14)).foregroundStyle(labelC)
+            Spacer()
+            Text(value).font(.karla(14, .bold)).foregroundStyle(valueColor)
+        }
+    }
+
+    private func confirmButton(_ label: LocalizedStringKey, disabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.karla(16, .medium))
+                .foregroundStyle(disabled ? primaryC.opacity(0.35) : primaryC)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 8)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+    }
+}
 
 /// Confirm panel for a picked origin→dest pair.
 /// Open Route — step three ("New Route Confirm", Figma 19:6758): the ORIG → DEST

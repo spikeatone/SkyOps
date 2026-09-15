@@ -76,6 +76,10 @@ struct NetworkView: View {
     /// Tapped airport (info card) — mutually exclusive with a selected aircraft.
     @State private var selectedAirportCode: String?
     @State private var routeMode: RouteMode = .off
+    /// Stops carried from a multi-city plan into the aircraft picker, so a loop the
+    /// player already laid out (via research or a saved plan) survives the pick step
+    /// instead of restarting empty. Cleared when the flow ends.
+    @State private var pendingRotationStops: [String] = []
     @State private var flash: String?
     /// Which control-bar panel is open (mutually exclusive). Route-opening is
     /// its own flow (`routeMode`), not a panel.
@@ -91,7 +95,7 @@ struct NetworkView: View {
         switch routeMode {
         case .off, .pickOrigin, .pickAircraft: return []
         case .pickDest(let o):  return [o]
-        case .confirm(let o, let d): return [o, d]
+        case .research(let o, let d), .confirm(let o, let d): return [o, d]
         case .rotate(_, let codes), .confirmRotation(_, let codes): return Set(codes)
         }
     }
@@ -204,10 +208,28 @@ struct NetworkView: View {
     /// there's exactly one idle spare (nothing to choose) — then jump straight to
     /// tapping the rotation.
     private func startRouteFlow() {
-        let spares = sim.idleSpares
-        if spares.count == 1 {
-            routeMode = .rotate(spares[0].id, [])
+        // RESEARCH-FIRST: pick the city pair and preview it BEFORE committing an
+        // aircraft (customer request, 14 Sep 2026). The old aircraft-first entry
+        // (→ .pickAircraft / .rotate) is now reached only AFTER research, via the
+        // "Assign an aircraft" button (see beginAssign).
+        routeMode = .pickOrigin
+    }
+
+    /// Commit step reached from the research panel's "Assign an aircraft" (or a
+    /// saved plan's "Open route"): the free-tier cap is re-checked HERE (research and
+    /// saving a plan are free; only opening a real route counts), then the existing
+    /// pick/confirm machinery takes over unchanged.
+    private func beginAssign(stops: [String]) {
+        guard stops.count >= 2 else { return }
+        panel = .none
+        guard store.canOpenRoute(sim) else { onUpgrade(store.capMessage(.route)); routeMode = .off; return }
+        if stops.count == 2 {
+            // City pair → the existing 2-airport confirm (picks the first spare, or
+            // routes to Acquire if there is none).
+            routeMode = .confirm(stops[0], stops[1])
         } else {
+            // A loop → pick the aircraft, seeded with the stops already chosen.
+            pendingRotationStops = stops
             routeMode = .pickAircraft
         }
     }
@@ -222,7 +244,9 @@ struct NetworkView: View {
     private func adoptSuggestionIfAny() {
         guard let sug = sim.pendingSuggestion else { return }
         panel = .none
-        routeMode = .confirm(sug.origin, sug.dest)
+        // A suggestion lands in RESEARCH too, so the player previews the market
+        // before committing an aircraft (the whole point of research-first).
+        routeMode = .research(sug.origin, sug.dest)
     }
 
     /// The route-flow steps that dock into the iPad rail: the confirm step(s)
@@ -238,7 +262,9 @@ struct NetworkView: View {
         // Done button anywhere; a customer reported trying to tap the word "Done" in
         // the instruction text (14 Sep 2026). On iPhone the panel floats at the bottom
         // of the map instead, so it was iPad-only.
-        case .confirm, .confirmRotation, .pickAircraft, .rotate: return true
+        // `.research` is here for the SAME reason — the research panel docks in the
+        // iPad rail; omit it and the whole preview vanishes on iPad landscape.
+        case .research, .confirm, .confirmRotation, .pickAircraft, .rotate: return true
         default: return false
         }
     }
@@ -736,6 +762,24 @@ struct NetworkView: View {
             EmptyView()
         case .pickOrigin, .pickDest:
             if let t = routePickHintText { routeHint(t) }
+        case .research(let o, let d):
+            if let origin = sim.airports.first(where: { $0.code == o }),
+               let dest = sim.airports.first(where: { $0.code == d }) {
+                let fromSuggestion = sim.pendingSuggestion != nil
+                RouteResearchPanel(
+                    sim: sim, origin: origin, dest: dest,
+                    onAssign: { beginAssign(stops: [o, d]) },
+                    onSavePlan: {
+                        sim.savePlan(stops: [o, d])
+                        showFlash("Saved to plans · \(o) → \(d)")
+                        if fromSuggestion { sim.clearSuggestion(); routeMode = .off; onReturnToOps() }
+                        else { routeMode = .off }
+                    },
+                    onCancel: {
+                        if fromSuggestion { sim.clearSuggestion(); routeMode = .off; onReturnToOps() }
+                        else { routeMode = .off; sim.clearAssignment() }
+                    })
+            }
         case .confirm(let o, let d):
             if let origin = sim.airports.first(where: { $0.code == o }),
                let dest = sim.airports.first(where: { $0.code == d }) {
@@ -757,8 +801,14 @@ struct NetworkView: View {
         case .pickAircraft:
             RouteAircraftPicker(
                 sim: sim,
-                onPick: { ac in routeMode = .rotate(ac.id, []) },
-                onCancel: { routeMode = .off; sim.clearAssignment() },
+                // Seed the loop with any stops carried from research / a saved plan,
+                // so a multi-city route already laid out doesn't restart empty.
+                onPick: { ac in
+                    let seed = pendingRotationStops
+                    pendingRotationStops = []
+                    routeMode = .rotate(ac.id, seed)
+                },
+                onCancel: { pendingRotationStops = []; routeMode = .off; sim.clearAssignment() },
                 onAcquire: { panel = .acquire })
         case .rotate(let acId, let codes):
             // Tapping cities on the map builds the loop; this bar shows progress
@@ -864,8 +914,8 @@ struct NetworkView: View {
         case .pickOrigin:
             if let ap = sim.airport(atScreenPoint: p) { routeMode = .pickDest(ap.code) }
         case .pickDest(let o):
-            if let ap = sim.airport(atScreenPoint: p), ap.code != o { routeMode = .confirm(o, ap.code) }
-        case .confirm:
+            if let ap = sim.airport(atScreenPoint: p), ap.code != o { routeMode = .research(o, ap.code) }
+        case .research, .confirm:
             break
         case .rotate(let acId, var codes):
             // Append the tapped airport as the next stop, unless it repeats the
