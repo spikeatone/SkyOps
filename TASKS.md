@@ -33,6 +33,32 @@ and update it in the same session as the work.
 
 ## In flight
 
+### ✅ SUBMITTED IN 1.10 (build 59) — `WAITING_FOR_REVIEW`, 14 Sep — research-first routes + Plans + customer fixes
+Chain ran end-to-end from the CLI (archive 1.10/59 → export → validate → upload → attach → What's New
+en/de → Promo Text en/de → review notes → submitted). ASC version `e7554f62-…`, Delivery UUID
+`dcf26427-3760-4b7d-9e0a-fbbab6628290`. ⚠️ **MARKETING_VERSION is `1.10`** (not `1.10.0`) to match the
+record string the designer created.
+- [x] **RESEARCH-FIRST route flow + PLANS SHELF** — Open Route previews distance/runway/demand/best-fit/
+      net-per-day BEFORE buying a plane; Save to plans → collapsible PLANNED drawer (live economics, map
+      ghost arcs); multi-city via "Add a stop". Built in 5 increments. `RoutePlanVerify` 23/23.
+      Driven live on the iPad; the projection is a fresh-route, reputation-grounded, pre-competition
+      estimate (labelled "at entry, before rivals") — verified within 0.6–1.6× of a route's realised net.
+- [x] **MX base upgrade + decommission** (customer dead-end: "line stations made the hangar option
+      disappear") — upgrade line station→hangar for the price difference, keeping the ledger;
+      decommission (no refund) frees the airport. `MXBaseVerify` 106/106. Driven live.
+- [x] **Subsidiary LIVE numbers** on the Market Intelligence list row + "· at acquisition" tags (the
+      "my Midas touch doesn't show" report). Driven live (Allegiant sub: $821k net under ownership).
+- [x] **iPad rotation Done button** (state `.rotate` wasn't in isRouteConfirm → the button was off-screen
+      on iPad landscape; a customer tried to tap the word "Done" in the hint). Driven live.
+- [x] **Ops briefing centred** in the content column · **load-menu version stamp** · Plans drawers
+      (ACTIVE open, PLANNED/CLOSED collapsed; save collapses others + scrolls the new card fully in).
+- [x] **DEBUG-only dev-Pro override** — `-devScenario` Pro was being clobbered by RevenueCat's
+      customerInfoStream, silently paywalling all sim route-flow testing. `store.devProOverride`.
+- [x] **Promo Text was EMPTY on the fresh 1.10 record** — set in both locales (standing version-agnostic
+      copy). Watch for this on every freshly-created version record.
+- [ ] **AFTER 1.10 is LIVE:** re-read the TelemetryDeck hang signal (still-open verdict from 1.8/1.9 —
+      b59 events judge it). Next new build = 60+.
+
 ### ✅ LIVE IN 1.9.0 (build 58) — APPROVED 12 Sep (same-day) — maintenance automation + the integration fix
 Everything merged to `main` after build 57 (1.8.0) was cut 9 Sep. Chain ran end-to-end from the CLI
 (archive → export → validate → upload → attach build 58 → What's New en/de → review notes → submit).

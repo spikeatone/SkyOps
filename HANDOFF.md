@@ -5,11 +5,33 @@ the app was renamed — see CLAUDE.md). This file orients a fresh session in one
 read. It's a pointer, not the source of truth — when it disagrees with
 CLAUDE.md, CLAUDE.md wins.
 
-_Snapshot: 12 September 2026._
+_Snapshot: 14 September 2026._
 
-**► ⭐⭐⭐ 1.9.0 (build 58) IS LIVE — APPROVED and `READY_FOR_SALE` / `READY_FOR_DISTRIBUTION` (approved
-12 Sep 2026, ~11:00 PDT, same day it was submitted; rolling out over ≤24h). Next new build = 59+.**
-The whole chain ran from the CLI: bumped
+**► ⭐⭐⭐ 1.10 (build 59) IS SUBMITTED — `WAITING_FOR_REVIEW` (submitted 14 Sep 2026, auto-releases on
+approval). Next new build = 60+.** The whole chain ran from the CLI: bumped 1.9.0→**1.10** / 58→59
+(⚠️ the ASC record was created as `1.10`, so MARKETING_VERSION is **`1.10`** not `1.10.0` — a build's
+CFBundleShortVersionString must match the record string exactly) → archive (1.10/59) → export →
+validate (VERIFY SUCCEEDED) → upload (UPLOAD SUCCEEDED, **Delivery UUID
+`dcf26427-3760-4b7d-9e0a-fbbab6628290`**, 80 MB) → build 59 attached → What's New en-US+de-DE →
+**Promo Text set in BOTH locales** (the standing "one plane → global airline" copy; it was EMPTY on
+the fresh record) → App Review notes with a **SCALED-BACK 4.3(a) intro** (3 short paragraphs, not 5;
+3416 chars vs 1.9's 3961) → Game Center already enabled → submitted in ASC.
+**ASC ids — version `e7554f62-7d6c-4ae3-8535-a06ff946cd28`.** Copy: `aa-1.1.x/whats-new-1.10.md` +
+`aa-1.1.x/app-review-notes-1.10.txt`.
+**1.10 = the RESEARCH-FIRST route flow + PLANS SHELF** (Open Route now previews distance/runway/demand/
+best-fit/net-per-day BEFORE you buy a plane; "Save to plans" parks it in a collapsible PLANNED drawer
+under Routes with live economics + map ghost arcs; works for multi-city loops via "Add a stop") · the
+**MX base upgrade/decommission** (line station → hangar for the price difference; decommission frees
+the airport) · **subsidiary LIVE numbers** on the Market Intelligence list row + "· at acquisition"
+tags (the "my Midas touch doesn't show" fix) · the **iPad rotation Done-button** fix · **Ops briefing
+centred** in the content column · the **load-menu version stamp** · and a DEBUG-only **dev-Pro override**
+so `-devScenario` no longer gets paywalled by RevenueCat's stream. All DRIVEN-VERIFIED on the iPad Pro
+sim (subsidiary numbers, MX upgrade/decommission, research flow, briefing centring, drawers all
+confirmed live). Harnesses: RoutePlanVerify 23/23 · RoundTrip 13/13 · SaveCompat 12/12 · Rotation
+55/55 · MXBase 106/106 · German clean but the 2 known DEBUG livery strings.
+
+**► (history) 1.9.0 (build 58) IS LIVE — APPROVED and `READY_FOR_SALE` / `READY_FOR_DISTRIBUTION` (approved
+12 Sep 2026, ~11:00 PDT, same day it was submitted).** The whole chain ran from the CLI: bumped
 1.8.0→1.9.0 / 57→58 (6 configs) → archive (ARCHIVE SUCCEEDED, 1.9.0/58) → export → validate
 (VERIFY SUCCEEDED) → upload (UPLOAD SUCCEEDED, **Delivery UUID `b3521401-9259-4095-bc30-97813abdb384`**,
 79.8 MB) → build 58 attached → en-US + de-DE What's New set → App Review notes set (3961 chars, §1
