@@ -565,6 +565,7 @@ struct ContentView: View {
                 airlineName: name,
                 dateLine: "Day \(Simulation.gameDay(at: sim.tick)) · \(date)",
                 items: items,
+                isPadLayout: isPadLayout,
                 onDismiss: { withAnimation(.easeOut(duration: 0.2)) { briefing = nil } })
                 .transition(.opacity)
         }

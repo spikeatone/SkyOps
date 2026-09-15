@@ -16,6 +16,10 @@ struct SessionBriefingView: View {
     let airlineName: String
     let dateLine: String                       // "Day 214 · Mar 4, 2027"
     let items: [Simulation.BriefingItem]
+    /// iPad docks a sidebar rail on the left, so a window-centred card reads
+    /// off-centre; centre against the content column instead (matches the Alerts
+    /// modal and auto-slow banner). The dim backdrop stays full-screen.
+    var isPadLayout: Bool = false
     let onDismiss: () -> Void
 
     @Environment(\.colorScheme) private var scheme
@@ -30,7 +34,14 @@ struct SessionBriefingView: View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
                 .onTapGesture(perform: onDismiss)
-            VStack(alignment: .leading, spacing: 14) {
+            card
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .centredInContentColumn(isPadLayout)
+        }
+    }
+
+    private var card: some View {
+        VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("OPS BRIEFING").font(.karla(11, .bold)).foregroundStyle(secondary)
                         .kerning(1.2)
@@ -71,6 +82,5 @@ struct SessionBriefingView: View {
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(border, lineWidth: 1))
             .shadow(color: .black.opacity(isDark ? 0.5 : 0.2), radius: 14, y: 6)
             .padding(20)
-        }
     }
 }
