@@ -187,6 +187,26 @@ struct MapView: View {
         }
         ctx.stroke(arcs, with: .color(cruiseColor.opacity(0.07)), lineWidth: 1)
 
+        // PLANNED routes (researched, not yet opened) — faint "ghost" dashed arcs,
+        // drawn UNDER the real network so opened routes always sit on top. Same
+        // unordered-pair dedupe as the player arcs below (a 2-stop plan yields A→B
+        // and B→A, which would restart the dash phase and render near-solid).
+        var planArcs = Path()
+        var planDrawn = Set<String>()
+        for plan in sim.plans {
+            for (a, b) in Simulation.rotationLegs(plan.stops) {
+                let key = a < b ? a + "|" + b : b + "|" + a
+                guard planDrawn.insert(key).inserted else { continue }
+                guard let o = sim.airports.first(where: { $0.code == a }),
+                      let d = sim.airports.first(where: { $0.code == b }) else { continue }
+                let pp = FlightPath.pathPoints(origin: o.screen, dest: d.screen)
+                planArcs.move(to: pp.start)
+                planArcs.addQuadCurve(to: pp.end, control: pp.mid)
+            }
+        }
+        ctx.stroke(planArcs, with: .color(cruiseColor.opacity(0.22)),
+                   style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
+
         // The player's opened routes — brighter, so the real network stands out.
         // EVERY leg of a rotation, not just origin→dest: for a multi-city loop
         // those two are merely the FIRST and LAST stop, so drawing the pair alone

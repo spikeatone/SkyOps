@@ -1345,6 +1345,9 @@ struct RotationConfirmPanel: View {
 /// the card inline to the full P&L + profitability chart + recent flights.
 struct RoutesPanel: View {
     let sim: Simulation
+    /// Open a saved plan — hands the plan's stops back to NetworkView, which closes
+    /// the panel, re-checks the free-tier cap, and enters the assign-aircraft flow.
+    var onOpenPlan: (RoutePlan) -> Void = { _ in }
     @State private var expandedId: Int?
     /// The open route the player is confirming a close+park on.
     @State private var closeTarget: Route?
@@ -1371,8 +1374,9 @@ struct RoutesPanel: View {
     var body: some View {
         let active = sim.playerRoutes.sorted { $0.openedTick > $1.openedTick }
         let closed = sim.closedPlayerRoutes.sorted { ($0.closedTick ?? 0) > ($1.closedTick ?? 0) }
+        let planned = sim.plans.sorted { $0.savedTick > $1.savedTick }
         Group {
-            if active.isEmpty && closed.isEmpty {
+            if active.isEmpty && closed.isEmpty && planned.isEmpty {
                 Text("No routes opened yet.")
                     .font(.karla(14)).foregroundStyle(labelColor)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -1381,6 +1385,7 @@ struct RoutesPanel: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         if !active.isEmpty { section("ACTIVE ROUTES", active) }
+                        if !planned.isEmpty { planSection(planned) }
                         if !closed.isEmpty { section("CLOSED ROUTES", closed) }
                     }
                     .padding(8)
@@ -1422,6 +1427,65 @@ struct RoutesPanel: View {
             }
             ForEach(routes) { card($0) }
         }
+    }
+
+    /// The PLANNED ROUTES section — researched-but-unopened routes, between Active
+    /// and Closed. Same stacked-section treatment; economics recomputed live per row.
+    private func planSection(_ plans: [RoutePlan]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("PLANNED ROUTES").font(.karla(14)).foregroundStyle(labelColor)
+                Rectangle().fill(cardBorder).frame(height: 1)
+                Text("researched · not opened").font(.karla(10)).foregroundStyle(labelColor.opacity(0.7))
+            }
+            ForEach(plans) { planCard($0) }
+        }
+    }
+
+    private func planCard(_ plan: RoutePlan) -> some View {
+        // Economics recomputed from CURRENT sim state every render — a plan can
+        // never go stale. nil airports (a code that vanished) degrade to "—".
+        let o = sim.airport(plan.originCode)
+        let d = sim.airport(plan.destCode)
+        let best = (o != nil && d != nil) ? sim.bestFitType(from: o!, to: d!) : nil
+        let net = (best != nil && o != nil && d != nil) ? sim.projectedDailyNet(best!, from: o!, to: d!) : nil
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(plan.label).font(.karla(16, .heavy)).foregroundStyle(primaryC)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Spacer(minLength: 6)
+                if let net {
+                    Text("\(net < 0 ? "−" : "")\(Currency.symbol)\(abs(net).formatted())/day")
+                        .font(.karla(12, .semibold)).foregroundStyle(net < 0 ? red : green)
+                }
+            }
+            Text(best != nil
+                 ? String(localized: "Best fit \(best!.name) · at entry, before rivals")
+                 : String(localized: "No aircraft can fly this pair"))
+                .font(.karla(11)).foregroundStyle(labelColor)
+            HStack(spacing: 8) {
+                Button {
+                    Feedback.impact(.light); onOpenPlan(plan)
+                } label: {
+                    Text("Open route").font(.karla(13, .bold)).foregroundStyle(.white)
+                        .frame(maxWidth: .infinity).padding(.vertical, 7)
+                        .background(best != nil ? Sky.brightBlue : Color.gray.opacity(0.4))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }.buttonStyle(.plain).disabled(best == nil)
+                Button {
+                    Feedback.impact(.light); sim.deletePlan(id: plan.id)
+                } label: {
+                    Image(systemName: "trash").font(.system(size: 13))
+                        .foregroundStyle(labelColor).frame(width: 40).padding(.vertical, 7)
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+                }.buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(innerCardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
     }
 
     private func card(_ r: Route) -> some View {

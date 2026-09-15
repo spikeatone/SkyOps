@@ -2292,6 +2292,16 @@
         }
       }
     },
+    "Best fit %@ · at entry, before rivals": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passendstes %@ · bei Start, vor Wettbewerbern"
+          }
+        }
+      }
+    },
     "Best guesses from public numbers. Open their books for a firmer picture.": {
       "localizations": {
         "de": {
@@ -5613,6 +5623,16 @@
         }
       }
     },
+    "No aircraft can fly this pair": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Flugzeug kann dieses Paar fliegen"
+          }
+        }
+      }
+    },
     "No aircraft currently %@.": {
       "localizations": {
         "de": {
@@ -6390,6 +6410,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "STRECKE PLANEN · noch nichts ausgegeben"
+          }
+        }
+      }
+    },
+    "PLANNED ROUTES": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GEPLANTE STRECKEN"
           }
         }
       }
@@ -9383,6 +9413,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "hat die %@ Eröffnungskosten amortisiert, +%@"
+          }
+        }
+      }
+    },
+    "researched · not opened": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recherchiert · nicht eröffnet"
           }
         }
       }

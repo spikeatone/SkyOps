@@ -215,6 +215,12 @@ struct NetworkView: View {
         routeMode = .pickOrigin
     }
 
+    /// Open a saved plan from the Routes panel: leave the panel, then enter the
+    /// same commit step the research panel's "Assign an aircraft" uses.
+    private func openPlan(_ plan: RoutePlan) {
+        beginAssign(stops: plan.stops)
+    }
+
     /// Commit step reached from the research panel's "Assign an aircraft" (or a
     /// saved plan's "Open route"): the free-tier cap is re-checked HERE (research and
     /// saving a plan are free; only opening a real route counts), then the existing
@@ -312,7 +318,7 @@ struct NetworkView: View {
             BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
                 .frame(maxHeight: .infinity, alignment: .top)
         case .routes:
-            RoutesPanel(sim: sim).frame(maxHeight: .infinity, alignment: .top)
+            RoutesPanel(sim: sim, onOpenPlan: { openPlan($0) }).frame(maxHeight: .infinity, alignment: .top)
         case .hire:
             VStack(spacing: 0) {
                 AddCrewPanel(sim: sim) { withAnimation(Motion.glide) { panel = .none } }
@@ -495,7 +501,7 @@ struct NetworkView: View {
                 .frame(maxHeight: .infinity, alignment: .top)
                 .transition(slide)
         case .routes:
-            RoutesPanel(sim: sim).transition(slide)
+            RoutesPanel(sim: sim, onOpenPlan: { openPlan($0) }).transition(slide)
             Spacer(minLength: 0)
         case .hire:
             AddCrewPanel(sim: sim) { withAnimation(Motion.glide) { panel = .none } }.transition(slide)
