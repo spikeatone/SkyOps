@@ -3044,6 +3044,49 @@ final class Simulation {
         return Int((perLeg * legsPerDay).rounded())
     }
 
+    // MARK: - Multi-city rotation research (preview a loop before an aircraft)
+
+    /// Can this type fly EVERY leg of the loop (range + runway)? Mirrors
+    /// `rotationBlock` the way `typeCanFly` mirrors `routeBlock`.
+    func typeCanFlyRotation(_ t: AircraftType, stops: [String]) -> Bool {
+        for (a, b) in Simulation.rotationLegs(stops) {
+            guard let from = airport(a), let to = airport(b) else { continue }
+            if !typeCanFly(t, from: from, to: to) { return false }
+        }
+        return true
+    }
+
+    func rotationFlyableTypes(stops: [String]) -> (can: [AircraftType], cannot: [AircraftType]) {
+        var can: [AircraftType] = [], cannot: [AircraftType] = []
+        for t in AircraftType.all { typeCanFlyRotation(t, stops: stops) ? can.append(t) : cannot.append(t) }
+        return (can, cannot)
+    }
+
+    /// Highest projected-daily-net type that can fly the whole loop, or nil.
+    func bestFitRotationType(stops: [String]) -> AircraftType? {
+        rotationFlyableTypes(stops: stops).can
+            .max { projectedRotationDailyNet($0, stops: stops) < projectedRotationDailyNet($1, stops: stops) }
+    }
+
+    /// Projected daily net for a TYPE flying this loop: the AVERAGE per-leg net
+    /// across the loop × legs/day (the aircraft flies one leg per cycle, walking the
+    /// loop). Same fresh-route, reputation-grounded estimate as `projectedDailyNet`,
+    /// so a loop and a pair are quoted on the same basis.
+    func projectedRotationDailyNet(_ t: AircraftType, stops: [String]) -> Int {
+        let legs = Simulation.rotationLegs(stops)
+        guard !legs.isEmpty else { return 0 }
+        var sumPerLeg = 0.0, n = 0
+        let legsPerDay = 1440.0 / Double(Simulation.legCycleTicks)
+        for (a, b) in legs {
+            guard let from = airport(a), let to = airport(b) else { continue }
+            // projectedDailyNet is perLeg × legsPerDay; recover perLeg by dividing.
+            sumPerLeg += Double(projectedDailyNet(t, from: from, to: to)) / legsPerDay
+            n += 1
+        }
+        guard n > 0 else { return 0 }
+        return Int((sumPerLeg / Double(n) * legsPerDay).rounded())
+    }
+
     /// Create the Route (charge cost, consume slots, log). Shared by openRoute
     /// (staffed now) and the airport-offer accept path (may open PENDING — no
     /// aircraft yet). Does NOT assign an aircraft.

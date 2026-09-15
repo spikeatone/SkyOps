@@ -1592,6 +1592,16 @@
         }
       }
     },
+    "Add a stop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopp hinzufügen"
+          }
+        }
+      }
+    },
     "Africa": {
       "localizations": {
         "de": {
@@ -3832,6 +3842,16 @@
         }
       }
     },
+    "Estimate for a fresh loop, before rivals enter.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schätzung für einen neuen Rundkurs, bevor Wettbewerber einsteigen."
+          }
+        }
+      }
+    },
     "Estimate for a fresh route, before rivals enter.": {
       "localizations": {
         "de": {
@@ -5633,6 +5653,16 @@
         }
       }
     },
+    "No aircraft can fly every leg of this loop yet — add a stop it can reach, or undo one.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kann kein Flugzeug jeden Abschnitt dieses Rundkurses fliegen — füge einen erreichbaren Stopp hinzu oder nimm einen zurück."
+          }
+        }
+      }
+    },
     "No aircraft can fly this pair": {
       "localizations": {
         "de": {
@@ -6410,6 +6440,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "TILGEN"
+          }
+        }
+      }
+    },
+    "PLAN A LOOP · nothing spent yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RUNDKURS PLANEN · noch nichts ausgegeben"
           }
         }
       }
@@ -8133,6 +8173,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Start / Steigflug"
+          }
+        }
+      }
+    },
+    "Tap another city to add a stop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe eine weitere Stadt an, um einen Stopp hinzuzufügen"
+          }
+        }
+      }
+    },
+    "Tap another city, or plan this loop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe eine weitere Stadt an oder plane diesen Rundkurs"
           }
         }
       }

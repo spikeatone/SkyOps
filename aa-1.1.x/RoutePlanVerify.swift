@@ -140,6 +140,45 @@ func run() {
               "5: projected $\(projected)/day is within 0.6–1.6× of realised $\(realisedDaily)/day")
     }
 
+    // ── 6. Multi-city rotation research helpers ─────────────────────────────────
+    do {
+        let sim = Simulation()
+        sim.configure(viewport: CGSize(width: 400, height: 800))
+        sim.nameAirline("Plan Air", tailCode: "PL")
+        sim.devInjectCash(1_000_000_000)
+        let loop = ["DEN", "ORD", "MSP"]
+        // typeCanFlyRotation ⇔ every leg passes typeCanFly.
+        var mismatches = 0, checked = 0
+        for t in AircraftType.all {
+            checked += 1
+            let whole = sim.typeCanFlyRotation(t, stops: loop)
+            let everyLeg = Simulation.rotationLegs(loop).allSatisfy { (a, b) in
+                guard let o = sim.airport(a), let d = sim.airport(b) else { return true }
+                return sim.typeCanFly(t, from: o, to: d)
+            }
+            if whole != everyLeg { mismatches += 1 }
+        }
+        check(checked > 20, "6: iterated types for the loop (\(checked))")
+        check(mismatches == 0, "6: typeCanFlyRotation ⇔ every leg flyable (\(mismatches) mismatches)")
+        // A loop's best-fit projects a finite, and here positive, daily net.
+        guard let best = sim.bestFitRotationType(stops: loop) else {
+            check(false, "6: no best-fit for the loop"); printResult(pass, fail); return
+        }
+        let loopNet = sim.projectedRotationDailyNet(best, stops: loop)
+        check(loopNet != 0, "6: the loop projects a non-zero daily net (\(best.name), $\(loopNet))")
+        // A single leg's projection and the 2-stop "loop" of that leg agree (a 2-stop
+        // rotation is just A↔B, so its per-day net equals the pair projection).
+        guard let o = sim.airport("DEN"), let d = sim.airport("ORD"), let t2 = sim.bestFitType(from: o, to: d) else {
+            check(false, "6: pair setup"); printResult(pass, fail); return
+        }
+        let pairNet = sim.projectedDailyNet(t2, from: o, to: d)
+        let twoStopLoopNet = sim.projectedRotationDailyNet(t2, stops: ["DEN", "ORD"])
+        // The 2-stop loop is A→B then B→A; the reverse leg's fees differ (arrival
+        // airport), so allow a small band rather than exact equality.
+        check(abs(pairNet - twoStopLoopNet) <= max(2000, abs(pairNet) / 5),
+              "6: a 2-stop loop ≈ the pair projection (pair $\(pairNet), loop $\(twoStopLoopNet))")
+    }
+
     printResult(pass, fail)
 }
 

@@ -96,6 +96,7 @@ struct NetworkView: View {
         case .off, .pickOrigin, .pickAircraft: return []
         case .pickDest(let o):  return [o]
         case .research(let o, let d), .confirm(let o, let d): return [o, d]
+        case .researchRotation(let codes): return Set(codes)
         case .rotate(_, let codes), .confirmRotation(_, let codes): return Set(codes)
         }
     }
@@ -179,7 +180,8 @@ struct NetworkView: View {
     /// Mirror the tapped-out rotation onto the sim so MapView can draw the loop.
     private func syncRotationPreview(_ mode: RouteMode) {
         switch mode {
-        case .rotate(_, let codes), .confirmRotation(_, let codes): sim.setRotationPreview(codes)
+        case .rotate(_, let codes), .confirmRotation(_, let codes), .researchRotation(let codes):
+            sim.setRotationPreview(codes)
         default: sim.clearRotationPreview()
         }
     }
@@ -270,7 +272,7 @@ struct NetworkView: View {
         // of the map instead, so it was iPad-only.
         // `.research` is here for the SAME reason — the research panel docks in the
         // iPad rail; omit it and the whole preview vanishes on iPad landscape.
-        case .research, .confirm, .confirmRotation, .pickAircraft, .rotate: return true
+        case .research, .researchRotation, .confirm, .confirmRotation, .pickAircraft, .rotate: return true
         default: return false
         }
     }
@@ -280,6 +282,7 @@ struct NetworkView: View {
     /// to avoid duplicating the instruction (see the mapCard overlay).
     private var isRotating: Bool {
         if case .rotate = routeMode { return true }
+        if case .researchRotation = routeMode { return true }
         return false
     }
 
@@ -775,6 +778,11 @@ struct NetworkView: View {
                 RouteResearchPanel(
                     sim: sim, origin: origin, dest: dest,
                     onAssign: { beginAssign(stops: [o, d]) },
+                    onAddStop: {
+                        // Grow the pair into a multi-city loop — start tapping more stops.
+                        sim.clearSuggestion()
+                        routeMode = .researchRotation([o, d])
+                    },
                     onSavePlan: {
                         sim.savePlan(stops: [o, d])
                         showFlash("Saved to plans · \(o) → \(d)")
@@ -786,6 +794,22 @@ struct NetworkView: View {
                         else { routeMode = .off; sim.clearAssignment() }
                     })
             }
+        case .researchRotation(let codes):
+            RotationResearchPanel(
+                sim: sim, codes: codes,
+                onAssign: { beginAssign(stops: codes) },
+                onSavePlan: {
+                    sim.savePlan(stops: codes)
+                    showFlash("Saved to plans · \(codes.joined(separator: " → "))")
+                    routeMode = .off
+                },
+                onUndo: {
+                    let trimmed = Array(codes.dropLast())
+                    // Back below 3 stops → return to the pair research panel.
+                    if trimmed.count >= 2 { routeMode = .researchRotation(trimmed) }
+                    else if trimmed.count == 2 { routeMode = .research(trimmed[0], trimmed[1]) }
+                },
+                onCancel: { routeMode = .off; sim.clearAssignment() })
         case .confirm(let o, let d):
             if let origin = sim.airports.first(where: { $0.code == o }),
                let dest = sim.airports.first(where: { $0.code == d }) {
@@ -923,6 +947,13 @@ struct NetworkView: View {
             if let ap = sim.airport(atScreenPoint: p), ap.code != o { routeMode = .research(o, ap.code) }
         case .research, .confirm:
             break
+        case .researchRotation(var codes):
+            // Tap to add the next stop (no aircraft yet — that's the whole point).
+            guard let ap = sim.airport(atScreenPoint: p) else { break }
+            if codes.last == ap.code { break }
+            guard codes.count < Route.maxStops else { showFlash("A rotation can have at most \(Route.maxStops) stops"); break }
+            codes.append(ap.code)
+            routeMode = .researchRotation(codes)
         case .rotate(let acId, var codes):
             // Append the tapped airport as the next stop, unless it repeats the
             // immediately-preceding stop or the loop is already at the max.

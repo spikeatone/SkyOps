@@ -686,6 +686,10 @@ enum RouteMode: Equatable {
     // aircraft committed and NO money spent, THEN assign an aircraft. `.research`
     // sits between `.pickDest` and `.confirm`.
     case research(String, String)           // origin, dest — the preview panel
+    // Multi-city research: tap the loop's stops with NO aircraft committed, preview
+    // the whole loop's economics, THEN assign. Reached from `.research` via "Add a
+    // stop". The aircraft-first `.rotate` below still exists for the assign step.
+    case researchRotation([String])         // stops tapped so far (in order), no aircraft
     case confirm(String, String)
     // Multi-city rotation flow (Phase 2). Aircraft-first: pick the spare, then
     // tap cities in order (each appends a stop), then confirm the loop.
@@ -906,6 +910,7 @@ struct RouteResearchPanel: View {
     let origin: Airport
     let dest: Airport
     let onAssign: () -> Void
+    let onAddStop: () -> Void
     let onSavePlan: () -> Void
     let onCancel: () -> Void
 
@@ -968,10 +973,108 @@ struct RouteResearchPanel: View {
 
             HStack(spacing: 8) {
                 confirmButton("Assign an aircraft", disabled: best == nil, action: onAssign)
-                confirmButton("Save to plans", disabled: false, action: onSavePlan)
+                confirmButton("Add a stop", disabled: false, action: onAddStop)
             }.frame(height: 32)
-            confirmButton("Abandon", disabled: false, action: onCancel)
-                .frame(height: 32)
+            HStack(spacing: 8) {
+                confirmButton("Save to plans", disabled: false, action: onSavePlan)
+                confirmButton("Abandon", disabled: false, action: onCancel)
+            }.frame(height: 32)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        .shadow(color: isDark ? .clear : .black.opacity(0.12), radius: 3, y: 1)
+    }
+
+    private func infoRow(_ label: LocalizedStringKey, _ value: String, _ valueColor: Color) -> some View {
+        HStack {
+            Text(label).font(.karla(14)).foregroundStyle(labelC)
+            Spacer()
+            Text(value).font(.karla(14, .bold)).foregroundStyle(valueColor)
+        }
+    }
+
+    private func confirmButton(_ label: LocalizedStringKey, disabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.karla(16, .medium))
+                .foregroundStyle(disabled ? primaryC.opacity(0.35) : primaryC)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 8)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+    }
+}
+
+/// RESEARCH panel for a multi-city LOOP — the rotation analogue of
+/// RouteResearchPanel. Tap stops on the map (no aircraft committed); this shows the
+/// loop, its total distance, whole-loop projected net, and how many types can fly
+/// EVERY leg, then Assign / Save to plans / Undo stop / Abandon.
+struct RotationResearchPanel: View {
+    let sim: Simulation
+    let codes: [String]
+    let onAssign: () -> Void
+    let onSavePlan: () -> Void
+    let onUndo: () -> Void
+    let onCancel: () -> Void
+
+    @Environment(\.colorScheme) private var scheme
+    private var isDark: Bool { scheme == .dark }
+    private var cardBG: Color     { isDark ? Sky.navBarDark : .white }
+    private var cardBorder: Color { isDark ? Sky.onDarkStroke : Color(skyHex: 0xE6E6E6) }
+    private var primaryC: Color   { isDark ? .white : .black }
+    private var labelC: Color     { isDark ? .white : Color(skyHex: 0x64748B) }
+    private var secondaryC: Color { isDark ? Sky.lightBlue.opacity(0.8) : Color(skyHex: 0x64748B) }
+    private var green: Color      { isDark ? Color(skyHex: 0x87ED7A) : Color(skyHex: 0x10B981) }
+    private var red: Color        { isDark ? Color(skyHex: 0xFF9292) : Color(skyHex: 0xD70000) }
+
+    private var totalNM: Int {
+        Simulation.rotationLegs(codes).reduce(0) { sum, leg in
+            guard let a = sim.airport(leg.0), let b = sim.airport(leg.1) else { return sum }
+            return sum + Int(a.greatCircleNM(to: b).rounded())
+        }
+    }
+
+    var body: some View {
+        let best = codes.count >= 2 ? sim.bestFitRotationType(stops: codes) : nil
+        let (can, _) = sim.rotationFlyableTypes(stops: codes)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("PLAN A LOOP · nothing spent yet")
+                .font(.karla(10, .bold)).kerning(1).foregroundStyle(secondaryC)
+            (Text(codes.joined(separator: "  →  ")) + Text("  →  ↺"))
+                .font(.karla(17, .heavy)).foregroundStyle(primaryC)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(codes.count < 2 ? "Tap another city to add a stop"
+                                 : "Tap another city, or plan this loop")
+                .font(.karla(11)).foregroundStyle(secondaryC)
+            infoRow("Total loop", "\(totalNM.formatted()) nm", primaryC)
+            if let best {
+                let net = sim.projectedRotationDailyNet(best, stops: codes)
+                infoRow("Best fit", best.name, primaryC)
+                infoRow("Net / day at entry", "\(net < 0 ? "−" : "")\(Currency.symbol)\(abs(net).formatted())",
+                        net < 0 ? red : green)
+                infoRow("Aircraft that fit", "\(can.count) of \(AircraftType.all.count) types", secondaryC)
+                Text("Estimate for a fresh loop, before rivals enter.")
+                    .font(.karla(10)).foregroundStyle(secondaryC)
+            } else {
+                Text("No aircraft can fly every leg of this loop yet — add a stop it can reach, or undo one.")
+                    .font(.karla(12)).foregroundStyle(red).fixedSize(horizontal: false, vertical: true)
+            }
+
+            Rectangle().fill(cardBorder).frame(height: 1).padding(.vertical, 2)
+
+            HStack(spacing: 8) {
+                confirmButton("Assign an aircraft", disabled: best == nil, action: onAssign)
+                confirmButton("Undo stop", disabled: false, action: onUndo)
+            }.frame(height: 32)
+            HStack(spacing: 8) {
+                confirmButton("Save to plans", disabled: false, action: onSavePlan)
+                confirmButton("Abandon", disabled: false, action: onCancel)
+            }.frame(height: 32)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
