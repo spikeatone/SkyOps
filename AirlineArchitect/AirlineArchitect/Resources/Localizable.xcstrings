@@ -531,6 +531,16 @@
         }
       }
     },
+    "%@%@%@/day": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@%@%@/Tag"
+          }
+        }
+      }
+    },
     "%@%lld%%": {
       "localizations": {
         "de": {
