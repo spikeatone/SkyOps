@@ -1468,6 +1468,10 @@ struct RoutesPanel: View {
     /// Measured content height so the panel HUGS its content (one collapsed route
     /// card is short), only scrolling when the list exceeds the cap.
     @State private var contentHeight: CGFloat = 0
+    /// Which of the three route sections are expanded. ACTIVE opens by default (the
+    /// main thing a player checks); PLANNED and CLOSED start collapsed to save space.
+    /// Saving a plan auto-opens PLANNED (see the scrollToPlans handler).
+    @State private var expandedSections: Set<String> = ["active"]
 
     private let netGreen = Color(skyHex: 0x87ED7A)
     private let netRed   = Color(skyHex: 0xFF9292)
@@ -1498,17 +1502,35 @@ struct RoutesPanel: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
-                            if !active.isEmpty { section("ACTIVE ROUTES", active) }
+                        VStack(alignment: .leading, spacing: 12) {
+                            if !active.isEmpty { section("ACTIVE ROUTES", key: "active", active) }
                             if !planned.isEmpty { planSection(planned).id("plans") }
-                            if !closed.isEmpty { section("CLOSED ROUTES", closed) }
+                            if !closed.isEmpty { section("CLOSED ROUTES", key: "closed", closed) }
                         }
                         .padding(8)
+                        // Extra bottom room so the last card can always scroll clear of
+                        // the panel's bottom edge instead of being clipped there.
+                        .padding(.bottom, 16)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
                     }
-                    // Just saved a plan → scroll to PLANNED so the player sees it.
+                    // Just saved a plan → open PLANNED and scroll the NEW card FULLY
+                    // into view (bottom anchor, so it isn't cut off below the fold —
+                    // the section is collapsed by default). A tick's delay lets the
+                    // drawer expand and lay out before the scroll measures it.
                     .onChange(of: scrollToPlans) { _, _ in
-                        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("plans", anchor: .top) }
+                        // Open PLANNED and collapse the OTHER sections so its card has
+                        // room to show fully — with ACTIVE's 6 routes expanded the new
+                        // plan was pinned to the bottom edge and clipped (14 Sep 2026).
+                        withAnimation(Motion.glide) { expandedSections = ["plans"] }
+                        let newest = planned.first
+                        // Run AFTER the expand/collapse animation settles, or scrollTo
+                        // measures the pre-layout height and stops short of the card.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                if let id = newest?.id { proxy.scrollTo("plan-\(id)", anchor: .bottom) }
+                                else { proxy.scrollTo("plans", anchor: .top) }
+                            }
+                        }
                     }
                 }
                 // iPad rail: fill the available height (the rail is tall, and the
@@ -1540,26 +1562,52 @@ struct RoutesPanel: View {
         }
     }
 
-    private func section(_ title: LocalizedStringKey, _ routes: [Route]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Text(title).font(.karla(14)).foregroundStyle(labelColor)
-                Rectangle().fill(cardBorder).frame(height: 1)
+    /// A collapsible section header — tappable, with a count chip and a chevron that
+    /// rotates when open. Sections are closed by default to keep the panel compact.
+    private func sectionHeader(_ title: LocalizedStringKey, key: String, count: Int,
+                               trailing: LocalizedStringKey? = nil) -> some View {
+        let open = expandedSections.contains(key)
+        return Button {
+            Feedback.impact(.light)
+            withAnimation(Motion.glide) {
+                if open { expandedSections.remove(key) } else { expandedSections.insert(key) }
             }
-            ForEach(routes) { card($0) }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(labelColor).rotationEffect(.degrees(open ? 90 : 0))
+                Text(title).font(.karla(14)).foregroundStyle(labelColor)
+                Text("\(count)").font(.karla(11, .bold)).foregroundStyle(labelColor)
+                    .padding(.horizontal, 6).padding(.vertical, 1)
+                    .background(cardBorder.opacity(0.5)).clipShape(Capsule())
+                Rectangle().fill(cardBorder).frame(height: 1)
+                if let trailing {
+                    Text(trailing).font(.karla(10)).foregroundStyle(labelColor.opacity(0.7))
+                }
+            }
+        }.buttonStyle(.plain)
+    }
+
+    private func section(_ title: LocalizedStringKey, key: String, _ routes: [Route]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader(title, key: key, count: routes.count)
+            if expandedSections.contains(key) {
+                ForEach(routes) { card($0) }
+            }
         }
     }
 
     /// The PLANNED ROUTES section — researched-but-unopened routes, between Active
-    /// and Closed. Same stacked-section treatment; economics recomputed live per row.
+    /// and Closed. Same collapsible treatment; economics recomputed live per row.
     private func planSection(_ plans: [RoutePlan]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Text("PLANNED ROUTES").font(.karla(14)).foregroundStyle(labelColor)
-                Rectangle().fill(cardBorder).frame(height: 1)
-                Text("researched · not opened").font(.karla(10)).foregroundStyle(labelColor.opacity(0.7))
+            sectionHeader("PLANNED ROUTES", key: "plans", count: plans.count,
+                          trailing: "researched · not opened")
+            if expandedSections.contains("plans") {
+                // Each card carries a scroll id so the save-reveal can pull the whole
+                // newest card into view (not just the header).
+                ForEach(plans) { planCard($0).id("plan-\($0.id)") }
             }
-            ForEach(plans) { planCard($0) }
         }
     }
 
