@@ -1451,6 +1451,17 @@ struct RoutesPanel: View {
     /// Open a saved plan — hands the plan's stops back to NetworkView, which closes
     /// the panel, re-checks the free-tier cap, and enters the assign-aircraft flow.
     var onOpenPlan: (RoutePlan) -> Void = { _ in }
+    /// iPad LANDSCAPE docks this in a full-height side rail — FILL that space so lower
+    /// sections (Planned, Closed) are visible instead of clipped below a content-hugging
+    /// cap (a player saved two plans and never saw them — 14 Sep 2026).
+    var fillHeight: Bool = false
+    /// The cap when NOT filling (iPhone / iPad portrait, where it floats over the map).
+    /// iPad portrait passes a taller cap so more of the list shows without covering the
+    /// whole map.
+    var maxFloatingHeight: CGFloat = 376
+    /// Bumped by NetworkView when a plan is just saved → scroll to the PLANNED section
+    /// so the player sees where it went.
+    var scrollToPlans: Int = 0
     @State private var expandedId: Int?
     /// The open route the player is confirming a close+park on.
     @State private var closeTarget: Route?
@@ -1485,22 +1496,29 @@ struct RoutesPanel: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 24).padding(.horizontal, 8)
             } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        if !active.isEmpty { section("ACTIVE ROUTES", active) }
-                        if !planned.isEmpty { planSection(planned) }
-                        if !closed.isEmpty { section("CLOSED ROUTES", closed) }
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            if !active.isEmpty { section("ACTIVE ROUTES", active) }
+                            if !planned.isEmpty { planSection(planned).id("plans") }
+                            if !closed.isEmpty { section("CLOSED ROUTES", closed) }
+                        }
+                        .padding(8)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
                     }
-                    .padding(8)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+                    // Just saved a plan → scroll to PLANNED so the player sees it.
+                    .onChange(of: scrollToPlans) { _, _ in
+                        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("plans", anchor: .top) }
+                    }
                 }
-                // Hug the content (a single collapsed route card is short) — only
-                // scroll once the list exceeds the cap. Expanding a route's caret
-                // grows the content, so the panel grows with it.
-                .frame(height: min(max(contentHeight, 1), 376))
+                // iPad rail: fill the available height (the rail is tall, and the
+                // sections stack below the fold otherwise). iPhone floating overlay:
+                // hug the content — a single collapsed route card is short — and only
+                // scroll once the list exceeds the cap.
+                .frame(maxHeight: fillHeight ? .infinity : min(max(contentHeight, 1), maxFloatingHeight))
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: fillHeight ? .infinity : nil)
         .background(cardBG)
         .clipShape(RoundedRectangle(cornerRadius: 4))
         .overlay(RoundedRectangle(cornerRadius: 4).stroke(cardBorder, lineWidth: 1))

@@ -80,6 +80,9 @@ struct NetworkView: View {
     /// player already laid out (via research or a saved plan) survives the pick step
     /// instead of restarting empty. Cleared when the flow ends.
     @State private var pendingRotationStops: [String] = []
+    /// Bumped when a plan is saved, to scroll the Routes list to PLANNED (see
+    /// revealPlansAfterSave). The RoutesPanel watches it via `scrollToPlans`.
+    @State private var scrollPlansTrigger = 0
     @State private var flash: String?
     /// Which control-bar panel is open (mutually exclusive). Route-opening is
     /// its own flow (`routeMode`), not a panel.
@@ -223,6 +226,15 @@ struct NetworkView: View {
         beginAssign(stops: plan.stops)
     }
 
+    /// After saving a plan, close the research flow and OPEN the Routes list scrolled
+    /// to PLANNED — otherwise a new player saves a plan and never finds where it went
+    /// (14 Sep 2026). Bumping the trigger makes the panel scroll to the section.
+    private func revealPlansAfterSave() {
+        routeMode = .off
+        withAnimation(Motion.glide) { panel = .routes }
+        scrollPlansTrigger += 1
+    }
+
     /// Commit step reached from the research panel's "Assign an aircraft" (or a
     /// saved plan's "Open route"): the free-tier cap is re-checked HERE (research and
     /// saving a plan are free; only opening a real route counts), then the existing
@@ -321,7 +333,10 @@ struct NetworkView: View {
             BuyPanel(sim: sim, store: store, onUpgrade: { onUpgrade(store.capMessage(.fleet)) }, onBought: handleBought)
                 .frame(maxHeight: .infinity, alignment: .top)
         case .routes:
-            RoutesPanel(sim: sim, onOpenPlan: { openPlan($0) }).frame(maxHeight: .infinity, alignment: .top)
+            // Docked in the tall iPad landscape rail — fill it so Planned/Closed show.
+            RoutesPanel(sim: sim, onOpenPlan: { openPlan($0) }, fillHeight: true,
+                        scrollToPlans: scrollPlansTrigger)
+                .frame(maxHeight: .infinity, alignment: .top)
         case .hire:
             VStack(spacing: 0) {
                 AddCrewPanel(sim: sim) { withAnimation(Motion.glide) { panel = .none } }
@@ -504,7 +519,11 @@ struct NetworkView: View {
                 .frame(maxHeight: .infinity, alignment: .top)
                 .transition(slide)
         case .routes:
-            RoutesPanel(sim: sim, onOpenPlan: { openPlan($0) }).transition(slide)
+            // Floats over the map (iPhone / iPad portrait) — hug content, but give iPad
+            // a taller cap so the list shows more without covering the whole map.
+            RoutesPanel(sim: sim, onOpenPlan: { openPlan($0) },
+                        maxFloatingHeight: isPad ? 620 : 376,
+                        scrollToPlans: scrollPlansTrigger).transition(slide)
             Spacer(minLength: 0)
         case .hire:
             AddCrewPanel(sim: sim) { withAnimation(Motion.glide) { panel = .none } }.transition(slide)
@@ -786,8 +805,8 @@ struct NetworkView: View {
                     onSavePlan: {
                         sim.savePlan(stops: [o, d])
                         showFlash("Saved to plans · \(o) → \(d)")
-                        if fromSuggestion { sim.clearSuggestion(); routeMode = .off; onReturnToOps() }
-                        else { routeMode = .off }
+                        sim.clearSuggestion()
+                        revealPlansAfterSave()
                     },
                     onCancel: {
                         if fromSuggestion { sim.clearSuggestion(); routeMode = .off; onReturnToOps() }
@@ -801,7 +820,7 @@ struct NetworkView: View {
                 onSavePlan: {
                     sim.savePlan(stops: codes)
                     showFlash("Saved to plans · \(codes.joined(separator: " → "))")
-                    routeMode = .off
+                    revealPlansAfterSave()
                 },
                 onUndo: {
                     let trimmed = Array(codes.dropLast())
@@ -832,11 +851,13 @@ struct NetworkView: View {
             RouteAircraftPicker(
                 sim: sim,
                 // Seed the loop with any stops carried from research / a saved plan,
-                // so a multi-city route already laid out doesn't restart empty.
+                // so a multi-city route already laid out doesn't restart empty. With
+                // stops already chosen, skip straight to the loop confirm; otherwise
+                // start tapping.
                 onPick: { ac in
                     let seed = pendingRotationStops
                     pendingRotationStops = []
-                    routeMode = .rotate(ac.id, seed)
+                    routeMode = seed.count >= 2 ? .confirmRotation(ac.id, seed) : .rotate(ac.id, seed)
                 },
                 onCancel: { pendingRotationStops = []; routeMode = .off; sim.clearAssignment() },
                 onAcquire: { panel = .acquire })
@@ -1053,11 +1074,15 @@ struct NetworkView: View {
             return
         }
         // Manual rotation flow: the player hit Acquire from the aircraft-picker
-        // (no idle spares). Put them straight into tapping the rotation for the
-        // jet they just bought.
+        // (no idle spares). Carry through any stops already tapped during research /
+        // a saved plan — WITHOUT this the loop restarted empty and asked the player
+        // to tap the cities all over again (reported 14 Sep 2026). If they haven't
+        // laid out stops yet, start empty as before.
         if case .pickAircraft = routeMode {
             panel = .none
-            routeMode = .rotate(ac.id, [])
+            let seed = pendingRotationStops
+            pendingRotationStops = []
+            routeMode = seed.count >= 2 ? .confirmRotation(ac.id, seed) : .rotate(ac.id, seed)
         }
     }
 
